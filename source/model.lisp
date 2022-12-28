@@ -2,7 +2,9 @@
 (in-package :cl-waffe)
 
 (defmacro call (model &rest args)
-  `(funcall (slot-value ,model 'forward) ,model ,@args))
+  `(let ((result (funcall (slot-value ,model 'forward) ,model ,@args)))
+     ;(setf (slot-value result 'backward) (slot-value ,model 'backward))
+     result))
 
 (defmacro defmodel (name args &key parameters forward backward)
   (labels ((assure-args (x)

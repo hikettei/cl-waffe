@@ -12,6 +12,7 @@
   :licence "MIT"
   :depends-on (:cl-waffe :fiveam)
   :components ((:module "t" :components ((:file "package")
+					 (:file "operators")
 					 (:file "network")
 					 (:file "deriv"))))
   :perform (test-op (o s)

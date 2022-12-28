@@ -3,5 +3,9 @@
 
 (defpackage cl-waffe
   (:use :cl)
-  (:export #:defmodel
-	   #:call))
+  (:export #:tensor
+	   #:const
+	   #:defmodel
+	   #:call
+	   #:add
+	   #:mul))
