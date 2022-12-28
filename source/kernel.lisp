@@ -6,7 +6,7 @@
 
 (defun check-kernel (variable)
   (unless (typep variable 'WaffeTensor)
-    (error "The inputs must be tensor"))
+    (error "The inputs must be tensor got: ~a" variable))
   
   (unless (find (slot-value variable 'backend) *kernels*)
     (error "Invaild kernel: ~a" (slot-value variable 'backend))

@@ -7,18 +7,23 @@
       (const x)))
 
 ; 連続してcallopすると計算木が生成されない
+
 (defmodel AddTensor nil
   :parameters nil
   :forward  ((x y) (callop :add x y))
-  :backward ((dy) (values dy dy)))
+  :backward ((d1 d2) (list d1 d2)))
 
 (defmodel MulTensor nil
-  :parameters nil
-  :forward ((x y) (callop :mul x y))
-  :backward ((dy) dy))
+  :parameters ((xi T) (yi T))
+  :forward ((x y)
+	    (setf (self xi) x)
+	    (setf (self yi) y)
+	    (callop :mul x y))
+  :backward ((d1 d2) (list (callop :mul d1 (self yi))
+			   (callop :mul d2 (self xi)))))
 
-(defmethod add (x y)
+(defun add (x y)
   (call (AddTensor) (assure-tensor x) (assure-tensor y)))
 
-(defmethod mul (x y)
+(defun mul (x y)
   (call (MulTensor) (assure-tensor x) (assure-tensor y)))

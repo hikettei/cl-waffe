@@ -12,7 +12,7 @@
   :version nil
   :description "an opencl-based deeplearning library"
   :pathname "source"
-  ;:depends-on ("numcl")
+  ;:depends-on (#:numcl)
   :in-order-to ((test-op (test-op cl-waffe-test)))
   :components ((:module "backends/cpu"
 		:components ((:file "package")

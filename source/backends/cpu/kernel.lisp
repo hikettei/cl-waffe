@@ -2,4 +2,6 @@
 (in-package :cl-waffe.backends.cpu)
 
 (defun kernel (ope args)
-  1)
+  (case ope
+    (:add (+ (car args) (second args)))
+    (:mul (* (car args) (second args)))))

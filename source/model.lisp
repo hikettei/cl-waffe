@@ -1,10 +1,12 @@
 
 (in-package :cl-waffe)
 
-(defmacro call (model &rest args)
-  `(let ((result (funcall (slot-value ,model 'forward) ,model ,@args)))
-     ;(setf (slot-value result 'backward) (slot-value ,model 'backward))
-     result))
+(defun call (model &rest args)
+  (let ((result (apply (slot-value model 'forward) model args)))
+    (setf (slot-value result 'backward) (slot-value model 'backward))
+    (setf (slot-value result 'grad) model)
+    (setf (slot-value result 'variables) args)
+    result))
 
 (defmacro defmodel (name args &key parameters forward backward)
   (labels ((assure-args (x)
@@ -19,7 +21,7 @@
        `(progn
 	  (defstruct (,(gensym (symbol-name ',name))
 		     (:constructor ,c (,@',args &aux ,@',parameters)))
-	   ,@',(map 'list (lambda (x) (assure-args (car x))) parameters)
+	    ,@',(map 'list (lambda (x) (assure-args (car x))) parameters)
 	   (forward ,',(let ((largs (car forward))
 			     (lbody (cdr forward))
 			     (self-heap (gensym)))
@@ -37,6 +39,6 @@
 				 (macrolet ((self (name)
 					      `(slot-value ,',self-heap ',name)))
 				   ,@lbody)))
-			    nil)))
+			    nil))) ;my grad
 	 (,c ,@init-args)))))
 
