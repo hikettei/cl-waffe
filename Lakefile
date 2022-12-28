@@ -1,0 +1,17 @@
+#|-*- mode:lisp -*-|#
+(in-package :cl-user)
+(defpackage :lake.user
+  (:use :cl :lake :cl-syntax :asdf)
+  (:shadowing-import-from :lake
+                          :directory))
+(in-package :lake.user)
+
+(use-syntax :interpol)
+
+(task "test" ()
+      (ql:quickload :fiveam)
+      (load "cl-waffe.asd")
+      (load "cl-waffe-test.asd")
+      (asdf:test-system :cl-waffe))
+
+;;; here follow your tasks...

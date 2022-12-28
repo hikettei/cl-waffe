@@ -4,9 +4,10 @@
 (defmacro call (model &rest args)
   `(funcall (slot-value ,model 'forward) ,model ,@args))
 
-(defmacro defmodel (name &key args parameters forward)
+(defmacro defmodel (name args &key parameters forward backward)
   (labels ((assure-args (x)
 	     (if (or (equal (symbol-name x) "forward")
+		     (equal (symbol-name x) "backward")
 		     (equal (symbol-name x) "self")) ; enough?
 		 (error "the name forward cant be used as param name")
 		 x)))
@@ -24,6 +25,16 @@
 			 `(lambda ,(concatenate 'list (list self-heap) largs)
 			    (macrolet ((self (name)
 					 `(slot-value ,',self-heap ',name)))
-			      ,@lbody)))))
+			      ,@lbody))))
+	   (backward ,',(if backward
+			    (let ((largs (car backward))
+				  (lbody (cdr backward))
+				  (self-heap (gensym)))
+			      `(dolist (i ,largs) (assure-args i))
+			      `(lambda ,(concatenate 'list (list self-heap) largs)
+				 (macrolet ((self (name)
+					      `(slot-value ,',self-heap ',name)))
+				   ,@lbody)))
+			    nil)))
 	 (,c ,@init-args)))))
 

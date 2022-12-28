@@ -1,9 +1,19 @@
 
-(in-package :asdf-user)
+(in-package :cl-user)
+
+(defpackage :cl-waffe-asd
+  (:use :cl :asdf))
+
+(in-package :cl-waffe-asd)
 
 (asdf:defsystem :cl-waffe
   :author "hikettei twitter -> @ichndm"
   :licence "MIT"
-  :version "in-dev"
+  :version nil
   :description "an opencl-based deeplearning library"
-  :pathname "source")
+  :pathname "source"
+  :in-order-to ((test-op (test-op cl-waffe-test)))
+  :components ((:file "package")
+	       (:file "model")
+	       (:file "tensor")
+	       (:file "functions")))

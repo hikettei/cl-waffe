@@ -1,6 +1,7 @@
 
 (in-package :cl-user)
 
-(defpackage #:cl-waffe
+(defpackage cl-waffe
   (:use :cl)
-  (:export))
+  (:export #:defmodel
+	   #:call))
