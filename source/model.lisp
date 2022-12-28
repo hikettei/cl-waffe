@@ -11,12 +11,12 @@
 		     (equal (symbol-name x) "self")) ; enough?
 		 (error "the name forward cant be used as param name")
 		 x)))
-    (unless (and parameters forward)
-      (error "insufficient params"))
+    (unless forward
+      (error "insufficient forms"))
     `(defmacro ,name (&rest init-args &aux (c (gensym)))
        `(progn
-	 (defstruct (,(gensym (symbol-name ',name))
-		     (:constructor ,c (,',@args &aux ,@',parameters)))
+	  (defstruct (,(gensym (symbol-name ',name))
+		     (:constructor ,c (,@',args &aux ,@',parameters)))
 	   ,@',(map 'list (lambda (x) (assure-args (car x))) parameters)
 	   (forward ,',(let ((largs (car forward))
 			     (lbody (cdr forward))
