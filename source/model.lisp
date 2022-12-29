@@ -39,6 +39,6 @@
 				 (macrolet ((self (name)
 					      `(slot-value ,',self-heap ',name)))
 				   ,@lbody)))
-			    nil))) ;my grad
+			    nil)))
 	 (,c ,@init-args)))))
 

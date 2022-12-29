@@ -6,8 +6,12 @@
   (:export #:tensor
 	   #:const
 	   #:data
+	   #:grad
 	   #:defmodel
+	   #:parameter
 	   #:call
 	   #:backward
+	   #:zeros
+	   #:arange
 	   #:add
 	   #:mul))

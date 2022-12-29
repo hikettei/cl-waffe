@@ -35,6 +35,4 @@
 		   (:opencl (cl-waffe.backends.opencl:kernel instruction args)))))
     (const result backend)))
 
-(defun init-vector ())
-
 (defun backends-available ())
