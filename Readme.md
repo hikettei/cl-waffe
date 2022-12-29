@@ -35,7 +35,32 @@ RuliaChan (Twitter: @ichndm)
 defmodelでParameterの初期値をnilにすると代入できなくなる、後から代入したいならTを使うように
 
 行列演算
+
 numclでCPUのカーネル
+
 openclでopenclのカーネル
-それぞれのカーネルようにデータ型を定義する
+
 numclのバージョン管理
+
+モデルの表示(like torch keras)をしたいから、defmodelを二種類作る
+
+Kernelの命令のwiki作る
+
+termplotでlossのグラフを表示する
+
+Error表示わかりやすくする. (invaild argument numberとかどの関数？ってなる)
+
+DLWaffeみたいなTrainer Classを実装
+
+画像, テキスト読み込み用のライブラリを作る
+
+Seq2Seqを実装
+
+Transformerを実装
+
+# Kernel Instructions
+
+:add ... 3DArray + 3DArray
+
+# 行列演算と微分を増やすin numcl
+# Optimizer Model

@@ -16,6 +16,7 @@
 	   #:random-tensor
 	   #:normal
 	   #:arange
+	   #:self
 	   
 	   #:add
 	   #:sub

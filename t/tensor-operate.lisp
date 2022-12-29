@@ -8,9 +8,10 @@
 (setq bias (randn 10 10))
 
 
-(setq result (add (mul weight x) bias))
+(setq result (mean (add (mul weight x) bias) 0))
 
+;(print (data result))
 (backward result)
 
-(print (grad weight))
+;(print (grad weight))
 
