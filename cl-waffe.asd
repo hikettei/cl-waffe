@@ -20,10 +20,10 @@
 	       (:module "backends/opencl"
 	       :components ((:file "package")
 			    (:file "kernel")))
+	       (:file "tensor" :depends-on ("package"))
 	       (:file "package" :depends-on ("backends/cpu"
 					     "backends/opencl"))
 	       (:file "kernel")
 	       (:file "model")
-	       (:file "tensor")
 	       (:file "functions")
 	       (:file "operators")))

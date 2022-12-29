@@ -4,8 +4,8 @@
 (defun call (model &rest args)
   (let ((result (apply (slot-value model 'forward) model args)))
     (setf (slot-value result 'backward) (slot-value model 'backward))
-    (setf (slot-value result 'grad) model)
-    (setf (slot-value result 'variables) args)
+    (setf (slot-value result 'state) model) ; last state
+    (setf (slot-value result 'variables) (coerce args 'list))
     result))
 
 (defmacro defmodel (name args &key parameters forward backward)

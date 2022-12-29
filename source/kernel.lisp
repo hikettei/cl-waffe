@@ -33,7 +33,7 @@
 	 (result (case backend
 		   (:cpu (cl-waffe.backends.cpu:kernel instruction args))
 		   (:opencl (cl-waffe.backends.opencl:kernel instruction args)))))
-    (tensor result backend)))
+    (const result backend)))
 
 (defun init-vector ())
 
