@@ -14,6 +14,7 @@
   :components ((:module "t" :components ((:file "package")
 					 (:file "operators")
 					 (:file "network")
+					 (:file "tensor-operate")
 					 (:file "deriv"))))
   :perform (test-op (o s)
 		    (symbol-call :fiveam :run! :test)))

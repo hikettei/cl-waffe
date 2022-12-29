@@ -9,7 +9,7 @@
 (use-syntax :interpol)
 
 (task "test" ()
-      (ql:quickload :fiveam)
+      (ql:quickload :fiveam :silent t)
       (load "cl-waffe.asd")
       (load "cl-waffe-test.asd")
       (asdf:test-system :cl-waffe))
