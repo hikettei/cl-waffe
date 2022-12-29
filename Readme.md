@@ -1,6 +1,7 @@
 
 # cl-waffe
 
+Deeplearningのライブラリを自作しようとしている。。。
 
 # 目標
 
@@ -12,7 +13,7 @@ CPU OpenCL Cudaなどのbackend
 
 最適化を頑張る。。。
 
-FP16 FP8 FP4
+FP16 FP8
 
 Dataset Model Optimizerの統合、使いやすくする
 
