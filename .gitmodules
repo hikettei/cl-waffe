@@ -1,0 +1,3 @@
+[submodule "source/cl-termgraph"]
+	path = source/cl-termgraph
+	url = git@github.com:hikettei/cl-termgraph.git
