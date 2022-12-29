@@ -17,6 +17,8 @@
 	   #:normal
 	   #:arange
 	   #:self
+
+	   #:relu
 	   
 	   #:add
 	   #:sub

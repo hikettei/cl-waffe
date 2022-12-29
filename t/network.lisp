@@ -6,9 +6,9 @@
 ; simple mlp
 
 (defmodel MLP nil
-  :parameters ((layer1 (cl-waffe.nn:linearlayer (* 28 28) 128))
-	       (layer2 (cl-waffe.nn:linearlayer 128 256))
-	       (layer3 (cl-waffe.nn:linearlayer 256 10)))
+  :parameters ((layer1 (cl-waffe.nn:denselayer (* 28 28) 128))
+	       (layer2 (cl-waffe.nn:denselayer 128 256))
+	       (layer3 (cl-waffe.nn:denselayer 256 10)))
   :forward ((x)
 	    (call (cl-waffe:self layer3)
 		  (call (cl-waffe:self layer2)

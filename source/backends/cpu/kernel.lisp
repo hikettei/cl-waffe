@@ -19,7 +19,7 @@
     (:div (numcl:/ (car args) (second args)))
     (:dot (numcl:vdot (car args) (second args)))
     (:log (numcl:log (car args)))
-    (:pow (numcl:power (car args) (second args)))
+    (:pow (numcl:expt (car args) (second args)))
     (:sum (numcl:sum (car args) :axes (second args)))
     (:mean (numcl:mean (car args) :axes (second args)))
     (:reshape (numcl:reshape (car args) (second args)))
