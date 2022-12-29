@@ -62,5 +62,10 @@ Transformerを実装
 
 :add ... 3DArray + 3DArray
 
-# 行列演算と微分を増やすin numcl
-# Optimizer Model
+明日やること
+
+Optimizer Loss Activationの実装
+
+Trainer Classの実装
+
+termgraphを使う
