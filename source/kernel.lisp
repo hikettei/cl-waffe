@@ -6,7 +6,13 @@
 			       :sub
 			       :mul
 			       :div
+			       :log
+			       :pow
 			       :sum
+			       :mean
+			       :dot
+			       :reshape
+			       :transpose
 			       :repeat))
 
 (defun check-kernel (variable)

@@ -16,10 +16,19 @@
 	   #:random-tensor
 	   #:normal
 	   #:arange
+	   
 	   #:add
+	   #:sub
 	   #:mul
+	   #:div
+	   #:dot
+	   #:pow
+	   #:loge
 	   #:sum
+	   #:mean
 	   #:shape
+	   #:reshape
 	   #:repeats
+	   #:transpose
 	   #:astensor
 	   #:matmul))
