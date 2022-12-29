@@ -139,3 +139,16 @@
           do (setf (row-major-aref res n) (gaussiandb-random gb)))
     (const (numcl:asarray res))))
 
+(defun shape (tensor &optional (nth nil))
+  (unless (typep (data tensor) 'array)
+    ;error
+    )
+  
+  (if nth
+      (nth (data (assure-tensor nth)) (numcl:shape (data tensor)))
+      (numcl:shape (data tensor))))
+
+(defun astensor (arr)
+  (const (numcl:asarray arr)))
+
+  

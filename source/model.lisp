@@ -12,7 +12,7 @@
   (labels ((assure-args (x)
 	     (if (or (equal (symbol-name x) "forward")
 		     (equal (symbol-name x) "backward")
-		     (equal (symbol-name x) "self")) ; enough?
+		     (equal (symbol-name x) "self")) ; i am not sure if it is really enough
 		 (error "the name forward cant be used as param name")
 		 x)))
     (unless forward

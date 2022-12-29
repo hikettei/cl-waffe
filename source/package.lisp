@@ -18,4 +18,8 @@
 	   #:arange
 	   #:add
 	   #:mul
+	   #:sum
+	   #:shape
+	   #:repeats
+	   #:astensor
 	   #:matmul))

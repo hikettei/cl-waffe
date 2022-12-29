@@ -2,7 +2,12 @@
 (in-package :cl-waffe)
 
 (defparameter *kernels* `(:cpu :opencl))
-(defparameter *instructions* `(:add :mul))
+(defparameter *instructions* `(:add
+			       :sub
+			       :mul
+			       :div
+			       :sum
+			       :repeat))
 
 (defun check-kernel (variable)
   (unless (typep variable 'WaffeTensor)
