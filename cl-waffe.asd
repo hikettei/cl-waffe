@@ -26,4 +26,9 @@
 	       (:file "kernel")
 	       (:file "model")
 	       (:file "functions")
-	       (:file "operators")))
+	       (:file "operators")
+	       (:module "nn"
+		:components ((:file "package")
+			     (:file "utils")
+			     (:file "losses")
+			     (:file "functional")))))

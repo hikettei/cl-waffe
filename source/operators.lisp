@@ -22,8 +22,14 @@
   :backward ((d1 d2) (list (callop :mul d1 (self yi))
 			   (callop :mul d2 (self xi)))))
 
+;ScalarMul
+
 (defun add (x y)
   (call (AddTensor) (assure-tensor x) (assure-tensor y)))
 
 (defun mul (x y)
   (call (MulTensor) (assure-tensor x) (assure-tensor y)))
+
+(defun matmul (x y)
+  (call (MatMulTensor) (assure-tensor x) (assure-tensor y)))
+

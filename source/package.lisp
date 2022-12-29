@@ -12,6 +12,10 @@
 	   #:call
 	   #:backward
 	   #:zeros
+	   #:randn
+	   #:random-tensor
+	   #:normal
 	   #:arange
 	   #:add
-	   #:mul))
+	   #:mul
+	   #:matmul))

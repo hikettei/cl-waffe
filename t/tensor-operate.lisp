@@ -3,4 +3,14 @@
 
 (in-suite :test)
 
-(print (parameter (zeros `(10 10))))
+(setq weight (parameter (randn 10 10)))
+(setq x (randn 10 10))
+(setq bias (randn 10 10))
+
+
+(setq result (add (mul weight x) bias))
+
+(backward result)
+
+(print (grad weight))
+

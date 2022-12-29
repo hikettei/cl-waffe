@@ -1,6 +1,7 @@
 
 (in-package :cl-waffe)
 
+
 (defstruct (WaffeTensor (:constructor
 			    tensor
 			    (value &optional (backend :cpu)
@@ -76,3 +77,65 @@
 
 (n2w zeros numcl:zeros)
 (n2w arange numcl:arange)
+
+(defclass gaussiandb () ((mean :initform nil
+			       :initarg :mean
+			       :accessor gaussiandb-mean)
+			 (var :initform nil
+			      :initarg :var
+			      :accessor gaussiandb-var)))
+
+(defun double-random ()
+  (let ((i (random 1.0)))
+    (if (eq i 0.0)
+	(setq i (double-random))) i))
+
+(defmethod gaussiandb-random ((gs gaussiandb))
+  (let* ((r (double-random))
+	 (c (sqrt (* -2 (log r)))))
+    (if (< (double-random) 0.5)
+	(+    (* c
+	      (sin (* 2.0 pi (double-random)))
+	      (gaussiandb-var gs))
+	      (gaussiandb-mean gs))
+	(+    (* c
+	      (cos (* 2.0 pi (double-random)))
+	      (gaussiandb-var gs))
+	      (gaussiandb-mean gs)))))
+
+(defun getrandn ()
+  (let ((u1 (loop for x = (random 1.0)
+                  when (> x 0.0)
+                    return x))
+        (u2 (loop for x = (random 1.0)
+                  when (> x 0.0)
+                    return x)))
+    (values (* (sqrt (* -2 (log u1))) (cos (* 2 pi u2)))
+            (* (sqrt (* -2 (log u1))) (sin (* 2 pi u2))))))
+
+(defun random-tensor (dims limit)
+  (let* ((res (make-array dims))
+         (upper-limit (if (listp limit) (second limit) limit))
+         (lower-limit (if (listp limit) (first limit) 0))
+         (len (if (listp dims) (reduce #'* dims) dims))
+         (tmp-limit (- upper-limit lower-limit)))
+    (loop for n from 0 to (1- len)
+          do (setf (row-major-aref res n)
+                   (+ (random tmp-limit) lower-limit)))
+    (const (numcl:asarray res))))
+
+(defun randn (&rest dims)
+  (let* ((res (make-array dims))
+         (len (if (listp dims) (reduce #'* dims) dims)))
+    (loop for n from 0 to (1- len)
+          do (setf (row-major-aref res n) (getrandn)))
+    (const (numcl:asarray res))))
+
+(defun normal (dims &optional (mean 2.0) (var 1.0))
+  (let* ((gb (make-instance 'gaussiandb :mean mean :var var))
+	 (res (make-array dims))
+         (len (if (listp dims) (reduce #'* dims) dims)))
+    (loop for n from 0 to (1- len)
+          do (setf (row-major-aref res n) (gaussiandb-random gb)))
+    (const (numcl:asarray res))))
+
