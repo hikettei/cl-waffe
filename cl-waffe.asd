@@ -27,6 +27,10 @@
 	       (:file "model")
 	       (:file "functions")
 	       (:file "operators")
+	       (:module "optimizers"
+		:components ((:file "package")
+			     (:file "optimizers")
+			     (:file "optimizer")))
 	       (:module "nn"
 		:components ((:file "package")
 			     (:file "utils")
