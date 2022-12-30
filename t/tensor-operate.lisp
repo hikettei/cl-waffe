@@ -10,7 +10,6 @@
 
 (setq result (mean (add (mul weight x) bias) 0))
 
-(print (data result))
 (backward result)
 
 ;(print (grad weight))
