@@ -67,6 +67,15 @@ Transformerを実装
 
 Optimizer Loss Activationの実装
 
+Optimizer  ... Adam SGD
+
+Loss       ... Mse CrossEntropy
+
+Activation ... ReLU Sigmoid tanh
+
+
 Trainer Classの実装
+
+Epochのログとかを表示する (cl-cram使いたい)
 
 termgraphを使う

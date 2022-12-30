@@ -16,9 +16,12 @@
 	   #:random-tensor
 	   #:normal
 	   #:arange
+	   #:ones-like
 	   #:self
 
 	   #:relu
+	   #:sigmoid
+	   #:tanh
 	   
 	   #:add
 	   #:sub
@@ -27,6 +30,7 @@
 	   #:dot
 	   #:pow
 	   #:loge
+	   #:t-exp
 	   #:sum
 	   #:mean
 	   #:shape

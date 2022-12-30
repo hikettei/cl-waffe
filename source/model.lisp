@@ -13,7 +13,7 @@
 	     (if (or (equal (symbol-name x) "forward")
 		     (equal (symbol-name x) "backward")
 		     (equal (symbol-name x) "self")) ; i am not sure if it is really enough
-		 (error "the name forward cant be used as param name")
+		 (error "the name ~a is not allowed to use" (symbol-name x))
 		 x)))
     (unless forward
       (error "insufficient forms"))

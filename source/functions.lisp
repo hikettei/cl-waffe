@@ -13,10 +13,20 @@
 
 (defmodel ReLUTensor nil
   :parameters ((path-through T))
-  :forward ((x) (setf (self path-through) (assure-tensor (numcl:asarray (plusns x))))
-		(callop :mul (self path-through) x))
+  :forward ((x)
+	    (setf (self path-through) (assure-tensor (numcl:asarray (plusns x))))
+	    (callop :mul (self path-through) x))
   :backward ((dy) (list (mul (self path-through) dy))))
 
 (defun relu (x)
   (call (ReLUTensor) (assure-tensor x)))
 
+(defmodel SigmoidTensor nil
+  :parameters ((xi T))
+  :forward ((x)
+	    (setf (self xi) x)
+	    (div 1 (add 1.0 (t-exp (mul -1 x)))))
+  :backward ((dy) (list (mul (sigmoid (sigmoid (self xi))) (mul dy (sub (ones-like (self xi) (sigmoid (sigmoid (self xi))))))))))
+
+(defun sigmoid (x)
+  (call (SigmoidTensor) (assure-tensor x)))

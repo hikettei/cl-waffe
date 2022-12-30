@@ -15,6 +15,10 @@
 	    (case (cl-waffe:self activation)
 	      (:relu
 	       (relu (call (cl-waffe:self layer) x)))
+	      (:sigmoid
+	       (sigmoid (call (cl-waffe:self layer) x)))
 	      (T
-	       (error "~a: the activation func is not implemented." (cl-waffe:self activation))))))
+	       (funcall (cl-waffe:self activation)
+			(call (cl-waffe:self layer) x))))))
+
 

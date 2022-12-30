@@ -11,6 +11,7 @@
 			       :sum
 			       :mean
 			       :dot
+			       :exp
 			       :reshape
 			       :transpose
 			       :repeat))

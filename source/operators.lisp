@@ -87,6 +87,11 @@
   :forward ((x) (callop :repeat x (self axis) (self repeats)))
   :backward ((dy) (list (sum dy (self axis)))))
 
+(defmodel ExpTensor nil
+  :parameters ((xi T))
+  :forward ((x) (setf (self xi) x) (callop :exp x))
+  :backward ((dy) (list (mul dy (t-exp (self xi))))))
+
 ;ScalarMul
 
 (defun add (x y)
@@ -126,6 +131,8 @@
   (call (TransposeTensor (assure-tensor result)) (assure-tensor x)))
 
 (defun matmul (x y)
-  ; ...
+  ; 4 3d tensor
   (call (DotProductTensor) (assure-tensor x) (assure-tensor y)))
 
+(defun t-exp (x)
+  (call (ExpTensor) (assure-tensor x)))

@@ -152,3 +152,5 @@
   (const (numcl:asarray arr)))
 
   
+(defun ones-like (arr)
+  (const (numcl:ones-like (data arr))))
