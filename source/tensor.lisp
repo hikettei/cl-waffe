@@ -40,14 +40,15 @@
   ; the nth variavle of tensor
   `(slot-value (nth-var ,tensor ,n) ,s))
 
-(defun grad (tensor)
-  (unless (slot-value tensor 'grad)
-    (error "The tensor is not a parameter"))
+(defmacro grad (tensor)
+  `(progn
+     (unless (slot-value ,tensor 'grad)
+       (error "The tensor is not a parameter"))
 
-  (if (typep (slot-value tensor 'grad) 'cons)
-      (error "Before using grad, you need to call (backward tensor)"))
-
-  (slot-value tensor 'grad))
+     (if (typep (slot-value ,tensor 'grad) 'cons)
+	 (error "Before using grad, you need to call (backward tensor)"))
+  
+  (slot-value ,tensor 'grad)))
 
 (defmacro parameter (tensor)
   ; enable grad
@@ -58,7 +59,9 @@
   (if (slot-value tensor 'backward)
       (let ((state (slot-value tensor 'state))
 	    (grad  (if (slot-value tensor 'grad-tmp)
-		       (slot-value tensor 'grad-tmp)
+		       (if (typep (slot-value tensor 'grad-tmp) 'list)
+			   (list (car (slot-value tensor 'grad-tmp)))
+			   (slot-value tensor 'grad-tmp))
 		       (repeat tensor 1))))
 	(let ((grads (apply (slot-value tensor 'backward) state grad)))
 	  (dotimes (i (length (slot-value tensor 'variables)))
@@ -237,7 +240,7 @@
     (with-output-to-string (res)
       (if (null grad)
 	  (write-string "#Const(" res)
-	  (write-string "#Parameter{" res)) ;11
+	  (write-string "#Parameter{" res))
       
       (if (or (typep contents 'vector) (typep contents 'array))
 	  (progn
@@ -258,3 +261,4 @@
 		(write-string ")" res)
 		(write-string "}" res))))
       res)))
+

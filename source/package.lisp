@@ -3,11 +3,21 @@
 
 (defpackage cl-waffe
   (:use :cl)
-  (:export #:tensor
+  (:export #:waffetensor
+           #:tensor
 	   #:const
 	   #:data
 	   #:grad
+	   
 	   #:defmodel
+	   #:defnode
+	   #:defoptimizer
+
+	   #:forward
+	   #:backward
+	   #:parameters
+	   #:hide-from-tree
+	   
 	   #:parameter
 	   #:call
 	   #:backward

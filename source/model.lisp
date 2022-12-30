@@ -3,10 +3,16 @@
 
 (defun call (model &rest args)
   (let ((result (apply (slot-value model 'forward) model args)))
-    (setf (slot-value result 'backward) (slot-value model 'backward))
-    (setf (slot-value result 'state) model) ; last state
-    (setf (slot-value result 'variables) (coerce args 'list))
-    result))
+    (if (slot-value model 'hide-from-tree) ;assure model isnt model
+	(progn
+	  (setf (slot-value result 'backward) (slot-value model 'backward))
+	  (setf (slot-value result 'state) model) ; last state
+	  (setf (slot-value result 'variables) (coerce args 'list))
+	  result)
+	result)))
+
+(defmacro defoptimizer (name args &key parameters update)
+  `(defmodel ,name ,args :parameters ,parameters :forward ,update :backward nil :hide-from-tree T))
 
 (defmacro defnode (name args &key parameters forward backward)
   `(defmodel ,name ,args :parameters ,parameters :forward ,forward :backward ,backward :hide-from-tree T))
@@ -50,11 +56,10 @@
 				   ,@lbody)))
 			    nil))
 	   ,@',(map 'list (lambda (x) (assure-args (car x))) parameters))
-	 (,c ,@init-args)))))
+	  (,c ,@init-args)))))
 
 (defun render-simple-model-structure (stream model)
-  (declare (ignore model))
-  (format stream "[WaffeModel]"))
+  (format stream "[Model: ~a]" (type-of model)))
 
 (defun print-model (model)
   (fresh-line)
@@ -62,15 +67,14 @@
 
 (defparameter *initial-indent-size* 4)
 
-(defun render-model-structure (stream model &optional (indent-level 0) (total-param 0) (model-name "Model") &key (indent-increase 4) (prefix "Param"))
+(defun render-model-structure (stream model &optional (indent-level 0) (total-param 0) (model-name "Model") (indent-increase 4) (prefix "Param"))
   (if (and (slot-exists-p model 'parameters)
 	   (slot-exists-p model 'hide-from-tree)
 	   (slot-exists-p model 'forward)
 	   (slot-exists-p model 'backward))
       (if (typep (slot-value model 'parameters) 'list)
 	  (labels ((indent-with (code &optional (space NIL))
-		     (dotimes (i (+ indent-level (if space *initial-indent-size* 0)))
-		       (declare (ignore i))
+		     (dotimes (_ (+ indent-level (if space *initial-indent-size* 0)))
 		       (format stream code))))
 	    (indent-with "–")
 	    (format stream "––– {~a (~a)}~C" model-name (type-of model) #\newline)
@@ -83,17 +87,16 @@
 	    (dotimes (i (length (slot-value model 'parameters)))
 	      (let ((p (case i
 			 (0 "Input ")
-			 ((1- (length (slot-value model 'parameters))) "Param ") ; ...
+			 ;((1- (length (slot-value model 'parameters))) "Param ")
 			 (T "Param ")))
 		    (param (nth i (slot-value model 'parameters))))
-		(render-model-structure stream (slot-value model param) (+ indent-level indent-increase) total-param (symbol-name param) :prefix p)))
+		(render-model-structure stream (slot-value model param) (+ indent-level indent-increase) total-param (symbol-name param) indent-increase p)))
 
 	    (if (= indent-level 0)
 		(progn
 		  (format stream "=======")))))
       (labels ((indent-with ()
-		 (dotimes (i (+ indent-level *initial-indent-size*))
-		   (declare (ignore i))
+		 (dotimes (_ (+ indent-level *initial-indent-size*))
 		   (format stream " "))))
 	(if (typep model 'WaffeTensor)
 	    (progn

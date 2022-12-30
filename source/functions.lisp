@@ -26,7 +26,10 @@
   :forward ((x)
 	    (setf (self xi) x)
 	    (div 1 (add 1.0 (t-exp (mul -1 x)))))
-  :backward ((dy) (list (mul (sigmoid (sigmoid (self xi))) (mul dy (sub (ones-like (self xi) (sigmoid (sigmoid (self xi))))))))))
+  :backward ((dy) (list (mul (sigmoid (sigmoid (self xi)))
+			     (mul dy (sub
+				      (ones-like (self xi))
+				      (sigmoid (sigmoid (self xi)))))))))
 
 (defun sigmoid (x)
   (call (SigmoidTensor) (assure-tensor x)))

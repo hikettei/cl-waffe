@@ -11,12 +11,12 @@
 (defnode AddTensor nil
   :parameters nil
   :forward  ((x y) (callop :add x y))
-  :backward ((d1 d2) (list d1 d2)))
+  :backward ((dy) (list dy dy)))
 
 (defnode SubTensor nil
   :parameters nil
   :forward ((x y) (callop :sub x y))
-  :backward ((d1 d2) (list d1 (mul d2 -1))))
+  :backward ((dy) (list dy (mul dy -1))))
 
 (defnode MulTensor nil
   :parameters ((xi T) (yi T))
@@ -24,8 +24,8 @@
 	    (setf (self xi) x)
 	    (setf (self yi) y)
 	    (callop :mul x y))
-  :backward ((d1 d2) (list (callop :mul d1 (self yi))
-			   (callop :mul d2 (self xi)))))
+  :backward ((dy) (list (callop :mul dy (self yi))
+			(callop :mul dy (self xi)))))
 
 (defnode DivTensor nil
   :parameters ((xi T) (yi T))
@@ -33,15 +33,15 @@
             (setf (self xi) x)
 	    (setf (self yi) y)
 	    (callop :div x y))
-  :backward ((d1 d2) (list (callop :div d1 (self yi))
-			   (callop :div (mul (mul d2 (self xi)) -1) (mul (self yi) (self yi))))))
+  :backward ((dy) (list (callop :div dy (self yi))
+			(callop :div (mul (mul dy (self xi)) -1) (mul (self yi) (self yi))))))
 
 (defnode PowTensor nil
   :parameters ((xi T) (yi T))
   :forward ((x1 y1) (setf (self xi) x1) (setf (self yi) y1)
 		    (callop :pow x1 y1))
-  :backward ((d1 d2) (list (mul (mul d1 (self x2)) (pow (self x1) (sub (self y1) 1)))
-			   (pow (mul d2 (self y1)) (mul (self yi) (loge (self xi)))))))
+  :backward ((dy) (list (mul (mul dy (self x2)) (pow (self x1) (sub (self y1) 1)))
+			(pow (mul dy (self y1)) (mul (self yi) (loge (self xi)))))))
 
 (defnode LogTensor nil
   :parameters ((x1 T))
@@ -58,8 +58,8 @@
   :forward ((x1 x2) (setf (self xi) x1)
 		    (setf (self yi) x2)
 		    (callop :dot x1 x2))
-  :backward ((d1 d2)
-	     (list (dot d1 (transpose (self yi))) (dot d2 (transpose (self xi))))))
+  :backward ((dy)
+	     (list (dot dy (transpose (self yi))) (dot (transpose (self yi)) dy))))
 
 (defnode TransposeTensor (shape)
   :parameters ((prev-shape T) (shape shape))
@@ -136,3 +136,5 @@
 
 (defun t-exp (x)
   (call (ExpTensor) (assure-tensor x)))
+
+
