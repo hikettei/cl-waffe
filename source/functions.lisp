@@ -1,7 +1,7 @@
 
 (in-package :cl-waffe)
 
-(defun plusns (tensor)
+(defun plusns (tensor) ; gpu ver...?
   (let* ((dims (shape tensor))
 	 (res (data tensor))
          (len (if (listp dims) (reduce #'* dims) dims)))
@@ -11,7 +11,7 @@
 						 (coerce 0 'double-float))))
     res))
 
-(defmodel ReLUTensor nil
+(defnode ReLUTensor nil
   :parameters ((path-through T))
   :forward ((x)
 	    (setf (self path-through) (assure-tensor (numcl:asarray (plusns x))))
@@ -21,7 +21,7 @@
 (defun relu (x)
   (call (ReLUTensor) (assure-tensor x)))
 
-(defmodel SigmoidTensor nil
+(defnode SigmoidTensor nil
   :parameters ((xi T))
   :forward ((x)
 	    (setf (self xi) x)
@@ -31,7 +31,7 @@
 (defun sigmoid (x)
   (call (SigmoidTensor) (assure-tensor x)))
 
-(defmodel TanhTensor nil
+(defnode TanhTensor nil
   :parameters nil
   :forward ((x)
 	    (callop :tanh x))
@@ -40,3 +40,5 @@
 
 (defun wf-tanh (x)
   (call (TanhTensor) (assure-tensor x)))
+
+

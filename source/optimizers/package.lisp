@@ -3,4 +3,6 @@
 
 (defpackage cl-waffe.optimizers
   (:use :cl :cl-waffe)
-  (:export))
+  (:export :is-waffe-model))
+
+

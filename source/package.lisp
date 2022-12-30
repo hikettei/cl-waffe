@@ -22,6 +22,8 @@
 	   #:relu
 	   #:sigmoid
 	   #:wf-tanh
+
+	   #:print-model
 	   
 	   #:add
 	   #:sub

@@ -6,3 +6,4 @@
   (if bias
       (add (dot x weight) bias)
       (dot x weight)))
+

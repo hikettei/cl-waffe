@@ -9,3 +9,4 @@
 	 (res (mul coeff (mul y (sum (log (add x delta)) 0))))) ; axis=0?
     res))
 
+
