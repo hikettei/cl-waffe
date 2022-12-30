@@ -21,7 +21,7 @@
 
 	   #:relu
 	   #:sigmoid
-	   #:tanh
+	   #:wf-tanh
 	   
 	   #:add
 	   #:sub

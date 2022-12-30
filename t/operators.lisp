@@ -12,3 +12,4 @@
       (is (= 6 (mul 3 (add 1 1))))
       (is (add a b))
       (is (sub a b)))
+

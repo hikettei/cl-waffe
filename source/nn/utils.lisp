@@ -17,6 +17,8 @@
 	       (relu (call (cl-waffe:self layer) x)))
 	      (:sigmoid
 	       (sigmoid (call (cl-waffe:self layer) x)))
+	      (:tanh
+	       (wf-tanh (call (cl-waffe:self layer) x)))
 	      (T
 	       (funcall (cl-waffe:self activation)
 			(call (cl-waffe:self layer) x))))))

@@ -12,6 +12,7 @@
 			       :mean
 			       :dot
 			       :exp
+			       :tanh
 			       :reshape
 			       :transpose
 			       :repeat))
@@ -34,7 +35,7 @@
 	       (rest variables)))))
 
 (defun callop (instruction &rest variables)
-  (unless (find instruction *instructions*)
+  (unless (find instruction *instructions*) ;doesnt works?
     (error "unsupported instruction: ~a" instruction))
 
   (unless (assure-tensors variables)

@@ -23,6 +23,7 @@
     (:pow (numcl:expt (car args) (second args)))
     (:sum (numcl:sum (car args) :axes (second args)))
     (:mean (numcl:mean (car args) :axes (second args)))
+    (:tanh (numcl:tanh (car args)))
     (:reshape (numcl:reshape (car args) (second args)))
     (:repeat (repeat (car args) (third args) :axis (second args)))
     (:transpose (numcl:transpose (car args) (second args)))

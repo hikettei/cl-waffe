@@ -6,4 +6,3 @@
 
 (fiveam:def-suite :test)
 
-

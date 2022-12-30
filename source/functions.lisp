@@ -30,3 +30,13 @@
 
 (defun sigmoid (x)
   (call (SigmoidTensor) (assure-tensor x)))
+
+(defmodel TanhTensor nil
+  :parameters nil
+  :forward ((x)
+	    (callop :tanh x))
+  :backward ((dy)
+	     (sub 1 (pow (callop :tanh dy) 2))))
+
+(defun wf-tanh (x)
+  (call (TanhTensor) (assure-tensor x)))
