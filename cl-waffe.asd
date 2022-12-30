@@ -8,7 +8,7 @@
 
 (asdf:defsystem :cl-waffe
   :author "hikettei twitter -> @ichndm"
-  :licence "MIT"
+  :licence nil
   :version nil
   :description "an opencl-based deeplearning library"
   :pathname "source"

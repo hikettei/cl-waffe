@@ -9,7 +9,7 @@
 (defsystem :cl-waffe-test
   :version nil
   :author "hikettei"
-  :licence "MIT"
+  :licence nil
   :depends-on (:cl-waffe :fiveam)
   :components ((:module "t" :components ((:file "package")
 					 (:file "operators")
