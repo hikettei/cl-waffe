@@ -62,7 +62,7 @@
 		       (if (typep (slot-value tensor 'grad-tmp) 'list)
 			   (list (car (slot-value tensor 'grad-tmp)))
 			   (slot-value tensor 'grad-tmp))
-		       (repeat tensor 1))))
+		       (list (car (repeat tensor 1))))))
 	(let ((grads (apply (slot-value tensor 'backward) state grad)))
 	  (dotimes (i (length (slot-value tensor 'variables)))
 	    (if (nth-tensor tensor i 'grad-tmp)
