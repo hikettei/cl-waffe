@@ -2,7 +2,15 @@
 (in-package :cl-waffe)
 
 
-(defstruct (WaffeTensor (:constructor
+(defparameter *print-char-max-len* 5)
+(defparameter *print-arr-max-size* 6)
+(defparameter *print-mat-max-size* 3)
+
+(defstruct (WaffeTensor (:print-function
+			 (lambda (tensor stream depth)
+			   (declare (ignore depth))
+			   (format stream (render-tensor tensor))))
+	                (:constructor
 			    tensor
 			    (value &optional (backend :cpu)
 			     &aux (data value) (backend backend) (grad `(nil nil))))
@@ -151,6 +159,102 @@
 (defun astensor (arr)
   (const (numcl:asarray arr)))
 
-  
 (defun ones-like (arr)
   (const (numcl:ones-like (data arr))))
+
+(defun write-description (res backward backend)
+  (write-string (format nil " :device :~a :backward ~A" backend backward) res))
+
+(defun reduce-str (obj)
+  (let ((str (format nil "~a" obj)))
+    (if (>= (length str) *print-char-max-len*)
+	(concatenate 'string (subseq str 0 *print-char-max-len*) "...")
+	str)))
+
+(defun pprint-1d-vector (stream data)
+  (if (> (length (numcl:shape data)) 1)
+      (error ""))
+  
+  (if (>= (numcl:size data) *print-arr-max-size*)
+      (write-string (format nil "(~A ~A ~2~ ~A ~A)"
+			    (reduce-str (numcl:aref data 0))
+			    (reduce-str (numcl:aref data 1))
+			    (reduce-str (numcl:aref data (- (numcl:size data) 2)))
+			    (reduce-str (numcl:aref data (1- (numcl:size data)))))
+		    stream)
+      (progn
+	(write-string "(" stream)
+	(dotimes (i (numcl:size data))
+	  (write-string (format nil "~A" (reduce-str (numcl:aref data i))) stream)
+	  (unless (= i (1- (numcl:size data)))
+	    (write-string " " stream)))
+	(write-string ")" stream))))
+
+(defun pprint-vector (stream data &optional (newline T) (indent-size 0))
+  (case (length (numcl:shape data))
+    (1
+     (pprint-1d-vector stream data))
+    (T
+     (write-string "(" stream)
+     (if (< (car (numcl:shape data)) *print-mat-max-size*)
+	 (progn
+	   (dotimes (i (car (numcl:shape data)))
+	     (pprint-vector stream (numcl:aref data i) newline (1+ indent-size))
+	     (unless (= i (1- (car (numcl:shape data))))
+	       (if newline
+		   (progn
+		     (write-char #\Newline stream)
+		     (dotimes (k (1+ indent-size))
+		       (write-string " " stream)))
+		   (write-string " " stream))))
+	   (write-string ")" stream))
+	 (progn
+	   (labels ((render-v (line do-newline)
+		      (pprint-vector stream line newline (1+ indent-size))
+		      (if do-newline
+			  (if newline
+			      (progn
+				(write-char #\Newline stream)
+				(if (= 2 (length (numcl:shape data)))
+				    (progn
+				      (dotimes (_ (+ (* 2 indent-size) 3))
+					(declare (ignore _))
+					(write-string " " stream))
+				      (write-string "..." stream)
+				      (write-char #\Newline stream)))
+				(dotimes (k (1+ indent-size))
+				  (write-string " " stream)))
+			      (write-string " " stream)))))
+	     (render-v (numcl:aref data 0) T)
+	     ;(render-v (numcl:aref data 1) T)
+	     
+	     ;(render-v (numcl:aref data (- (car (numcl:shape data)) 2)) T)
+	     (render-v (numcl:aref data (1- (car (numcl:shape data)))) NIL)
+	     (write-string ")" stream)))))))
+
+(defun render-tensor (tensor &optional (newline T) (indent-size 0))
+  (with-slots ((contents data) (backward backward) (backend backend) (grad grad)) tensor
+    (with-output-to-string (res)
+      (if (null grad)
+	  (write-string "#Const(" res)
+	  (write-string "#Parameter{" res)) ;11
+      
+      (if (or (typep contents 'vector) (typep contents 'array))
+	  (progn
+	    (pprint-vector res contents newline (if (null grad)
+						    (+ indent-size (length "#Const("))
+						    (+ indent-size (length "#Parameter{")))) ; Numcl Array
+	    (write-string (format nil " :shape ~a" (numcl:shape contents)) res)
+	    (unless (null grad)
+	      (write-description res backward backend))
+	    (if (null grad)
+		(write-string ")" res)
+		(write-string "}" res)))
+	  (progn ; Simple data
+	    (write-string (format nil "~A" contents) res)
+	    (unless (null grad)
+	      (write-description res backward backend))
+	    (if (null grad)
+		(write-string ")" res)
+		(write-string "}" res))))
+      res)))

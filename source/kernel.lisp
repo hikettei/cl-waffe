@@ -49,3 +49,5 @@
     (const result backend)))
 
 (defun backends-available ())
+
+(defun check-supported-instruction (backend))

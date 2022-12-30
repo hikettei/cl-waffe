@@ -8,10 +8,14 @@
     (setf (slot-value result 'variables) (coerce args 'list))
     result))
 
-(defmacro defmodel (name args &key parameters forward backward)
+(defmacro defnode (name args &key parameters forward backward)
+  `(defmodel ,name ,args :parameters ,parameters :forward ,forward :backward ,backward :hide-from-tree T))
+
+(defmacro defmodel (name args &key parameters forward backward hide-from-tree)
   (labels ((assure-args (x)
 	     (if (or (equal (symbol-name x) "forward")
 		     (equal (symbol-name x) "backward")
+		     (equal (symbol-name x) "hide-from-tree")
 		     (equal (symbol-name x) "self")) ; i am not sure if it is really enough
 		 (error "the name ~a is not allowed to use" (symbol-name x))
 		 x)))
@@ -22,6 +26,7 @@
 	  (defstruct (,(gensym (symbol-name ',name))
 		     (:constructor ,c (,@',args &aux ,@',parameters)))
 	    ,@',(map 'list (lambda (x) (assure-args (car x))) parameters)
+	   (hide-from-tree ,',hide-from-tree)
 	   (forward ,',(let ((largs (car forward))
 			     (lbody (cdr forward))
 			     (self-heap (gensym)))
