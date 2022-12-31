@@ -24,6 +24,21 @@
 	  (error "Could not find any parameter")
 	  (butlast parameters)))))
 
-(defmacro init-optimizer (optim model &rest args)
+(defun find-variables (model)
+  (let ((parameters `(T)))
+    (labels ((search-param (m)
+	       (if (is-waffe-model m)
+		   (dolist (p (slot-value m 'parameters))
+		     (search-param (slot-value m p)))
+		   (if (typep m 'cl-waffe:WaffeTensor)
+		       (push m parameters)))))
+      (search-param model)
+      (if (= (length parameters) 1)
+	  (error "Could not find any parameter")
+	  (butlast parameters)))))
+
+
+(defmacro init-optimizer (optim model &rest args) 
   `(,optim (find-parameters ,model) ,@args))
+
 

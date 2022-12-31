@@ -10,7 +10,7 @@
   :version nil
   :author "hikettei"
   :licence nil
-  :depends-on (:cl-waffe :fiveam)
+  :depends-on (:cl-waffe :fiveam :cl-libsvm-format)
   :components ((:module "t" :components ((:file "package")
 					 (:file "mnist")
 					 (:file "operators")

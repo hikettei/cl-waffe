@@ -11,15 +11,36 @@
 	  result)
 	result)))
 
-(defmacro defoptimizer (name args &key parameters update zero-grad)
-  (unless zero-grad
-    (error ":zero-grad is nil"))
+(defmacro is-waffe-model (model)
+  `(and (slot-exists-p ,model 'parameters)
+        (slot-exists-p ,model 'hide-from-tree)
+        (slot-exists-p ,model 'forward)
+        (slot-exists-p ,model 'backward)))
+
+(defun find-variables (model)
+  (let ((parameters `(T)))
+    (labels ((search-param (m)
+	       (if (is-waffe-model m)
+		   (dolist (p (slot-value m 'parameters))
+		     (search-param (slot-value m p)))
+		   (if (typep m 'WaffeTensor)
+		       (push m parameters)))))
+      (search-param model)
+      (if (= (length parameters) 1)
+	  (error "Could not find any parameter")
+	  (butlast parameters)))))
+
+(defmacro defoptimizer (name args &key parameters update)
   `(defmodel ,name ,args
      :parameters ,parameters
      :forward ,update
-     :backward (() (dolist (p (self ,zero-grad))
-		     (setf (slot-value p 'grad) `(nil . nil))
-		     (setf (slot-value p 'grad-tmp) nil)))
+     :backward ((model) (dolist (p (find-variables model))
+			  (setf (slot-value p 'state) nil)
+			  (setf (slot-value p 'backward) nil)
+			  (setf (slot-value p 'variables) nil)
+			  (setf (slot-value p 'grad) nil)
+			  (setf (slot-value p 'grad-tmp) nil))
+		nil)
      :hide-from-tree nil))
 
 (defmacro defnode (name args &key parameters forward backward)

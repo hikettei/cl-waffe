@@ -25,7 +25,7 @@
 (setq model (MLP :sigmoid))
 (print-model model)
 
-(setq input (randn (* 28 28) 128))
+(setq input (randn (* 28 28) 2))
 (setq out (sum (call model input) 0))
 
 (setq optim (cl-waffe.optimizers:init-optimizer cl-waffe.optimizers:sgd model))

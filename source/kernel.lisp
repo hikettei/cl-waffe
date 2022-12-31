@@ -42,7 +42,11 @@
     (error "all inputs must have same backends and be waffe tensor"))
 
   (let* ((backend (slot-value (first variables) 'backend))
-	 (args (map 'list (lambda (x) (slot-value x 'data)) variables))
+	 (args (map 'list (lambda (x) (let ((c (slot-value x 'data))) ; numcl check, ituka kesu
+					(if (or (typep c 'array) (typep c 'vector))
+					    (numcl:asarray c)
+					    c)))
+		    variables))
 	 (result (case backend
 		   (:cpu (cl-waffe.backends.cpu:kernel instruction args))
 		   (:opencl (cl-waffe.backends.opencl:kernel instruction args)))))

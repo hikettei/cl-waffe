@@ -16,7 +16,7 @@
   :forward ((x)
 	    (setf (self path-through) (assure-tensor (numcl:asarray (plusns x))))
 	    (callop :mul (self path-through) x))
-  :backward ((dy) (list (mul (self path-through) dy))))
+  :backward ((dy) (list (callop :mul (self path-through) dy))))
 
 (defun relu (x)
   (call (ReLUTensor) (assure-tensor x)))
@@ -26,7 +26,7 @@
   :forward ((x)
 	    (setf (self xi) x)
 	    (div 1 (add 1.0 (t-exp (mul -1 x)))))
-  :backward ((dy) (list (mul (sigmoid (sigmoid (self xi)))
+  :backward ((dy) (list (callop :mul (sigmoid (sigmoid (self xi)))
 			     (mul dy (sub
 				      (ones-like (self xi))
 				      (sigmoid (sigmoid (self xi)))))))))
@@ -39,7 +39,7 @@
   :forward ((x)
 	    (callop :tanh x))
   :backward ((dy)
-	     (sub 1 (pow (callop :tanh dy) 2))))
+	     (callop :sub (const 1) (pow (callop :tanh dy) 2))))
 
 (defun wf-tanh (x)
   (call (TanhTensor) (assure-tensor x)))

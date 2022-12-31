@@ -13,11 +13,13 @@
 	                (:constructor
 			    tensor
 			    (value &optional (backend :cpu)
-			     &aux (data value) (backend backend) (grad `(nil nil))))
+			     &aux (data (if (typep value 'WaffeTensor) (data value) value)) (backend backend) (grad `(nil nil))))
+			       ;(grad-tmp `(nil nil)) (backward `(nil nil)) (variables `(nil nil)) (state `(nil nil))))
 			(:constructor
 			    const
 			    (value &optional (backend :cpu)
-			     &aux (data value) (backend backend) (grad nil))))
+			     &aux (data (if (typep value 'WaffeTensor) (data value) value)) (backend backend) (grad nil))))
+			      ; (grad-tmp `(nil nil)) (backward `(nil nil)) (variables `(nil nil)) (state `(nil nil)))))
   data grad-tmp backward backend grad variables state)
 
 (defun data (tensor)
@@ -65,11 +67,11 @@
       (let ((state (slot-value tensor 'state))
 	    (grad  (if (slot-value tensor 'grad-tmp)
 		       (if (typep (slot-value tensor 'grad-tmp) 'list)
-			   (list (car (slot-value tensor 'grad-tmp)))
-			   (slot-value tensor 'grad-tmp))
-		       (list (car (repeat tensor 1))))))
-	(let ((grads (apply (slot-value tensor 'backward) state grad)))
-	  (dotimes (i (length (slot-value tensor 'variables)))
+			   (slot-value tensor 'grad-tmp)
+			   (repeat tensor (slot-value tensor 'grad-tmp)))
+		       (repeat tensor 1))))
+	(dotimes (i (length (slot-value tensor 'variables)))
+	  (let ((grads (apply (slot-value tensor 'backward) state (list (nth i grad)))))
 	    (if (nth-tensor tensor i 'grad-tmp)
 		(setf (nth-tensor tensor i 'grad-tmp)
 		      (repeat (nth-var tensor i) (data (add (nth-tensor tensor i 'grad-tmp) (nth i grads)))))
@@ -93,6 +95,9 @@
 
 (n2w zeros numcl:zeros)
 (n2w arange numcl:arange)
+
+(defmacro array-ref (tensor &rest args)
+  `(const (numcl:aref (data ,tensor) ,@args)))
 
 (defclass gaussiandb () ((mean :initform nil
 			       :initarg :mean

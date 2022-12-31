@@ -15,6 +15,8 @@
 	   #:deftrainer
 	   #:step-model
 
+	   #:defdataset
+
 	   #:model
 	   #:update
 	   #:zero-grad
@@ -23,6 +25,10 @@
 	   #:backward
 	   #:parameters
 	   #:hide-from-tree
+
+	   #:train
+	   #:get-dataset
+	   #:get-dataset-length
 	   
 	   #:parameter
 	   #:call
@@ -33,6 +39,8 @@
 	   #:normal
 	   #:arange
 	   #:ones-like
+	   #:array-ref
+	   
 	   #:self
 
 	   #:relu

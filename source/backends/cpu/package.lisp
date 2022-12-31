@@ -3,4 +3,4 @@
 
 (defpackage cl-waffe.backends.cpu
   (:use :cl)
-  (:export #:kernel))
+  (:export #:kernel #:infomation))

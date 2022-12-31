@@ -6,4 +6,5 @@
   (:export :linear
            :linearlayer
 	   :denselayer
-	   :mse))
+           :mse
+           :cross-entropy))

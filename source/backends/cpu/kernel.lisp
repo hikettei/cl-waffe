@@ -29,3 +29,4 @@
     (:transpose (numcl:transpose (car args) (second args)))
     (T (error "~a is nt yet implemented" ope))))
 
+(defun infomation ())
