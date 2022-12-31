@@ -1,6 +1,0 @@
-[submodule "source/cl-termgraph"]
-	path = source/cl-termgraph
-	url = git@github.com:hikettei/cl-termgraph.git
-[submodule "source/cl-cram"]
-	path = source/cl-cram
-	url = git@github.com:hikettei/cl-cram.git

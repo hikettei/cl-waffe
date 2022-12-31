@@ -70,10 +70,6 @@
 (setq train (MnistData mnist-dataset mnist-target))
 (setq valid (MnistData mnist-dataset-test mnist-target-test))
 
-(dotimes (i (get-dataset-length train))
-  (let ((args (get-dataset train i)))
-    (print i)
-    (print (step-model trainer (car args) (second args)))
-    ))
+(train trainer train :max-iterate 20)
 
 

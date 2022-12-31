@@ -12,9 +12,14 @@
   :version nil
   :description "an opencl-based deeplearning library"
   :pathname "source"
-  :depends-on (#:numcl)
+  :depends-on (#:numcl #:cl-ansi-text)
   :in-order-to ((test-op (test-op cl-waffe-test)))
-  :components ((:module "backends/cpu"
+  :components ((:file "cl-cram")
+	       (:module "cl-termgraph"
+		:components ((:file "package")
+			     (:file "cl-termgraph")
+			     (:file "figure")))
+	       (:module "backends/cpu"
 		:components ((:file "package")
 			     (:file "kernel")))
 	       (:module "backends/opencl"

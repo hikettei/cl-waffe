@@ -37,6 +37,9 @@
 (defun step-model (trainer &rest args)
   (apply (slot-value trainer 'step-model) trainer args))
 
+(defun step-model1 (trainer args)
+  (apply (slot-value trainer 'step-model) trainer args))
+
 (defmacro defdataset (name args &key parameters forward length)
   (labels ((assure-args (x)
 		     (if (or (eq (symbol-name x) "parameters")
@@ -76,6 +79,40 @@
 (defun get-dataset-length (dataset)
   (apply (slot-value dataset 'length) (list dataset)))
 
-(defun train (trainer dataset &key (enable-animation t))
+(defun train (trainer dataset &key (enable-animation t)
+		                (epoch 1)
+			     	(max-iterate nil)
+				(verbose t)
+				(stream t)
+				(progress-bar-freq 1)
+				(save-model-path nil)
+				(width 20)
+				(height 5)
+				(color :while))
+  (let ((losses `(0.0)))
+    (dotimes (epoch-num epoch)
+      (if verbose
+	  (format stream "~C==|Epoch: ~a|======================~C" #\newline epoch-num #\newline))
 
-  )
+      (let ((status-bar nil))
+	(fresh-line)
+	(if (and enable-animation verbose)
+	    (cl-cram:init-progress-bar status-bar (format nil "loss:~a" (first losses)) (get-dataset-length dataset)))
+	(dotimes (i (if max-iterate max-iterate (get-dataset-length dataset)))
+	  (let* ((args (get-dataset dataset i))
+		 (loss (data (step-model1 trainer args))))
+	    (push loss losses)
+	    (if (and enable-animation verbose)
+		(cl-cram:update status-bar 1 :desc (format nil "loss:~a" (first losses))))))
+	(let ((figure (make-instance 'cl-termgraph:figure-graph-frame
+				     :figure #'(lambda (a) (multiple-value-bind (n _) (round a) (declare (ignore a))
+							     (if (< (length losses) n) (nth n losses) 0.0)))
+				     :from 0
+				     :end (length losses)
+				     :width width
+				     :height height
+				     :name (format nil "|Losses at Epoch: ~a|" epoch-num))))
+	  (cl-termgraph:plot figure nil)
+	  (cl-cram:discard-all-progress-bar)
+	  (setq losses `(0.0)))))))
+	    
