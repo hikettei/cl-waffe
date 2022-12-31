@@ -24,3 +24,6 @@
 	  (error "Could not find any parameter")
 	  (butlast parameters)))))
 
+(defmacro init-optimizer (optim model &rest args)
+  `(,optim (find-parameters ,model) ,@args))
+

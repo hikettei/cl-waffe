@@ -28,15 +28,11 @@
 (setq input (randn (* 28 28) 128))
 (setq out (sum (call model input) 0))
 
-(setq m (cl-waffe.optimizers:find-parameters model))
-
-(setq optim (cl-waffe.optimizers:sgd m))
+(setq optim (cl-waffe.optimizers:init-optimizer cl-waffe.optimizers:sgd model))
 
 (backward out)
-
-(print m)
 (call optim)
-(print (data (car m)))
+
 ;(print n)
 (print out)
 

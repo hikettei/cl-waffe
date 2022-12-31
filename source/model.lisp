@@ -11,13 +11,25 @@
 	  result)
 	result)))
 
-(defmacro defoptimizer (name args &key parameters update)
-  `(defmodel ,name ,args :parameters ,parameters :forward ,update :backward nil :hide-from-tree nil))
+(defmacro defoptimizer (name args &key parameters update zero-grad)
+  (unless zero-grad
+    (error ":zero-grad is nil"))
+  `(defmodel ,name ,args
+     :parameters ,parameters
+     :forward ,update
+     :backward (() (dolist (p (self ,zero-grad))
+		     (setf (slot-value p 'grad) `(nil . nil))
+		     (setf (slot-value p 'grad-tmp) nil)))
+     :hide-from-tree nil))
 
 (defmacro defnode (name args &key parameters forward backward)
   `(defmodel ,name ,args :parameters ,parameters :forward ,forward :backward ,backward :hide-from-tree T))
 
 (defmacro defmodel (name args &key parameters forward backward hide-from-tree)
+  #|
+  Define an node.
+  Args: hide-from-tree ... if true, this node is detached from autograd. (that is, when backward, use backward defined in itself)
+  |#
   (labels ((assure-args (x)
 	     (if (or (equal (symbol-name x) "forward")
 		     (equal (symbol-name x) "backward")
@@ -28,10 +40,10 @@
 		 x)))
     (unless forward
       (error "insufficient forms"))
-    `(defmacro ,name (&rest init-args &aux (c (gensym)))
+    `(defmacro ,name (&rest init-args &aux (constructor-name (gensym)))
        `(progn
 	  (defstruct (,(gensym (symbol-name ',name))
-		      (:constructor ,c (,@',args &aux ,@',parameters))
+		      (:constructor ,constructor-name (,@',args &aux ,@',parameters))
 		      (:print-function (lambda (m stream k)
 					 (declare (ignore k))
 					 (render-simple-model-structure stream m))))
@@ -56,10 +68,13 @@
 				   ,@lbody)))
 			    nil))
 	   ,@',(map 'list (lambda (x) (assure-args (car x))) parameters))
-	  (,c ,@init-args)))))
+	  (,constructor-name ,@init-args)))))
 
 (defun render-simple-model-structure (stream model)
-  (format stream "[Model: ~a]" (type-of model)))
+  (format stream "[~a: ~a]" (if (slot-value model 'hide-from-tree)
+				"Node "
+				"Model")
+	  (type-of model)))
 
 (defun print-model (model)
   (fresh-line)
@@ -94,7 +109,7 @@
 
 	    (if (= indent-level 0)
 		(progn
-		  (format stream "=======")))))
+		  (format stream ""))))) ;in the end of model
       (labels ((indent-with ()
 		 (dotimes (_ (+ indent-level *initial-indent-size*))
 		   (format stream " "))))

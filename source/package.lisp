@@ -12,6 +12,12 @@
 	   #:defmodel
 	   #:defnode
 	   #:defoptimizer
+	   #:deftrainer
+	   #:step-model
+
+	   #:model
+	   #:update
+	   #:zero-grad
 
 	   #:forward
 	   #:backward

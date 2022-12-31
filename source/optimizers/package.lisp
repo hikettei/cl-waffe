@@ -6,6 +6,7 @@
   (:export
    :is-waffe-model
    :find-parameters
+   :init-optimizer
 
    :SGD))
 

@@ -25,6 +25,7 @@
 					     "backends/opencl"))
 	       (:file "kernel")
 	       (:file "model")
+	       (:file "trainer" :depends-on ("optimizers"))
 	       (:file "functions")
 	       (:file "operators")
 	       (:module "optimizers"

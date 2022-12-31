@@ -12,6 +12,7 @@
   :licence nil
   :depends-on (:cl-waffe :fiveam)
   :components ((:module "t" :components ((:file "package")
+					 (:file "mnist")
 					 (:file "operators")
 					 (:file "network")
 					 (:file "tensor-operate")
