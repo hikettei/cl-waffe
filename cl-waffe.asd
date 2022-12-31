@@ -24,7 +24,7 @@
 	       (:file "package" :depends-on ("backends/cpu"
 					     "backends/opencl"))
 	       (:file "kernel")
-	       (:file "model" :depends-on ("optimizers"))
+	       (:file "model")
 	       (:file "functions")
 	       (:file "operators")
 	       (:module "optimizers"

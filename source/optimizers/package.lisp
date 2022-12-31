@@ -4,7 +4,9 @@
 (defpackage cl-waffe.optimizers
   (:use :cl :cl-waffe)
   (:export
-   #:is-waffe-model
-   #:find-parameters))
+   :is-waffe-model
+   :find-parameters
+
+   :SGD))
 
 

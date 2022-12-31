@@ -23,6 +23,11 @@
 (defun data (tensor)
   (slot-value tensor 'data))
 
+(defun (setf data) (val &optional tensor)
+  (if tensor
+      (setf (slot-value tensor 'data) val)
+      tensor))
+
 (defun is-tensor (grad)
   (typep grad 'WaffeTensor))
 

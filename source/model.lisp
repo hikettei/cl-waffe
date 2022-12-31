@@ -12,7 +12,7 @@
 	result)))
 
 (defmacro defoptimizer (name args &key parameters update)
-  `(defmodel ,name ,args :parameters ,parameters :forward ,update :backward nil :hide-from-tree T))
+  `(defmodel ,name ,args :parameters ,parameters :forward ,update :backward nil :hide-from-tree nil))
 
 (defmacro defnode (name args &key parameters forward backward)
   `(defmodel ,name ,args :parameters ,parameters :forward ,forward :backward ,backward :hide-from-tree T))
