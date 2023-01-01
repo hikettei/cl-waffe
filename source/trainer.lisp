@@ -79,6 +79,19 @@
 (defun get-dataset-length (dataset)
   (apply (slot-value dataset 'length) (list dataset)))
 
+(defun eq-ntimes (width &optional (word "="))
+  (with-output-to-string (str) (dotimes (_ (* 2 width)) (declare (ignore _)) (format str word))))
+
+(defun format-title (title start-from width)
+  (let ((base (eq-ntimes width)))
+    (setf (subseq base start-from (+ start-from (length title))) title)
+    base))
+
+(defmacro maxlist (list)
+  `(let ((max-item (apply #'max ,list)))
+     (if (<= max-item 1.0) 1.0 max-item)))
+
+
 (defun train (trainer dataset &key (enable-animation t)
 		                (epoch 1)
 			     	(max-iterate nil)
@@ -86,37 +99,45 @@
 				(stream t)
 				(progress-bar-freq 1)
 				(save-model-path nil)
-				(width 20)
-				(height 5)
-				(color :while))
-  (let ((losses `(0.0))
+				(width 45)
+				(height 7)) ; stream指定してtxtファイルにログを残せるようにしたい
+  (let ((losses `(0.0)) ; cl-termgraph assumes that loss >= 0
+	(prev-losses nil)
+	(prev-losses1 nil)
 	(status-bar nil))
     (if (and enable-animation verbose)
 	(cl-cram:init-progress-bar status-bar (format nil "loss:~a" (first losses)) (get-dataset-length dataset)))
     (dotimes (epoch-num epoch)
       (if verbose
-	  (format stream "~C==|Epoch: ~a|======================~C" #\newline epoch-num #\newline))
+	  (progn
+	    (format stream "~C~a~C" #\newline (eq-ntimes width "–") #\newline)
+	    (format stream "~C~a~C" #\newline  (format-title (format nil "|~a Epoch:|" epoch-num) 4 width) #\newline)
+	    (format stream "~C~a~C" #\newline (eq-ntimes width "–") #\newline)))
 
       (let ((total-len (if max-iterate max-iterate (get-dataset-length dataset))))
-	(fresh-line)
-	(print "losses")
+	(setq cl-termgraph:*dif* (if (< width total-len) (* width (/ 1 total-len)) (/ 1 total-len)))
 	(dotimes (i total-len)
 	  (let* ((args (get-dataset dataset i))
 		 (loss (data (step-model1 trainer args))))
 	    (push loss losses)
 	    (if (and enable-animation verbose)
 		(cl-cram:update status-bar 1 :desc (format nil "loss:~a" (first losses))))))
-	(let ((figure (make-instance 'cl-termgraph:figure-graph-frame
-				     :figure #'(lambda (a) (multiple-value-bind (n _) (round a) (declare (ignore a))
-							     (if (< (length losses) n) (nth n losses) 0.0)))
-				     :from 0
-				     :end (length losses)
-				     :width width
-				     :height height
-				     :name (format nil "|Losses at Epoch: ~a|" epoch-num))))
-	  (cl-termgraph:plot figure nil)
+	(let* ((losses-aorder (map 'list (lambda (x) (* (/ x (maxlist (butlast losses))) height)) (cdr (reverse losses))))
+	       (pallet (cl-termgraph:make-listplot-frame (* 2 width) height)))
+	  (cl-termgraph:init-line pallet :white)
+	  (cl-termgraph:listplot-write pallet losses-aorder :blue)
+	  (if prev-losses
+	      (cl-termgraph:listplot-write pallet prev-losses :red))
+	  (format stream "~C" #\newline)
+	  (cl-termgraph:listplot-print pallet :x-label "n" :y-label "loss" :title nil
+					      :descriptions (if prev-losses
+								`((:red "prev-losses" ,(apply #'min prev-losses1) ,(apply #'max prev-losses1))
+								  (:blue "losses" ,(apply #'min losses) ,(apply #'max losses)))
+								`((:blue "losses" ,(apply #'min losses) ,(apply #'max losses))))
+					      :stream stream)
+	  (setq prev-losses1 losses)
+	  (setq prev-losses losses-aorder)
+	  (cl-cram:update status-bar 0 :desc (format nil "Preparing for Next Batch...") :reset t)
+	  (setq losses `(0.0)))))))
 
-	(cl-cram:update status-bar total-len :desc (format nil "loss:~a" (first losses)) :reset t)
-	(setq losses `(0.0)))))))
 
-	    

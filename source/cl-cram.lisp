@@ -67,11 +67,11 @@
       (setf (pbar-count status) 0))
   (if desc
       (setf (pbar-desc status) desc))
-  (if *progress-bar-enabled*
-      (backward-lines))
+  ;(if *progress-bar-enabled*
+  ;    (backward-lines))
+  (format t "~C" #\newline)
   (dolist (i *all-of-progress-bars*)
     (format t (render i)))
-  (fresh-line)
   nil)
 
 (declaim (ftype (function (progress-bar-status) string) render))

@@ -6,4 +6,3 @@
 
 (defun cross-entropy (x y &optional (delta 1e-7)) ; not supporting mini-batch
   (mul -1 (sum (sum (mul y (loge (add x delta))) 1) 0)))
-

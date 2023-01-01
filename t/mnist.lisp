@@ -3,6 +3,19 @@
 
 (in-suite :test)
 
+(setq pallet (cl-termgraph:make-listplot-frame 40 14))
+(setq l1 `(10 10 10 9.5 8 8 8 8 8 7 7 7 6 5 5 4 3 3 2 2 2 1 1 1 1 1 1 1 1 1 1 1 1 0.5))
+(setq l2 `(11 11 11 9.5))
+
+(cl-termgraph:init-line pallet :white)
+(cl-termgraph:listplot-write pallet l1 :blue)
+(cl-termgraph:listplot-write pallet l2 :red)
+
+(cl-termgraph:listplot-print pallet :x-label "n" :y-label "loss"
+				    :title "Test"
+				    :descriptions `((:red "prev-loss" 0 4)
+						    (:blue "current-loss" 0 3)))
+
 (defmodel MLP (activation)
   :parameters ((layer1 (cl-waffe.nn:denselayer (* 28 28) 512 NIL activation))
 	       (layer2 (cl-waffe.nn:denselayer 512 256 NIL activation))
