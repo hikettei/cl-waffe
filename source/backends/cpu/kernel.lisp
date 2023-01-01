@@ -17,7 +17,7 @@
     (:sub (numcl:- (car args) (second args)))
     (:mul (numcl:* (car args) (second args)))
     (:div (numcl:/ (car args) (second args)))
-    (:dot (numcl:vdot (car args) (second args)))
+    (:dot (numcl:matmul (car args) (second args))) ;vdot? matmul? or?
     (:log (numcl:log (car args)))
     (:exp (numcl:exp (car args)))
     (:pow (numcl:expt (car args) (second args)))

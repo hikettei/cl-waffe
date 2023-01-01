@@ -57,14 +57,14 @@
   :backward ((dy) (list (callop :reshape dy (self prev-shape)))))
 
 (defnode DotProductTensor nil
-  :parameters ((xi T) (yi T) (i 1))
-  :forward ((x1 x2) (setf (self xi) x1)
+  :parameters ((xi T) (yi T))
+  :forward ((x1 x2) ; only supports 2d and 2d arrays
+		    (setf (self xi) x1)
 		    (setf (self yi) x2)
 		    (callop :dot x1 x2))
   :backward ((dy)
-	     (let ((tensor (if (= (mod i 2) 0) (self xi) (self yi)))) ; how awful...
-	       (incf (self i) 1)
-	       (list (callop :dot dy (transpose tensor)) (callop :dot dy (transpose tensor))))))
+	       (list (callop :dot dy (transpose (self yi)))
+		     (callop :dot (transpose (self xi)) dy))))
 
 (defnode TransposeTensor (shape)
   :parameters ((prev-shape T) (shape shape))

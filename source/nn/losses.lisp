@@ -4,8 +4,6 @@
 (defun mse (p y) ; PowBackward...
   (mean (pow (sub p y) 2) 0))
 
-(defun cross-entropy (x y &optional (delta 1e-7))
-  (let* ((coeff (div -1.0 (max (length (data x)) 1)))
-	 (res (mul coeff (mul y (sum (loge (add x delta)) 0))))) ; axis=0?
-    res))
+(defun cross-entropy (x y &optional (delta 1e-7)) ; not supporting mini-batch
+  (mul -1 (sum (sum (mul y (loge (add x delta))) 1) 0)))
 

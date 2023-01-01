@@ -40,6 +40,7 @@
 	   #:arange
 	   #:ones-like
 	   #:array-ref
+	   #:array-ref-expand
 	   
 	   #:self
 

@@ -99,6 +99,7 @@
 
       (let ((total-len (if max-iterate max-iterate (get-dataset-length dataset))))
 	(fresh-line)
+	(print "losses")
 	(dotimes (i total-len)
 	  (let* ((args (get-dataset dataset i))
 		 (loss (data (step-model1 trainer args))))
@@ -116,8 +117,6 @@
 	  (cl-termgraph:plot figure nil)
 
 	(cl-cram:update status-bar total-len :desc (format nil "loss:~a" (first losses)) :reset t)
-	(setq losses `(0.0))
-	)))))
+	(setq losses `(0.0)))))))
 
-;todo cl-termgraph入れる
 	    

@@ -80,7 +80,7 @@
 		(if (typep (nth-tensor tensor i 'grad) 'cons)
 		    (setf (nth-tensor tensor i 'grad) (data (nth i grads)))
 		    (setf (nth-tensor tensor i 'grad) (data (add (nth-tensor tensor i 'grad)
-							    (data (nth i grads)))))))
+							         (nth i grads))))))
 	    (backward (nth-var tensor i)))))
       (setf (slot-value tensor 'grad-tmp) (if (slot-value tensor 'grad)
 					  (repeat tensor 0)
@@ -98,6 +98,9 @@
 
 (defmacro array-ref (tensor &rest args)
   `(const (numcl:aref (data ,tensor) ,@args)))
+
+(defmacro array-ref-expand (tensor &rest args)
+  `(const (numcl:expand-dims (numcl:aref (data ,tensor) ,@args) 0)))
 
 (defclass gaussiandb () ((mean :initform nil
 			       :initarg :mean
@@ -173,7 +176,7 @@
   (const (numcl:asarray arr)))
 
 (defun ones-like (arr)
-  (const (numcl:ones-like (data arr))))
+  (const (numcl:ones (shape (numcl:asarray arr)))))
 
 (defun write-description (res backward backend)
   (write-string (format nil " :device :~a :backward ~A" backend backward) res))

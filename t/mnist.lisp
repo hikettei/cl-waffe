@@ -4,9 +4,9 @@
 (in-suite :test)
 
 (defmodel MLP (activation)
-  :parameters ((layer1 (cl-waffe.nn:denselayer (* 28 28) 128 T activation))
-	       (layer2 (cl-waffe.nn:denselayer 128 256 T activation))
-	       (layer3 (cl-waffe.nn:denselayer 256 10 T activation)))
+  :parameters ((layer1 (cl-waffe.nn:denselayer (* 28 28) 512 NIL activation))
+	       (layer2 (cl-waffe.nn:denselayer 512 256 NIL activation))
+	       (layer3 (cl-waffe.nn:denselayer 256 10 NIL activation)))
   :forward ((x)
 	    (call (self layer3)
 		  (call (self layer2)
@@ -17,7 +17,7 @@
   :optimizer      cl-waffe.optimizers:SGD
   :optimizer-args (:lr lr)
   :step-model ((x y)
-	       (let ((out (cl-waffe.nn:mse (call (model) x) y)))
+	       (let ((out (cl-waffe.nn:cross-entropy (call (model) x) y)))
 		 (backward out)
 		 (update)
 		 (zero-grad)
@@ -25,8 +25,8 @@
 
 (defdataset Mnistdata (train valid)
   :parameters ((train train) (valid valid))
-  :forward ((index) (list (array-ref (self train) index t)
-			  (array-ref (self valid) index t)))
+  :forward ((index) (list (array-ref-expand (self train) index t)
+			  (array-ref-expand (self valid) index t)))
   :length (() (car (shape (self train)))))
 
 (defmacro do-index-value-list ((index value list) &body body)
@@ -70,6 +70,6 @@
 (setq train (MnistData mnist-dataset mnist-target))
 (setq valid (MnistData mnist-dataset-test mnist-target-test))
 
-(train trainer train :max-iterate 1 :epoch 60)
+(train trainer train :max-iterate 4 :epoch 60)
 
 
