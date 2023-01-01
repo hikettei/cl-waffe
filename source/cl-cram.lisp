@@ -60,16 +60,18 @@
   `(fround (* 100 (/ (pbar-count ,status) (pbar-total ,status)))))
 
 ;(declaim (ftype (function (progress-bar-status fixnum)) update))
-(defun update (status count &key desc)
+(defun update (status count &key desc reset)
   (declare (optimize (speed 3) (safety 0) (debug 0)))
   (incf (pbar-count status) count)
-  (fresh-line);
+  (if reset
+      (setf (pbar-count status) 0))
   (if desc
       (setf (pbar-desc status) desc))
   (if *progress-bar-enabled*
       (backward-lines))
   (dolist (i *all-of-progress-bars*)
     (format t (render i)))
+  (fresh-line)
   nil)
 
 (declaim (ftype (function (progress-bar-status) string) render))

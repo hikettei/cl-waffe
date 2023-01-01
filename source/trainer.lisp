@@ -89,16 +89,17 @@
 				(width 20)
 				(height 5)
 				(color :while))
-  (let ((losses `(0.0)))
+  (let ((losses `(0.0))
+	(status-bar nil))
+    (if (and enable-animation verbose)
+	(cl-cram:init-progress-bar status-bar (format nil "loss:~a" (first losses)) (get-dataset-length dataset)))
     (dotimes (epoch-num epoch)
       (if verbose
 	  (format stream "~C==|Epoch: ~a|======================~C" #\newline epoch-num #\newline))
 
-      (let ((status-bar nil))
+      (let ((total-len (if max-iterate max-iterate (get-dataset-length dataset))))
 	(fresh-line)
-	(if (and enable-animation verbose)
-	    (cl-cram:init-progress-bar status-bar (format nil "loss:~a" (first losses)) (get-dataset-length dataset)))
-	(dotimes (i (if max-iterate max-iterate (get-dataset-length dataset)))
+	(dotimes (i total-len)
 	  (let* ((args (get-dataset dataset i))
 		 (loss (data (step-model1 trainer args))))
 	    (push loss losses)
@@ -113,6 +114,10 @@
 				     :height height
 				     :name (format nil "|Losses at Epoch: ~a|" epoch-num))))
 	  (cl-termgraph:plot figure nil)
-	  (cl-cram:discard-all-progress-bar)
-	  (setq losses `(0.0)))))))
+
+	(cl-cram:update status-bar total-len :desc (format nil "loss:~a" (first losses)) :reset t)
+	(setq losses `(0.0))
+	)))))
+
+;todo cl-termgraph入れる
 	    

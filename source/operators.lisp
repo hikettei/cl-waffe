@@ -43,7 +43,7 @@
   :backward ((dy) ; ???
 	     (list (callop :mul (callop :mul dy (self yi)) (callop :pow (self xi) (sub (self yi) 1)))
 		   (callop :mul dy (callop :mul
-					   (callop :log (callop :pow (self xi) (self yi)))
+					   (callop :div (callop :log (callop :pow (self xi) (self yi))) (self yi))
 					   (callop :pow (self xi) (self yi)))))))
 
 (defnode LogTensor nil
