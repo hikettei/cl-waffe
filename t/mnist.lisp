@@ -6,7 +6,7 @@
 (defmodel MLP (activation)
   :parameters ((layer1 (cl-waffe.nn:denselayer (* 28 28) 128 T activation))
 	       (layer2 (cl-waffe.nn:denselayer 128 256 T activation))
-	       (layer3 (cl-waffe.nn:linearlayer 256 10 T)))
+	       (layer3 (cl-waffe.nn:denselayer 256 10 T activation)))
   :forward ((x)
 	    (call (self layer3)
 		  (call (self layer2)
@@ -70,6 +70,6 @@
 (setq train (MnistData mnist-dataset mnist-target))
 (setq valid (MnistData mnist-dataset-test mnist-target-test))
 
-(train trainer train :max-iterate 20)
+(train trainer train :max-iterate 1 :epoch 60)
 
 
