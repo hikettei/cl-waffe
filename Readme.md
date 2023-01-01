@@ -1,23 +1,65 @@
 
 # cl-waffe
 
-Deeplearningのライブラリを自作しようとしている。。。
+Deeplearningのライブラリを自作しようとしている。。。冬休み終わったら時間なくて放棄しちゃうかも
 
-# 目標
+# Todo/Memos
 
-自動微分 PyTorchのようなわかりやすい設計
 
-CPU OpenCL Cudaなどのbackend
+Numclは使いたくないがOpenBLASに依存しないで動くようにしたい。
 
-行列演算はnumclベースにする。色々な環境で動くようにする。
+-> cl-waffe上ではcl標準のarrayで動作
 
-最適化を頑張る。。。
+-> numclベースの行列演算を書き換える
 
-FP16 FP8
+-> WaffeTensor >> (Numcl mgl-mat opencl-kernel...)
 
-Dataset Model Optimizerの統合、使いやすくする
 
-Trainer Classに学習する時のlambda式を渡すみたいな。。。
+reshape/randnなどの関数を自前実装(骨が折れる...)
+
+-> 命名規則をどうにかする(logeとかwf-tanhとかはわかりずらい)
+
+-> Tensorの型をちゃんと定義する + FP16/FP8
+
+-> 次元配列の演算, ミニバッチ学習
+
+-> (data tensor) = CL標準配列と定義
+
+-> 学習データの読み込みがめちゃくちゃ遅い... MNISTですら重たい
+
+
+必要ライブラリの管理(versionなど)
+
+
+Error表示をちゃんと書く(invaild argument numberとかはわかりずらい)
+
+
+画像/テキストのloaderを作る CLのライブラリにいい感じのやつが見当たらない。。。
+
+
+ProgressBarに残り時間の推定を実装/Update-Frequencyを用意
+
+
+学習時のLossの推移をSLIME上かtxtに保存できるように書いておく
+
+
+えげちぃWarningの解消
+
+
+モデルの計算式書く時にS式はしんどい、yaccで中置記法->S式に変換するマクロ作る (exa: (with-waffe-exp 1+ a))
+
+
+BackendをCPU/Cuda(OpenCl)に増やす
+
+
+OptimizerにAdam/Momentum/RMSPropを実装
+
+
+Embeddingやsinとか、機能を増やす
+
+
+プロファイリングして最適化を頑張る。。。
+
 
 # Tutorials
 
@@ -31,51 +73,14 @@ $ ros config set dynamic-space-size 4gb
 
 RuliaChan (Twitter: @ichndm)
 
-### Todo
+### memos
 
-defmodelでParameterの初期値をnilにすると代入できなくなる、後から代入したいならTを使うように
-
-行列演算
-
-numclでCPUのカーネル
-
-openclでopenclのカーネル
-
-numclのバージョン管理
-
-モデルの表示(like torch keras)をしたいから、defmodelを二種類作る
-
-Kernelの命令のwiki作る
-
-termplotでlossのグラフを表示する
-
-Error表示わかりやすくする. (invaild argument numberとかどの関数？ってなる)
-
-DLWaffeみたいなTrainer Classを実装
-
-画像, テキスト読み込み用のライブラリを作る
-
-Seq2Seqを実装
-
-Transformerを実装
-
-# Kernel Instructions
-
-:add ... 3DArray + 3DArray
-
-明日やること
-
-Optimizer Loss Activationの実装
-
-Optimizer  ... Adam SGD
-
-Loss       ... Mse CrossEntropy
-
-Activation ... ReLU Sigmoid tanh
+; nodeのパラメーターの初期値にnil使えないのを覚えておく
 
 
-Trainer Classの実装
+## Environment
 
-Epochのログとかを表示する (cl-cram使いたい)
-
-termgraphを使う
+```
+SBCL 2.2.5
+macOS Monterey version 12.4
+```
