@@ -61,11 +61,11 @@
 		 x)))
     (unless forward
       (error "insufficient forms"))
-    `(defmacro ,name (&rest init-args &aux (constructor-name (gensym)))
+    (let ((constructor-name (gensym)))
+      `(progn ; 二重の遅延評価。。。いつか直す
        `(progn
-	  (declare (ignore ,@',(map 'list (lambda (x) (car x)) parameters)))
 	  (defstruct (,(gensym (symbol-name ',name))
-		      (:constructor ,constructor-name (,@',args &aux ,@',parameters))
+		      (:constructor ,',constructor-name (,@',args &aux ,@',parameters))
 		      (:print-function (lambda (m stream k)
 					 (declare (ignore k))
 					 (render-simple-model-structure stream m))))
@@ -90,7 +90,9 @@
 				   ,@lbody)))
 			    nil))
 	   ,@',(map 'list (lambda (x) (assure-args (car x))) parameters))
-	  (,constructor-name ,@init-args)))))
+	  
+	  (defmacro ,',name (&rest init-args)
+	    `(,constructor-name ,@init-args)))))))
 
 (defun render-simple-model-structure (stream model)
   (format stream "[~a: ~a]" (if (slot-value model 'hide-from-tree)

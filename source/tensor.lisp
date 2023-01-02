@@ -65,7 +65,7 @@
   `(or fixnum float))
 
 (deftype Waffe-Array ()
-  `(or mgl-mat:mat))
+  `(or mgl-mat:mat simple-array))
 
 (defun waffe-array (c)
   (and (typep c 'simple-array)
@@ -262,10 +262,9 @@
       (next-node dims-indices nil nil)
       (setf tensor (call (CutBackward value) tensor)))))
 
-(defmacro !where ())
-(defmacro !index ())
+(defmacro !where ()) ; todo
+(defmacro !index ()) ; todo
   
-
 (defmacro !row-major-aref (tensor index)
   `(mgl-mat:row-major-mref (data ,tensor) ,index))
 
@@ -361,10 +360,12 @@
 	(concatenate 'string (subseq str 0 *print-char-max-len*) "...")
 	str)))
 
+
 (defun pprint-1d-vector (stream data)
   (if (> (!dims data) 1)
       (error ""))
-  
+  (print data)
+  (print (!aref data 0))
   (if (>= (!size data) *print-arr-max-size*)
       (write-string (format nil "(~A ~A ~2~ ~A ~A)"
 			    (reduce-str (!aref data 0))
@@ -408,7 +409,6 @@
 				(if (= 2 (!dims data))
 				    (progn
 				      (dotimes (_ (+ (* 2 indent-size) 3))
-					(declare (ignore _))
 					(write-string " " stream))
 				      (write-string "..." stream)
 				      (write-char #\Newline stream)))
@@ -429,11 +429,15 @@
 	  (write-string "#Const(" res)
 	  (write-string "#Parameter{" res))
       
-      (if (or (typep contents 'vector) (typep contents 'array))
+      (if (or (typep contents 'array)
+	      (typep contents 'vector)) ; typep tensor 'waffe-tensor
+	  ; squeezeeが実装できるまでTensorでは使えない
+          ; (!aref)するときに次数が下がらないため
+          ; mgl -> numclにして表示する？ redefiningを直す
 	  (progn
 	    (pprint-vector res contents newline (if (null grad)
 						    (+ indent-size (length "#Const("))
-						    (+ indent-size (length "#Parameter{")))) ; Numcl Array
+						    (+ indent-size (length "#Parameter{"))))
 	    (write-string (format nil " :shape ~a" (!shape contents)) res)
 	    (unless (null grad)
 	      (write-description res backward backend))
