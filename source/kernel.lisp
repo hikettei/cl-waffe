@@ -1,7 +1,7 @@
 
 (in-package :cl-waffe)
 
-(defparameter *kernels* `(:cpu :opencl))
+(defparameter *kernels* `(:cpu :opencl :mgl))
 (defparameter *instructions* `(:add
 			       :sub
 			       :mul
@@ -49,7 +49,8 @@
 		    variables))
 	 (result (case backend
 		   (:cpu (cl-waffe.backends.cpu:kernel instruction args))
-		   (:opencl (cl-waffe.backends.opencl:kernel instruction args)))))
+		   (:opencl (cl-waffe.backends.opencl:kernel instruction args))
+		   (:mgl (cl-waffe.backends.mgl:kernel instruction args)))))
     (const result :backend backend)))
 
 (defun backends-available ())

@@ -11,6 +11,22 @@
 (defparameter *default-backend* :mgl)
 
 ; utils
+(defstruct (WaffeTensor (:print-function
+			 (lambda (tensor stream depth)
+			   (declare (ignore depth))
+			   (format stream (render-tensor tensor))))
+	                (:constructor
+			    tensor
+			    (value &key (backend *default-backend*) (extend nil)
+			     &aux (data (init-waffe-tensor-data value)) (backend (check-backend backend extend)) (grad `(nil nil))))
+			(:constructor
+			    const
+			    (value &key (backend *default-backend*) (extend nil)
+			     &aux (data (init-waffe-tensor-data value)) (backend (check-backend backend extend)) (grad nil))))
+  data grad-tmp backward backend grad variables state)
+
+(defmacro data (tensor)
+  `(waffetensor-data ,tensor))
 
 (defun double-random ()
   (let ((i (random 1.0)))
@@ -61,29 +77,29 @@
 
 
 
-(deftype WaffeSupportedDataType ()
+(deftype waffesupporteddatatype ()
   `(or fixnum float))
 
-(deftype Waffe-Array ()
+(deftype waffe-array ()
   `(or mgl-mat:mat simple-array))
 
 (defun waffe-array (c)
   (and (typep c 'simple-array)
-       (every (lambda (e) (typep e 'WaffeSupportedDataType)) c)))
+       (every (lambda (e) (typep e 'waffesupporteddatatype)) c)))
 
-(deftype WaffeTensorContentType ()
+(deftype waffetensorcontenttype ()
   `(or mgl-mat:mat
-       WaffeSupportedDataType))
+       waffesupporteddatatype))
       ; (satisfies waffe-array)))
 
 (defun init-waffe-tensor-data (content)
   ; todo: coerce: simple-array -> mgl-mat
 
-  (let* ((content (if (typep content 'WaffeTensor)
+  (let* ((content (if (typep content 'waffetensor)
 		      (data content)
 		      content)))
-    (unless (typep content 'WaffeTensorContentType)
-      (error "WaffeTensor only supports of type of mgl-mat and fixnum/float but got: ~a" (type-of content)))
+    (unless (typep content 'waffetensorcontenttype)
+      (error "Waffetensor only supports of type of mgl-mat and fixnum/float but got: ~a" (type-of content)))
 
     content))
 
@@ -92,26 +108,9 @@
       backend
       (waffetensor-backend tensor)))
 
-(defstruct (WaffeTensor (:print-function
-			 (lambda (tensor stream depth)
-			   (declare (ignore depth))
-			   (format stream (render-tensor tensor))))
-	                (:constructor
-			    tensor
-			    (value &key (backend *default-backend*) (extend nil)
-			     &aux (data (init-waffe-tensor-data value)) (backend (check-backend backend extend)) (grad `(nil nil))))
-			(:constructor
-			    const
-			    (value &key (backend *default-backend*) (extend nil)
-			     &aux (data (init-waffe-tensor-data value)) (backend (check-backend backend extend)) (grad nil))))
-  data grad-tmp backward backend grad variables state)
-
 (defmacro extend-from (new-tensor old-tensor)
   ; (extend-from (!randn `(10 10)) old-tensor) :backendとかを引き継ぐ
   (declare (ignore new-tensor old-tensor)))
-
-(defmacro data (tensor)
-  `(waffetensor-data ,tensor))
 
 (defun (setf data) (val &optional tensor)
   (if tensor
@@ -120,7 +119,7 @@
 
 ; is-tensor
 (defun waffe-tensor-p (tensor)
-  (typep tensor 'WaffeTensor))
+  (typep tensor 'waffetensor))
 
 (defmacro grad (tensor)
   `(progn
@@ -133,7 +132,7 @@
   (waffetensor-grad ,tensor)))
 
 (defmacro parameter (tensor)
-  ; Make constants parameter
+  ; make constants parameter
   `(with-slots ((data data) (backend backend)) ,tensor
      (tensor data :backend backend)))
   
@@ -162,14 +161,14 @@
 					  (repeat tensor 0)))))
 
 
-(defmacro !zeros (shape &optional (dtype :double))
-  `(const (mgl-mat:make-mat ,shape :ctype ,dtype :initial-element 0)))
+(defun !zeros (shape &optional (dtype :double))
+  (const (mgl-mat:make-mat shape :ctype dtype :initial-element 0)))
 
-(defmacro !ones (shape &optional (dtype :double))
-  `(const (mgl-mat:make-mat ,shape :ctype ,dtype :initial-element 1)))
+(defun !ones (shape &optional (dtype :double))
+  (const (mgl-mat:make-mat shape :ctype dtype :initial-element 1)))
 
-(defmacro !fill (shape element &optional (dtype  :double))
-  `(const (mgl-mat:make-mat ,shape :ctype ,dtype :initial-element ,element)))
+(defun !fill (shape element &optional (dtype  :double))
+  (const (mgl-mat:make-mat shape :ctype dtype :initial-element element)))
 
 (defmacro !arange (&rest args)
   `(const (mgl-mat:make-mat (numcl:shape (numcl:arange ,@args))
@@ -179,12 +178,6 @@
   `(let ((,new-tensor (!zeros-like ,tensor)))
      (mgl-mat:copy! (data ,tensor) (data ,new-tensor))
      ,new-tensor))
-
-(defnode CutTensor (result)
-  :parameters ((result1 result))
-  :forward ((x) (self result1))
-  :backward ((dy) (list dy))) ; todo
-
 
 (defun !aref (tensor &rest dims) ; example: (aref vector 1 t t)
   (let* ((tensor-dims (!shape tensor))
@@ -218,7 +211,9 @@
 			        (concatenate 'list rargs `(,m)))))))
 
 	(next-node dims-indices nil nil)
-	(call (CutTensor result) tensor))))
+
+      ;(call (CutTensor result) tensor))
+    result)))
 
 (defun (setf !aref) (value &optional tensor &rest dims) ; (setf tensor value)
   (let* ((tensor-dims (!shape value))
@@ -261,7 +256,8 @@
 				(concatenate 'list args `(,m))
 				(concatenate 'list rargs `(,m)))))))
       (next-node dims-indices nil nil)
-      (setf tensor (call (CutBackward value) tensor)))))
+      ;(setf tensor (call (CutTensor value) tensor))
+      (setf tensor result))))
 
 (defmacro !where ()) ; todo
 (defmacro !index ()) ; todo
@@ -325,22 +321,22 @@
       (mgl-mat:mat-dimension (data tensor) nth)
       (mgl-mat:mat-dimensions (data tensor))))
 
-(defmacro !dims (tensor)
-  `(length (!shape ,tensor)))
+(defun !dims (tensor)
+  (length (!shape tensor)))
 
-(defmacro !size (tensor)
-  `(apply #'* (!shape ,tensor)))
+(defun !size (tensor)
+  (apply #'* (!shape tensor)))
 
-(defmacro !size-1 (tensor)
-  `(1- (!size ,tensor)))
+(defun !size-1 (tensor)
+  (1- (!size tensor)))
 
-(defmacro !zeros-like (tensor)
-  `(!zeros (!shape ,tensor)))
+(defun !zeros-like (tensor)
+  (!zeros (!shape tensor)))
 
-(defmacro !ones-like (tensor)
-  `(!ones (!shape ,tensor)))
+(defun !ones-like (tensor)
+  (!ones (!shape tensor)))
 
-(defmacro !full-like ())
+(defun !full-like ())
 
 
 (defun write-description (res backward backend)

@@ -72,5 +72,23 @@
 	   #:!zeros-like
 	   #:!ones-like
 	   #:!full-like
-	   
+
+	   #:!add
+	   #:!sub
+	   #:!mul
+	   #:!div
+
+	   #:!dot
+	   #:!sum
+	   #:!pow
+	   #:!mean
+	   #:!log
+	   #:!reshape
+	   #:!transpose
+	   #:!exp
+	   #:!matmul
+
+	   #:!relu
+	   #:!sigmoid
+	   #:!tanh
 	   ))

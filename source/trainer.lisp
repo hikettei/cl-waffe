@@ -82,7 +82,7 @@
   (apply (slot-value dataset 'length) (list dataset)))
 
 (defun eq-ntimes (width &optional (word "="))
-  (with-output-to-string (str) (dotimes (_ (* 2 width)) (declare (ignore _)) (format str word))))
+  (with-output-to-string (str) (dotimes (_ (* 2 width)) (format str word))))
 
 (defun format-title (title start-from width)
   (let ((base (eq-ntimes width)))

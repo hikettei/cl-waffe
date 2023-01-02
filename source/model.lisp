@@ -30,11 +30,11 @@
 	  (error "Could not find any parameter")
 	  (butlast parameters)))))
 
-(defmacro defoptimizer (name args &key parameters update)
+(defmacro defoptimizer (name args &key parameters update &aux (model (gensym)))
   `(defmodel ,name ,args
      :parameters ,parameters
      :forward ,update
-     :backward ((model) (dolist (p (find-variables model))
+     :backward ((,model) (dolist (p (find-variables ,model))
 			  (setf (slot-value p 'state) nil)
 			  (setf (slot-value p 'backward) nil)
 			  (setf (slot-value p 'variables) nil)
@@ -74,7 +74,9 @@
 			   (lbody (cdr forward))
 			   (self-heap (gensym)))
 			 (dolist (i largs) (assure-args i))
-			 `(lambda ,(concatenate 'list (list self-heap) largs)
+		       `(lambda ,(concatenate 'list (list self-heap) largs)
+			  ,(if (null parameters)
+			       `(declare (ignore ,self-heap)))
 			    (macrolet ((self (name)
 					 `(slot-value ,',self-heap ',name)))
 			      ,@lbody))))
@@ -84,6 +86,8 @@
 				  (self-heap (gensym)))
 			      (dolist (i largs) (assure-args i))
 			      `(lambda ,(concatenate 'list (list self-heap) largs)
+				 ,(if (null parameters)
+				      `(declare (ignore ,self-heap)))
 				 (macrolet ((self (name)
 					      `(slot-value ,',self-heap ',name)))
 				   ,@lbody)))
@@ -139,5 +143,5 @@
 	(if (typep model 'WaffeTensor)
 	    (progn
 	      (indent-with)
-	      (format stream "(+)~a:~a~C" prefix (shape model) #\newline))))))
+	      (format stream "(+)~a:~a~C" prefix (!shape model) #\newline))))))
 
