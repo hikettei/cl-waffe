@@ -28,7 +28,7 @@
 	    ;(print (div (add 1 (wf-tanh (div x 2))) 2)) which is a faster way?
 	    ;(callop :div (const 1.0) (add 1.0 (t-exp (mul -1.0 x)))))
             (callop :div (add 1 (wf-tanh (div x 2))) (const 2)))
-  :backward ((dy) (let ((p (sigmoid (self xi))))
+  :backward ((dy) (let ((p (igmoid (self xi))))
 		    (list (callop :mul p (mul dy (sub 1 p)))))))
 
 (defun sigmoid (x)

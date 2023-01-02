@@ -3,35 +3,33 @@
 
 
 (defparameter *print-char-max-len* 5)
+; todo comment...
 (defparameter *print-arr-max-size* 6)
+;
 (defparameter *print-mat-max-size* 3)
+;
 
-(defstruct (WaffeTensor (:print-function
-			 (lambda (tensor stream depth)
-			   (declare (ignore depth))
-			   (format stream (render-tensor tensor))))
-	                (:constructor
-			    tensor
-			    (value &optional (backend :cpu)
-			     &aux (data (if (typep value 'WaffeTensor) (data value) value)) (backend backend) (grad `(nil nil))))
-			       ;(grad-tmp `(nil nil)) (backward `(nil nil)) (variables `(nil nil)) (state `(nil nil))))
-			(:constructor
-			    const
-			    (value &optional (backend :cpu)
-			     &aux (data (if (typep value 'WaffeTensor) (data value) value)) (backend backend) (grad nil))))
-			      ; (grad-tmp `(nil nil)) (backward `(nil nil)) (variables `(nil nil)) (state `(nil nil)))))
-  data grad-tmp backward backend grad variables state)
 
-(defun data (tensor)
-  (slot-value tensor 'data))
+; utils
 
-(defun (setf data) (val &optional tensor)
-  (if tensor
-      (setf (slot-value tensor 'data) val)
-      tensor))
+(defun double-random ()
+  (let ((i (random 1.0)))
+    (if (eq i 0.0)
+	(setq i (double-random)))
+    i))
 
-(defun is-tensor (grad)
-  (typep grad 'WaffeTensor))
+(defun gaussiandb-random (var mean)
+  (let* ((r (double-random))
+	 (c (sqrt (* -2 (log r)))))
+    (if (< (double-random) 0.5)
+	(+    (* c
+	      (sin (* 2.0 pi (double-random)))
+	      var)
+	      mean)
+	(+    (* c
+	      (cos (* 2.0 pi (double-random)))
+	      var)
+	      mean))))
 
 (defun repeat (tensor n)
   (map 'list
@@ -40,6 +38,20 @@
 	 (const n))
        (slot-value tensor 'variables)))
 
+(defun repeat-n (val n)
+  (let ((a `(,val)))
+    (dotimes (_ (1- n))
+      (push val a))
+    a))
+
+(defun repeat-c (n)
+  (let ((a `(0))
+	(i 0))
+    (dotimes (_ (1- n))
+      (incf i 1)
+      (push i a))
+    (reverse a)))
+
 (defmacro nth-var (tensor n)
   `(nth ,n (slot-value ,tensor 'variables)))
 
@@ -47,176 +59,282 @@
   ; the nth variavle of tensor
   `(slot-value (nth-var ,tensor ,n) ,s))
 
+
+
+(deftype WaffeSupportedDataType ()
+  `(or fixnum float))
+
+(deftype Waffe-Array ()
+  `(or mgl-mat:mat))
+
+(defun waffe-array (c)
+  (and (typep c 'simple-array)
+       (every (lambda (e) (typep e 'WaffeSupportedDataType)) c)))
+
+(deftype WaffeTensorContentType ()
+  `(or mgl-mat:mat
+       WaffeSupportedDataType))
+      ; (satisfies waffe-array)))
+
+(defun init-waffe-tensor-data (content)
+  ; todo: coerce: simple-array -> mgl-mat
+
+  (let* ((content (if (typep content 'WaffeTensor)
+		      (data content)
+		      content)))
+    (unless (typep content 'WaffeTensorContentType)
+      (error "WaffeTensor only supports of type of mgl-mat and fixnum/float but got: ~a" (type-of content)))
+
+    content))
+
+(defstruct (WaffeTensor (:print-function
+			 (lambda (tensor stream depth)
+			   (declare (ignore depth))
+			   (format stream (render-tensor tensor))))
+	                (:constructor
+			    tensor
+			    (value &optional (backend :cpu)
+			     &aux (data (init-waffe-tensor-data value)) (backend backend) (grad `(nil nil))))
+			(:constructor
+			    const
+			    (value &optional (backend :cpu)
+			     &aux (data (init-waffe-tensor-data value)) (backend backend) (grad nil))))
+  data grad-tmp backward backend grad variables state)
+
+(defmacro extend-from (new-tensor old-tensor)
+  ; (extend-from (!randn `(10 10)) old-tensor) :backendとかを引き継ぐ
+  )
+
+(defmacro data (tensor)
+  `(waffetensor-data ,tensor))
+
+(defun (setf data) (val &optional tensor)
+  (if tensor
+      (setf (waffetensor-data tensor) val)
+      tensor))
+
+; is-tensor
+(defun waffe-tensor-p (tensor)
+  (typep tensor 'WaffeTensor))
+
 (defmacro grad (tensor)
   `(progn
-     (unless (slot-value ,tensor 'grad)
-       (error "The tensor is not a parameter"))
+     (unless (waffetensor-grad ,tensor)
+       (error "The tensor is not a parameter. Constants doesn't have a grad"))
 
-     (if (typep (slot-value ,tensor 'grad) 'cons)
-	 (error "Before using grad, you need to call (backward tensor)"))
+     (if (typep (waffetensor-grad ,tensor) 'cons)
+	 (error "A grad is nil. Please remain you need to call (backward out) before using a grad"))
   
-  (slot-value ,tensor 'grad)))
+  (waffetensor-grad ,tensor)))
 
 (defmacro parameter (tensor)
-  ; enable grad
+  ; Make constants parameter
   `(with-slots ((data data) (backend backend)) ,tensor
      (tensor data backend)))
   
 (defun backward (tensor)
-  (if (slot-value tensor 'backward)
-      (let ((state (slot-value tensor 'state))
-	    (grad  (if (slot-value tensor 'grad-tmp)
-		       (if (typep (slot-value tensor 'grad-tmp) 'list)
-			   (slot-value tensor 'grad-tmp)
-			   (repeat tensor (slot-value tensor 'grad-tmp)))
+  (if (waffetensor-backward tensor)
+      (let ((state (waffetensor-state tensor))
+	    (grad  (if (waffetensor-grad-tmp tensor)
+		       (if (typep (waffetensor-grad-tmp tensor) 'list)
+			   (waffetensor-grad-tmp tensor)
+			   (repeat tensor (waffetensor-grad-tmp tensor)))
 		       (repeat tensor 1))))
-	(dotimes (i (length (slot-value tensor 'variables)))
-	  (let ((grads (apply (slot-value tensor 'backward) state (list (nth i grad)))))
+	(dotimes (i (length (waffetensor-variables tensor)))
+	  (let ((grads (apply (waffetensor-backward tensor) state (list (nth i grad)))))
 	    (if (nth-tensor tensor i 'grad-tmp)
 		(setf (nth-tensor tensor i 'grad-tmp)
-		      (repeat (nth-var tensor i) (data (add (nth-tensor tensor i 'grad-tmp) (nth i grads)))))
+		      (repeat (nth-var tensor i) (data (!add (nth-tensor tensor i 'grad-tmp) (nth i grads)))))
 		(setf (nth-tensor tensor i 'grad-tmp) (repeat (nth-var tensor i) (data (nth i grads)))))
 	    (if (nth-tensor tensor i 'grad)
 		(if (typep (nth-tensor tensor i 'grad) 'cons)
 		    (setf (nth-tensor tensor i 'grad) (data (nth i grads)))
-		    (setf (nth-tensor tensor i 'grad) (data (add (nth-tensor tensor i 'grad)
+		    (setf (nth-tensor tensor i 'grad) (data (!add (nth-tensor tensor i 'grad)
 							         (nth i grads))))))
 	    (backward (nth-var tensor i)))))
-      (setf (slot-value tensor 'grad-tmp) (if (slot-value tensor 'grad)
+      (setf (slot-value tensor 'grad-tmp) (if (waffetensor-grad tensor)
 					  (repeat tensor 0)
 					  (repeat tensor 0)))))
 
-(defmacro numcl-to-waffe (waffe-name numcl-name)
-  `(defmacro ,waffe-name (&rest args)
-     `(const (,',numcl-name ,@args))))
 
-(defmacro n2w (waffe-name numcl-name)
-  `(numcl-to-waffe ,waffe-name ,numcl-name))
+(defmacro !zeros (shape &optional (dtype :double))
+  `(const (mgl-mat:make-mat ,shape :ctype ,dtype :initial-element 0)))
 
-(n2w zeros numcl:zeros)
-(n2w arange numcl:arange)
+(defmacro !ones (shape &optional (dtype :double))
+  `(const (mgl-mat:make-mat ,shape :ctype ,dtype :initial-element 1)))
+
+(defmacro !fill (shape element &optional (dtype  :double))
+  `(const (mgl-mat:make-mat ,shape :ctype ,dtype :initial-element ,element)))
+
+(defmacro !arange (&rest args)
+  `(const (mgl-mat:make-mat (numcl:shape (numcl:arange ,@args))
+			    :initial-contents (numcl:arange ,@args))))
+
+;(defnode Arefbackward)
+(defun !aref (tensor &rest dims) ; backwardも作る tと自動補完
+  ; Mref+LOOPなのでPerformanceが非常に悪い...
+  ; assers dims = fixnum (dims = 1 1 1) -> slot-value
+  (let* ((tensor-dims (!shape tensor))
+	 (dims (cond
+		   ((> (!dims tensor) (length dims)) ;supply dims
+		    (concatenate 'list dims (repeat-n t (- (!dims tensor) (length dims)))) )
+		 ((= (!dims tensor) (length dims)) dims)
+		 (T (error "!aref: dim ~a beyonds tensor's dim" dims))))
+	 (dims-result (mapcar (lambda (x y) (if (typep x 'fixnum)
+						 1
+						 y))
+			      dims tensor-dims))
+	 (result (!zeros dims-result))
+	 (dims-indices (mapcar (lambda (x y)
+				 (if (typep x 'fixnum)
+				     1
+				     (repeat-c y)))
+			       dims dims-result)))
+    (labels ((next-node (drest args rargs)
+	       (if (= (length args) (length dims))
+		   (progn ; emmm...
+		     (eval `(setf (mgl-mat:mref (data ,result) ,@rargs)
+				  (mgl-mat:mref (data ,tensor) ,@args)))))
+	       (if (typep (car drest) 'fixnum)
+		   (next-node (cdr drest) (concatenate 'list args
+						       `(,(car drest)))
+			      (concatenate 'list rargs `(0)))
+		   (dolist (m (car drest))
+		     (next-node (cdr drest)
+				(concatenate 'list args `(,m))
+			        (concatenate 'list rargs `(,m)))))))
+
+	(next-node dims-indices nil nil)
+	result)))
+
+;(defun (setf !aref) ());backward
+  
+
+(defmacro !row-major-aref (tensor index)
+  `(mgl-mat:row-major-mref (data ,tensor) ,index))
+
+(defmacro !with-mgl-operation (tensor var &body body)
+  `(let ((,var (data ,tensor)))
+     ,@body))
 
 (defmacro array-ref (tensor &rest args)
   `(const (numcl:aref (data ,tensor) ,@args)))
 
-(defmacro array-ref-expand (tensor &rest args)
+(defmacro array-ref-expand (tensor &rest args) ; iru?
   `(const (numcl:expand-dims (numcl:aref (data ,tensor) ,@args) 0)))
 
-(defclass gaussiandb () ((mean :initform nil
-			       :initarg :mean
-			       :accessor gaussiandb-mean)
-			 (var :initform nil
-			      :initarg :var
-			      :accessor gaussiandb-var)))
-
-(defun double-random ()
-  (let ((i (random 1.0)))
-    (if (eq i 0.0)
-	(setq i (double-random))) i))
-
-(defmethod gaussiandb-random ((gs gaussiandb))
-  (let* ((r (double-random))
-	 (c (sqrt (* -2 (log r)))))
-    (if (< (double-random) 0.5)
-	(+    (* c
-	      (sin (* 2.0 pi (double-random)))
-	      (gaussiandb-var gs))
-	      (gaussiandb-mean gs))
-	(+    (* c
-	      (cos (* 2.0 pi (double-random)))
-	      (gaussiandb-var gs))
-	      (gaussiandb-mean gs)))))
-
-(defun getrandn ()
-  (let ((u1 (loop for x = (random 1.0)
-                  when (> x 0.0)
-                    return x))
-        (u2 (loop for x = (random 1.0)
-                  when (> x 0.0)
-                    return x)))
-    (values (* (sqrt (* -2 (log u1))) (cos (* 2 pi u2)))
-            (* (sqrt (* -2 (log u1))) (sin (* 2 pi u2))))))
-
-(defun random-tensor (dims limit)
-  (let* ((res (make-array dims))
+(defun !random (dims limit)
+  ; if limit=fixnum, !random=randint
+  ; if limit=float,  !random=random
+  (let* ((res (!zeros dims))
          (upper-limit (if (listp limit) (second limit) limit))
          (lower-limit (if (listp limit) (first limit) 0))
          (len (if (listp dims) (reduce #'* dims) dims))
          (tmp-limit (- upper-limit lower-limit)))
     (loop for n from 0 to (1- len)
-          do (setf (row-major-aref res n)
+          do (setf (!row-major-aref res n)
                    (+ (random tmp-limit) lower-limit)))
-    (const (numcl:asarray res))))
+    res))
 
-(defun randn (&rest dims)
-  (let* ((res (make-array dims))
+(defun !random-with (dims f)
+  (let* ((res (!zeros dims))
          (len (if (listp dims) (reduce #'* dims) dims)))
     (loop for n from 0 to (1- len)
-          do (setf (row-major-aref res n) (getrandn)))
-    (const (numcl:asarray res))))
+          do (setf (!row-major-aref res n)
+                   (funcall f)))
+    f))
 
-(defun normal (dims &optional (mean 2.0) (var 1.0))
-  (let* ((gb (make-instance 'gaussiandb :mean mean :var var))
-	 (res (make-array dims))
+(defun !normal (dims &optional (mean 2.0) (var 1.0))
+  (let* ((res (!zeros dims))
          (len (if (listp dims) (reduce #'* dims) dims)))
     (loop for n from 0 to (1- len)
-          do (setf (row-major-aref res n) (gaussiandb-random gb)))
-    (const (numcl:asarray res))))
+          do (setf (!row-major-aref res n) (gaussiandb-random var mean)))
+    res))
 
-(defun shape (tensor &optional (nth nil))
-  (unless (typep (data tensor) 'array)
-    ;error
-    )
+(defmacro !randn (dims)
+  `(!normal ,dims 0 1))
+
+(defun !binomial (dims n p)
+  (declare (ignore dims n p)))
+
+(defun !beta (dims a b)
+  (declare (ignore dims a b)))
+
+(defun !gamma (dims scale)
+  (declare (ignore dims scale)))
+
+(defun !chisquare (dims df)
+  (declare (ignore dims df)))
+
+
+(defun !shape (tensor &optional (nth nil))
+  (unless (typep (data tensor) 'waffe-array)
+    (error "Fixnum/Double/Float doesn't have a shape"))
   
   (if nth
-      (nth (data (assure-tensor nth)) (numcl:shape (data tensor)))
-      (numcl:shape (data tensor))))
+      (mgl-mat:mat-dimension (data tensor) nth)
+      (mgl-mat:mat-dimensions (data tensor))))
 
-(defun astensor (arr)
-  (const (numcl:asarray arr)))
+(defmacro !dims (tensor)
+  `(length (!shape ,tensor)))
 
-(defun ones-like (arr)
-  (const (numcl:ones (shape (numcl:asarray arr)))))
+(defmacro !size (tensor)
+  `(apply #'* (!shape ,tensor)))
+
+(defmacro !size-1 (tensor)
+  `(1- (!size ,tensor)))
+
+(defmacro !zeros-like (tensor)
+  `(!zeros (shape ,tensor)))
+
+(defmacro !ones-like (tensor)
+  `(!ones (shape ,tensor)))
+
+(defmacro !full-like ())
+
 
 (defun write-description (res backward backend)
+  ; Parameter { ... <= here }
   (write-string (format nil " :device :~a :backward ~A" backend backward) res))
 
 (defun reduce-str (obj)
+  ; align string content of tensor following *print-char-max-len*
+  ; Todo: 1.00000000001d0 <- 末端も表示
   (let ((str (format nil "~a" obj)))
     (if (>= (length str) *print-char-max-len*)
 	(concatenate 'string (subseq str 0 *print-char-max-len*) "...")
 	str)))
 
 (defun pprint-1d-vector (stream data)
-  (if (> (length (numcl:shape data)) 1)
+  (if (> (!dims data) 1)
       (error ""))
   
-  (if (>= (numcl:size data) *print-arr-max-size*)
+  (if (>= (!size data) *print-arr-max-size*)
       (write-string (format nil "(~A ~A ~2~ ~A ~A)"
-			    (reduce-str (numcl:aref data 0))
-			    (reduce-str (numcl:aref data 1))
-			    (reduce-str (numcl:aref data (- (numcl:size data) 2)))
-			    (reduce-str (numcl:aref data (1- (numcl:size data)))))
+			    (reduce-str (!aref data 0))
+			    (reduce-str (!aref data 1))
+			    (reduce-str (!aref data (-  (!size data) 2)))
+			    (reduce-str (!aref data (1- (!size data)))))
 		    stream)
       (progn
 	(write-string "(" stream)
-	(dotimes (i (numcl:size data))
-	  (write-string (format nil "~A" (reduce-str (numcl:aref data i))) stream)
-	  (unless (= i (1- (numcl:size data)))
+	(dotimes (i (!size data))
+	  (write-string (format nil "~A" (reduce-str (!aref data i))) stream)
+	  (unless (= i (!size-1 data))
 	    (write-string " " stream)))
 	(write-string ")" stream))))
 
 (defun pprint-vector (stream data &optional (newline T) (indent-size 0))
-  (case (length (numcl:shape data))
+  (case (!dims data)
     (1
      (pprint-1d-vector stream data))
     (T
      (write-string "(" stream)
-     (if (< (car (numcl:shape data)) *print-mat-max-size*)
+     (if (< (!shape data 0) *print-mat-max-size*)
 	 (progn
-	   (dotimes (i (car (numcl:shape data)))
-	     (pprint-vector stream (numcl:aref data i) newline (1+ indent-size))
-	     (unless (= i (1- (car (numcl:shape data))))
+	   (dotimes (i (!shape data 0))
+	     (pprint-vector stream (!aref data i) newline (1+ indent-size))
+	     (unless (= i (1- (!shape data 0)))
 	       (if newline
 		   (progn
 		     (write-char #\Newline stream)
@@ -231,7 +349,7 @@
 			  (if newline
 			      (progn
 				(write-char #\Newline stream)
-				(if (= 2 (length (numcl:shape data)))
+				(if (= 2 (!dims data))
 				    (progn
 				      (dotimes (_ (+ (* 2 indent-size) 3))
 					(declare (ignore _))
@@ -241,11 +359,11 @@
 				(dotimes (k (1+ indent-size))
 				  (write-string " " stream)))
 			      (write-string " " stream)))))
-	     (render-v (numcl:aref data 0) T)
+	     (render-v (!aref data 0) T)
 	     ;(render-v (numcl:aref data 1) T)
 	     
 	     ;(render-v (numcl:aref data (- (car (numcl:shape data)) 2)) T)
-	     (render-v (numcl:aref data (1- (car (numcl:shape data)))) NIL)
+	     (render-v (!aref data (1- (!shape data 0))) NIL)
 	     (write-string ")" stream)))))))
 
 (defun render-tensor (tensor &optional (newline T) (indent-size 0))
@@ -260,7 +378,7 @@
 	    (pprint-vector res contents newline (if (null grad)
 						    (+ indent-size (length "#Const("))
 						    (+ indent-size (length "#Parameter{")))) ; Numcl Array
-	    (write-string (format nil " :shape ~a" (numcl:shape contents)) res)
+	    (write-string (format nil " :shape ~a" (!shape contents)) res)
 	    (unless (null grad)
 	      (write-description res backward backend))
 	    (if (null grad)

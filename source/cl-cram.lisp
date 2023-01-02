@@ -61,7 +61,7 @@
 
 ;(declaim (ftype (function (progress-bar-status fixnum)) update))
 (defun update (status count &key desc reset)
-  (declare (optimize (speed 3) (safety 0) (debug 0)))
+  ;(declare (optimize (speed 3) (safety 0) (debug 0)))
   (incf (pbar-count status) count)
   (if reset
       (setf (pbar-count status) 0))
@@ -74,9 +74,9 @@
     (format t (render i)))
   nil)
 
-(declaim (ftype (function (progress-bar-status) string) render))
+;(declaim (ftype (function (progress-bar-status) string) render))
 (defun render (status)
-  (declare (optimize (speed 3) (safety 0) (debug 0)))
+  ;(declare (optimize (speed 3) (safety 0) (debug 0)))
   (with-output-to-string (bar)
     (let ((spl (- *indent* (pbar-desc-len status) -1)))
       (write-string (pbar-desc status) bar)

@@ -1,10 +1,6 @@
 
 (in-package :cl-user)
 
-(defpackage :cl-waffe-asd
-  (:use :cl :asdf))
-
-(in-package :cl-waffe-asd)
 
 (asdf:defsystem :cl-waffe
   :author "hikettei twitter -> @ichndm"

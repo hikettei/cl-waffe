@@ -6,16 +6,19 @@
   (:export #:waffetensor
            #:tensor
 	   #:const
+	   
 	   #:data
 	   #:grad
+
+	   #:waffe-tensor-p
 	   
 	   #:defmodel
 	   #:defnode
 	   #:defoptimizer
 	   #:deftrainer
-	   #:step-model
-
 	   #:defdataset
+	   
+	   #:step-model
 
 	   #:model
 	   #:update
@@ -33,6 +36,7 @@
 	   #:parameter
 	   #:call
 	   #:backward
+	   
 	   #:zeros
 	   #:randn
 	   #:random-tensor
