@@ -50,7 +50,7 @@
 	 (result (case backend
 		   (:cpu (cl-waffe.backends.cpu:kernel instruction args))
 		   (:opencl (cl-waffe.backends.opencl:kernel instruction args)))))
-    (const result backend)))
+    (const result :backend backend)))
 
 (defun backends-available ())
 

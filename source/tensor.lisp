@@ -108,7 +108,7 @@
 
 (defmacro extend-from (new-tensor old-tensor)
   ; (extend-from (!randn `(10 10)) old-tensor) :backendとかを引き継ぐ
-  )
+  (declare (ignore new-tensor old-tensor)))
 
 (defmacro data (tensor)
   `(waffetensor-data ,tensor))
@@ -135,7 +135,7 @@
 (defmacro parameter (tensor)
   ; Make constants parameter
   `(with-slots ((data data) (backend backend)) ,tensor
-     (tensor data backend)))
+     (tensor data :backend backend)))
   
 (defun backward (tensor)
   (if (waffetensor-backward tensor)
@@ -181,9 +181,10 @@
      ,new-tensor))
 
 (defnode CutTensor (result)
-  :parameters ((result result))
-  :forward ((x) (declare (ignore x)) (self result))
+  :parameters ((result1 result))
+  :forward ((x) (self result1))
   :backward ((dy) (list dy))) ; todo
+
 
 (defun !aref (tensor &rest dims) ; example: (aref vector 1 t t)
   (let* ((tensor-dims (!shape tensor))
@@ -271,12 +272,6 @@
 (defmacro !with-mgl-operation (tensor var &body body)
   `(let ((,var (data ,tensor)))
      ,@body))
-
-(defmacro array-ref (tensor &rest args)
-  `(const (numcl:aref (data ,tensor) ,@args)))
-
-(defmacro array-ref-expand (tensor &rest args) ; iru?
-  `(const (numcl:expand-dims (numcl:aref (data ,tensor) ,@args) 0)))
 
 (defun !random (dims limit)
   ; if limit=fixnum, !random=randint

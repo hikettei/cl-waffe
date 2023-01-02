@@ -2,7 +2,7 @@
 (in-package :cl-user)
 
 (defpackage cl-waffe
-  (:use :cl)
+  (:use :cl :mgl-mat)
   (:export #:waffetensor
            #:tensor
 	   #:const
@@ -36,16 +36,7 @@
 	   #:parameter
 	   #:call
 	   #:backward
-	   
-	   #:zeros
-	   #:randn
-	   #:random-tensor
-	   #:normal
-	   #:arange
-	   #:ones-like
-	   #:array-ref
-	   #:array-ref-expand
-	   
+	   	   
 	   #:self
 
 	   #:relu
@@ -53,20 +44,33 @@
 	   #:wf-tanh
 
 	   #:print-model
+
+	   #:*default-backend*
+	   #:extend-from
+	   #:!zeros
+	   #:!ones
+	   #:!fill
+	   #:!arange
+	   #:!aref
+	   #:!row-major-aref
+	   #:!with-mgl-operation
+	   #:!copy
+	   #:!index
+	   #:!where
+	   #:!random
+	   #:!random-with
+	   #:!normal
+	   #:!randn
+	   #:!binomial
+	   #:!beta
+	   #:!gamma
+	   #:!chisquare
+	   #:!shape
+	   #:!dims
+	   #:!size
+	   #:!size-1
+	   #:!zeros-like
+	   #:!ones-like
+	   #:!full-like
 	   
-	   #:add
-	   #:sub
-	   #:mul
-	   #:div
-	   #:dot
-	   #:pow
-	   #:loge
-	   #:t-exp
-	   #:sum
-	   #:mean
-	   #:shape
-	   #:reshape
-	   #:repeats
-	   #:transpose
-	   #:astensor
-	   #:matmul))
+	   ))
