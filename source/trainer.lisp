@@ -1,7 +1,6 @@
 
 (in-package :cl-waffe)
 
-
 (defmacro deftrainer (name args &key model optimizer optimizer-args step-model (forward NIL))
   (if forward (error ":forward is unavailable in deftrainer macro. use instead: :step-model"))
   (labels ((assure-args (x)
@@ -10,20 +9,20 @@
 			     (eq (symbol-name x) "step"))
 			 (error "cant use ~a as a name" (symbol-name x))
 			 x)))
-     (let ((constructor-name (gensym)))
+     `(defmacro ,name (&rest init-args &aux (constructor-name (gensym)))
 	`(progn
-	  (defstruct (,(gensym (symbol-name name))
+	  (defstruct (,(gensym (symbol-name ',name))
 		      (:print-function (lambda (trainer stream _)
 					 (declare (ignore trainer _))
 					 (format stream "[Trainer of ___]")))
-		      (:constructor ,constructor-name (,@(map 'list (lambda (x) (assure-args x)) args)
-						       &aux (model ,model)
-							 (optimizer (cl-waffe.optimizers:init-optimizer ,optimizer
+		      (:constructor ,constructor-name (,@',(map 'list (lambda (x) (assure-args x)) args)
+						       &aux (model ,',model)
+							 (optimizer (cl-waffe.optimizers:init-optimizer ,',optimizer
 													model
-													,@optimizer-args)))))
+													,@',optimizer-args)))))
 		     (model NIL)
 		     (optimizer NIL)
-		     (step-model ,(let ((largs (car step-model))
+		     (step-model ,',(let ((largs (car step-model))
 					  (lbody (cdr step-model))
 					  (self-heap (gensym)))
 				      `(lambda ,(concatenate 'list (list self-heap) largs)
@@ -31,15 +30,16 @@
 						    (update    (&rest args1) `(call (slot-value ,',self-heap 'optimizer) ,@args1))
 						    (zero-grad ()            `(funcall (slot-value (slot-value ,',self-heap 'optimizer) 'backward)
 										       (slot-value ,',self-heap 'optimizer) ,',model)))
-					   ,@lbody)))))
-	  (defmacro ,name (&rest init-args)
-	    `(,',constructor-name ,@init-args))))))
+					    ,@lbody)))))
+	  (,constructor-name ,@init-args)))))
+
 
 (defun step-model (trainer &rest args)
   (apply (slot-value trainer 'step-model) trainer args))
 
 (defun step-model1 (trainer args)
   (apply (slot-value trainer 'step-model) trainer args))
+
 
 (defmacro defdataset (name args &key parameters forward length)
   (labels ((assure-args (x)

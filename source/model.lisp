@@ -61,26 +61,26 @@
 		 x)))
     (unless forward
       (error "insufficient forms"))
-    (let ((constructor-name (gensym)))
-      `(progn
-	 (defstruct (,(gensym (symbol-name name))
-		      (:constructor ,constructor-name (,@args &aux ,@parameters))
+    `(defmacro ,name (&rest init-args &aux (constructor-name (gensym)))
+       `(progn
+	  (defstruct (,(gensym (symbol-name ',name))
+		      (:constructor ,constructor-name (,@',args &aux ,@',parameters))
 		      (:print-function (lambda (m stream k)
 					 (declare (ignore k))
 					 (render-simple-model-structure stream m))))
-	   (hide-from-tree ,hide-from-tree)
-	   (parameters ',(map 'list (lambda (x) (car x)) parameters))
-	   (forward ,(let ((largs (car forward))
-			   (lbody (cdr forward))
-			   (self-heap (gensym)))
+	   (hide-from-tree ,',hide-from-tree)
+	   (parameters ',',(map 'list (lambda (x) (car x)) parameters))
+	   (forward ,',(let ((largs (car forward))
+			     (lbody (cdr forward))
+			     (self-heap (gensym)))
 			 (dolist (i largs) (assure-args i))
-		       `(lambda ,(concatenate 'list (list self-heap) largs)
-			  ,(if (null parameters)
-			       `(declare (ignore ,self-heap)))
+			 `(lambda ,(concatenate 'list (list self-heap) largs)
+			    ,(if (null parameters)
+				 `(declare (ignore ,self-heap)))
 			    (macrolet ((self (name)
 					 `(slot-value ,',self-heap ',name)))
 			      ,@lbody))))
-	   (backward ,(if backward
+	   (backward ,',(if backward
 			    (let ((largs (car backward))
 				  (lbody (cdr backward))
 				  (self-heap (gensym)))
@@ -92,10 +92,9 @@
 					      `(slot-value ,',self-heap ',name)))
 				   ,@lbody)))
 			    nil))
-	   ,@(map 'list (lambda (x) (assure-args (car x))) parameters))
-	  
-	  (defmacro ,name (&rest init-args)
-	    `(,',constructor-name ,@init-args))))))
+	   ,@',(map 'list (lambda (x) (assure-args (car x))) parameters))
+	  (,constructor-name ,@init-args)))))
+
 
 (defun render-simple-model-structure (stream model)
   (format stream "[~a: ~a]" (if (slot-value model 'hide-from-tree)

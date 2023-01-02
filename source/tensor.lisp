@@ -77,7 +77,7 @@
 
 
 
-(deftype waffesupporteddatatype ()
+(deftype WaffeSupportedDataType ()
   `(or fixnum float))
 
 (deftype waffe-array ()
@@ -87,7 +87,7 @@
   (and (typep c 'simple-array)
        (every (lambda (e) (typep e 'waffesupporteddatatype)) c)))
 
-(deftype waffetensorcontenttype ()
+(deftype WaffeTensorContentType ()
   `(or mgl-mat:mat
        waffesupporteddatatype))
       ; (satisfies waffe-array)))
@@ -98,7 +98,7 @@
   (let* ((content (if (typep content 'waffetensor)
 		      (data content)
 		      content)))
-    (unless (typep content 'waffetensorcontenttype)
+    (unless (typep content 'WaffeTensorContentType)
       (error "Waffetensor only supports of type of mgl-mat and fixnum/float but got: ~a" (type-of content)))
 
     content))
@@ -179,6 +179,7 @@
      (mgl-mat:copy! (data ,tensor) (data ,new-tensor))
      ,new-tensor))
 
+;mref is ridiculously slow... 配列のサイズが一定以上の時,CL標準配列に書き直してから実行するように。
 (defun !aref (tensor &rest dims) ; example: (aref vector 1 t t)
   (let* ((tensor-dims (!shape tensor))
 	 (dims (cond
