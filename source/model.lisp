@@ -63,6 +63,7 @@
       (error "insufficient forms"))
     `(defmacro ,name (&rest init-args &aux (constructor-name (gensym)))
        `(progn
+	  (declare (ignore ,@',(map 'list (lambda (x) (car x)) parameters)))
 	  (defstruct (,(gensym (symbol-name ',name))
 		      (:constructor ,constructor-name (,@',args &aux ,@',parameters))
 		      (:print-function (lambda (m stream k)

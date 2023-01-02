@@ -8,7 +8,7 @@
 ;
 (defparameter *print-mat-max-size* 3)
 ;
-
+(defparameter *default-backend* :mgl)
 
 ; utils
 
@@ -87,18 +87,23 @@
 
     content))
 
+(defun check-backend (backend tensor)
+  (if (null tensor)
+      backend
+      (waffetensor-backend tensor)))
+
 (defstruct (WaffeTensor (:print-function
 			 (lambda (tensor stream depth)
 			   (declare (ignore depth))
 			   (format stream (render-tensor tensor))))
 	                (:constructor
 			    tensor
-			    (value &optional (backend :cpu)
-			     &aux (data (init-waffe-tensor-data value)) (backend backend) (grad `(nil nil))))
+			    (value &key (backend *default-backend*) (extend nil)
+			     &aux (data (init-waffe-tensor-data value)) (backend (check-backend backend extend)) (grad `(nil nil))))
 			(:constructor
 			    const
-			    (value &optional (backend :cpu)
-			     &aux (data (init-waffe-tensor-data value)) (backend backend) (grad nil))))
+			    (value &key (backend *default-backend*) (extend nil)
+			     &aux (data (init-waffe-tensor-data value)) (backend (check-backend backend extend)) (grad nil))))
   data grad-tmp backward backend grad variables state)
 
 (defmacro extend-from (new-tensor old-tensor)
@@ -169,11 +174,18 @@
 (defmacro !arange (&rest args)
   `(const (mgl-mat:make-mat (numcl:shape (numcl:arange ,@args))
 			    :initial-contents (numcl:arange ,@args))))
+;backendsの引き継ぎは？
+(defmacro !copy (tensor &aux (new-tensor (gensym)))
+  `(let ((,new-tensor (!zeros-like ,tensor)))
+     (mgl-mat:copy! (data ,tensor) (data ,new-tensor))
+     ,new-tensor))
 
-;(defnode Arefbackward)
-(defun !aref (tensor &rest dims) ; backwardも作る tと自動補完
-  ; Mref+LOOPなのでPerformanceが非常に悪い...
-  ; assers dims = fixnum (dims = 1 1 1) -> slot-value
+(defnode CutTensor (result)
+  :parameters ((result result))
+  :forward ((x) (declare (ignore x)) (self result))
+  :backward ((dy) (list dy))) ; todo
+
+(defun !aref (tensor &rest dims) ; example: (aref vector 1 t t)
   (let* ((tensor-dims (!shape tensor))
 	 (dims (cond
 		   ((> (!dims tensor) (length dims)) ;supply dims
@@ -205,9 +217,53 @@
 			        (concatenate 'list rargs `(,m)))))))
 
 	(next-node dims-indices nil nil)
-	result)))
+	(call (CutTensor result) tensor))))
 
-;(defun (setf !aref) ());backward
+(defun (setf !aref) (value &optional tensor &rest dims) ; (setf tensor value)
+  (let* ((tensor-dims (!shape value))
+	 (dims (cond
+		   ((> (!dims tensor) (length dims)) ;supply dims
+		    (concatenate 'list dims (repeat-n t (- (!dims tensor) (length dims)))) )
+		 ((= (!dims tensor) (length dims)) dims)
+		 (T (error "!aref: dim ~a beyonds tensor's dim" dims))))
+	 (dims-result (mapcar (lambda (x y) (if (typep x 'fixnum)
+						 1
+						 y))
+			      dims tensor-dims))
+	 (result (!copy tensor))
+	 (dims-indices (mapcar (lambda (x y)
+				 (if (typep x 'fixnum)
+				     1
+				     (repeat-c y)))
+			       dims dims-result)))
+    (unless (and (mapcar (lambda (x y)
+			   (if (typep y 'fixnum)
+			       (eq x y)
+			       t))
+			 (!shape value) dims-result))
+      (error "(setf !aref): mismatch dims ~a and ~a" (!shape value) dims-result))
+    
+    (labels ((next-node (drest args rargs)
+	       (if (= (length args) (length dims))
+		   (progn
+		     (print args)
+		     (print rargs)
+		     (print result) (print value)
+		     (eval `(setf (mgl-mat:mref (data ,result) ,@args)
+				  (mgl-mat:mref (data ,value)  ,@rargs)))))
+	       (if (typep (car drest) 'fixnum)
+		   (next-node (cdr drest) (concatenate 'list args
+						       `(,(car drest)))
+			      (concatenate 'list rargs `(0)))
+		   (dolist (m (car drest))
+		     (next-node (cdr drest)
+				(concatenate 'list args `(,m))
+				(concatenate 'list rargs `(,m)))))))
+      (next-node dims-indices nil nil)
+      (setf tensor (call (CutBackward value) tensor)))))
+
+(defmacro !where ())
+(defmacro !index ())
   
 
 (defmacro !row-major-aref (tensor index)
@@ -285,10 +341,10 @@
   `(1- (!size ,tensor)))
 
 (defmacro !zeros-like (tensor)
-  `(!zeros (shape ,tensor)))
+  `(!zeros (!shape ,tensor)))
 
 (defmacro !ones-like (tensor)
-  `(!ones (shape ,tensor)))
+  `(!ones (!shape ,tensor)))
 
 (defmacro !full-like ())
 
