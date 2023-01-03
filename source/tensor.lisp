@@ -10,7 +10,8 @@
 ;
 (defparameter *default-backend* :mgl)
 
-(defparameter *fp* :double) ;:float
+(defparameter mgl-mat:*DEFAULT-MAT-CTYPE* :double) ;double/float
+
 ; utils
 (defstruct (WaffeTensor (:print-function
 			 (lambda (tensor stream depth)
@@ -161,14 +162,14 @@
 					  (repeat tensor 0)))))
 
 
-(defun !zeros (shape &optional (dtype :double))
-  (const (mgl-mat:make-mat shape :ctype dtype :initial-element 0)))
+(defun !zeros (shape)
+  (const (mgl-mat:make-mat shape :initial-element 0)))
 
-(defun !ones (shape &optional (dtype :double))
-  (const (mgl-mat:make-mat shape :ctype dtype :initial-element 1)))
+(defun !ones (shape)
+  (const (mgl-mat:make-mat shape :initial-element 1)))
 
-(defun !fill (shape element &optional (dtype  :double))
-  (const (mgl-mat:make-mat shape :ctype dtype :initial-element element)))
+(defun !fill (shape element)
+  (const (mgl-mat:make-mat shape :initial-element element)))
 
 (defmacro !arange (&rest args)
   `(const (mgl-mat:make-mat (numcl:shape (numcl:arange ,@args))

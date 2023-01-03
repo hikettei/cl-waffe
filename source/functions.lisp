@@ -6,15 +6,15 @@
 	 (res (data tensor))
          (len (if (listp dims) (reduce #'* dims) dims)))
     (loop for n from 0 to (1- len)
-          do (setf (row-major-aref res n) (if (> (row-major-aref res n) (coerce 0 'double-float))
-						 (row-major-aref res n)
-						 (coerce 0 'double-float))))
+          do (setf (mgl-mat:row-major-mref res n) (if (> (mgl-mat:row-major-mref res n) (coerce 0 'float))
+						 (mgl-mat:row-major-mref res n)
+						 (coerce 0 'float))))
     res))
 
 (defnode ReLUTensor nil
   :parameters ((path-through T))
   :forward ((x)
-	    (setf (self path-through) (assure-tensor (numcl:asarray (plusns x))))
+	    (setf (self path-through) (assure-tensor (plusns x)))
 	    (callop :mul (self path-through) x))
   :backward ((dy) (list (callop :mul (self path-through) dy))))
 

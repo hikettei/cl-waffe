@@ -35,11 +35,11 @@
      :parameters ,parameters
      :forward ,update
      :backward ((,model) (dolist (p (find-variables ,model))
-			  (setf (slot-value p 'state) nil)
-			  (setf (slot-value p 'backward) nil)
-			  (setf (slot-value p 'variables) nil)
-			  (setf (slot-value p 'grad) nil)
-			  (setf (slot-value p 'grad-tmp) nil))
+			   (setf (waffetensor-state p) nil)
+			   (setf (waffetensor-backward p) nil)
+			   (setf (waffetensor-variables p) nil)
+			   (setf (waffetensor-grad p) `(nil nil))
+			   (setf (waffetensor-grad-tmp p) nil))
 		nil)
      :hide-from-tree nil))
 

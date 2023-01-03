@@ -23,6 +23,3 @@
 	       (funcall (cl-waffe:self activation)
 			(call (cl-waffe:self layer) x))))))
 
-
-
-

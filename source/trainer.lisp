@@ -29,7 +29,8 @@
 					 (macrolet ((model     ()            `(slot-value ,',self-heap 'model))
 						    (update    (&rest args1) `(call (slot-value ,',self-heap 'optimizer) ,@args1))
 						    (zero-grad ()            `(funcall (slot-value (slot-value ,',self-heap 'optimizer) 'backward)
-										       (slot-value ,',self-heap 'optimizer) ,',model)))
+										       (slot-value ,',self-heap 'optimizer)
+										       (slot-value ,',self-heap 'model))))
 					    ,@lbody)))))
 	  (,constructor-name ,@init-args)))))
 
