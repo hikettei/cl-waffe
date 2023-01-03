@@ -8,9 +8,27 @@
 ;
 (defparameter *print-mat-max-size* 3)
 ;
+(defparameter *default-backend* :mgl)
 
+(defparameter mgl-mat:*DEFAULT-MAT-CTYPE* :double) ;double/float
 
 ; utils
+(defstruct (WaffeTensor (:print-function
+			 (lambda (tensor stream depth)
+			   (declare (ignore depth))
+			   (format stream (render-tensor tensor))))
+	                (:constructor
+			    tensor
+			    (value &key (backend *default-backend*) (extend nil)
+			     &aux (data (init-waffe-tensor-data value)) (backend (check-backend backend extend)) (grad `(nil nil))))
+			(:constructor
+			    const
+			    (value &key (backend *default-backend*) (extend nil)
+			     &aux (data (init-waffe-tensor-data value)) (backend (check-backend backend extend)) (grad nil))))
+  data grad-tmp backward backend grad variables state)
+
+(defmacro data (tensor)
+  `(waffetensor-data ,tensor))
 
 (defun double-random ()
   (let ((i (random 1.0)))
@@ -44,9 +62,9 @@
       (push val a))
     a))
 
-(defun repeat-c (n)
-  (let ((a `(0))
-	(i 0))
+(defun repeat-c (n &key (start 0))
+  (let ((a `(,start))
+	(i start))
     (dotimes (_ (1- n))
       (incf i 1)
       (push i a))
@@ -60,53 +78,40 @@
   `(slot-value (nth-var ,tensor ,n) ,s))
 
 
-
 (deftype WaffeSupportedDataType ()
-  `(or fixnum float))
+  `(or fixnum float null))
 
-(deftype Waffe-Array ()
-  `(or mgl-mat:mat))
+(deftype waffe-array ()
+  `(or mgl-mat:mat simple-array))
 
 (defun waffe-array (c)
   (and (typep c 'simple-array)
-       (every (lambda (e) (typep e 'WaffeSupportedDataType)) c)))
+       (every (lambda (e) (typep e 'waffesupporteddatatype)) c)))
 
 (deftype WaffeTensorContentType ()
   `(or mgl-mat:mat
-       WaffeSupportedDataType))
+       waffesupporteddatatype))
       ; (satisfies waffe-array)))
 
 (defun init-waffe-tensor-data (content)
   ; todo: coerce: simple-array -> mgl-mat
 
-  (let* ((content (if (typep content 'WaffeTensor)
+  (let* ((content (if (typep content 'waffetensor)
 		      (data content)
 		      content)))
     (unless (typep content 'WaffeTensorContentType)
-      (error "WaffeTensor only supports of type of mgl-mat and fixnum/float but got: ~a" (type-of content)))
+      (error "Waffetensor only supports of type of mgl-mat and fixnum/float/null but got: ~a" (type-of content)))
 
     content))
 
-(defstruct (WaffeTensor (:print-function
-			 (lambda (tensor stream depth)
-			   (declare (ignore depth))
-			   (format stream (render-tensor tensor))))
-	                (:constructor
-			    tensor
-			    (value &optional (backend :cpu)
-			     &aux (data (init-waffe-tensor-data value)) (backend backend) (grad `(nil nil))))
-			(:constructor
-			    const
-			    (value &optional (backend :cpu)
-			     &aux (data (init-waffe-tensor-data value)) (backend backend) (grad nil))))
-  data grad-tmp backward backend grad variables state)
+(defun check-backend (backend tensor)
+  (if (null tensor)
+      backend
+      (waffetensor-backend tensor)))
 
 (defmacro extend-from (new-tensor old-tensor)
   ; (extend-from (!randn `(10 10)) old-tensor) :backendとかを引き継ぐ
-  )
-
-(defmacro data (tensor)
-  `(waffetensor-data ,tensor))
+  (declare (ignore new-tensor old-tensor)))
 
 (defun (setf data) (val &optional tensor)
   (if tensor
@@ -115,7 +120,7 @@
 
 ; is-tensor
 (defun waffe-tensor-p (tensor)
-  (typep tensor 'WaffeTensor))
+  (typep tensor 'waffetensor))
 
 (defmacro grad (tensor)
   `(progn
@@ -128,9 +133,9 @@
   (waffetensor-grad ,tensor)))
 
 (defmacro parameter (tensor)
-  ; Make constants parameter
+  ; make constants parameter
   `(with-slots ((data data) (backend backend)) ,tensor
-     (tensor data backend)))
+     (tensor data :backend backend)))
   
 (defun backward (tensor)
   (if (waffetensor-backward tensor)
@@ -157,24 +162,70 @@
 					  (repeat tensor 0)))))
 
 
-(defmacro !zeros (shape &optional (dtype :double))
-  `(const (mgl-mat:make-mat ,shape :ctype ,dtype :initial-element 0)))
+(defun !zeros (shape)
+  (const (mgl-mat:make-mat shape :initial-element 0)))
 
-(defmacro !ones (shape &optional (dtype :double))
-  `(const (mgl-mat:make-mat ,shape :ctype ,dtype :initial-element 1)))
+(defun !ones (shape)
+  (const (mgl-mat:make-mat shape :initial-element 1)))
 
-(defmacro !fill (shape element &optional (dtype  :double))
-  `(const (mgl-mat:make-mat ,shape :ctype ,dtype :initial-element ,element)))
+(defun !fill (shape element)
+  (const (mgl-mat:make-mat shape :initial-element element)))
 
 (defmacro !arange (&rest args)
   `(const (mgl-mat:make-mat (numcl:shape (numcl:arange ,@args))
 			    :initial-contents (numcl:arange ,@args))))
+;backendsの引き継ぎは？
+(defmacro !copy (tensor &aux (new-tensor (gensym)))
+  `(let ((,new-tensor (!zeros-like ,tensor)))
+     (mgl-mat:copy! (data ,tensor) (data ,new-tensor))
+     ,new-tensor))
 
-;(defnode Arefbackward)
-(defun !aref (tensor &rest dims) ; backwardも作る tと自動補完
-  ; Mref+LOOPなのでPerformanceが非常に悪い...
-  ; assers dims = fixnum (dims = 1 1 1) -> slot-value
-  (let* ((tensor-dims (!shape tensor))
+;mref is ridiculously slow... 配列のサイズが一定以上の時,CL標準配列に書き直してから実行するように。 or displaceベースで書き直す？
+(defun !aref (tensor &rest dims) ; example: (aref vector 1 t t)
+  (let* ((tensor-dims (!shape tensor)) ; Todo: (aref vector '(1 3) t t)
+	 (dims (cond
+		   ((> (!dims tensor) (length dims)) ;supply dims
+		    (concatenate 'list dims (repeat-n t (- (!dims tensor) (length dims)))) )
+		 ((= (!dims tensor) (length dims)) dims)
+		 (T (error "!aref: dim ~a beyonds tensor's dim" dims))))
+	 (dims-result (mapcar (lambda (x y) (if (typep x 'fixnum)
+						1
+						(if (typep x 'list)
+						    (progn
+						      (unless (= (length x) 2)
+							(error "!aref: an argument is following: index t `(from start)"))
+						      (- (second x) (car x)))
+						    y)))
+			      dims tensor-dims))
+	 (result (!zeros dims-result))
+	 (dims-indices (mapcar (lambda (x y)
+				 (if (typep x 'fixnum)
+				     1
+				     (if (typep x 'list)
+					 (repeat-c (- (second x) (car x)) :start (car x))
+					 (repeat-c y))))
+			       dims dims-result)))
+    (labels ((next-node (drest args rargs)
+	       (if (= (length args) (length dims))
+		   (progn ; emmm...
+		     (eval `(setf (mgl-mat:mref (data ,result) ,@rargs)
+				  (mgl-mat:mref (data ,tensor) ,@args)))))
+	       (if (typep (car drest) 'fixnum)
+		   (next-node (cdr drest) (concatenate 'list args
+						       `(,(nth (length args) dims)))
+			      (concatenate 'list rargs `(0)))
+		   (dotimes (i (length (car drest)))
+		     (next-node (cdr drest)
+				(concatenate 'list args `(,(nth i (car drest))))
+			        (concatenate 'list rargs `(,i)))))))
+
+	(next-node dims-indices nil nil)
+
+      ;(call (CutTensor result) tensor))
+    result)))
+
+(defun (setf !aref) (value &optional tensor &rest dims) ; (setf tensor value)
+  (let* ((tensor-dims (!shape value))
 	 (dims (cond
 		   ((> (!dims tensor) (length dims)) ;supply dims
 		    (concatenate 'list dims (repeat-n t (- (!dims tensor) (length dims)))) )
@@ -184,44 +235,48 @@
 						 1
 						 y))
 			      dims tensor-dims))
-	 (result (!zeros dims-result))
+	 (result (!copy tensor))
 	 (dims-indices (mapcar (lambda (x y)
 				 (if (typep x 'fixnum)
 				     1
 				     (repeat-c y)))
 			       dims dims-result)))
+    (unless (and (mapcar (lambda (x y)
+			   (if (typep y 'fixnum)
+			       (eq x y)
+			       t))
+			 (!shape value) dims-result))
+      (error "(setf !aref): mismatch dims ~a and ~a" (!shape value) dims-result))
+    
     (labels ((next-node (drest args rargs)
 	       (if (= (length args) (length dims))
-		   (progn ; emmm...
-		     (eval `(setf (mgl-mat:mref (data ,result) ,@rargs)
-				  (mgl-mat:mref (data ,tensor) ,@args)))))
+		   (progn
+		     (print args)
+		     (print rargs)
+		     (print result) (print value)
+		     (eval `(setf (mgl-mat:mref (data ,result) ,@args)
+				  (mgl-mat:mref (data ,value)  ,@rargs)))))
 	       (if (typep (car drest) 'fixnum)
 		   (next-node (cdr drest) (concatenate 'list args
-						       `(,(car drest)))
+						       `(,(nth (length args) dims)))
 			      (concatenate 'list rargs `(0)))
 		   (dolist (m (car drest))
 		     (next-node (cdr drest)
 				(concatenate 'list args `(,m))
-			        (concatenate 'list rargs `(,m)))))))
+				(concatenate 'list rargs `(,m)))))))
+      (next-node dims-indices nil nil)
+      ;(setf tensor (call (CutTensor value) tensor))
+      (setf tensor result))))
 
-	(next-node dims-indices nil nil)
-	result)))
-
-;(defun (setf !aref) ());backward
+(defmacro !where ()) ; todo
+(defmacro !index ()) ; todo
   
-
 (defmacro !row-major-aref (tensor index)
   `(mgl-mat:row-major-mref (data ,tensor) ,index))
 
 (defmacro !with-mgl-operation (tensor var &body body)
   `(let ((,var (data ,tensor)))
      ,@body))
-
-(defmacro array-ref (tensor &rest args)
-  `(const (numcl:aref (data ,tensor) ,@args)))
-
-(defmacro array-ref-expand (tensor &rest args) ; iru?
-  `(const (numcl:expand-dims (numcl:aref (data ,tensor) ,@args) 0)))
 
 (defun !random (dims limit)
   ; if limit=fixnum, !random=randint
@@ -272,25 +327,28 @@
     (error "Fixnum/Double/Float doesn't have a shape"))
   
   (if nth
-      (mgl-mat:mat-dimension (data tensor) nth)
+      (let ((n (if (typep nth 'waffetensor)
+		   (data nth)
+		   nth)))
+	(mgl-mat:mat-dimension (data tensor) n))
       (mgl-mat:mat-dimensions (data tensor))))
 
-(defmacro !dims (tensor)
-  `(length (!shape ,tensor)))
+(defun !dims (tensor)
+  (length (!shape tensor)))
 
-(defmacro !size (tensor)
-  `(apply #'* (!shape ,tensor)))
+(defun !size (tensor)
+  (apply #'* (!shape tensor)))
 
-(defmacro !size-1 (tensor)
-  `(1- (!size ,tensor)))
+(defun !size-1 (tensor)
+  (1- (!size tensor)))
 
-(defmacro !zeros-like (tensor)
-  `(!zeros (shape ,tensor)))
+(defun !zeros-like (tensor)
+  (!zeros (!shape tensor)))
 
-(defmacro !ones-like (tensor)
-  `(!ones (shape ,tensor)))
+(defun !ones-like (tensor)
+  (!ones (!shape tensor)))
 
-(defmacro !full-like ())
+(defun !full-like ())
 
 
 (defun write-description (res backward backend)
@@ -305,36 +363,48 @@
 	(concatenate 'string (subseq str 0 *print-char-max-len*) "...")
 	str)))
 
+(defmacro !aref-array (array &rest args) ; possibly too slow...
+  `(let ((res (data (!aref (const (mgl-mat:array-to-mat ,array)) ,@args))))
+     (mgl-mat:mat-to-array (mgl-mat:reshape! res (cdr
+						  (mgl-mat:mat-dimensions res)))))) ;unsqueeze
+
+(defun !unsqueeze-array (array)
+  (mgl-mat:mat-to-array (mgl-mat:reshape!
+			 (mgl-mat:array-to-mat array) (cdr (array-dimensions array)))))
+
 (defun pprint-1d-vector (stream data)
-  (if (> (!dims data) 1)
+  (if (> (length (array-dimensions data)) 1)
       (error ""))
-  
-  (if (>= (!size data) *print-arr-max-size*)
-      (write-string (format nil "(~A ~A ~2~ ~A ~A)"
-			    (reduce-str (!aref data 0))
-			    (reduce-str (!aref data 1))
-			    (reduce-str (!aref data (-  (!size data) 2)))
-			    (reduce-str (!aref data (1- (!size data)))))
+  (if (>= (apply #'* (array-dimensions data)) *print-arr-max-size*)
+      (write-string (format nil "(~A ~A ~2~ ~A ~A)" ; todo: i wanna display last 3 digits.
+			    (reduce-str (aref data 0))
+			    (reduce-str (aref data 1))
+			    (reduce-str (aref data (-  (length data) 2)))
+			    (reduce-str (aref data (1- (length data)))))
 		    stream)
       (progn
 	(write-string "(" stream)
-	(dotimes (i (!size data))
-	  (write-string (format nil "~A" (reduce-str (!aref data i))) stream)
-	  (unless (= i (!size-1 data))
+	(dotimes (i (apply #'* (array-dimensions data)))
+	  (write-string (format nil "~A" (reduce-str (aref data i))) stream)
+	  (unless (= i (1- (apply #'* (array-dimensions data))))
 	    (write-string " " stream)))
 	(write-string ")" stream))))
 
 (defun pprint-vector (stream data &optional (newline T) (indent-size 0))
-  (case (!dims data)
-    (1
+  (cond
+    ((= 1 (length (array-dimensions data)))
      (pprint-1d-vector stream data))
+    ((= 1 (car (array-dimensions data)))
+     (write-string "(" stream)
+     (pprint-vector stream (!unsqueeze-array data) newline (1+ indent-size))
+     (write-string ")" stream))
     (T
      (write-string "(" stream)
-     (if (< (!shape data 0) *print-mat-max-size*)
-	 (progn
-	   (dotimes (i (!shape data 0))
-	     (pprint-vector stream (!aref data i) newline (1+ indent-size))
-	     (unless (= i (1- (!shape data 0)))
+     (if (< (car (array-dimensions data)) *print-mat-max-size*)
+	 (let ((fd (car (array-dimensions data))))
+	   (dotimes (i fd)
+	     (pprint-vector stream (!aref-array data i) newline (1+ indent-size))
+	     (unless (= i (1- fd))
 	       (if newline
 		   (progn
 		     (write-char #\Newline stream)
@@ -347,23 +417,21 @@
 		      (pprint-vector stream line newline (1+ indent-size))
 		      (if do-newline
 			  (if newline
-			      (progn
-				(write-char #\Newline stream)
-				(if (= 2 (!dims data))
-				    (progn
-				      (dotimes (_ (+ (* 2 indent-size) 3))
-					(declare (ignore _))
-					(write-string " " stream))
-				      (write-string "..." stream)
-				      (write-char #\Newline stream)))
 				(dotimes (k (1+ indent-size))
-				  (write-string " " stream)))
-			      (write-string " " stream)))))
-	     (render-v (!aref data 0) T)
+				  (write-string " " stream))))))
+	     (render-v (!aref-array data 0) T)
 	     ;(render-v (numcl:aref data 1) T)
-	     
+	     (if newline
+		 (progn
+		   (write-char #\newline stream)
+		   (dotimes (_ (+ (* 2 indent-size) 3))
+		     (write-string " " stream))
+		   (write-string "..." stream)
+		   (write-char #\newline stream)
+		   (dotimes (k (1+ indent-size))
+		     (write-string " " stream))))
 	     ;(render-v (numcl:aref data (- (car (numcl:shape data)) 2)) T)
-	     (render-v (!aref data (1- (!shape data 0))) NIL)
+	     (render-v (!aref-array data (1- (car (array-dimensions data)))) NIL)
 	     (write-string ")" stream)))))))
 
 (defun render-tensor (tensor &optional (newline T) (indent-size 0))
@@ -373,23 +441,36 @@
 	  (write-string "#Const(" res)
 	  (write-string "#Parameter{" res))
       
-      (if (or (typep contents 'vector) (typep contents 'array))
+      (if (or (typep contents 'array)
+	      (typep contents 'vector))
 	  (progn
 	    (pprint-vector res contents newline (if (null grad)
 						    (+ indent-size (length "#Const("))
-						    (+ indent-size (length "#Parameter{")))) ; Numcl Array
-	    (write-string (format nil " :shape ~a" (!shape contents)) res)
+						    (+ indent-size (length "#Parameter{"))))
+	    (write-string (format nil " :mgl nil :shape ~a" (!shape contents)) res)
 	    (unless (null grad)
 	      (write-description res backward backend))
 	    (if (null grad)
 		(write-string ")" res)
 		(write-string "}" res)))
-	  (progn ; Simple data
-	    (write-string (format nil "~A" contents) res)
-	    (unless (null grad)
-	      (write-description res backward backend))
-	    (if (null grad)
-		(write-string ")" res)
-		(write-string "}" res))))
+	  (if (typep contents 'mgl-mat:mat)
+	      (progn
+		(pprint-vector res (mgl-mat:mat-to-array contents) newline
+							 (if (null grad)
+							     (+ indent-size (length "#Const("))
+							     (+ indent-size (length "#Parameter{"))))
+		(write-string (format nil " :mgl t :shape ~a" (mgl-mat:mat-dimensions contents)) res)
+		(unless (null grad)
+		  (write-description res backward backend))
+		(if (null grad)
+		    (write-string ")" res)
+		    (write-string "}" res)))
+	      (progn
+		(write-string (format nil "~A" contents) res)
+		(unless (null grad)
+		  (write-description res backward backend))
+		(if (null grad)
+		    (write-string ")" res)
+		    (write-string "}" res)))))
       res)))
 

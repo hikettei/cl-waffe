@@ -8,7 +8,7 @@
   :version nil
   :description "an opencl-based deeplearning library"
   :pathname "source"
-  :depends-on (#:numcl #:cl-ansi-text)
+  :depends-on (#:numcl #:cl-ansi-text #:mgl-mat)
   :in-order-to ((test-op (test-op cl-waffe-test)))
   :components ((:file "cl-cram")
 	       (:module "cl-termgraph"
@@ -18,14 +18,17 @@
 	       (:module "backends/cpu"
 		:components ((:file "package")
 			     (:file "kernel")))
+	       (:module "backends/mgl-mat"
+		:components ((:file "package")
+			     (:file "kernel")))
 	       (:module "backends/opencl"
 	       :components ((:file "package")
 			    (:file "kernel")))
-	       (:file "tensor" :depends-on ("package"))
 	       (:file "package" :depends-on ("backends/cpu"
 					     "backends/opencl"))
+	       (:file "model" :depends-on ("tensor"))
+	       (:file "tensor")
 	       (:file "kernel")
-	       (:file "model")
 	       (:file "trainer" :depends-on ("optimizers"))
 	       (:file "functions")
 	       (:file "operators")

@@ -1,7 +1,6 @@
 
 (in-package :cl-waffe)
 
-
 (defmacro deftrainer (name args &key model optimizer optimizer-args step-model (forward NIL))
   (if forward (error ":forward is unavailable in deftrainer macro. use instead: :step-model"))
   (labels ((assure-args (x)
@@ -30,9 +29,11 @@
 					 (macrolet ((model     ()            `(slot-value ,',self-heap 'model))
 						    (update    (&rest args1) `(call (slot-value ,',self-heap 'optimizer) ,@args1))
 						    (zero-grad ()            `(funcall (slot-value (slot-value ,',self-heap 'optimizer) 'backward)
-										       (slot-value ,',self-heap 'optimizer) ,',model)))
+										       (slot-value ,',self-heap 'optimizer)
+										       (slot-value ,',self-heap 'model))))
 					    ,@lbody)))))
 	  (,constructor-name ,@init-args)))))
+
 
 (defun step-model (trainer &rest args)
   (apply (slot-value trainer 'step-model) trainer args))
@@ -44,7 +45,7 @@
   (labels ((assure-args (x)
 		     (if (or (eq (symbol-name x) "parameters")
 			     (eq (symbol-name x) "forward")
-			     (eq (symbol-name x) ""))
+			     (eq (symbol-name x) "length"))
 			 (error "cant use ~a as a name" (symbol-name x))
 			 x)))
     (unless forward
@@ -80,7 +81,7 @@
   (apply (slot-value dataset 'length) (list dataset)))
 
 (defun eq-ntimes (width &optional (word "="))
-  (with-output-to-string (str) (dotimes (_ (* 2 width)) (declare (ignore _)) (format str word))))
+  (with-output-to-string (str) (dotimes (_ (* 2 width)) (format str word))))
 
 (defun format-title (title start-from width)
   (let ((base (eq-ntimes width)))

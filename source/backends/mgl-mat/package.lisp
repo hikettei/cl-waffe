@@ -1,4 +1,4 @@
 
-(defpackage :cl-waffe.backends.mgl-mat
+(defpackage :cl-waffe.backends.mgl
   (:use :cl)
   (:export #:kernel))

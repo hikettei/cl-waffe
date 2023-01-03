@@ -10,8 +10,11 @@
 
 (task "test" ()
       (ql:quickload :fiveam :silent t)
+      (ql:quickload :cl-libsvm-format :slient t)
+      ;(ql:quickload :mgl-mat :slient t)
+      (declaim (sb-ext:muffle-conditions cl:warning))
       (load "cl-waffe.asd")
       (load "cl-waffe-test.asd")
-      (asdf:test-system :cl-waffe))
+      (asdf:test-system :cl-waffe-test))
 
 ;;; here follow your tasks...

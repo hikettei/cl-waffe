@@ -30,16 +30,16 @@
 	  (error "Could not find any parameter")
 	  (butlast parameters)))))
 
-(defmacro defoptimizer (name args &key parameters update)
+(defmacro defoptimizer (name args &key parameters update &aux (model (gensym)))
   `(defmodel ,name ,args
      :parameters ,parameters
      :forward ,update
-     :backward ((model) (dolist (p (find-variables model))
-			  (setf (slot-value p 'state) nil)
-			  (setf (slot-value p 'backward) nil)
-			  (setf (slot-value p 'variables) nil)
-			  (setf (slot-value p 'grad) nil)
-			  (setf (slot-value p 'grad-tmp) nil))
+     :backward ((,model) (dolist (p (find-variables ,model))
+			   (setf (waffetensor-state p) nil)
+			   (setf (waffetensor-backward p) nil)
+			   (setf (waffetensor-variables p) nil)
+			   (setf (waffetensor-grad p) `(nil nil))
+			   (setf (waffetensor-grad-tmp p) nil))
 		nil)
      :hide-from-tree nil))
 
@@ -73,8 +73,10 @@
 	   (forward ,',(let ((largs (car forward))
 			     (lbody (cdr forward))
 			     (self-heap (gensym)))
-			 `(dolist (i ,largs) (assure-args i))
+			 (dolist (i largs) (assure-args i))
 			 `(lambda ,(concatenate 'list (list self-heap) largs)
+			    ,(if (null parameters)
+				 `(declare (ignore ,self-heap)))
 			    (macrolet ((self (name)
 					 `(slot-value ,',self-heap ',name)))
 			      ,@lbody))))
@@ -82,14 +84,17 @@
 			    (let ((largs (car backward))
 				  (lbody (cdr backward))
 				  (self-heap (gensym)))
-			      `(dolist (i ,largs) (assure-args i))
+			      (dolist (i largs) (assure-args i))
 			      `(lambda ,(concatenate 'list (list self-heap) largs)
+				 ,(if (null parameters)
+				      `(declare (ignore ,self-heap)))
 				 (macrolet ((self (name)
 					      `(slot-value ,',self-heap ',name)))
 				   ,@lbody)))
 			    nil))
 	   ,@',(map 'list (lambda (x) (assure-args (car x))) parameters))
 	  (,constructor-name ,@init-args)))))
+
 
 (defun render-simple-model-structure (stream model)
   (format stream "[~a: ~a]" (if (slot-value model 'hide-from-tree)
@@ -137,5 +142,5 @@
 	(if (typep model 'WaffeTensor)
 	    (progn
 	      (indent-with)
-	      (format stream "(+)~a:~a~C" prefix (shape model) #\newline))))))
+	      (format stream "(+)~a:~a~C" prefix (!shape model) #\newline))))))
 
