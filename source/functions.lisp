@@ -37,7 +37,7 @@
   :forward ((x)
 	    (callop :tanh x))
   :backward ((dy)
-	     (callop :sub (const 1) (!pow (callop :tanh dy) 2))))
+	     (list (callop :sub (const 1) (!pow (callop :tanh dy) 2)))))
 
 (defun !tanh (x)
   (call (TanhTensor) (assure-tensor x)))
