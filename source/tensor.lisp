@@ -76,9 +76,8 @@
   `(slot-value (nth-var ,tensor ,n) ,s))
 
 
-
 (deftype WaffeSupportedDataType ()
-  `(or fixnum float))
+  `(or fixnum float null))
 
 (deftype waffe-array ()
   `(or mgl-mat:mat simple-array))
@@ -99,7 +98,7 @@
 		      (data content)
 		      content)))
     (unless (typep content 'WaffeTensorContentType)
-      (error "Waffetensor only supports of type of mgl-mat and fixnum/float but got: ~a" (type-of content)))
+      (error "Waffetensor only supports of type of mgl-mat and fixnum/float/null but got: ~a" (type-of content)))
 
     content))
 
@@ -319,7 +318,10 @@
     (error "Fixnum/Double/Float doesn't have a shape"))
   
   (if nth
-      (mgl-mat:mat-dimension (data tensor) nth)
+      (let ((n (if (typep nth 'waffetensor)
+		   (data nth)
+		   nth)))
+	(mgl-mat:mat-dimension (data tensor) n))
       (mgl-mat:mat-dimensions (data tensor))))
 
 (defun !dims (tensor)
@@ -352,38 +354,41 @@
 	(concatenate 'string (subseq str 0 *print-char-max-len*) "...")
 	str)))
 
+(defmacro !aref-array (array &rest args) ; possibly too slow...
+  `(let ((res (data (!aref (const (mgl-mat:array-to-mat ,array)) ,@args))))
+     (mgl-mat:mat-to-array (mgl-mat:reshape! res (cdr
+						  (mgl-mat:mat-dimensions res))))))
+
 
 (defun pprint-1d-vector (stream data)
-  (if (> (!dims data) 1)
+  (if (> (length (array-dimensions data)) 1)
       (error ""))
-  (print data)
-  (print (!aref data 0))
-  (if (>= (!size data) *print-arr-max-size*)
+  (if (>= (apply #'* (array-dimensions data)) *print-arr-max-size*)
       (write-string (format nil "(~A ~A ~2~ ~A ~A)"
-			    (reduce-str (!aref data 0))
-			    (reduce-str (!aref data 1))
-			    (reduce-str (!aref data (-  (!size data) 2)))
-			    (reduce-str (!aref data (1- (!size data)))))
+			    (reduce-str (!aref-array data 0))
+			    (reduce-str (!aref-array data 1))
+			    (reduce-str (!aref-array data (-  (length data) 2)))
+			    (reduce-str (!aref-array data (1- (length data)))))
 		    stream)
       (progn
 	(write-string "(" stream)
-	(dotimes (i (!size data))
-	  (write-string (format nil "~A" (reduce-str (!aref data i))) stream)
-	  (unless (= i (!size-1 data))
+	(dotimes (i (apply #'* (array-dimensions data)))
+	  (write-string (format nil "~A" (reduce-str (!aref-array data i))) stream)
+	  (unless (= i (1- (apply #'* (array-dimensions data))))
 	    (write-string " " stream)))
 	(write-string ")" stream))))
 
 (defun pprint-vector (stream data &optional (newline T) (indent-size 0))
-  (case (!dims data)
+  (case (length (array-dimensions data))
     (1
      (pprint-1d-vector stream data))
     (T
      (write-string "(" stream)
-     (if (< (!shape data 0) *print-mat-max-size*)
+     (if (< (car (array-dimensions data)) *print-mat-max-size*)
 	 (progn
-	   (dotimes (i (!shape data 0))
-	     (pprint-vector stream (!aref data i) newline (1+ indent-size))
-	     (unless (= i (1- (!shape data 0)))
+	   (dotimes (i (car (array-dimensions data)))
+	     (pprint-vector stream (!aref-array data i) newline (1+ indent-size))
+	     (unless (= i (1- (car (array-dimensions data))))
 	       (if newline
 		   (progn
 		     (write-char #\Newline stream)
@@ -398,7 +403,7 @@
 			  (if newline
 			      (progn
 				(write-char #\Newline stream)
-				(if (= 2 (!dims data))
+				(if (= 2 (length (array-dimensions data)))
 				    (progn
 				      (dotimes (_ (+ (* 2 indent-size) 3))
 					(write-string " " stream))
@@ -407,11 +412,11 @@
 				(dotimes (k (1+ indent-size))
 				  (write-string " " stream)))
 			      (write-string " " stream)))))
-	     (render-v (!aref data 0) T)
+	     (render-v (!aref-array data 0) T)
 	     ;(render-v (numcl:aref data 1) T)
 	     
 	     ;(render-v (numcl:aref data (- (car (numcl:shape data)) 2)) T)
-	     (render-v (!aref data (1- (!shape data 0))) NIL)
+	     (render-v (!aref-array data (1- (car (array-dimensions data)))) NIL)
 	     (write-string ")" stream)))))))
 
 (defun render-tensor (tensor &optional (newline T) (indent-size 0))
@@ -422,26 +427,35 @@
 	  (write-string "#Parameter{" res))
       
       (if (or (typep contents 'array)
-	      (typep contents 'vector)) ; typep tensor 'waffe-tensor
-	  ; squeezeeが実装できるまでTensorでは使えない
-          ; (!aref)するときに次数が下がらないため
-          ; mgl -> numclにして表示する？ redefiningを直す
+	      (typep contents 'vector))
 	  (progn
 	    (pprint-vector res contents newline (if (null grad)
 						    (+ indent-size (length "#Const("))
 						    (+ indent-size (length "#Parameter{"))))
-	    (write-string (format nil " :shape ~a" (!shape contents)) res)
+	    (write-string (format nil " :mgl nil :shape ~a" (!shape contents)) res)
 	    (unless (null grad)
 	      (write-description res backward backend))
 	    (if (null grad)
 		(write-string ")" res)
 		(write-string "}" res)))
-	  (progn ; Simple data
-	    (write-string (format nil "~A" contents) res)
-	    (unless (null grad)
-	      (write-description res backward backend))
-	    (if (null grad)
-		(write-string ")" res)
-		(write-string "}" res))))
+	  (if (typep contents 'mgl-mat:mat)
+	      (progn
+		(pprint-vector res (mgl-mat:mat-to-array contents) newline
+							 (if (null grad)
+							     (+ indent-size (length "#Const("))
+							     (+ indent-size (length "#Parameter{"))))
+		(write-string (format nil " :mgl t :shape ~a" (mgl-mat:mat-dimensions contents)) res)
+		(unless (null grad)
+		  (write-description res backward backend))
+		(if (null grad)
+		    (write-string ")" res)
+		    (write-string "}" res)))
+	      (progn
+		(write-string (format nil "~A" contents) res)
+		(unless (null grad)
+		  (write-description res backward backend))
+		(if (null grad)
+		    (write-string ")" res)
+		    (write-string "}" res)))))
       res)))
 
