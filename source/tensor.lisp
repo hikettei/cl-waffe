@@ -357,23 +357,22 @@
 (defmacro !aref-array (array &rest args) ; possibly too slow...
   `(let ((res (data (!aref (const (mgl-mat:array-to-mat ,array)) ,@args))))
      (mgl-mat:mat-to-array (mgl-mat:reshape! res (cdr
-						  (mgl-mat:mat-dimensions res))))))
-
+						  (mgl-mat:mat-dimensions res))))))  
 
 (defun pprint-1d-vector (stream data)
   (if (> (length (array-dimensions data)) 1)
       (error ""))
   (if (>= (apply #'* (array-dimensions data)) *print-arr-max-size*)
       (write-string (format nil "(~A ~A ~2~ ~A ~A)"
-			    (reduce-str (!aref-array data 0))
-			    (reduce-str (!aref-array data 1))
-			    (reduce-str (!aref-array data (-  (length data) 2)))
-			    (reduce-str (!aref-array data (1- (length data)))))
+			    (reduce-str (aref data 0))
+			    (reduce-str (aref data 1))
+			    (reduce-str (aref data (-  (length data) 2)))
+			    (reduce-str (aref data (1- (length data)))))
 		    stream)
       (progn
 	(write-string "(" stream)
 	(dotimes (i (apply #'* (array-dimensions data)))
-	  (write-string (format nil "~A" (reduce-str (!aref-array data i))) stream)
+	  (write-string (format nil "~A" (reduce-str (aref data i))) stream)
 	  (unless (= i (1- (apply #'* (array-dimensions data))))
 	    (write-string " " stream)))
 	(write-string ")" stream))))
@@ -416,7 +415,7 @@
 	     ;(render-v (numcl:aref data 1) T)
 	     
 	     ;(render-v (numcl:aref data (- (car (numcl:shape data)) 2)) T)
-	     (render-v (!aref-array data (1- (car (array-dimensions data)))) NIL)
+	     (render-v (!aref-array data (car (array-dimensions data))) NIL)
 	     (write-string ")" stream)))))))
 
 (defun render-tensor (tensor &optional (newline T) (indent-size 0))
