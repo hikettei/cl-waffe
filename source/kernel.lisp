@@ -41,16 +41,18 @@
   (unless (assure-tensors variables)
     (error "all inputs must have same backends and be waffe tensor"))
 
-  (let* ((backend (slot-value (first variables) 'backend))
-	 (args (map 'list (lambda (x) (let ((c (slot-value x 'data))) ; numcl check, ituka kesu
-					(if (or (typep c 'array) (typep c 'vector))
-					    (numcl:asarray c)
-					    c)))
-		    variables))
+  (let* ((backend (waffetensor-backend (first variables)))
+	 (args (map 'list (lambda (x) (waffetensor-data x)) variables))
+	 (all-not-array (every (lambda (x) (typep x 'waffesupporteddatatype)) args))
 	 (result (case backend
-		   (:cpu (cl-waffe.backends.cpu:kernel instruction args))
+		   (:cpu    (cl-waffe.backends.cpu:kernel instruction args))
 		   (:opencl (cl-waffe.backends.opencl:kernel instruction args))
-		   (:mgl (cl-waffe.backends.mgl:kernel instruction args)))))
+		   (:mgl    (if all-not-array ; Use CPU When like Const(1) + Const(1)
+			        (cl-waffe.backends.cpu:kernel instruction args)
+				(cl-waffe.backends.mgl:kernel instruction args)))))
+	 (result (if (numcl:numcl-array-p result)
+		     (mgl-mat:array-to-mat result)
+		     result)))
     (const result :backend backend)))
 
 (defun backends-available ())

@@ -10,6 +10,7 @@
 ;
 (defparameter *default-backend* :mgl)
 
+(defparameter *fp* :double) ;:float
 ; utils
 (defstruct (WaffeTensor (:print-function
 			 (lambda (tensor stream depth)
