@@ -52,6 +52,11 @@
 				(cl-waffe.backends.mgl:kernel instruction args)))))
 	 (result (if (numcl:numcl-array-p result)
 		     (mgl-mat:array-to-mat result)
+		     result)) ; may cause some bugs
+	 (result (if (typep result 'mgl-mat:mat)
+		     (if (equal (mgl-mat:mat-dimensions result) `(1))
+			 (mgl-mat:mref result 0)
+			 result)
 		     result)))
     (const result :backend backend)))
 
