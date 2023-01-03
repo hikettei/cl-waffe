@@ -203,7 +203,7 @@
 				  (mgl-mat:mref (data ,tensor) ,@args)))))
 	       (if (typep (car drest) 'fixnum)
 		   (next-node (cdr drest) (concatenate 'list args
-						       `(,(car drest)))
+						       `(,(nth (length args) dims)))
 			      (concatenate 'list rargs `(0)))
 		   (dolist (m (car drest))
 		     (next-node (cdr drest)
@@ -249,7 +249,7 @@
 				  (mgl-mat:mref (data ,value)  ,@rargs)))))
 	       (if (typep (car drest) 'fixnum)
 		   (next-node (cdr drest) (concatenate 'list args
-						       `(,(car drest)))
+						       `(,(nth (length args) dims)))
 			      (concatenate 'list rargs `(0)))
 		   (dolist (m (car drest))
 		     (next-node (cdr drest)
@@ -357,13 +357,17 @@
 (defmacro !aref-array (array &rest args) ; possibly too slow...
   `(let ((res (data (!aref (const (mgl-mat:array-to-mat ,array)) ,@args))))
      (mgl-mat:mat-to-array (mgl-mat:reshape! res (cdr
-						  (mgl-mat:mat-dimensions res))))))  
+						  (mgl-mat:mat-dimensions res)))))) ;unsqueeze
+
+(defun !unsqueeze-array (array)
+  (mgl-mat:mat-to-array (mgl-mat:reshape!
+			 (mgl-mat:array-to-mat array) (cdr (array-dimensions array)))))
 
 (defun pprint-1d-vector (stream data)
   (if (> (length (array-dimensions data)) 1)
       (error ""))
   (if (>= (apply #'* (array-dimensions data)) *print-arr-max-size*)
-      (write-string (format nil "(~A ~A ~2~ ~A ~A)"
+      (write-string (format nil "(~A ~A ~2~ ~A ~A)" ; todo: i wanna display last 3 digits.
 			    (reduce-str (aref data 0))
 			    (reduce-str (aref data 1))
 			    (reduce-str (aref data (-  (length data) 2)))
@@ -378,16 +382,20 @@
 	(write-string ")" stream))))
 
 (defun pprint-vector (stream data &optional (newline T) (indent-size 0))
-  (case (length (array-dimensions data))
-    (1
+  (cond
+    ((= 1 (length (array-dimensions data)))
      (pprint-1d-vector stream data))
+    ((= 1 (car (array-dimensions data)))
+     (write-string "(" stream)
+     (pprint-vector stream (!unsqueeze-array data) newline (1+ indent-size))
+     (write-string ")" stream))
     (T
      (write-string "(" stream)
      (if (< (car (array-dimensions data)) *print-mat-max-size*)
-	 (progn
-	   (dotimes (i (car (array-dimensions data)))
+	 (let ((fd (car (array-dimensions data))))
+	   (dotimes (i fd)
 	     (pprint-vector stream (!aref-array data i) newline (1+ indent-size))
-	     (unless (= i (1- (car (array-dimensions data))))
+	     (unless (= i (1- fd))
 	       (if newline
 		   (progn
 		     (write-char #\Newline stream)
@@ -400,22 +408,21 @@
 		      (pprint-vector stream line newline (1+ indent-size))
 		      (if do-newline
 			  (if newline
-			      (progn
-				(write-char #\Newline stream)
-				(if (= 2 (length (array-dimensions data)))
-				    (progn
-				      (dotimes (_ (+ (* 2 indent-size) 3))
-					(write-string " " stream))
-				      (write-string "..." stream)
-				      (write-char #\Newline stream)))
 				(dotimes (k (1+ indent-size))
-				  (write-string " " stream)))
-			      (write-string " " stream)))))
+				  (write-string " " stream))))))
 	     (render-v (!aref-array data 0) T)
 	     ;(render-v (numcl:aref data 1) T)
-	     
+	     (if newline
+		 (progn
+		   (write-char #\newline stream)
+		   (dotimes (_ (+ (* 2 indent-size) 3))
+		     (write-string " " stream))
+		   (write-string "..." stream)
+		   (write-char #\newline stream)
+		   (dotimes (k (1+ indent-size))
+		     (write-string " " stream))))
 	     ;(render-v (numcl:aref data (- (car (numcl:shape data)) 2)) T)
-	     (render-v (!aref-array data (car (array-dimensions data))) NIL)
+	     (render-v (!aref-array data (1- (car (array-dimensions data)))) NIL)
 	     (write-string ")" stream)))))))
 
 (defun render-tensor (tensor &optional (newline T) (indent-size 0))
