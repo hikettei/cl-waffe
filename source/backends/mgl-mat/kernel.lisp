@@ -63,7 +63,9 @@
 	      (mgl-mat:gemm! 1 (car args) (second args) 0 out)))
       (:log (avoid-destructive mgl-mat:.log! (car args)))
       (:exp (avoid-destructive mgl-mat:.exp! (car args)))
-      (:pow (avoid-destructive mgl-mat:.expt! (car args) (second args)))
+      (:pow (let ((x (mgl-mat:copy-mat (car args))))
+	      (mgl-mat:.expt! x (second args))
+	      x))
       (:sum  (numcl-to-mat (numcl:sum  (mat-to-numcl (car args)) :axes (second args)))) ; CPU
       (:mean (numcl-to-mat (numcl:mean (mat-to-numcl (car args)) :axes (second args)))) ;CPU
       (:tanh (avoid-destructive mgl-mat:.tanh! (car args)))

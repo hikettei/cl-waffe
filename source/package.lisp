@@ -80,6 +80,7 @@
 
 	   #:!dot
 	   #:!sum
+	  
 	   #:!pow
 	   #:!mean
 	   #:!log
@@ -91,4 +92,5 @@
 	   #:!relu
 	   #:!sigmoid
 	   #:!tanh
+	   #:!softmax
 	   ))

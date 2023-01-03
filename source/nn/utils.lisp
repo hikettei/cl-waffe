@@ -19,6 +19,8 @@
 	       (!sigmoid (call (cl-waffe:self layer) x)))
 	      (:tanh
 	       (!tanh (call (cl-waffe:self layer) x)))
+	      (:softmax
+	       (!softmax (call (cl-waffe:self layer) x)))
 	      (T
 	       (funcall (cl-waffe:self activation)
 			(call (cl-waffe:self layer) x))))))

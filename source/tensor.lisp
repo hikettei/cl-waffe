@@ -62,9 +62,9 @@
       (push val a))
     a))
 
-(defun repeat-c (n)
-  (let ((a `(0))
-	(i 0))
+(defun repeat-c (n &key (start 0))
+  (let ((a `(,start))
+	(i start))
     (dotimes (_ (1- n))
       (incf i 1)
       (push i a))
@@ -180,23 +180,30 @@
      (mgl-mat:copy! (data ,tensor) (data ,new-tensor))
      ,new-tensor))
 
-;mref is ridiculously slow... 配列のサイズが一定以上の時,CL標準配列に書き直してから実行するように。
+;mref is ridiculously slow... 配列のサイズが一定以上の時,CL標準配列に書き直してから実行するように。 or displaceベースで書き直す？
 (defun !aref (tensor &rest dims) ; example: (aref vector 1 t t)
-  (let* ((tensor-dims (!shape tensor))
+  (let* ((tensor-dims (!shape tensor)) ; Todo: (aref vector '(1 3) t t)
 	 (dims (cond
 		   ((> (!dims tensor) (length dims)) ;supply dims
 		    (concatenate 'list dims (repeat-n t (- (!dims tensor) (length dims)))) )
 		 ((= (!dims tensor) (length dims)) dims)
 		 (T (error "!aref: dim ~a beyonds tensor's dim" dims))))
 	 (dims-result (mapcar (lambda (x y) (if (typep x 'fixnum)
-						 1
-						 y))
+						1
+						(if (typep x 'list)
+						    (progn
+						      (unless (= (length x) 2)
+							(error "!aref: an argument is following: index t `(from start)"))
+						      (- (second x) (car x)))
+						    y)))
 			      dims tensor-dims))
 	 (result (!zeros dims-result))
 	 (dims-indices (mapcar (lambda (x y)
 				 (if (typep x 'fixnum)
 				     1
-				     (repeat-c y)))
+				     (if (typep x 'list)
+					 (repeat-c (- (second x) (car x)) :start (car x))
+					 (repeat-c y))))
 			       dims dims-result)))
     (labels ((next-node (drest args rargs)
 	       (if (= (length args) (length dims))
@@ -207,10 +214,10 @@
 		   (next-node (cdr drest) (concatenate 'list args
 						       `(,(nth (length args) dims)))
 			      (concatenate 'list rargs `(0)))
-		   (dolist (m (car drest))
+		   (dotimes (i (length (car drest)))
 		     (next-node (cdr drest)
-				(concatenate 'list args `(,m))
-			        (concatenate 'list rargs `(,m)))))))
+				(concatenate 'list args `(,(nth i (car drest))))
+			        (concatenate 'list rargs `(,i)))))))
 
 	(next-node dims-indices nil nil)
 

@@ -36,10 +36,13 @@
   :parameters nil
   :forward ((x)
 	    (callop :tanh x))
-  :backward ((dy)
+  :backward ((dy) ; cant backward correctly
 	     (list (callop :sub (const 1) (!pow (callop :tanh dy) 2)))))
 
 (defun !tanh (x)
   (call (TanhTensor) (assure-tensor x)))
 
+(defun !softmax (x)
+  (let ((z (!sum (!exp x) 1)))
+    (!div (!exp x) z)))
 
