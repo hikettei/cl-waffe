@@ -41,20 +41,22 @@
 
   (unless (assure-tensors variables)
     (error "all inputs must have same backends and be waffe tensor"))
-
+  
   (let* ((backward? (find t (map 'list (lambda (x) (waffetensor-backward-mode x)) variables)))
 	 (carx (car variables))
+	 (tmp nil)
 	 (out (unless backward?
-		(if (or (and (endp variables) (waffetensor-out carx))
-			(every (lambda (y)
-				 (eq (waffetensor-out carx)
-				     (waffetensor-out y)))
-			       (rest variables)))
-		    (waffetensor-out carx)
-		    (if (typep (waffetensor-out carx) 'mgl-mat:mat) ; alway refer to left side node
-			(waffetensor-out carx)
-			nil))
+		(if (find t (map 'list (lambda (x) (typep x 'waffetensor)) variables))
+		    (let ((r (find t variables :test (lambda (_ x) (declare (ignore _))
+							       (if (typep (data x) 'mgl-mat:mat)
+								   (waffetensor-out x))))))
+		      (if r
+			  (progn
+			    (setq tmp (waffetensor-out r)))
+			  nil))
+		    nil)
 		nil))
+	 (out tmp)
 	 (backend (waffetensor-backend (first variables)))
 	 (args (map 'list (lambda (x) (waffetensor-data x)) variables))
 	 (all-not-array (every (lambda (x) (typep x 'waffesupporteddatatype)) args))
@@ -72,21 +74,15 @@
 			 (mgl-mat:mref result 0)
 			 result)
 		     result)))
-
-    ;(unless out
-    ;  (print "INIT!!")
-    ;  (print instruction)
-    ;  (print (const (waffetensor-out carx))))
-    
+        
     (if (typep result 'mgl-mat:mat)
-	(unless out
-	  (dolist (i variables)
-	    (setf (waffetensor-out i) result))))
+	(unless backward?
+	  (unless out
+	    (dolist (var variables)
+	      (setf (waffetensor-out var) result)))))
 
-    (print result)
-    (if out
-	out
-	(const result :backend backend))))
+    (const result :backend backend)))
+	       
 
 (defun backends-available ())
 

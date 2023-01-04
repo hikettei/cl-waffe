@@ -6,7 +6,7 @@
 (defmacro avoid-destructive (ope out mat &rest args)
   `(if ,out
        (progn
-	 (mgl-mat:copy-mat ,mat ,out)
+	 (mgl-mat:copy! ,mat ,out)
 	 ,(unless (null args)
 	    `(,ope ,out ,@args)
 	    `(,ope ,out)))
@@ -54,9 +54,9 @@
 
 (defun kernel (ope args &optional out) ; operations with CPU is ridiculously slow... So I need to rewrite it with define-lisp-kernel/define-cuda-kernel
   (if (and (find ope `(:mul :div :matmul))
-	   (or (map 'list (lambda (x) (if (not (typep x 'mgl-mat:mat)) (= x 1))) args)))
+	   (find t (map 'list (lambda (x) (if (not (typep x 'mgl-mat:mat)) (= x 1))) args)))
       (if (and (eq ope :div) (eq (car args) 1))
-	  (avoid-destructing mgl-mat:.inv! out (find 1 args :test (lambda (x y) (declare (ignore x)) (typep y 'mgl-mat:mat))))
+	  (avoid-destructing mgl-mat:.inv! out (second args))
 	  (find 1 args :test (lambda (x y) (declare (ignore x)) (typep y 'mgl-mat:mat))))
   (let* ((args (ensure-shape ope args)))
     (case ope
@@ -79,8 +79,8 @@
       (:matmul (let ((out (if out
 			      out
 			      (mgl-mat:make-mat `(,(car (mgl-mat:mat-dimensions (car args)))
-					   ,(second (mgl-mat:mat-dimensions (second args))))
-					 :initial-element 0))))
+					        ,(second (mgl-mat:mat-dimensions (second args))))
+					        :initial-element 0))))
 	      (unless (and (<= (length (mgl-mat:mat-dimensions (car args))) 2)
 			   (<= (length (mgl-mat:mat-dimensions (second args))) 2))
 
@@ -96,13 +96,19 @@
 		(let ((x (mgl-mat:copy-mat (car args))))
 		  (mgl-mat:.expt! x (second args))
 		  x)))
-      (:sum  (numcl-to-mat (numcl:sum  (mat-to-numcl (car args)) :axes (second args)))) ; CPU
-      (:mean (numcl-to-mat (numcl:mean (mat-to-numcl (car args)) :axes (second args)))) ;CPU
+      (:sum  (let ((result (numcl-to-mat (numcl:sum  (mat-to-numcl (car args)) :axes (second args)))))
+	       ;CPU
+	       result))
+      (:mean (let ((result (numcl-to-mat (numcl:mean (mat-to-numcl (car args)) :axes (second args)))))
+               ;CPU
+	       result))
       (:tanh (avoid-destructive mgl-mat:.tanh! out (car args)))
       (:reshape (let ((x (mgl-mat:copy-mat (car args)))) ;displaceベースに書き換える
 		    (mgl-mat:reshape! x (second args))
 		    x))
-      (:repeat    (numcl-to-mat (repeat (mat-to-numcl (car args)) (third args) :axis (second args)))) ;CPU and esp slow -> stack
+      (:repeat (let ((result (numcl-to-mat (repeat (mat-to-numcl (car args)) (third args) :axis (second args)))))
+                    ;esp its too slow, rewrite with stack
+		    result))
       (:transpose (mgl-mat:transpose (car args))) ; second args?
       (T (error "~a is nt yet implemented" ope))))))
 

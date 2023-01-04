@@ -9,7 +9,7 @@
 (defmodel MLP (activation)
   :parameters ((layer1 (cl-waffe.nn:denselayer (* 28 28) 128 T activation))
 	       (layer2 (cl-waffe.nn:denselayer 128 256 T activation))
-	       (layer3 (cl-waffe.nn:denselayer 256 10 T activation)))
+	       (layer3 (cl-waffe.nn:denselayer 256 10 T :softmax)))
   :forward ((x)
 	    (call (self layer3)
 		  (call (self layer2)

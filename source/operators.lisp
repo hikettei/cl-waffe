@@ -61,7 +61,7 @@
   :forward ((x1 x2) ; only supports 2d and 2d arrays
 		    (setf (self xi) x1)
 		    (setf (self yi) x2)
-		    (callop :dot x1 x2)) ;rewrite to dot!!!!
+		    (callop :dot x1 x2))
   :backward ((dy)
 	       (list (callop :dot dy (!transpose (self yi)))
 		     (callop :dot (!transpose (self xi)) dy))))
@@ -102,8 +102,8 @@
   :forward ((x y) (setf (self xi) x)
 		  (setf (self yi) y)
 		  (callop :matmul x y))
-  :backward ((dy) (list (const (data (!matmul dy (!transpose (self yi)))))
-			(const (data (!matmul (!transpose (self xi)) dy))))))
+  :backward ((dy) (list (const (data (callop :matmul dy (!transpose (self yi)))))
+			(const (data (callop :matmul (!transpose (self xi)) dy))))))
 
 ;(defnode CutTensor (result)
 ;  :parameters ((result1 result))

@@ -20,7 +20,7 @@
 (defmodel MLP (activation)
   :parameters ((layer1 (cl-waffe.nn:denselayer (* 28 28) 512 NIL activation))
 	       (layer2 (cl-waffe.nn:denselayer 512 256 NIL activation))
-	       (layer3 (cl-waffe.nn:denselayer 256 10 NIL)))
+	       (layer3 (cl-waffe.nn:denselayer 256 10 NIL activation)))
   :forward ((x)
 	    (call (self layer3)
 		  (call (self layer2)
@@ -37,11 +37,12 @@
 		 (zero-grad)
 		 out)))
 
-
-(defdataset Mnistdata (train valid)
-  :parameters ((train train) (valid valid))
-  :forward ((index) (list (!aref (self train) index t)
-			  (!aref (self valid) index t)))
+; mini-batch学習を実装 -> batchnorm -> softmax
+(defdataset Mnistdata (train valid batch-size)
+  :parameters ((train train) (valid valid) (batch-size batch-size))
+  :forward ((index)
+	    (list (!aref (self train) index)
+		  (!aref (self valid) index)))
   :length (() (car (!shape (self train)))))
 
 
@@ -83,12 +84,14 @@
   (defparameter mnist-dataset-test datamat)
   (defparameter mnist-target-test target))
 
+
 (format t "Training: ~a" (!shape mnist-dataset))
 (format t "Valid   : ~a" (!shape mnist-target))
 
 (setq trainer (MLPTrainer :relu 1e-3))
 
-(setq train (MnistData mnist-dataset mnist-target))
-(setq valid (MnistData mnist-dataset-test mnist-target-test))
+(setq train (MnistData mnist-dataset mnist-target 2))
+(setq valid (MnistData mnist-dataset-test mnist-target-test 2))
 
 (train trainer train :max-iterate 100 :epoch 60)
+
