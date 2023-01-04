@@ -53,9 +53,11 @@
   (mgl-mat:array-to-mat ncl))
 
 (defun kernel (ope args &optional out) ; operations with CPU is ridiculously slow... So I need to rewrite it with define-lisp-kernel/define-cuda-kernel
-  (if (and (find ope `(:mul :matmul))
+  (if (and (find ope `(:mul :div :matmul))
 	   (or (map 'list (lambda (x) (if (not (typep x 'mgl-mat:mat)) (= x 1))) args)))
-      (find 1 args :test (lambda (x y) (typep y 'mgl-mat:mat)))
+      (if (and (eq ope :div) (eq (car args) 1))
+	  (avoid-destructing mgl-mat:.inv! out (find 1 args :test (lambda (x y) (declare (ignore x)) (typep y 'mgl-mat:mat))))
+	  (find 1 args :test (lambda (x y) (declare (ignore x)) (typep y 'mgl-mat:mat))))
   (let* ((args (ensure-shape ope args)))
     (case ope
       (:add (mgl-mat:M+ (car args) (second args)))

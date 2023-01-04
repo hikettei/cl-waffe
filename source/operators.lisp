@@ -61,10 +61,10 @@
   :forward ((x1 x2) ; only supports 2d and 2d arrays
 		    (setf (self xi) x1)
 		    (setf (self yi) x2)
-		    (callop :matmul x1 x2)) ;rewrite to dot!!!!
+		    (callop :dot x1 x2)) ;rewrite to dot!!!!
   :backward ((dy)
-	       (list (callop :matmul dy (!transpose (self yi)))
-		     (callop :matmul (!transpose (self xi)) dy))))
+	       (list (callop :dot dy (!transpose (self yi)))
+		     (callop :dot (!transpose (self xi)) dy))))
 
 (defnode TransposeTensor (shape)
   :parameters ((prev-shape T) (shape shape))
@@ -96,7 +96,14 @@
   :parameters ((xi T))
   :forward ((x) (setf (self xi) x) (callop :exp x))
   :backward ((dy) (list (callop :mul dy (callop :exp (self xi))))))
-  
+
+(defnode MatMulTensor ()
+  :parameters ((xi T) (yi T))
+  :forward ((x y) (setf (self xi) x)
+		  (setf (self yi) y)
+		  (callop :matmul x y))
+  :backward ((dy) (list (const (data (!matmul dy (!transpose (self yi)))))
+			(const (data (!matmul (!transpose (self xi)) dy))))))
 
 ;(defnode CutTensor (result)
 ;  :parameters ((result1 result))
@@ -142,8 +149,15 @@
   (call (TransposeTensor (assure-tensor (if result (numcl:asarray result)))) (assure-tensor x)))
 
 (defun !matmul (x y)
-  ; 4 3d tensor
-  (call (DotProductTensor) (assure-tensor x) (assure-tensor y)))
+  (cond
+    ((and (= (!dims x) (!dims y))
+	  (= (!dims x) 2))
+     (call (MatMulTensor) (assure-tensor x) (assure-tensor y)))
+    ((and (= (!dims x) 1) (= (!dims y) 2))
+     (call (MatMulTensor) (unsqueeze (assure-tensor x) -1) (assure-tensor y)))
+    ((and (= (!dims x) 2) (= (!dims y) 1))
+     (call (MatMulTensor) (assure-tensor x) (unsqueeze (assure-tensor y) -1)))
+    (T (error "matmul for 3d/4d tensor is coming soon..."))))
 
 (defun !unsqueeze (x &optional (dim 0))
   ; display error when (!dims x) >= dim

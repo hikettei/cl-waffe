@@ -5,6 +5,7 @@
   :parameters ((params params) (lr lr))
   :update (()
 	   (dolist (p (self params))
+	     (print (const (Grad p)))
 	     (setf (data p) (data (!sub p (!mul (self lr) (grad p))))))))
 
 

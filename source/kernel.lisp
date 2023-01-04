@@ -66,8 +66,8 @@
 				(cl-waffe.backends.mgl:kernel instruction args out)))))
 	 (result (if (numcl:numcl-array-p result)
 		     (mgl-mat:array-to-mat result)
-		     result)) ; may cause some bugs
-	 (result (if (typep result 'mgl-mat:mat)
+		     result))
+	 (result (if (typep result 'mgl-mat:mat) ; may cause some backwards problems
 		     (if (equal (mgl-mat:mat-dimensions result) `(1))
 			 (mgl-mat:mref result 0)
 			 result)
@@ -83,6 +83,7 @@
 	  (dolist (i variables)
 	    (setf (waffetensor-out i) result))))
 
+    (print result)
     (if out
 	out
 	(const result :backend backend))))
