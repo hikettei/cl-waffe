@@ -89,6 +89,9 @@
 	   #:!exp
 	   #:!matmul
 
+	   #:!squeeze
+	   #:!unsqueeze
+
 	   #:!relu
 	   #:!sigmoid
 	   #:!tanh

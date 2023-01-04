@@ -92,10 +92,11 @@
   :forward ((x) (callop :repeat x (self axis) (self repeats)))
   :backward ((dy) (list (callop :sum dy (self axis)))))
 
-(defnode ExpTensor nil
+(defnode ExpTensor ()
   :parameters ((xi T))
   :forward ((x) (setf (self xi) x) (callop :exp x))
   :backward ((dy) (list (callop :mul dy (callop :exp (self xi))))))
+  
 
 ;(defnode CutTensor (result)
 ;  :parameters ((result1 result))
@@ -143,6 +144,35 @@
 (defun !matmul (x y)
   ; 4 3d tensor
   (call (DotProductTensor) (assure-tensor x) (assure-tensor y)))
+
+(defun !unsqueeze (x &optional (dim 0))
+  ; display error when (!dims x) >= dim
+  (let ((s (!shape x)))
+    (case dim
+      (0  (setq s `(1 ,@s)))
+      (-1 (push 1 (cdr (nthcdr (1- (length s)) s))))
+      (T  (push 1 (cdr (nthcdr (1- dim) s)))))
+    (!reshape x s)))
+
+(defun !squeeze (x &optional (dim nil))
+  (labels ((remove-nth (nth list)
+	     (loop for i in list
+		   for idx from 0
+		   unless (= idx nth)
+		     collect i)))
+    (let ((s (!shape x)))
+      (cond
+	((null dim) (setq s (remove 1 s)))
+	((eq dim 0) (setq s (if (= (car s) 1)
+		       (cdr s)
+		       s)))
+	((eq dim -1) (setq s (if (= (car (last s)) 1)
+			(butlast s)
+			s)))
+	(T (setq s (if (= (nth dim s) 1)
+		       (remove-nth dim s)
+		       s))))
+      (!reshape x s))))
 
 (defun !exp (x)
   (call (ExpTensor) (assure-tensor x)))

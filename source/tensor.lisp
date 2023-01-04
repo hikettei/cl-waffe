@@ -79,7 +79,7 @@
 
 
 (deftype WaffeSupportedDataType ()
-  `(or fixnum float null))
+  `(or fixnum float null cons)) ;cons?
 
 (deftype waffe-array ()
   `(or mgl-mat:mat simple-array))
