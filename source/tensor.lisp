@@ -20,12 +20,15 @@
 	                (:constructor
 			    tensor
 			    (value &key (backend *default-backend*) (extend nil)
-			     &aux (data (init-waffe-tensor-data value)) (backend (check-backend backend extend)) (grad `(nil nil))))
+			     &aux (data (init-waffe-tensor-data value)) (backend (check-backend backend extend)) (grad `(nil nil))
+			       (grad-tmp (make-grad-tmp :value nil :grad-called nil))))
 			(:constructor
 			    const
 			    (value &key (backend *default-backend*) (extend nil)
-			     &aux (data (init-waffe-tensor-data value)) (backend (check-backend backend extend)) (grad nil))))
-  data grad-tmp backward backend grad variables state)
+			     &aux (data (init-waffe-tensor-data value)) (backend (check-backend backend extend)) (grad nil) (grad-tmp (make-grad-tmp :value nil :grad-called nil)))))
+  data grad-tmp backward backend grad variables state out backward-mode)
+
+(defstruct grad-tmp value grad-called)
 
 (defmacro data (tensor)
   `(waffetensor-data ,tensor))
@@ -136,28 +139,36 @@
   ; make constants parameter
   `(with-slots ((data data) (backend backend)) ,tensor
      (tensor data :backend backend)))
+
+(defmacro setfgradtmp (tensor value) ;tensor-grad-tmp
+  `(progn
+     (setf (grad-tmp-grad-called ,tensor) t)
+     (setf (grad-tmp-value ,tensor) ,value)))
   
 (defun backward (tensor)
   (if (waffetensor-backward tensor)
       (let ((state (waffetensor-state tensor))
-	    (grad  (if (waffetensor-grad-tmp tensor)
-		       (if (typep (waffetensor-grad-tmp tensor) 'list)
-			   (waffetensor-grad-tmp tensor)
-			   (repeat tensor (waffetensor-grad-tmp tensor)))
+	    (grad  (if (grad-tmp-grad-called (waffetensor-grad-tmp tensor))
+		       (if (typep (grad-tmp-value (waffetensor-grad-tmp tensor)) 'list)
+			   (grad-tmp-value (waffetensor-grad-tmp tensor))
+			   (repeat tensor (grad-tmp-value (waffetensor-grad-tmp tensor))))
 		       (repeat tensor 1))))
 	(dotimes (i (length (waffetensor-variables tensor)))
-	  (let ((grads (apply (waffetensor-backward tensor) state (list (nth i grad)))))
-	    (if (nth-tensor tensor i 'grad-tmp)
-		(setf (nth-tensor tensor i 'grad-tmp)
-		      (repeat (nth-var tensor i) (data (!add (nth-tensor tensor i 'grad-tmp) (nth i grads)))))
-		(setf (nth-tensor tensor i 'grad-tmp) (repeat (nth-var tensor i) (data (nth i grads)))))
+	  (setf (waffetensor-backward-mode (nth i grad)) t)
+	  (let ((grads (funcall (waffetensor-backward tensor) state (nth i grad))))
+	    (setf (waffetensor-backward-mode (nth i grad)) nil)
+	    (if (grad-tmp-value (nth-tensor tensor i 'grad-tmp))
+		(setfgradtmp (nth-tensor tensor i 'grad-tmp)
+		       (repeat (nth-var tensor i) (data (!add
+							(grad-tmp-value (nth-tensor tensor i 'grad-tmp)) (nth i grads)))))
+		(setfgradtmp (nth-tensor tensor i 'grad-tmp) (repeat (nth-var tensor i) (data (nth i grads)))))
 	    (if (nth-tensor tensor i 'grad)
 		(if (typep (nth-tensor tensor i 'grad) 'cons)
 		    (setf (nth-tensor tensor i 'grad) (data (nth i grads)))
 		    (setf (nth-tensor tensor i 'grad) (data (!add (nth-tensor tensor i 'grad)
-							         (nth i grads))))))
+							          (nth i grads))))))
 	    (backward (nth-var tensor i)))))
-      (setf (slot-value tensor 'grad-tmp) (if (waffetensor-grad tensor)
+      (setf (grad-tmp-value (slot-value tensor 'grad-tmp)) (if (waffetensor-grad tensor)
 					  (repeat tensor 0)
 					  (repeat tensor 0)))))
 

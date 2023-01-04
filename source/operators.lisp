@@ -14,7 +14,7 @@
   :backward ((dy) (list dy dy)))
 
 (defnode SubTensor nil
-  :parameters nil
+  :parameters ()
   :forward ((x y) (callop :sub x y))
   :backward ((dy) (list dy (callop :mul dy (const -1)))))
 
@@ -61,10 +61,10 @@
   :forward ((x1 x2) ; only supports 2d and 2d arrays
 		    (setf (self xi) x1)
 		    (setf (self yi) x2)
-		    (callop :dot x1 x2))
+		    (callop :matmul x1 x2)) ;rewrite to dot!!!!
   :backward ((dy)
-	       (list (callop :dot dy (!transpose (self yi)))
-		     (callop :dot (!transpose (self xi)) dy))))
+	       (list (callop :matmul dy (!transpose (self yi)))
+		     (callop :matmul (!transpose (self xi)) dy))))
 
 (defnode TransposeTensor (shape)
   :parameters ((prev-shape T) (shape shape))
