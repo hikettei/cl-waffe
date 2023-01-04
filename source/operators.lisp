@@ -53,7 +53,7 @@
 
 (defnode ReshapeTensor (shape)
   :parameters ((prev-shape T) (shape shape))
-  :forward ((x) (setf (self prev-shape) (!shape x)) (callop :reshape x (self shape)))
+  :forward ((x) (setf (self prev-shape) (assure-tensor (!shape x))) (callop :reshape x (self shape)))
   :backward ((dy) (list (callop :reshape dy (self prev-shape)))))
 
 (defnode DotProductTensor nil
@@ -74,14 +74,14 @@
 (defnode MeanTensor (axis)
   :parameters ((axis axis) (repeats T))
   :forward ((x)
-	    (setf (self repeats) (assure-tensor (!shape x axis)))
+	    (setf (self repeats) (assure-tensor (!shape x (self axis))))
 	    (callop :mean x (self axis)))
   :backward ((dy) (list (callop :repeat dy (self axis) (self repeats)))))
 
 (defnode SumTensor (axis)
   :parameters ((axis axis) (repeats T))
   :forward ((x)
-	    (setf (self repeats) (assure-tensor (!shape x axis)))
+	    (setf (self repeats) (assure-tensor (!shape x (self axis))))
 	    (callop :sum x (self axis)))
   :backward ((dy) (list (callop :div
 				 (callop :repeat dy (self axis) (self repeats))
@@ -102,8 +102,8 @@
   :forward ((x y) (setf (self xi) x)
 		  (setf (self yi) y)
 		  (callop :matmul x y))
-  :backward ((dy) (list (const (data (callop :matmul dy (!transpose (self yi)))))
-			(const (data (callop :matmul (!transpose (self xi)) dy))))))
+  :backward ((dy) (list (const (data (!matmul dy (!transpose (self yi)))))
+			(const (data (!matmul (!transpose (self xi)) dy))))))
 
 ;(defnode CutTensor (result)
 ;  :parameters ((result1 result))
@@ -154,9 +154,9 @@
 	  (= (!dims x) 2))
      (call (MatMulTensor) (assure-tensor x) (assure-tensor y)))
     ((and (= (!dims x) 1) (= (!dims y) 2))
-     (call (MatMulTensor) (unsqueeze (assure-tensor x) -1) (assure-tensor y)))
+     (call (MatMulTensor) (!unsqueeze (assure-tensor x) -1) (assure-tensor y)))
     ((and (= (!dims x) 2) (= (!dims y) 1))
-     (call (MatMulTensor) (assure-tensor x) (unsqueeze (assure-tensor y) -1)))
+     (call (MatMulTensor) (assure-tensor x) (!unsqueeze (assure-tensor y) -1)))
     (T (error "matmul for 3d/4d tensor is coming soon..."))))
 
 (defun !unsqueeze (x &optional (dim 0))

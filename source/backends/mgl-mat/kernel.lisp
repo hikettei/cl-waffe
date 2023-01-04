@@ -9,11 +9,12 @@
 	 (mgl-mat:copy! ,mat ,out)
 	 ,(unless (null args)
 	    `(,ope ,out ,@args)
-	    `(,ope ,out)))
+	    `(,ope ,out))
+	 ,out)
        (let ((result (mgl-mat:copy-mat ,mat)))
 	 ,(unless (null args)
 	    `(,ope result ,@args)
-	    `(,ope ,out))
+	    `(,ope result))
 	 result)))
 
 (defun repeat (array n &key axis)
@@ -71,9 +72,10 @@
       (:div (let ((out (if out
 			   out
 			   (mgl-mat:make-mat (mgl-mat:mat-dimensions (car args))
-					 :initial-element 0)))
-		  (inv (avoid-destructive mgl-mat:.inv! out (second args))))
-	      (mgl-mat:geem! 1 (car args) inv 0 out)
+					     :initial-element 0))))
+	      
+		  (avoid-destructive mgl-mat:.inv! out (second args))
+	      (mgl-mat:geem! 1 (car args) out 0 out)
 	      out))
       (:dot (mgl-mat:dot (car args) (second args)))
       (:matmul (let ((out (if out
@@ -92,16 +94,21 @@
       (:pow (if out
 		(progn
 		  (mgl-mat:copy! (car args) out)
-		  (mgl-mat:.expt! out (second args)))
+		  (mgl-mat:.expt! out (second args))
+		  out)
 		(let ((x (mgl-mat:copy-mat (car args))))
 		  (mgl-mat:.expt! x (second args))
 		  x)))
-      (:sum  (let ((result (numcl-to-mat (numcl:sum  (mat-to-numcl (car args)) :axes (second args)))))
+      (:sum  (let ((result (numcl:sum  (mat-to-numcl (car args)) :axes (second args))))
 	       ;CPU
-	       result))
-      (:mean (let ((result (numcl-to-mat (numcl:mean (mat-to-numcl (car args)) :axes (second args)))))
+	       (if (typep result 'fixnum)
+		   result
+		   (numcl-to-mat result))))
+      (:mean (let ((result (numcl:mean (mat-to-numcl (car args)) :axes (second args))))
                ;CPU
-	       result))
+	       (if (typep result 'fixnum)
+		   result
+		   (numcl-to-mat result))))
       (:tanh (avoid-destructive mgl-mat:.tanh! out (car args)))
       (:reshape (let ((x (mgl-mat:copy-mat (car args)))) ;displaceベースに書き換える
 		    (mgl-mat:reshape! x (second args))
