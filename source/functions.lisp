@@ -25,7 +25,7 @@
   :parameters ((xi T))
   :forward ((x)
 	    (setf (self xi) x)
-            (callop :div (!add 1 (!tanh (!div x 2))) (const 2)))
+            (!div (!add 1 (!tanh (!div x 2))) (const 2)))
   :backward ((dy) (let ((p (!sigmoid (self xi))))
 		    (list (callop :mul p (!mul dy (!sub 1 p)))))))
 
@@ -33,16 +33,34 @@
   (call (SigmoidTensor) (assure-tensor x)))
 
 (defnode TanhTensor nil
-  :parameters nil
+  :parameters ((xi T))
   :forward ((x)
+	    (setf (self xi) x)
 	    (callop :tanh x))
-  :backward ((dy) ; cant backward correctly
-	     (list (callop :sub (const 1) (!pow (callop :tanh dy) 2)))))
+  :backward ((dy) ; 導関数を再度確認
+	     (list (callop :sub (const 1) (!pow (callop :tanh (self x)) 2)))))
 
 (defun !tanh (x)
   (call (TanhTensor) (assure-tensor x)))
 
 (defun !softmax (x)
+  (print "data")
+  (print (data x))
   (let ((z (!sum (!exp x) 1)))
+    (print "exp")
+    (print (data (!exp x)))
+    (print "result")
+    (print (data (!div (!exp x) z)))
     (!div (!exp x) z)))
 
+(defnode SoftMaxTensor nil
+  :parameters ((xi T))
+  :forward ((x)
+	    (let ((result (softmax-forward x)))
+	      (setf (self xi) result)
+	      result))
+  :backward ((dy)
+	     (list (!mul dy (!sub (self xi) 1)))))
+
+;(defun !softmax (x)
+;  (call (SoftMaxTensor) (assure-tensor x)))

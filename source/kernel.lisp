@@ -18,6 +18,17 @@
 			       :transpose
 			       :repeat))
 
+(defnode 1dArrayToConstTensor nil
+  :parameters ((xi T))
+  :forward ((x)
+	    (setf (self xi) x)
+	    (const (mgl-mat:mref (data x) 0)))
+  :backward ((dy)
+	     (list (callop :mul dy (self xi)))))
+
+(defun !1darray-to-const (x)
+  (call (1dArrayToConstTensor) (assure-tensor x)))
+
 (defun check-kernel (variable)
   (unless (typep variable 'WaffeTensor)
     (error "The inputs must be tensor got: ~a" variable))
@@ -66,13 +77,8 @@
 		   (:mgl    (if all-not-array ; Use CPU When like Const(1) + Const(1)
 			        (cl-waffe.backends.cpu:kernel instruction args out)
 				(cl-waffe.backends.mgl:kernel instruction args out)))))
-	 (result (if (numcl:numcl-array-p result)
+	 (result (if (numcl:numcl-array-p result) ; slow?
 		     (mgl-mat:array-to-mat result)
-		     result))
-	 (result (if (typep result 'mgl-mat:mat) ; may cause some backwards problems
-		     (if (equal (mgl-mat:mat-dimensions result) `(1))
-			 (mgl-mat:mref result 0)
-			 result)
 		     result)))
         
     (if (typep result 'mgl-mat:mat)

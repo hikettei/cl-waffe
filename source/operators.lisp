@@ -33,8 +33,8 @@
             (setf (self xi) x)
 	    (setf (self yi) y)
 	    (callop :div x y))
-  :backward ((dy) (list (callop :div dy (self yi))
-			(callop :div (!mul (!mul dy (self xi)) -1) (!mul (self yi) (self yi))))))
+  :backward ((dy) (list (!div dy (self yi))
+			(!div (!mul (!mul dy (self xi)) -1) (!mul (self yi) (self yi))))))
 
 (defnode PowTensor nil
   :parameters ((xi T) (yi T))
@@ -49,7 +49,7 @@
 (defnode LogTensor nil
   :parameters ((x1 T))
   :forward ((x1) (setf (self x1) x1) (callop :log x1))
-  :backward ((dy) (list (callop :div dy (self x1)))))
+  :backward ((dy) (list (!div dy (self x1)))))
 
 (defnode ReshapeTensor (shape)
   :parameters ((prev-shape T) (shape shape))
@@ -83,7 +83,7 @@
   :forward ((x)
 	    (setf (self repeats) (assure-tensor (!shape x (self axis))))
 	    (callop :sum x (self axis)))
-  :backward ((dy) (list (callop :div
+  :backward ((dy) (list (!div
 				 (callop :repeat dy (self axis) (self repeats))
 				 (self repeats)))))
 
@@ -121,9 +121,14 @@
 (defun !mul (x y)
   (call (MulTensor) (assure-tensor x) (assure-tensor y)))
 
-(defun !div (x y)
+(defun !div-old (x y)
+  ; x must be 1, cl-waffe.backends.mgl:div has some problems?...
   (call (DivTensor) (assure-tensor x) (assure-tensor y)))
 
+(defun !div (x y)
+  ; its faster
+  (!mul x (!div-old 1 y)))
+  
 (defun !dot (x y)
   (call (DotProductTensor) (assure-tensor x) (assure-tensor y)))
 

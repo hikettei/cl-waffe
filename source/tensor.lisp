@@ -82,7 +82,7 @@
 
 
 (deftype WaffeSupportedDataType ()
-  `(or fixnum float null cons)) ;cons?
+  `(or fixnum float null cons ratio)) ;cons?
 
 (deftype waffe-array ()
   `(or mgl-mat:mat simple-array))
@@ -105,7 +105,11 @@
     (unless (typep content 'WaffeTensorContentType)
       (error "Waffetensor only supports of type of mgl-mat and fixnum/float/null but got: ~a" (type-of content)))
 
-    content))
+    (if (typep content 'ratio)
+	(if (eq mgl-mat:*default-mat-ctype* :double) ;...
+	    (coerce content 'double-float)
+	    (coerce content 'double-float))
+	content)))
 
 (defun check-backend (backend tensor)
   (if (null tensor)

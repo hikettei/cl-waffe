@@ -3,19 +3,15 @@
 
 ; Todo Rewrite with define-lisp-kernel
 
-(defmacro avoid-destructive (ope out mat &rest args)
-  `(if ,out
-       (progn
-	 (mgl-mat:copy! ,mat ,out)
-	 ,(unless (null args)
-	    `(,ope ,out ,@args)
-	    `(,ope ,out))
-	 ,out)
-       (let ((result (mgl-mat:copy-mat ,mat)))
-	 ,(unless (null args)
-	    `(,ope result ,@args)
-	    `(,ope result))
-	 result)))
+(defmacro decide-out-buffer (out args)
+  `(progn
+     (if ,out
+	 (progn
+	   (mgl-mat:copy! ,args ,out)
+	   ,out)
+	 (progn
+	   (mgl-mat:copy-mat ,args)))))
+      
 
 (defun repeat (array n &key axis)
   (if (numcl:arrayp array)
@@ -56,8 +52,9 @@
 (defun kernel (ope args &optional out) ; operations with CPU is ridiculously slow... So I need to rewrite it with define-lisp-kernel/define-cuda-kernel
   (if (and (find ope `(:mul :div :matmul))
 	   (find t (map 'list (lambda (x) (if (not (typep x 'mgl-mat:mat)) (= x 1))) args)))
-      (if (and (eq ope :div) (eq (car args) 1))
-	  (avoid-destructing mgl-mat:.inv! out (second args))
+      (if (and (eq ope :div) (= (car args) 1))
+	  (let ((o (decide-out-buffer out (second args))))
+	    (mgl-mat:.inv! o))
 	  (find 1 args :test (lambda (x y) (declare (ignore x)) (typep y 'mgl-mat:mat))))
   (let* ((args (ensure-shape ope args)))
     (case ope
@@ -66,16 +63,17 @@
       (:mul (let ((out (if out
 			   out
 			   (mgl-mat:make-mat (mgl-mat:mat-dimensions (car args))
-					 :initial-element 0))))
+					     :initial-element 0))))
 	      (mgl-mat:geem! 1 (car args) (second args) 0 out)
 	      out))
-      (:div (let ((out (if out
+      (:div (let* ((out (if out
 			   out
 			   (mgl-mat:make-mat (mgl-mat:mat-dimensions (car args))
-					     :initial-element 0))))
-	      
-		  (avoid-destructive mgl-mat:.inv! out (second args))
-	      (mgl-mat:geem! 1 (car args) out 0 out)
+					     :initial-element 0)))
+		  (args-copy (mgl-mat:copy-mat (second args)))
+		  ;initilizing new mats...
+		  (inv (mgl-mat:.inv! args-copy)))
+	      (mgl-mat:geem! 1 (car args) inv 0 out)
 	      out))
       (:dot (mgl-mat:dot (car args) (second args)))
       (:matmul (let ((out (if out
@@ -89,8 +87,10 @@
 		(error "cl-waffe.backends.mgl: :dot DotProduct Failed due to unsatisfication with (!dims A) <= 2 and (!dims B) <= 2"))
 		 (mgl-mat:gemm! 1 (car args) (second args) 0 out)
 		 out))
-      (:log (avoid-destructive mgl-mat:.log! out (car args)))
-      (:exp (avoid-destructive mgl-mat:.exp! out (car args)))
+      (:log (let ((o (decide-out-buffer out (car args))))
+	      (mgl-mat:.log! o)))
+      (:exp (let ((o (decide-out-buffer out (car args))))
+		(mgl-mat:.exp! o)))
       (:pow (if out
 		(progn
 		  (mgl-mat:copy! (car args) out)
@@ -109,7 +109,8 @@
 	       (if (typep result 'fixnum)
 		   result
 		   (numcl-to-mat result))))
-      (:tanh (avoid-destructive mgl-mat:.tanh! out (car args)))
+      (:tanh (let ((o (decide-out-buffer out (car args))))
+	       (mgl-mat:.tanh! o)))
       (:reshape (let ((x (mgl-mat:copy-mat (car args)))) ;displaceベースに書き換える
 		    (mgl-mat:reshape! x (second args))
 		    x))
