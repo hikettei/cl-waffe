@@ -33,8 +33,9 @@
             (setf (self xi) x)
 	    (setf (self yi) y)
 	    (callop :div x y))
-  :backward ((dy) (list (!div dy (self yi))
-			(!div (!mul (!mul dy (self xi)) -1) (!mul (self yi) (self yi))))))
+  :backward ((dy) (list (detach (!div dy (self yi)))
+			(detach (!div (!mul (!mul dy (self xi)) -1)
+				      (!pow (self yi) 2))))))
 
 (defnode PowTensor nil
   :parameters ((xi T) (yi T))
@@ -76,16 +77,16 @@
   :forward ((x)
 	    (setf (self repeats) (assure-tensor (!shape x (self axis))))
 	    (callop :mean x (self axis)))
-  :backward ((dy) (list (callop :repeat dy (self axis) (self repeats)))))
+  :backward ((dy) (list (!repeats dy (self axis) (self repeats)))))
 
 (defnode SumTensor (axis)
   :parameters ((axis axis) (repeats T))
   :forward ((x)
 	    (setf (self repeats) (assure-tensor (!shape x (self axis))))
 	    (callop :sum x (self axis)))
-  :backward ((dy) (list (!div
-				 (callop :repeat dy (self axis) (self repeats))
-				 (self repeats)))))
+  :backward ((dy)
+	     (list (detach (!div (!repeats dy (self axis) (self repeats))
+			   (self repeats))))))
 
 (defnode RepeatTensor (axis repeats)
   :parameters ((axis axis) (repeats repeats))
@@ -95,15 +96,16 @@
 (defnode ExpTensor ()
   :parameters ((xi T))
   :forward ((x) (setf (self xi) x) (callop :exp x))
-  :backward ((dy) (list (callop :mul dy (callop :exp (self xi))))))
+  :backward ((dy) (list (callop :mul dy
+				(callop :exp (self xi))))))
 
 (defnode MatMulTensor ()
   :parameters ((xi T) (yi T))
   :forward ((x y) (setf (self xi) x)
 		  (setf (self yi) y)
 		  (callop :matmul x y))
-  :backward ((dy) (list (const (data (!matmul dy (!transpose (self yi)))))
-			(const (data (!matmul (!transpose (self xi)) dy))))))
+  :backward ((dy) (list (detach (!matmul dy (!transpose (self yi))))
+			(detach (!matmul (!transpose (self xi)) dy)))))
 
 ;(defnode CutTensor (result)
 ;  :parameters ((result1 result))
@@ -132,14 +134,28 @@
 (defun !dot (x y)
   (call (DotProductTensor) (assure-tensor x) (assure-tensor y)))
 
-(defun !sum (x &optional (axis nil))
-  (call (SumTensor (assure-tensor axis)) (assure-tensor x)))
+(defun !sum (x &optional (axis nil) (keepdims nil))
+  (if (null axis)
+      (let ((axis-size (!dims x))
+	    (result x))
+	(dotimes (i axis-size)
+	  (setq result (!sum result (1- (- axis-size i)))))
+	result)
+      (let ((nrepeat (!shape x axis))
+	    (result (call (SumTensor (assure-tensor axis)) (assure-tensor x))))
+	(if keepdims
+	    (!repeats (!unsqueeze result axis) axis nrepeat)
+	    result))))
+
+(defun !mean (x &optional (axis nil) (keepdims nil))
+  (let ((nrepeat (!shape x axis))
+	(result (call (MeanTensor (assure-tensor axis)) (assure-tensor x))))
+    (if keepdims
+	(!repeats (!unsqueeze result axis) axis nrepeat)
+	result)))
 
 (defun !pow (x n)
   (call (PowTensor) (assure-tensor x) (assure-tensor n)))
-
-(defun !mean (x &optional (axis nil))
-  (call (MeanTensor (assure-tensor axis)) (assure-tensor x)))
 
 (defun !log (x)
   (call (LogTensor) (assure-tensor x)))

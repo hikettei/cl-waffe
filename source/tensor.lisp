@@ -10,7 +10,7 @@
 ;
 (defparameter *default-backend* :mgl)
 
-(defparameter mgl-mat:*DEFAULT-MAT-CTYPE* :double) ;double/float
+(defparameter mgl-mat:*DEFAULT-MAT-CTYPE* :float) ;double/float
 
 ; utils
 (defstruct (WaffeTensor (:print-function
@@ -148,8 +148,11 @@
   `(progn
      (setf (grad-tmp-grad-called ,tensor) t)
      (setf (grad-tmp-value ,tensor) ,value)))
-  
+
 (defun backward (tensor)
+  (backward1 tensor))
+  
+(defun backward1 (tensor) ; 書き直したい・・・
   (if (waffetensor-backward tensor)
       (let ((state (waffetensor-state tensor))
 	    (grad  (if (grad-tmp-grad-called (waffetensor-grad-tmp tensor))
@@ -166,15 +169,24 @@
 		       (repeat (nth-var tensor i) (data (!add
 							(grad-tmp-value (nth-tensor tensor i 'grad-tmp)) (nth i grads)))))
 		(setfgradtmp (nth-tensor tensor i 'grad-tmp) (repeat (nth-var tensor i) (data (nth i grads)))))
+	    ; grad=tになってるTensorにだけ勾配を代入するようにしたいのだが... ノードの終端かどうかの判別が...
 	    (if (nth-tensor tensor i 'grad)
-		(if (typep (nth-tensor tensor i 'grad) 'cons)
-		    (setf (nth-tensor tensor i 'grad) (data (nth i grads)))
-		    (setf (nth-tensor tensor i 'grad) (data (!add (nth-tensor tensor i 'grad)
-							          (nth i grads))))))
-	    (backward (nth-var tensor i)))))
-      (setf (grad-tmp-value (slot-value tensor 'grad-tmp)) (if (waffetensor-grad tensor)
-					  (repeat tensor 0)
-					  (repeat tensor 0)))))
+		(if (and (typep (nth-tensor tensor i 'data) 'mgl-mat:mat)
+			 (typep (data (nth i grads)) 'mgl-mat:mat))
+		    (if (equal (mgl-mat:mat-dimensions (nth-tensor tensor i 'data)) (mgl-mat:mat-dimensions (data (nth i grads))))
+			(if (typep (nth-tensor tensor i 'grad) 'cons) ;assert shapes, but is it due to a sumbackward's bug?
+			    (setf (nth-tensor tensor i 'grad) (data (nth i grads)))
+			    (setf (nth-tensor tensor i 'grad) (data (!add (nth-tensor tensor i 'grad) (nth i grads))))))
+			;(if (typep (nth-tensor tensor i 'grad) 'cons) ; it may be unnecessarry
+			;    (setf (nth-tensor tensor i 'grad) (data (!reshape (nth i grads) (!shape (nth-var tensor i)))))
+			;    (setf (nth-tensor tensor i 'grad) (data (!add (nth-tensor tensor i 'grad)
+			;						  (!reshape (nth i grads) (!shape (nth-var tensor i))))))))
+		    (if (typep (nth-tensor tensor i 'grad) 'cons)
+			(setf (nth-tensor tensor i 'grad) (data (nth i grads)))
+			(setf (nth-tensor tensor i 'grad) (data (!add (nth-tensor tensor i 'grad)
+								      (nth i grads)))))))
+	    (backward1 (nth-var tensor i)))))
+      (setf (grad-tmp-value (slot-value tensor 'grad-tmp)) (repeat tensor 0))))
 
 
 (defun !zeros (shape)
@@ -285,7 +297,7 @@
 
 (defmacro !where ()) ; todo
 (defmacro !index ()) ; todo
-  
+
 (defmacro !row-major-aref (tensor index)
   `(mgl-mat:row-major-mref (data ,tensor) ,index))
 
@@ -365,6 +377,8 @@
 
 (defun !full-like ())
 
+(defmacro detach (tensor)
+  `(const (data ,tensor)))
 
 (defun write-description (res backward backend)
   ; Parameter { ... <= here }

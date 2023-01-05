@@ -101,14 +101,14 @@
 		  x)))
       (:sum  (let ((result (numcl:sum  (mat-to-numcl (car args)) :axes (second args))))
 	       ;CPU
-	       (if (typep result 'fixnum)
-		   result
-		   (numcl-to-mat result))))
+	       (if (numcl:numcl-array-p result)
+		   (numcl-to-mat result)
+		   result)))
       (:mean (let ((result (numcl:mean (mat-to-numcl (car args)) :axes (second args))))
                ;CPU
-	       (if (typep result 'fixnum)
-		   result
-		   (numcl-to-mat result))))
+	       (if (numcl:numcl-array-p result)
+		   (numcl-to-mat result)
+		   result)))
       (:tanh (let ((o (decide-out-buffer out (car args))))
 	       (mgl-mat:.tanh! o)))
       (:reshape (let ((x (mgl-mat:copy-mat (car args)))) ;displaceベースに書き換える

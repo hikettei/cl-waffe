@@ -67,7 +67,7 @@
 			  nil))
 		    nil)
 		nil))
-	 (out tmp)
+	 (out tmp) ; disable with out=nil
 	 (backend (waffetensor-backend (first variables)))
 	 (args (map 'list (lambda (x) (waffetensor-data x)) variables))
 	 (all-not-array (every (lambda (x) (typep x 'waffesupporteddatatype)) args))
@@ -86,7 +86,6 @@
 	  (unless out
 	    (dolist (var variables)
 	      (setf (waffetensor-out var) result)))))
-
     (const result :backend backend)))
 	       
 
