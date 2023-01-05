@@ -137,10 +137,15 @@
      (tensor data :backend backend)))
 
 
-(defmacro setfgradtmp (gtmp value)
+(defmacro setfgradtmp (tensor value)
   `(progn
-     (setf (grad-tmp-grad-called ,gtmp) t)
-     (setf (grad-tmp-value ,gtmp) ,value)))
+     (setf (grad-tmp-grad-called (waffetensor-grad-tmp ,tensor)) t)
+     (if (and (typep (data ,tensor) 'mgl-mat:mat)
+	      (typep (data ,value) 'mgl-mat:mat))
+	 (if (equal (!shape ,tensor) (!shape ,value))
+	     (setf (grad-tmp-value (waffetensor-grad-tmp ,tensor)) ,value)
+	     (setf (grad-tmp-value (waffetensor-grad-tmp ,tensor)) (!reshape ,value (!shape ,tensor))))
+	 (setf (grad-tmp-value (waffetensor-grad-tmp ,tensor)) ,value))))
 
 (defun backward (tensor)
   (if (typep (data tensor) 'mgl-mat:mat)
@@ -159,16 +164,13 @@
 	    (setf (waffetensor-backward-mode grad-before) t)
 	    (let ((grads (funcall (waffetensor-backward tensor) state grad-before))) ; (length grads) == (length (waffetensor-variables tensor))
 	      (setf (waffetensor-backward-mode grad-before) nil)
-
 	      (unless (= (length (waffetensor-variables tensor))
 			 (length grads))
 		(error "backward error: The number of :forward args doesnt correspond with of :backward"))
 	    
 	      (dotimes (n (length grads))
-		(setfgradtmp (nth-tensor tensor n 'grad-tmp) (nth n grads))))))
-
-	(dotimes (i (length (waffetensor-variables tensor)))
-	  (backward1 (nth-var tensor i))))
+		(setfgradtmp (nth-var tensor n) (nth n grads)))
+	      (backward1 (nth-var tensor i))))))
       (if (waffetensor-grad tensor) ; the tensor is the end of node.
 	  (if (grad-tmp-value (waffetensor-grad-tmp tensor)) ; is grad-tmp already created?
               (progn

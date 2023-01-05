@@ -55,7 +55,8 @@
 (defnode ReshapeTensor (shape)
   :parameters ((prev-shape T) (shape shape))
   :forward ((x) (setf (self prev-shape) (assure-tensor (!shape x))) (callop :reshape x (self shape)))
-  :backward ((dy) (list (callop :reshape dy (self prev-shape)))))
+  :backward ((dy)
+	     (list (callop :reshape dy (self prev-shape)))))
 
 (defnode DotProductTensor nil
   :parameters ((xi T) (yi T))
@@ -79,14 +80,14 @@
 	    (callop :mean x (self axis)))
   :backward ((dy) (list (!repeats dy (self axis) (self repeats)))))
 
-(defnode SumTensor (axis)
+(defnode SumTensor (axis keepdims)
   :parameters ((axis axis) (repeats T))
   :forward ((x)
 	    (setf (self repeats) (assure-tensor (!shape x (self axis))))
 	    (callop :sum x (self axis)))
   :backward ((dy)
 	     (list (detach (!div (!repeats dy (self axis) (self repeats))
-			   (self repeats))))))
+				 (self repeats))))))
 
 (defnode RepeatTensor (axis repeats)
   :parameters ((axis axis) (repeats repeats))
@@ -104,8 +105,9 @@
   :forward ((x y) (setf (self xi) x)
 		  (setf (self yi) y)
 		  (callop :matmul x y))
-  :backward ((dy) (list (detach (!matmul dy (!transpose (self yi))))
-			(detach (!matmul (!transpose (self xi)) dy)))))
+  :backward ((dy)
+	     (list (detach (!matmul dy (!transpose (self yi))))
+		   (detach (!matmul (!transpose (self xi)) dy)))))
 
 ;(defnode CutTensor (result)
 ;  :parameters ((result1 result))
@@ -142,7 +144,7 @@
 	  (setq result (!sum result (1- (- axis-size i)))))
 	result)
       (let ((nrepeat (!shape x axis))
-	    (result (call (SumTensor (assure-tensor axis)) (assure-tensor x))))
+	    (result (call (SumTensor (assure-tensor axis) (if (null keepdims) -1 1)) (assure-tensor x))))
 	(if keepdims
 	    (!repeats (!unsqueeze result axis) axis nrepeat)
 	    result))))

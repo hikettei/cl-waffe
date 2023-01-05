@@ -16,7 +16,8 @@
   :forward ((x)
 	    (setf (self path-through) (assure-tensor (plusns x)))
 	    (callop :mul (self path-through) x))
-  :backward ((dy) (list (callop :mul (self path-through) dy))))
+  :backward ((dy)
+	     (list (callop :mul (self path-through) dy))))
 
 (defun !relu (x)
   (call (ReLUTensor) (assure-tensor x)))

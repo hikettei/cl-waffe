@@ -17,10 +17,22 @@
 				    :descriptions `((:red "prev-loss" 0 4)
 						    (:blue "current-loss" 0 3)))
 
+;softmax
+(setq tst `((1 0 0) (0 1 0) (0 0 1)))
+(setq ten (tensor (mgl-mat:make-mat `(3 3) :initial-contents tst)))
+
+(setq z (!softmax ten))
+(print z)
+(setq p (!sum z))
+(print "Softmax")
+(print p)
+(backward p)
+(print (grad ten))
+
 (defmodel MLP (activation)
   :parameters ((layer1 (cl-waffe.nn:denselayer (* 28 28) 512 NIL activation))
 	       (layer2 (cl-waffe.nn:denselayer 512 256 NIL activation))
-	       (layer3 (cl-waffe.nn:denselayer 256 10 NIL activation)))
+	       (layer3 (cl-waffe.nn:denselayer 256 10 NIL :softmax)))
   :forward ((x)
 	    (call (self layer3)
 		  (call (self layer2)
@@ -41,10 +53,9 @@
 (defdataset Mnistdata (train valid batch-size)
   :parameters ((train train) (valid valid) (batch-size batch-size))
   :forward ((index)
-	    (list (!aref (self train) index)
-		  (!aref (self valid) index)))
+	    (list (!aref (self train) `(,index ,(+ index (self batch-size))))
+		  (!aref (self valid) `(,index ,(+ index (self batch-size))))))
   :length (() (car (!shape (self train)))))
-
 
 (defmacro do-index-value-list ((index value list) &body body)
   (let ((iter (gensym))
