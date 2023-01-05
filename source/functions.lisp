@@ -1,7 +1,7 @@
 
 (in-package :cl-waffe)
 
-(defun plusns (tensor) ; gpu ver...?
+(defun plusns (tensor) ; gpu ver...? rewrite with define-lisp-kernel...
   (let* ((dims (!shape tensor))
 	 (res (data tensor))
          (len (if (listp dims) (reduce #'* dims) dims)))
@@ -16,7 +16,8 @@
   :forward ((x)
 	    (setf (self path-through) (assure-tensor (plusns x)))
 	    (callop :mul (self path-through) x))
-  :backward ((dy) (list (callop :mul (self path-through) dy))))
+  :backward ((dy)
+	     (list (callop :mul (self path-through) dy))))
 
 (defun !relu (x)
   (call (ReLUTensor) (assure-tensor x)))
@@ -25,7 +26,7 @@
   :parameters ((xi T))
   :forward ((x)
 	    (setf (self xi) x)
-            (callop :div (!add 1 (!tanh (!div x 2))) (const 2)))
+            (detach (!div (!add 1 (!tanh (!div x 2))) (const 2))))
   :backward ((dy) (let ((p (!sigmoid (self xi))))
 		    (list (callop :mul p (!mul dy (!sub 1 p)))))))
 
@@ -33,16 +34,18 @@
   (call (SigmoidTensor) (assure-tensor x)))
 
 (defnode TanhTensor nil
-  :parameters nil
+  :parameters ((xi T))
   :forward ((x)
+	    (setf (self xi) x)
 	    (callop :tanh x))
-  :backward ((dy) ; cant backward correctly
-	     (list (callop :sub (const 1) (!pow (callop :tanh dy) 2)))))
+  :backward ((dy)
+	     (list (callop :mul dy (callop :sub (const 1) (!pow (callop :tanh (self xi)) 2))))))
 
 (defun !tanh (x)
   (call (TanhTensor) (assure-tensor x)))
 
-(defun !softmax (x)
-  (let ((z (!sum (!exp x) 1)))
+(defun !softmax (x) ; backward
+  (let ((z (!sum (!exp x) 1 t)))
     (!div (!exp x) z)))
+
 

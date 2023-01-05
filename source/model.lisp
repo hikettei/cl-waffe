@@ -1,14 +1,23 @@
 
 (in-package :cl-waffe)
 
-(defun call (model &rest args)
+
+(defun call (model &rest args)  
   (let ((result (apply (slot-value model 'forward) model args)))
     (if (slot-value model 'hide-from-tree) ;assure model isnt model
 	(progn
-	  (setf (slot-value result 'backward) (slot-value model 'backward))
-	  (setf (slot-value result 'state) model) ; last state
-	  (setf (slot-value result 'variables) (coerce args 'list))
+	  (setf (waffetensor-backward result) (slot-value model 'backward))
+	  (setf (waffetensor-state result) model) ; last state
+	  (setf (waffetensor-variables result) (coerce args 'list))
 	  result)
+	result)))
+
+(defun call1 (model &rest args)
+  (let ((result (apply #'.call model args)))
+    (if (typep (data result) 'mgl-mat:mat)
+	(if (equal (mgl-mat:mat-dimensions (data result)) `(1))
+	    (!1darray-to-const result)
+	    result)
 	result)))
 
 (defmacro is-waffe-model (model)
@@ -39,7 +48,11 @@
 			   (setf (waffetensor-backward p) nil)
 			   (setf (waffetensor-variables p) nil)
 			   (setf (waffetensor-grad p) `(nil nil))
-			   (setf (waffetensor-grad-tmp p) nil))
+			   (let ((grad-tmp (waffetensor-grad-tmp p)))
+			     (setf (grad-tmp-grad-called grad-tmp) nil)
+			     (if (typep (grad-tmp-value grad-tmp) 'mgl-mat:mat)
+				 (mgl-mat:fill! (grad-tmp-value grad-tmp) 0)
+				 (setf (grad-tmp-value grad-tmp) nil))))
 		nil)
      :hide-from-tree nil))
 
@@ -143,4 +156,5 @@
 	    (progn
 	      (indent-with)
 	      (format stream "(+)~a:~a~C" prefix (!shape model) #\newline))))))
+
 

@@ -11,7 +11,8 @@
         ;(assert (null axis))
         (numcl:full n array))))
 
-(defun kernel (ope args)
+(defun kernel (ope args out)
+  (declare (ignore out))
   (let* ((args (map 'list (lambda (x) (if (or (typep x 'array) (typep x 'vector))
 					  (numcl:asarray x)
 					  (if (typep x 'mgl-mat:mat)

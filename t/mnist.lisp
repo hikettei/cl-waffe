@@ -17,10 +17,22 @@
 				    :descriptions `((:red "prev-loss" 0 4)
 						    (:blue "current-loss" 0 3)))
 
+;softmax
+(setq tst `((1 0 0) (0 1 0) (0 0 1)))
+(setq ten (tensor (mgl-mat:make-mat `(3 3) :initial-contents tst)))
+
+(setq z (!softmax ten))
+(print z)
+(setq p (!sum z))
+(print "Softmax")
+(print p)
+(backward p)
+(print (grad ten))
+
 (defmodel MLP (activation)
   :parameters ((layer1 (cl-waffe.nn:denselayer (* 28 28) 512 NIL activation))
 	       (layer2 (cl-waffe.nn:denselayer 512 256 NIL activation))
-	       (layer3 (cl-waffe.nn:denselayer 256 10 NIL)))
+	       (layer3 (cl-waffe.nn:denselayer 256 10 NIL :softmax)))
   :forward ((x)
 	    (call (self layer3)
 		  (call (self layer2)
@@ -37,13 +49,13 @@
 		 (zero-grad)
 		 out)))
 
-
-(defdataset Mnistdata (train valid)
-  :parameters ((train train) (valid valid))
-  :forward ((index) (list (!aref (self train) index t)
-			  (!aref (self valid) index t)))
+; mini-batch学習を実装 -> batchnorm -> softmax
+(defdataset Mnistdata (train valid batch-size)
+  :parameters ((train train) (valid valid) (batch-size batch-size))
+  :forward ((index)
+	    (list (!aref (self train) `(,index ,(+ index (self batch-size))))
+		  (!aref (self valid) `(,index ,(+ index (self batch-size))))))
   :length (() (car (!shape (self train)))))
-
 
 (defmacro do-index-value-list ((index value list) &body body)
   (let ((iter (gensym))
@@ -83,12 +95,14 @@
   (defparameter mnist-dataset-test datamat)
   (defparameter mnist-target-test target))
 
+
 (format t "Training: ~a" (!shape mnist-dataset))
 (format t "Valid   : ~a" (!shape mnist-target))
 
-(setq trainer (MLPTrainer :relu 1e-3))
+(setq trainer (MLPTrainer :sigmoid 1e-3))
 
-(setq train (MnistData mnist-dataset mnist-target))
-(setq valid (MnistData mnist-dataset-test mnist-target-test))
+(setq train (MnistData mnist-dataset mnist-target 64))
+(setq valid (MnistData mnist-dataset-test mnist-target-test 64))
 
-(train trainer train :max-iterate 100 :epoch 60)
+(train trainer train :max-iterate 10 :epoch 60)
+

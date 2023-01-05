@@ -36,7 +36,7 @@
 	   #:parameter
 	   #:call
 	   #:backward
-	   	   
+
 	   #:self
 
 	   #:relu
@@ -88,6 +88,9 @@
 	   #:!transpose
 	   #:!exp
 	   #:!matmul
+
+	   #:!squeeze
+	   #:!unsqueeze
 
 	   #:!relu
 	   #:!sigmoid

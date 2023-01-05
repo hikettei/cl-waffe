@@ -11,11 +11,23 @@
 			       :sum
 			       :mean
 			       :dot
+			       :matmul
 			       :exp
 			       :tanh
 			       :reshape
 			       :transpose
 			       :repeat))
+
+(defnode 1dArrayToConstTensor nil
+  :parameters ((xi T))
+  :forward ((x)
+	    (setf (self xi) x)
+	    (const (mgl-mat:mref (data x) 0)))
+  :backward ((dy)
+	     (list (callop :mul dy (self xi)))))
+
+(defun !1darray-to-const (x)
+  (call (1dArrayToConstTensor) (assure-tensor x)))
 
 (defun check-kernel (variable)
   (unless (typep variable 'WaffeTensor)
@@ -40,25 +52,42 @@
 
   (unless (assure-tensors variables)
     (error "all inputs must have same backends and be waffe tensor"))
-
-  (let* ((backend (waffetensor-backend (first variables)))
+  
+  (let* ((backward? (find t (map 'list (lambda (x) (waffetensor-backward-mode x)) variables)))
+	 (carx (car variables))
+	 (tmp nil)
+	 (out (unless backward?
+		(if (find t (map 'list (lambda (x) (typep x 'waffetensor)) variables))
+		    (let ((r (find t variables :test (lambda (_ x) (declare (ignore _))
+							       (if (typep (data x) 'mgl-mat:mat)
+								   (waffetensor-out x))))))
+		      (if r
+			  (progn
+			    (setq tmp (waffetensor-out r)))
+			  nil))
+		    nil)
+		nil))
+	 (out tmp) ; disable with out=nil
+	 (backend (waffetensor-backend (first variables)))
 	 (args (map 'list (lambda (x) (waffetensor-data x)) variables))
 	 (all-not-array (every (lambda (x) (typep x 'waffesupporteddatatype)) args))
 	 (result (case backend
-		   (:cpu    (cl-waffe.backends.cpu:kernel instruction args))
-		   (:opencl (cl-waffe.backends.opencl:kernel instruction args))
+		   (:cpu    (cl-waffe.backends.cpu:kernel instruction args out))
+		   (:opencl (cl-waffe.backends.opencl:kernel instruction args out))
 		   (:mgl    (if all-not-array ; Use CPU When like Const(1) + Const(1)
-			        (cl-waffe.backends.cpu:kernel instruction args)
-				(cl-waffe.backends.mgl:kernel instruction args)))))
-	 (result (if (numcl:numcl-array-p result)
+			        (cl-waffe.backends.cpu:kernel instruction args out)
+				(cl-waffe.backends.mgl:kernel instruction args out)))))
+	 (result (if (numcl:numcl-array-p result) ; slow?
 		     (mgl-mat:array-to-mat result)
-		     result)) ; may cause some bugs
-	 (result (if (typep result 'mgl-mat:mat)
-		     (if (equal (mgl-mat:mat-dimensions result) `(1))
-			 (mgl-mat:mref result 0)
-			 result)
 		     result)))
+        
+    (if (typep result 'mgl-mat:mat)
+	(unless backward?
+	  (unless out
+	    (dolist (var variables)
+	      (setf (waffetensor-out var) result)))))
     (const result :backend backend)))
+	       
 
 (defun backends-available ())
 

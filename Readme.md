@@ -8,32 +8,15 @@ Deeplearningのライブラリを自作しようとしている。。。冬休�
 # Todo/Memos
 
 
-・Numclは使いたくないがOpenBLASに依存しないで動くようにしたい。
-
--> cl-waffe上ではcl標準のarrayで動作
-
--> numclベースの行列演算を書き換える
-
--> WaffeTensor >> (Numcl mgl-mat opencl-kernel...)
+・ 次元配列の演算, ミニバッチ学習
 
 
-・reshape/randnなどの関数を自前実装(骨が折れる...)
+・ 学習データの読み込みがめちゃくちゃ遅い... MNISTですら重たい
 
--> 命名規則をどうにかする(logeとかwf-tanhとかはわかりずらい)
-
--> Tensorの型をちゃんと定義する + FP16/FP8
-
--> 次元配列の演算, ミニバッチ学習
-
--> (data tensor) = CL標準配列と定義
-
--> 学習データの読み込みがめちゃくちゃ遅い... MNISTですら重たい
+-> Dataloaderのベンチマーク
 
 
 ・必要ライブラリの管理(versionなど)
-
-
-・Error表示をちゃんと書く(invaild argument numberとかはわかりずらい)
 
 
 ・画像/テキストのloaderを作る CLのライブラリにいい感じのやつが見当たらない。。。
@@ -43,9 +26,6 @@ Deeplearningのライブラリを自作しようとしている。。。冬休�
 
 
 ・学習時のLossの推移をSLIME上かtxtに保存できるように書いておく
-
-
-・えげちぃWarningの解消
 
 
 ・モデルの計算式書く時にS式はしんどい、yaccで中置記法->S式に変換するマクロ作る (exa: (with-waffe-exp 1+ a))
