@@ -43,10 +43,8 @@
 (defun !tanh (x)
   (call (TanhTensor) (assure-tensor x)))
 
-(defun !softmax (x)
-  (print x)
+(defun !softmax (x) ; backward
   (let ((z (!sum (!exp x) 1 t)))
-    (print z)
     (!div (!exp x) z)))
 
 

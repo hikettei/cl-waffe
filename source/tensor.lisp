@@ -100,7 +100,7 @@
     (if (typep content 'ratio)
 	(if (eq mgl-mat:*default-mat-ctype* :double) ;...
 	    (coerce content 'double-float)
-	    (coerce content 'double-float))
+	    (coerce content 'float))
 	content)))
 
 (defun check-backend (backend tensor)
@@ -171,11 +171,16 @@
 	  (backward1 (nth-var tensor i))))
       (if (waffetensor-grad tensor) ; the tensor is the end of node.
 	  (if (grad-tmp-value (waffetensor-grad-tmp tensor)) ; is grad-tmp already created?
+              (progn
 	      (if (typep (waffetensor-grad tensor) 'cons) ; is it first value? or not?
+                  (let ((new-grad (grad-tmp-value (waffetensor-grad-tmp tensor))))
+		    (if (typep (data new-grad) 'mgl-mat:mat)
+			(if (equal (!shape new-grad) (!shape tensor))
+			    (setf (waffetensor-grad tensor) (data new-grad))
+			    (setf (waffetensor-grad tensor) (data (!reshape new-grad (!shape tensor))))) ; is it due to bugs of reshape?
+			(setf (waffetensor-grad tensor) (data new-grad))))
 		  (setf (waffetensor-grad tensor)
-			(data (grad-tmp-value (waffetensor-grad-tmp tensor))))
-		  (setf (waffetensor-grad tensor)
-			(data (!add (waffetensor-grad tensor) (grad-tmp-value (waffetensor-grad-tmp tensor))))))))))
+			(data (!add (waffetensor-grad tensor) (grad-tmp-value (waffetensor-grad-tmp tensor)))))))))))
 
 
 (defun !zeros (shape)
