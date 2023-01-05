@@ -99,10 +99,10 @@
 (format t "Training: ~a" (!shape mnist-dataset))
 (format t "Valid   : ~a" (!shape mnist-target))
 
-(setq trainer (MLPTrainer :relu 1e-3))
+(setq trainer (MLPTrainer :sigmoid 1e-3))
 
-(setq train (MnistData mnist-dataset mnist-target 2))
-(setq valid (MnistData mnist-dataset-test mnist-target-test 2))
+(setq train (MnistData mnist-dataset mnist-target 64))
+(setq valid (MnistData mnist-dataset-test mnist-target-test 64))
 
-(train trainer train :max-iterate 100 :epoch 60)
+(train trainer train :max-iterate 10 :epoch 60)
 
