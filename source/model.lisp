@@ -2,7 +2,7 @@
 (in-package :cl-waffe)
 
 
-(defun .call (model &rest args)  
+(defun call (model &rest args)  
   (let ((result (apply (slot-value model 'forward) model args)))
     (if (slot-value model 'hide-from-tree) ;assure model isnt model
 	(progn
@@ -12,7 +12,7 @@
 	  result)
 	result)))
 
-(defun call (model &rest args)
+(defun call1 (model &rest args)
   (let ((result (apply #'.call model args)))
     (if (typep (data result) 'mgl-mat:mat)
 	(if (equal (mgl-mat:mat-dimensions (data result)) `(1))
