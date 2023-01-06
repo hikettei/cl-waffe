@@ -34,7 +34,6 @@
 					    ,@lbody)))))
 	  (,constructor-name ,@init-args)))))
 
-
 (defun step-model (trainer &rest args)
   (apply (slot-value trainer 'step-model) trainer args))
 

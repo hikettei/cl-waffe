@@ -40,8 +40,8 @@
 	   #:!set-batch
 	   #:!reset-batch
 
-	   ; this is for temp
-           #:backward1
+	   ;this is for benchmark
+	   #:backward1
 	   #:callop
 
 

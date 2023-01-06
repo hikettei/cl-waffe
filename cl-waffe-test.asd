@@ -10,10 +10,10 @@
   :version nil
   :author "hikettei"
   :licence nil
-  :depends-on (:cl-waffe :fiveam :cl-libsvm-format)
+  :depends-on (:cl-waffe :fiveam :cl-libsvm-format :sb-sprof)
   :components ((:module "t" :components ((:file "package")
-					 (:file "deriv")
 					 (:file "mnist")
+					 (:file "deriv")				
 					 (:file "tensor-operate")
 					 (:file "operators")
 					 (:file "network")
