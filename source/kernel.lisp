@@ -63,7 +63,7 @@
 	       (rest variables)))))
 
 (defun callop (instruction &rest variables)
-  (declare (optimize (speed 3) (space 0) (safety 0) (debug 0)))
+  ;(declare (optimize (speed 3) (space 0) (safety 0) (debug 0)))
   (unless (find instruction *instructions*) ;doesnt works?
     (error "unsupported instruction: ~a" instruction))
 
@@ -76,14 +76,11 @@
 	 (all-not-array (every (lambda (x) (typep x 'waffesupporteddatatype)) args))
 	 (result (case backend
 		   (:cpu    (cl-waffe.backends.cpu:kernel instruction args out))
-		   (:opencl (cl-waffe.backends.opencl:kernel instruction args out))
+		   ;(:opencl (cl-waffe.backends.opencl:kernel instruction args out))
 		   (:mgl    (if all-not-array ; Use CPU When like Const(1) + Const(1)
 			        (cl-waffe.backends.cpu:kernel instruction args out)
 				(cl-waffe.backends.mgl:kernel instruction args out)))
 		   (T (error "No such backends: ~a" backend))))
-	 (result (if (numcl:numcl-array-p result) ; slow?
-		     (mgl-mat:array-to-mat result)
-		     result))
 	 (res-tensor (const result :backend backend)))
 
     (if (typep result 'mgl-mat:mat)

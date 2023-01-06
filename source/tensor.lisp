@@ -153,8 +153,8 @@
 	(error "grad can be implicitly created only for scalar outputs")))
   (backward1 tensor))
 
-(defun backward1 (tensor)
-  (declare (optimize (speed 3) (space 0) (safety 0)))
+(defun backward1 (tensor &optional (stop-backward nil))
+  ;(declare (optimize (speed 3) (space 0) (safety 0)))
   (if (waffetensor-backward tensor) ;Backward exists?
       (let ((state (waffetensor-state tensor)))
 	(dotimes (i (length (waffetensor-variables tensor))) ; do loop for the node's variables
@@ -162,19 +162,19 @@
 		 (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top
 				  (grad-tmp-value grad-tmp-before)
 				  (const 1)))) ; when top, dy=1
-	    ;(setf (waffetensor-backward-mode grad-before) t)
 	    (let ((grads (funcall (waffetensor-backward tensor) state grad-before))) ; (length grads) == (length (waffetensor-variables tensor))
-	     ; (setf (waffetensor-backward-mode grad-before) nil)
+	      
 	      (unless (= (length (waffetensor-variables tensor))
 			 (length grads))
 		(error "backward error: The number of :forward args doesnt correspond with of :backward"))
 	    
 	      (dotimes (n (length grads))
 		(setfgradtmp (nth-var tensor n) (nth n grads)))
-	      (backward1 (nth-var tensor i))))))
+
+	      (unless stop-backward
+		(backward1 (nth-var tensor i)))))))
       (if (waffetensor-grad tensor) ; the tensor is the end of node.
 	  (if (grad-tmp-value (waffetensor-grad-tmp tensor)) ; is grad-tmp already created?
-              (progn
 	      (if (typep (waffetensor-grad tensor) 'cons) ; is it first value? or not?
                   (let ((new-grad (grad-tmp-value (waffetensor-grad-tmp tensor))))
 		    (if (typep (data new-grad) 'mgl-mat:mat)
@@ -183,7 +183,7 @@
 			    (setf (waffetensor-grad tensor) (data (!reshape new-grad (!shape tensor))))) ; is it due to bugs of reshape?
 			(setf (waffetensor-grad tensor) (data new-grad))))
 		  (setf (waffetensor-grad tensor)
-			(data (!add (waffetensor-grad tensor) (grad-tmp-value (waffetensor-grad-tmp tensor)))))))))))
+			(data (!add (waffetensor-grad tensor) (grad-tmp-value (waffetensor-grad-tmp tensor))))))))))
 
 
 (defun !zeros (shape)

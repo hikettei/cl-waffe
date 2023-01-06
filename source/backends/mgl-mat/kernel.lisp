@@ -27,7 +27,8 @@
 		    :initial-element value))
 
 (defun mat-to-numcl (mat)
-  (numcl:asarray (mgl-mat:mat-to-array mat)))
+  (error ""))
+;(numcl:asarray (mgl-mat:mat-to-array mat)))
 
 (defparameter *v2v-operations* `(:add :sub :mul :div :dot :matmul))
 
@@ -46,7 +47,8 @@
       args))
 
 (defun numcl-to-mat (ncl)
-  (mgl-mat:array-to-mat ncl))
+  ;(mgl-mat:array-to-mat ncl))
+  (error ""))
 
 (defun kernel (ope args &optional out) ; operations with CPU is ridiculously slow... So I need to rewrite it with define-lisp-kernel/define-cuda-kernel
   (if (and (find ope `(:mul :div :matmul))
@@ -60,11 +62,11 @@
       (:add (if (eq (mgl-mat:mat-dimensions (car args)) (mgl-mat:mat-dimensions (second args)))
 		(let ((o (decide-out-buffer out (second args))))
 		  (mgl-mat:axpy! 1.0 (car args) o))
-		(mgl-mat:M+ (car args) (second args))))
+		(mgl-mat:m+ (car args) (second args))))
       (:sub (if (eq (mgl-mat:mat-dimensions (car args)) (mgl-mat:mat-dimensions (second args)))
 		(let ((o (decide-out-buffer out (car args))))
 		  (mgl-mat:axpy! -1.0 (second args) o))
-		(mgl-mat:M- (car args) (second args))))
+		(mgl-mat:m- (car args) (second args))))
       (:mul (let ((out (if out
 			   out
 			   (mgl-mat:make-mat (mgl-mat:mat-dimensions (car args))
@@ -89,7 +91,7 @@
 	      (unless (and (<= (length (mgl-mat:mat-dimensions (car args))) 2)
 			   (<= (length (mgl-mat:mat-dimensions (second args))) 2))
 
-		(error "cl-waffe.backends.mgl: :dot DotProduct Failed due to unsatisfication with (!dims A) <= 2 and (!dims B) <= 2"))
+		(error "cl-waffe.backends.mgl: :dot dotproduct failed due to unsatisfication with (!dims a) <= 2 and (!dims b) <= 2"))
 		 (mgl-mat:gemm! 1 (car args) (second args) 0 out)
 		 out))
       (:log (let ((o (decide-out-buffer out (car args))))
@@ -104,11 +106,22 @@
 		(let ((x (mgl-mat:copy-mat (car args))))
 		  (mgl-mat:.expt! x (second args))
 		  x)))
-      (:sum  (let ((result (numcl:sum  (mat-to-numcl (car args)) :axes (second args))))
-	       ;Using CPU
-	       (if (numcl:numcl-array-p result)
-		   (numcl-to-mat result)
-		   result)))
+      (:sum  (let* ((dims (mgl-mat:mat-dimensions (car args))) ; slow...
+		    (dims (if (and (= 1 (car (last dims)))
+				   (= 3 (length dims)))
+			      (butlast dims)
+			      dims))
+		    (x (mgl-mat:reshape! (mgl-mat:copy-mat (car args)) dims))
+		    (dims (case (second args)
+			   (1 `(,@(list (car dims)) 1))
+			   (0 `(1 ,@(cdr dims)))
+			   (T (error "Sum only supports a 2d matrix")))))
+	       (let ((o (mgl-mat:make-mat dims :initial-element 0)))
+		 (mgl-mat:sum! x o :axis (second args) :beta 1)
+		 (mgl-mat:reshape! o dims)
+		 (if (equal dims `(1 1))
+		     (mgl-mat:mref o 0 0)
+		     o))))
       (:mean (let ((result (numcl:mean (mat-to-numcl (car args)) :axes (second args))))
                ;Using CPU
 	       (if (numcl:numcl-array-p result)
