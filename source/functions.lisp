@@ -1,20 +1,13 @@
 
 (in-package :cl-waffe)
 
-(defun plusns (tensor) ; gpu ver...? rewrite with define-lisp-kernel...
-  (let* ((dims (!shape tensor))
-	 (res (data tensor))
-         (len (if (listp dims) (reduce #'* dims) dims)))
-    (loop for n from 0 to (1- len)
-          do (setf (mgl-mat:row-major-mref res n) (if (> (mgl-mat:row-major-mref res n) (coerce 0 'float))
-						 (mgl-mat:row-major-mref res n)
-						 (coerce 0 'float))))
-    res))
 
 (defnode ReLUTensor nil
-  :parameters ((path-through T))
+  :parameters ((path-through T) (zero-buff T))
   :forward ((x)
-	    (setf (self path-through) (assure-tensor (plusns x)))
+	    (if (equal (self zero-buff) T)
+		(setf (self zero-buff) (!zeros (!shape x))))
+	    (setf (self path-through) (callop :< x (self zero-buff)))
 	    (callop :mul (self path-through) x))
   :backward ((dy)
 	     (list (callop :mul (self path-through) dy))))

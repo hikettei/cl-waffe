@@ -39,7 +39,12 @@
 
 	   #:!set-batch
 	   #:!reset-batch
-	   
+
+	   ; this is for temp
+           #:backward1
+	   #:callop
+
+
 	   #:self
 
 	   #:relu

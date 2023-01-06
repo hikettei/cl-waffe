@@ -101,7 +101,7 @@
 				(progress-bar-freq 1)
 				(save-model-path nil)
 				(width 45)
-				(height 7)) ; stream指定してtxtファイルにログを残せるようにしたい
+				(height 10)) ; stream指定してtxtファイルにログを残せるようにしたい
   (let ((losses `(0.0)) ; cl-termgraph assumes that loss >= 0
 	(prev-losses nil)
 	(prev-losses1 nil)
@@ -123,19 +123,19 @@
 	    (push loss losses)
 	    (if (and enable-animation verbose)
 		(cl-cram:update status-bar 1 :desc (format nil "loss:~a" (first losses))))))
-	(let* ((losses-aorder (map 'list (lambda (x) (* (/ x (maxlist (butlast losses))) height)) (cdr (reverse losses))))
+	(let* ((losses-aorder (map 'list (lambda (x) (* (/ x (maxlist (butlast losses))) (1+ height))) (cdr (reverse losses))))
 	       (pallet (cl-termgraph:make-listplot-frame (* 2 width) height)))
-	  (cl-termgraph:init-line pallet :white)
-	  (cl-termgraph:listplot-write pallet losses-aorder :blue)
-	  (if prev-losses
-	      (cl-termgraph:listplot-write pallet prev-losses :red))
-	  (format stream "~C" #\newline)
-	  (cl-termgraph:listplot-print pallet :x-label "n" :y-label "loss" :title nil
-					      :descriptions (if prev-losses
-								`((:red "prev-losses" ,(apply #'min prev-losses1) ,(apply #'max prev-losses1))
-								  (:blue "losses" ,(apply #'min losses) ,(apply #'max losses)))
-								`((:blue "losses" ,(apply #'min losses) ,(apply #'max losses))))
-					      :stream stream)
+	  ;(cl-termgraph:init-line pallet :white)
+	  ;(cl-termgraph:listplot-write pallet losses-aorder :blue)
+	  ;(if prev-losses
+	  ;    (cl-termgraph:listplot-write pallet prev-losses :red))
+	  ;(format stream "~C" #\newline)
+	  ;(cl-termgraph:listplot-print pallet :x-label "n" :y-label "loss" :title nil
+		;			      :descriptions (if prev-losses
+		;						`((:red "prev-losses" ,(apply #'min prev-losses1) ,(apply #'max prev-losses1))
+		;						  (:blue "losses" ,(apply #'min losses) ,(apply #'max losses)))
+		;						`((:blue "losses" ,(apply #'min losses) ,(apply #'max losses))))
+		;			      :stream stream)
 	  (setq prev-losses1 losses)
 	  (setq prev-losses losses-aorder)
 	  (cl-cram:update status-bar 0 :desc (format nil "Preparing for Next Batch...") :reset t)

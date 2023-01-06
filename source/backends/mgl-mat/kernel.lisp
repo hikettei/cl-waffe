@@ -14,14 +14,13 @@
       
 
 (defun repeat (array n &key axis)
-  (if (numcl:arrayp array)
+  (if (typep array 'mgl-mat:mat)
       (if axis
-          (numcl:concatenate (make-list n :initial-element array) :axis axis)
-          (numcl:flatten
-           (numcl:concatenate (make-list n :initial-element (numcl:reshape array `(,@(numcl:shape array) -1))) :axis -1)))
-      (progn
-        ;(assert (null axis))
-        (numcl:full n array))))
+	  (if (>= (length (mgl-mat:mat-dimensions array)) 2)
+              (mgl-mat:stack axis (loop for i below n collect array))
+	      (repeat (mgl-mat:reshape array `(,@(mgl-mat:mat-dimensions array) 1)) n :axis axis))
+	  (error "axis=-1"))
+      (error "array != mat")))
 
 (defun mgl-full-like (tensor value)
   (mgl-mat:make-mat (mgl-mat:mat-dimensions tensor)
@@ -58,8 +57,14 @@
 	  (find 1 args :test (lambda (x y) (declare (ignore x)) (typep y 'mgl-mat:mat))))
   (let* ((args (ensure-shape ope args)))
     (case ope
-      (:add (mgl-mat:M+ (car args) (second args)))
-      (:sub (mgl-mat:M- (car args) (second args)))
+      (:add (if (eq (mgl-mat:mat-dimensions (car args)) (mgl-mat:mat-dimensions (second args)))
+		(let ((o (decide-out-buffer out (second args))))
+		  (mgl-mat:axpy! 1.0 (car args) o))
+		(mgl-mat:M+ (car args) (second args))))
+      (:sub (if (eq (mgl-mat:mat-dimensions (car args)) (mgl-mat:mat-dimensions (second args)))
+		(let ((o (decide-out-buffer out (car args))))
+		  (mgl-mat:axpy! -1.0 (second args) o))
+		(mgl-mat:M- (car args) (second args))))
       (:mul (let ((out (if out
 			   out
 			   (mgl-mat:make-mat (mgl-mat:mat-dimensions (car args))
@@ -100,23 +105,27 @@
 		  (mgl-mat:.expt! x (second args))
 		  x)))
       (:sum  (let ((result (numcl:sum  (mat-to-numcl (car args)) :axes (second args))))
-	       ;CPU
+	       ;Using CPU
 	       (if (numcl:numcl-array-p result)
 		   (numcl-to-mat result)
 		   result)))
       (:mean (let ((result (numcl:mean (mat-to-numcl (car args)) :axes (second args))))
-               ;CPU
+               ;Using CPU
 	       (if (numcl:numcl-array-p result)
 		   (numcl-to-mat result)
 		   result)))
       (:tanh (let ((o (decide-out-buffer out (car args))))
 	       (mgl-mat:.tanh! o)))
-      (:reshape (let ((x (mgl-mat:copy-mat (car args)))) ;displaceベースに書き換える
+      (:reshape (let ((x (mgl-mat:copy-mat (car args))))
 		    (mgl-mat:reshape! x (second args))
-		    x))
-      (:repeat (let ((result (numcl-to-mat (repeat (mat-to-numcl (car args)) (third args) :axis (second args)))))
-                    ;esp its too slow, rewrite with stack
-		    result))
+		  x))
+      (:< (let ((x (decide-out-buffer out (car args))))
+	       (mgl-mat:.<! (second args) x)
+	    x))
+      (:> (let ((x (decide-out-buffer out (car args))))
+	    (mgl-mat:.<! x (second args)) ; x = (second args) ...
+	    x))
+      (:repeat (repeat (car args) (third args) :axis (second args)))
       (:transpose (mgl-mat:transpose (car args))) ; second args?
       (T (error "~a is nt yet implemented" ope))))))
 

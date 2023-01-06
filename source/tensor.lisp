@@ -26,7 +26,7 @@
 			    const
 			    (value &key (backend *default-backend*) (extend nil)
 			     &aux (data (init-waffe-tensor-data value)) (backend (check-backend backend extend)) (grad nil) (grad-tmp (make-grad-tmp :value nil :grad-called nil)))))
-  data grad-tmp backward backend grad variables state out backward-mode)
+  data grad-tmp backward backend grad variables state)
 
 (defstruct grad-tmp value grad-called)
 
@@ -154,6 +154,7 @@
   (backward1 tensor))
 
 (defun backward1 (tensor)
+  (declare (optimize (speed 3) (space 0) (safety 0)))
   (if (waffetensor-backward tensor) ;Backward exists?
       (let ((state (waffetensor-state tensor)))
 	(dotimes (i (length (waffetensor-variables tensor))) ; do loop for the node's variables
@@ -161,9 +162,9 @@
 		 (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top
 				  (grad-tmp-value grad-tmp-before)
 				  (const 1)))) ; when top, dy=1
-	    (setf (waffetensor-backward-mode grad-before) t)
+	    ;(setf (waffetensor-backward-mode grad-before) t)
 	    (let ((grads (funcall (waffetensor-backward tensor) state grad-before))) ; (length grads) == (length (waffetensor-variables tensor))
-	      (setf (waffetensor-backward-mode grad-before) nil)
+	     ; (setf (waffetensor-backward-mode grad-before) nil)
 	      (unless (= (length (waffetensor-variables tensor))
 			 (length grads))
 		(error "backward error: The number of :forward args doesnt correspond with of :backward"))

@@ -11,12 +11,28 @@
 			       :sum
 			       :mean
 			       :dot
+			       :<
 			       :matmul
 			       :exp
 			       :tanh
 			       :reshape
 			       :transpose
 			       :repeat))
+
+(defparameter *keepdims-instructions* `(:add :sub :mul :div :log :pow :< :> :exp :tanh))
+
+(defparameter *input-to-out-shape-table* (make-hash-table :test #'equal)) ; these values are also values of result...
+
+(defmacro find-shape (instruction variables) ; reduce the num of keys
+  `(gethash `(,(if (find instruction *keepdims-instructions* :test #'eq)
+		  T
+		  instruction)
+	     ,@(map 'list (lambda (x)
+		       (if (typep (data x) 'mgl-mat:mat)
+			   (mgl-mat:mat-dimensions (data x))
+			   (data x)))
+		     variables))
+	   *input-to-out-shape-table*))
 
 (defnode 1dArrayToConstTensor nil
   :parameters ((xi T))
@@ -47,26 +63,14 @@
 	       (rest variables)))))
 
 (defun callop (instruction &rest variables)
+  (declare (optimize (speed 3) (space 0) (safety 0) (debug 0)))
   (unless (find instruction *instructions*) ;doesnt works?
     (error "unsupported instruction: ~a" instruction))
 
   (unless (assure-tensors variables)
     (error "all inputs must have same backends and be waffe tensor"))
   
-  (let* ((backward? (find t (map 'list (lambda (x) (waffetensor-backward-mode x)) variables)))
-	 (carx (car variables))
-	 (tmp nil)
-	 (out (unless backward?
-		(if (find t (map 'list (lambda (x) (typep x 'waffetensor)) variables))
-		    (let ((r (find t variables :test (lambda (_ x) (declare (ignore _))
-							       (if (typep (data x) 'mgl-mat:mat)
-								   (waffetensor-out x))))))
-		      (if r
-			  (setq tmp (waffetensor-out r))
-			  nil))
-		    nil)
-		nil))
-	 (out tmp) ; disable with out=nil
+  (let* ((out (find-shape instruction variables))
 	 (backend (waffetensor-backend (first variables)))
 	 (args (map 'list (lambda (x) (waffetensor-data x)) variables))
 	 (all-not-array (every (lambda (x) (typep x 'waffesupporteddatatype)) args))
@@ -75,23 +79,18 @@
 		   (:opencl (cl-waffe.backends.opencl:kernel instruction args out))
 		   (:mgl    (if all-not-array ; Use CPU When like Const(1) + Const(1)
 			        (cl-waffe.backends.cpu:kernel instruction args out)
-				(cl-waffe.backends.mgl:kernel instruction args out)))))
+				(cl-waffe.backends.mgl:kernel instruction args out)))
+		   (T (error "No such backends: ~a" backend))))
 	 (result (if (numcl:numcl-array-p result) ; slow?
 		     (mgl-mat:array-to-mat result)
-		     result)))
+		     result))
+	 (res-tensor (const result :backend backend)))
 
-    ;(if backward?
-	;(dolist (v variables)
-	 ; (print result) ; created new buffer 4
-	  ;(print (grad-tmp-value (waffetensor-grad-tmp v)))))
-        
     (if (typep result 'mgl-mat:mat)
-	(unless backward?
-	  (unless out
-	    (dolist (var variables)
-	      (setf (waffetensor-out var) result)))))
-    (const result :backend backend)))
-	       
+	(unless out
+	  (setf (find-shape instruction variables) result)))
+
+        res-tensor))
 
 (defun backends-available ())
 
