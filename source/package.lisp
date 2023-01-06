@@ -37,6 +37,9 @@
 	   #:call
 	   #:backward
 
+	   #:!set-batch
+	   #:!reset-batch
+	   
 	   #:self
 
 	   #:relu

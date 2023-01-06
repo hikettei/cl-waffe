@@ -62,8 +62,7 @@
 							       (if (typep (data x) 'mgl-mat:mat)
 								   (waffetensor-out x))))))
 		      (if r
-			  (progn
-			    (setq tmp (waffetensor-out r)))
+			  (setq tmp (waffetensor-out r))
 			  nil))
 		    nil)
 		nil))
@@ -80,6 +79,11 @@
 	 (result (if (numcl:numcl-array-p result) ; slow?
 		     (mgl-mat:array-to-mat result)
 		     result)))
+
+    ;(if backward?
+	;(dolist (v variables)
+	 ; (print result) ; created new buffer 4
+	  ;(print (grad-tmp-value (waffetensor-grad-tmp v)))))
         
     (if (typep result 'mgl-mat:mat)
 	(unless backward?
