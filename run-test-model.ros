@@ -1,0 +1,21 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#|
+exec ros -Q -- $0 "$@"
+|#
+(progn ;;init forms
+  (ros:ensure-asdf)
+  (load "cl-waffe.asd")
+  #+quicklisp(ql:quickload '(lake cl-waffe) :silent t)
+  )
+
+(defpackage :ros.script.cl-waffe-test.3881993727
+  (:use :cl))
+(in-package :ros.script.cl-waffe-test.3881993727)
+
+(defun main (&rest argv)
+  (declare (ignorable argv))
+  (cond
+    ((equal (car argv) "mnist") (load "./examples/mnist.lisp"))
+    (T (error "No such example model: ~a" (car argv)))))
+;;; vim: set ft=lisp lisp:

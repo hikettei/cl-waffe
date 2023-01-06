@@ -37,6 +37,14 @@
 	   #:call
 	   #:backward
 
+	   #:!set-batch
+	   #:!reset-batch
+
+	   ;this is for benchmark
+	   #:backward1
+	   #:callop
+
+
 	   #:self
 
 	   #:relu

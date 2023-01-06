@@ -2,39 +2,29 @@
 (in-package :cl-waffe.backends.cpu)
 
 (defun repeat (array n &key axis)
-  (if (numcl:arrayp array)
-      (if axis
-          (numcl:concatenate (make-list n :initial-element array) :axis axis)
-          (numcl:flatten
-           (numcl:concatenate (make-list n :initial-element (numcl:reshape array `(,@(numcl:shape array) -1))) :axis -1)))
-      (progn
-        ;(assert (null axis))
-        (numcl:full n array))))
+  ; asserted array is not tensor and may be axis is always zero
+  (let ((dims (case axis
+		(0 `(,n))
+		(1 `(1, n))
+		(T (error "kernel error")))))
+    (mgl-mat:make-mat dims :initial-element array)))
 
 (defun kernel (ope args out)
   (declare (ignore out))
-  (let* ((args (map 'list (lambda (x) (if (or (typep x 'array) (typep x 'vector))
-					  (numcl:asarray x)
-					  (if (typep x 'mgl-mat:mat)
-					      (numcl:asarray
-					       (mgl-mat:mat-to-array x))
-					      x)))
-		    args)))
-    (case ope
-      (:add (numcl:+ (car args) (second args)))
-      (:sub (numcl:- (car args) (second args)))
-      (:mul (numcl:* (car args) (second args)))
-      (:div (numcl:/ (car args) (second args)))
-      (:dot (numcl:matmul (car args) (second args))) ;vdot? matmul? or?
-      (:log (numcl:log (car args)))
-      (:exp (numcl:exp (car args)))
-      (:pow (numcl:expt (car args) (second args)))
+  ; (print "CPU Calling...") (print args) (print ope)
+  (case ope
+      (:add (+ (car args) (second args)))
+      (:sub (- (car args) (second args)))
+      (:mul (* (car args) (second args)))
+      (:div (/ (car args) (second args)))
+      (:log (log (car args)))
+      (:exp (exp (car args)))
+      (:pow (expt (car args) (second args)))
       (:sum (numcl:sum (car args) :axes (second args)))
       (:mean (numcl:mean (car args) :axes (second args)))
-      (:tanh (numcl:tanh (car args)))
-      (:reshape (numcl:reshape (car args) (second args)))
+      (:tanh (tanh (car args)))
       (:repeat (repeat (car args) (third args) :axis (second args)))
-      (:transpose (numcl:transpose (car args) (second args)))
-      (T (error "~a is nt yet implemented" ope)))))
+      ;(:transpose (numcl:transpose (car args) (second args)))
+      (T (error "~a is nt yet implemented" ope))))
 
 (defun infomation ())

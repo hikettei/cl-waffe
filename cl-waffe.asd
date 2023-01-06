@@ -8,7 +8,7 @@
   :version nil
   :description "an opencl-based deeplearning library"
   :pathname "source"
-  :depends-on (#:numcl #:cl-ansi-text #:mgl-mat)
+  :depends-on (#:numcl #:cl-ansi-text #:mgl-mat #:cl-libsvm-format)
   :in-order-to ((test-op (test-op cl-waffe-test)))
   :components ((:file "cl-cram")
 	       (:module "cl-termgraph"

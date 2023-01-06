@@ -1,23 +1,16 @@
 
 (in-package :cl-waffe)
 
+(declaim (inline call))
 
 (defun call (model &rest args)  
   (let ((result (apply (slot-value model 'forward) model args)))
     (if (slot-value model 'hide-from-tree) ;assure model isnt model
 	(progn
 	  (setf (waffetensor-backward result) (slot-value model 'backward))
-	  (setf (waffetensor-state result) model) ; last state
-	  (setf (waffetensor-variables result) (coerce args 'list))
+	  (setf (waffetensor-state result)    model) ; last state
+	  (setf (waffetensor-variables result) args)
 	  result)
-	result)))
-
-(defun call1 (model &rest args)
-  (let ((result (apply #'.call model args)))
-    (if (typep (data result) 'mgl-mat:mat)
-	(if (equal (mgl-mat:mat-dimensions (data result)) `(1))
-	    (!1darray-to-const result)
-	    result)
 	result)))
 
 (defmacro is-waffe-model (model)
@@ -74,26 +67,25 @@
 		 x)))
     (unless forward
       (error "insufficient forms"))
-    `(defmacro ,name (&rest init-args &aux (constructor-name (gensym)))
-       `(progn
-	  (defstruct (,(gensym (symbol-name ',name))
-		      (:constructor ,constructor-name (,@',args &aux ,@',parameters))
-		      (:print-function (lambda (m stream k)
-					 (declare (ignore k))
-					 (render-simple-model-structure stream m))))
-	   (hide-from-tree ,',hide-from-tree)
-	   (parameters ',',(map 'list (lambda (x) (car x)) parameters))
-	   (forward ,',(let ((largs (car forward))
-			     (lbody (cdr forward))
-			     (self-heap (gensym)))
-			 (dolist (i largs) (assure-args i))
-			 `(lambda ,(concatenate 'list (list self-heap) largs)
-			    ,(if (null parameters)
-				 `(declare (ignore ,self-heap)))
+    (let ((constructor-name (gensym)))
+      `(prog1
+	 (defstruct (,name
+		     (:print-function (lambda (m stream k)
+					(declare (ignore k))
+					(render-simple-model-structure stream m)))
+		     (:constructor ,constructor-name (,@args &aux ,@parameters)))
+	   (hide-from-tree ,hide-from-tree)
+	   (parameters ',(map 'list (lambda (x) (car x)) parameters))
+	   (forward ,(let ((largs (car forward))
+			   (lbody (cdr forward))
+			   (self-heap (gensym)))
+		       (dolist (i largs) (assure-args i))
+			`(lambda ,(concatenate 'list (list self-heap) largs)
+			    ,(if (null parameters) `(declare (ignore ,self-heap)))
 			    (macrolet ((self (name)
 					 `(slot-value ,',self-heap ',name)))
 			      ,@lbody))))
-	   (backward ,',(if backward
+	   (backward ,(if backward
 			    (let ((largs (car backward))
 				  (lbody (cdr backward))
 				  (self-heap (gensym)))
@@ -105,8 +97,9 @@
 					      `(slot-value ,',self-heap ',name)))
 				   ,@lbody)))
 			    nil))
-	   ,@',(map 'list (lambda (x) (assure-args (car x))) parameters))
-	  (,constructor-name ,@init-args)))))
+	   ,@(map 'list (lambda (x) (assure-args (car x))) parameters))
+	 (defun ,name (&rest init-args)
+	   (apply #',constructor-name init-args))))))
 
 
 (defun render-simple-model-structure (stream model)

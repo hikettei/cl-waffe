@@ -9,20 +9,20 @@
 			     (eq (symbol-name x) "step"))
 			 (error "cant use ~a as a name" (symbol-name x))
 			 x)))
-     `(defmacro ,name (&rest init-args &aux (constructor-name (gensym)))
-	`(progn
-	  (defstruct (,(gensym (symbol-name ',name))
+     (let ((constructor-name (gensym)))
+	`(prog1
+	  (defstruct (,name
 		      (:print-function (lambda (trainer stream _)
 					 (declare (ignore trainer _))
 					 (format stream "[Trainer of ___]")))
-		      (:constructor ,constructor-name (,@',(map 'list (lambda (x) (assure-args x)) args)
-						       &aux (model ,',model)
-							 (optimizer (cl-waffe.optimizers:init-optimizer ,',optimizer
+		      (:constructor ,constructor-name (,@(map 'list (lambda (x) (assure-args x)) args)
+						       &aux (model (funcall (lambda () ,model)))
+							 (optimizer (cl-waffe.optimizers:init-optimizer ,optimizer
 													model
-													,@',optimizer-args)))))
+													,@optimizer-args)))))
 		     (model NIL)
 		     (optimizer NIL)
-		     (step-model ,',(let ((largs (car step-model))
+		     (step-model ,(let ((largs (car step-model))
 					  (lbody (cdr step-model))
 					  (self-heap (gensym)))
 				      `(lambda ,(concatenate 'list (list self-heap) largs)
@@ -31,9 +31,9 @@
 						    (zero-grad ()            `(funcall (slot-value (slot-value ,',self-heap 'optimizer) 'backward)
 										       (slot-value ,',self-heap 'optimizer)
 										       (slot-value ,',self-heap 'model))))
-					    ,@lbody)))))
-	  (,constructor-name ,@init-args)))))
-
+					   ,@lbody)))))
+	   (defun ,name (&rest init-args)
+	     (apply #',constructor-name init-args))))))
 
 (defun step-model (trainer &rest args)
   (apply (slot-value trainer 'step-model) trainer args))
@@ -52,27 +52,28 @@
       (error ""))
     (unless length
       (error ""))
-     `(defmacro ,name (&rest init-args &aux (constructor-name (gensym)))
-	`(progn
-	  (defstruct (,(gensym (symbol-name ',name))
-		      (:print-function (lambda (trainer stream _)
-					 (declare (ignore trainer _))
-					 (format stream "[Dataset of ___]")))
-		      (:constructor ,constructor-name (,@',args &aux ,@',parameters)))
-	    ,@',(map 'list (lambda (x) (assure-args (car x))) parameters)
-	    (length ,',(let ((largs (car length))
-			     (lbody (cdr length))
-			     (self-heap (gensym)))
-			 `(lambda ,(concatenate 'list (list self-heap) largs)
-			    (macrolet ((self (name) `(slot-value ,',self-heap ',name)))
-			      ,@lbody))))
-	    (forward    ,',(let ((largs (car forward))
-				 (lbody (cdr forward))
-				 (self-heap (gensym)))
-			     `(lambda ,(concatenate 'list (list self-heap) largs)
-				(macrolet ((self (name) `(slot-value ,',self-heap ',name)))
-				  ,@lbody)))))
-	  (,constructor-name ,@init-args)))))
+     (let ((constructor-name (gensym)))
+       `(prog1
+	    (defstruct (,name
+			(:print-function (lambda (trainer stream _)
+					   (declare (ignore trainer _))
+					   (format stream "[Dataset of ___]")))
+			(:constructor ,constructor-name (,@args &aux ,@parameters)))
+	    ,@(map 'list (lambda (x) (assure-args (car x))) parameters)
+	    (length ,(let ((largs (car length))
+			   (lbody (cdr length))
+			   (self-heap (gensym)))
+		       `(lambda ,(concatenate 'list (list self-heap) largs)
+			  (macrolet ((self (name) `(slot-value ,',self-heap ',name)))
+			    ,@lbody))))
+	    (forward ,(let ((largs (car forward))
+			    (lbody (cdr forward))
+			    (self-heap (gensym)))
+			`(lambda ,(concatenate 'list (list self-heap) largs)
+			   (macrolet ((self (name) `(slot-value ,',self-heap ',name)))
+			     ,@lbody)))))
+	  (defun ,name (&rest init-args)
+	    (apply #',constructor-name init-args))))))
 
 (defun get-dataset (dataset index)
   (funcall (slot-value dataset 'forward) dataset index))
@@ -101,7 +102,7 @@
 				(progress-bar-freq 1)
 				(save-model-path nil)
 				(width 45)
-				(height 7)) ; stream指定してtxtファイルにログを残せるようにしたい
+				(height 10)) ; stream指定してtxtファイルにログを残せるようにしたい
   (let ((losses `(0.0)) ; cl-termgraph assumes that loss >= 0
 	(prev-losses nil)
 	(prev-losses1 nil)
@@ -123,19 +124,19 @@
 	    (push loss losses)
 	    (if (and enable-animation verbose)
 		(cl-cram:update status-bar 1 :desc (format nil "loss:~a" (first losses))))))
-	(let* ((losses-aorder (map 'list (lambda (x) (* (/ x (maxlist (butlast losses))) height)) (cdr (reverse losses))))
+	(let* ((losses-aorder (map 'list (lambda (x) (* (/ x (maxlist (butlast losses))) (1+ height))) (cdr (reverse losses))))
 	       (pallet (cl-termgraph:make-listplot-frame (* 2 width) height)))
-	  (cl-termgraph:init-line pallet :white)
-	  (cl-termgraph:listplot-write pallet losses-aorder :blue)
-	  (if prev-losses
-	      (cl-termgraph:listplot-write pallet prev-losses :red))
-	  (format stream "~C" #\newline)
-	  (cl-termgraph:listplot-print pallet :x-label "n" :y-label "loss" :title nil
-					      :descriptions (if prev-losses
-								`((:red "prev-losses" ,(apply #'min prev-losses1) ,(apply #'max prev-losses1))
-								  (:blue "losses" ,(apply #'min losses) ,(apply #'max losses)))
-								`((:blue "losses" ,(apply #'min losses) ,(apply #'max losses))))
-					      :stream stream)
+	  ;(cl-termgraph:init-line pallet :white)
+	  ;(cl-termgraph:listplot-write pallet losses-aorder :blue)
+	  ;(if prev-losses
+	  ;    (cl-termgraph:listplot-write pallet prev-losses :red))
+	  ;(format stream "~C" #\newline)
+	  ;(cl-termgraph:listplot-print pallet :x-label "n" :y-label "loss" :title nil
+		;			      :descriptions (if prev-losses
+		;						`((:red "prev-losses" ,(apply #'min prev-losses1) ,(apply #'max prev-losses1))
+		;						  (:blue "losses" ,(apply #'min losses) ,(apply #'max losses)))
+		;						`((:blue "losses" ,(apply #'min losses) ,(apply #'max losses))))
+		;			      :stream stream)
 	  (setq prev-losses1 losses)
 	  (setq prev-losses losses-aorder)
 	  (cl-cram:update status-bar 0 :desc (format nil "Preparing for Next Batch...") :reset t)

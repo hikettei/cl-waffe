@@ -26,7 +26,7 @@
 			    const
 			    (value &key (backend *default-backend*) (extend nil)
 			     &aux (data (init-waffe-tensor-data value)) (backend (check-backend backend extend)) (grad nil) (grad-tmp (make-grad-tmp :value nil :grad-called nil)))))
-  data grad-tmp backward backend grad variables state out backward-mode)
+  data grad-tmp backward backend grad variables state)
 
 (defstruct grad-tmp value grad-called)
 
@@ -153,7 +153,8 @@
 	(error "grad can be implicitly created only for scalar outputs")))
   (backward1 tensor))
 
-(defun backward1 (tensor)
+(defun backward1 (tensor &optional (stop-backward nil))
+  ;(declare (optimize (speed 3) (space 0) (safety 0)))
   (if (waffetensor-backward tensor) ;Backward exists?
       (let ((state (waffetensor-state tensor)))
 	(dotimes (i (length (waffetensor-variables tensor))) ; do loop for the node's variables
@@ -161,19 +162,19 @@
 		 (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top
 				  (grad-tmp-value grad-tmp-before)
 				  (const 1)))) ; when top, dy=1
-	    (setf (waffetensor-backward-mode grad-before) t)
 	    (let ((grads (funcall (waffetensor-backward tensor) state grad-before))) ; (length grads) == (length (waffetensor-variables tensor))
-	      (setf (waffetensor-backward-mode grad-before) nil)
+	      
 	      (unless (= (length (waffetensor-variables tensor))
 			 (length grads))
 		(error "backward error: The number of :forward args doesnt correspond with of :backward"))
 	    
 	      (dotimes (n (length grads))
 		(setfgradtmp (nth-var tensor n) (nth n grads)))
-	      (backward1 (nth-var tensor i))))))
+
+	      (unless stop-backward
+		(backward1 (nth-var tensor i)))))))
       (if (waffetensor-grad tensor) ; the tensor is the end of node.
 	  (if (grad-tmp-value (waffetensor-grad-tmp tensor)) ; is grad-tmp already created?
-              (progn
 	      (if (typep (waffetensor-grad tensor) 'cons) ; is it first value? or not?
                   (let ((new-grad (grad-tmp-value (waffetensor-grad-tmp tensor))))
 		    (if (typep (data new-grad) 'mgl-mat:mat)
@@ -182,7 +183,7 @@
 			    (setf (waffetensor-grad tensor) (data (!reshape new-grad (!shape tensor))))) ; is it due to bugs of reshape?
 			(setf (waffetensor-grad tensor) (data new-grad))))
 		  (setf (waffetensor-grad tensor)
-			(data (!add (waffetensor-grad tensor) (grad-tmp-value (waffetensor-grad-tmp tensor)))))))))))
+			(data (!add (waffetensor-grad tensor) (grad-tmp-value (waffetensor-grad-tmp tensor))))))))))
 
 
 (defun !zeros (shape)
@@ -203,7 +204,21 @@
      (mgl-mat:copy! (data ,tensor) (data ,new-tensor))
      ,new-tensor))
 
-;mref is ridiculously slow... 配列のサイズが一定以上の時,CL標準配列に書き直してから実行するように。 or displaceベースで書き直す？
+(defun !set-batch (dataset start-row-index batch-size)
+  (let ((dim (mgl-mat:mat-dimension (data dataset) 1)))
+    (mgl-mat:reshape-and-displace! (data dataset)
+                           (list batch-size dim)
+                           (* start-row-index dim))
+    dataset))
+
+(defun !reset-batch (dataset)
+  (let* ((dim (mgl-mat:mat-dimension (data dataset) 1))
+         (len (/ (mgl-mat:mat-max-size (data dataset)) dim)))
+    (reshape-and-displace! (data dataset) (list len dim) 0)
+    dataset))
+
+
+; !aref is ridiculously slow... due to mainly mref. for refering batch, use !cut-batch
 (defun !aref (tensor &rest dims) ; example: (aref vector 1 t t)
   (let* ((tensor-dims (!shape tensor)) ; Todo: (aref vector '(1 3) t t)
 	 (dims (cond
@@ -274,9 +289,6 @@
     (labels ((next-node (drest args rargs)
 	       (if (= (length args) (length dims))
 		   (progn
-		     (print args)
-		     (print rargs)
-		     (print result) (print value)
 		     (eval `(setf (mgl-mat:mref (data ,result) ,@args)
 				  (mgl-mat:mref (data ,value)  ,@rargs)))))
 	       (if (typep (car drest) 'fixnum)

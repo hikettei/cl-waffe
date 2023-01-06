@@ -1,10 +1,10 @@
 
-(in-package :cl-waffe-test)
+(use-package :cl-waffe)
 
 ; this file is excluded from cl-waffe-test
 ; here's mnist example codes and benchmark
 
-(defmodel MLP (activation)
+(defmodel MLP1 (activation)
   :parameters ((layer1 (cl-waffe.nn:denselayer (* 28 28) 512 T activation))
 	       (layer2 (cl-waffe.nn:denselayer 512 256 T activation))
 	       (layer3 (cl-waffe.nn:denselayer 256 10 T :softmax)))
@@ -13,8 +13,14 @@
 		  (call (self layer2)
 			(call (self layer1) x)))))
 
+(defmodel MLP (activation hidden-size)
+  :parameters ((layer1 (cl-waffe.nn:denselayer (* 28 28) hidden-size T activation))
+	       (layer2 (cl-waffe.nn:denselayer hidden-size 10 T :softmax)))
+  :forward ((x) (call (self layer2)
+		      (call (self layer1) x))))
+
 (deftrainer MLPTrainer (activation lr)
-  :model          (MLP activation)
+  :model          (MLP activation 50)
   :optimizer      cl-waffe.optimizers:SGD
   :optimizer-args (:lr lr)
   :step-model ((x y)
@@ -63,12 +69,12 @@
 		   (const (mgl-mat:array-to-mat target)))))
 
 (multiple-value-bind (datamat target)
-    (read-data "t/tmp/mnist.scale" 784 10 :most-min-class 0)
+    (read-data "examples/tmp/mnist.scale" 784 10 :most-min-class 0)
   (defparameter mnist-dataset datamat)
   (defparameter mnist-target target))
 
 (multiple-value-bind (datamat target)
-    (read-data "t/tmp/mnist.scale.t" 784 10 :most-min-class 0)
+    (read-data "examples/tmp/mnist.scale.t" 784 10 :most-min-class 0)
   (defparameter mnist-dataset-test datamat)
   (defparameter mnist-target-test target))
 
@@ -76,6 +82,7 @@
 
 (format t "Training: ~a" (!shape mnist-dataset))
 (format t "Valid   : ~a" (!shape mnist-target))
+(print "")
 
 (setq trainer (MLPTrainer :relu 1e-3))
 
@@ -84,9 +91,11 @@
 
 
 (defun test-train ()
-  (train trainer train :max-iterate 3 :epoch 1))
+  (train trainer train :max-iterate 100 :epoch 10))
 
-(sb-profile:profile cl-waffe:!aref)
-(test-train)
-(sb-profile:report)
+;(sb-profile:profile cl-waffe:!set-batch cl-waffe:backward cl-waffe:backward1 cl-waffe:callop)
+;(sb-sprof:start-profiling)
+(time (test-train))
+;(sb-sprof:report)
+;(sb-profile:report)
 
