@@ -3,21 +3,31 @@
 
 Deeplearningのライブラリを自作しようとしている。。。冬休み終わったら時間なくて放棄しちゃうかも
 
+# Documents
+
+Coming soon...
+
+
+# Run MNIST
+
+```
+$ ./run-test-model.ros
+```
+
+please remain that it requiers roswell.
+
+
 チュートリアルやサンプルコード、Documentなどはもう少ししたら書きます。
 
 # Todo/Memos
 
+・Write readme in english
 
-・ 次元配列の演算, ミニバッチ学習
+・最適化とメモリ消費量を減らすのを頑張る
 
+・Trainer使いやすくする
 
-・ 学習データの読み込みがめちゃくちゃ遅い... MNISTですら重たい
-
--> Dataloaderのベンチマーク
-
-
-・必要ライブラリの管理(versionなど)
-
+・Wikiを書く
 
 ・画像/テキストのloaderを作る CLのライブラリにいい感じのやつが見当たらない。。。
 
@@ -29,9 +39,6 @@ Deeplearningのライブラリを自作しようとしている。。。冬休�
 
 
 ・モデルの計算式書く時にS式はしんどい、yaccで中置記法->S式に変換するマクロ作る (exa: (with-waffe-exp 1+ a))
-
-
-・BackendをCPU/Cuda(OpenCl)に増やす
 
 
 ・OptimizerにAdam/Momentum/RMSPropを実装 (Amos試してみたいな...)
@@ -66,3 +73,10 @@ RuliaChan (Twitter: @ichndm)
 SBCL 2.2.5
 macOS Monterey version 12.4
 ```
+
+
+# Welcome To cl-waffe!
+
+cl-waffeはCommonLispで実装されたDeeplearningのライブラリです。
+
+cl-waffeでは以下の3つのマクロと2つの拡張用のマクロを用いてネットワークを定義していきます。
