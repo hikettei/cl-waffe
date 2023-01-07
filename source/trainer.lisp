@@ -108,7 +108,9 @@
 	(prev-losses1 nil)
 	(status-bar nil))
     (if (and enable-animation verbose)
-	(cl-cram:init-progress-bar status-bar (format nil "loss:~a" (first losses)) (get-dataset-length dataset)))
+	(cl-cram:init-progress-bar status-bar (format nil "loss:~a" (first losses)) (get-dataset-length dataset))
+	(format t "loss:~a~C" (first losses) #\newline)
+	)
     (dotimes (epoch-num epoch)
       (if verbose
 	  (progn
@@ -123,9 +125,11 @@
 		 (loss (data (step-model1 trainer args))))
 	    (push loss losses)
 	    (if (and enable-animation verbose)
-		(cl-cram:update status-bar 1 :desc (format nil "loss:~a" (first losses))))))
-	(let* ((losses-aorder (map 'list (lambda (x) (* (/ x (maxlist (butlast losses))) (1+ height))) (cdr (reverse losses))))
-	       (pallet (cl-termgraph:make-listplot-frame (* 2 width) height)))
+		(cl-cram:update status-bar 1 :desc (format nil "loss:~a" (first losses)))
+		(format t "loss:~a~C" (first losses) #\newline)
+	    )))
+	(let* ((losses-aorder (map 'list (lambda (x) (* (/ x (maxlist (butlast losses))) (1+ height))) (cdr (reverse losses)))))
+	  ;     (pallet (cl-termgraph:make-listplot-frame (* 2 width) height)))
 	  ;(cl-termgraph:init-line pallet :white)
 	  ;(cl-termgraph:listplot-write pallet losses-aorder :blue)
 	  ;(if prev-losses
@@ -139,7 +143,7 @@
 		;			      :stream stream)
 	  (setq prev-losses1 losses)
 	  (setq prev-losses losses-aorder)
-	  (cl-cram:update status-bar 0 :desc (format nil "Preparing for Next Batch...") :reset t)
+	  ;(cl-cram:update status-bar 0 :desc (format nil "Preparing for Next Batch...") :reset t)
 	  (setq losses `(0.0)))))))
 
 

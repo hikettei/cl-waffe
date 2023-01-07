@@ -6,6 +6,7 @@
   (:export #:waffetensor
            #:tensor
 	   #:const
+	   #:sysconst
 	   
 	   #:data
 	   #:grad
@@ -39,10 +40,6 @@
 
 	   #:!set-batch
 	   #:!reset-batch
-
-	   ;this is for benchmark
-	   #:backward1
-	   #:callop
 
 
 	   #:self
