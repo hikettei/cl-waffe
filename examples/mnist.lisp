@@ -83,7 +83,7 @@
 (format t "Valid   : ~a" (!shape mnist-target))
 (print "")
 
-(setq trainer (MLPTrainer :relu 1e-3))
+(setq trainer (MLPTrainer :relu 0.1))
 
 
 (setq train (MnistData mnist-dataset mnist-target 100))
@@ -93,7 +93,7 @@
 ;(sb-profile:profile cl-waffe:!set-batch cl-waffe:backward cl-waffe:!aref cl-waffe.backends.mgl:kernel numcl:sum numcl:numcl-array-p
 ;		    mgl-mat:mat-to-array mgl-mat:array-to-mat numcl:asarray)
 (sb-sprof:start-profiling)
-(time (train trainer train :max-iterate 600 :epoch 180 :batch-size 100 :valid-dataset test :verbose t :random t))
+(time (train trainer train :max-iterate 600 :epoch 10 :batch-size 100 :valid-dataset test :verbose t :random t))
 (sb-sprof:report)
 ;(sb-profile:report)
 
