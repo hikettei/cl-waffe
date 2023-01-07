@@ -1,5 +1,9 @@
 
-(use-package :cl-waffe)
+(defpackage :mnist-example
+  (:use :cl :cl-waffe :cl-libsvm-format)
+  (:export demo))
+
+(in-package :mnist-example)
 
 ; this file is excluded from cl-waffe-test
 ; here's mnist example codes and benchmark
@@ -15,7 +19,7 @@
 
 (defmodel MLP-Small (activation hidden-size)
   :parameters ((layer1 (cl-waffe.nn:denselayer (* 28 28) hidden-size T activation))
-	       (layer2 (cl-waffe.nn:denselayer hidden-size 10 T :softmax)))
+	       (layer2 (cl-waffe.nn:linearlayer hidden-size 10 T)))
   :forward ((x) (call (self layer2)
 		      (call (self layer1) x))))
 
@@ -67,33 +71,28 @@
     (values (const (mgl-mat:array-to-mat datamatrix))
 		   (const (mgl-mat:array-to-mat target)))))
 
-(multiple-value-bind (datamat target)
-    (read-data "examples/tmp/mnist.scale" 784 10 :most-min-class 0)
-  (defparameter mnist-dataset datamat)
-  (defparameter mnist-target target))
+(defun demo ()
+  (multiple-value-bind (datamat target)
+      (read-data "examples/tmp/mnist.scale" 784 10 :most-min-class 0)
+    (defparameter mnist-dataset datamat)
+    (defparameter mnist-target target))
 
-(multiple-value-bind (datamat target)
-    (read-data "examples/tmp/mnist.scale.t" 784 10 :most-min-class 0)
-  (defparameter mnist-dataset-test datamat)
-  (defparameter mnist-target-test target))
+  (multiple-value-bind (datamat target)
+      (read-data "examples/tmp/mnist.scale.t" 784 10 :most-min-class 0)
+    (defparameter mnist-dataset-test datamat)
+    (defparameter mnist-target-test target))
 
-
-
-(format t "Training: ~a" (!shape mnist-dataset))
-(format t "Valid   : ~a" (!shape mnist-target))
-(print "")
-
-(setq trainer (MLPTrainer :relu 0.1))
+  (format t "Training: ~a" (!shape mnist-dataset))
+  (format t "Valid   : ~a" (!shape mnist-target))
+  (print "")
 
 
-(setq train (MnistData mnist-dataset mnist-target 100))
-(setq test (MnistData mnist-dataset-test mnist-target-test 100))
+  (setq trainer (MLPTrainer :relu 0.1))
 
-(require 'sb-sprof)
-;(sb-profile:profile cl-waffe:!set-batch cl-waffe:backward cl-waffe:!aref cl-waffe.backends.mgl:kernel numcl:sum numcl:numcl-array-p
-;		    mgl-mat:mat-to-array mgl-mat:array-to-mat numcl:asarray)
-(sb-sprof:start-profiling)
-(time (train trainer train :max-iterate 600 :epoch 10 :batch-size 100 :valid-dataset test :verbose t :random t))
-(sb-sprof:report)
-;(sb-profile:report)
+  (setq train (MnistData mnist-dataset mnist-target 100))
+  (setq test (MnistData mnist-dataset-test mnist-target-test 100))
+
+  (sb-sprof:start-profiling)
+  (time (train trainer train :max-iterate 600 :epoch 10 :batch-size 100 :valid-dataset test :verbose t :random t))
+  (sb-profile:report))
 
