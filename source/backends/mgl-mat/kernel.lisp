@@ -78,7 +78,7 @@
       args))
 
 (defun kernel (ope args &optional out) ; operations with CPU is ridiculously slow... So I need to rewrite it with define-lisp-kernel/define-cuda-kernel
-  ;(declare (optimize (speed 3) (space 0) (safety 0) (debug 0)))
+  (declare (optimize (speed 3) (space 0) (safety 0) (debug 0)))
   (if (and (find ope `(:mul :div :matmul))
 	   (find t (map 'list (lambda (x) (if (and (not (typep x 'mgl-mat:mat)) (not (typep x 'function))) (= x 1))) args)))
       (if (and (eq ope :div) (= (car args) 1))

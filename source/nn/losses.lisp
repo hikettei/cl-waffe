@@ -10,3 +10,20 @@
   (!div (!mul -1 (!sum (!mul y (!log (!add x delta))))) (!shape y 0)))
 
 
+(defnode SoftMaxCrossEntropy (&key (delta 1e-7) (avoid-overflow t))
+  :parameters ((delta delta) (avoid-overflow avoid-overflow) (batch-size T) (out T) (target T))
+  :forward ((x y)
+	    (setf (self batch-size) (!shape y 0))
+	    (setf (self target) y)
+	    (let ((z (!softmax x :avoid-overflow (self avoid-overflow))))
+	      (setf (self out) z)
+	      (cross-entropy z y (self delta))))
+  :backward ((dy)
+	     (let* ((z (!sub (self out) (self target)))
+		    (dx (!mul dy (!div z (self batch-size)))))
+	       (list dx dx))))
+
+(defun softmax-cross-entropy (x y &key (avoid-overflow t) (delta 1e-7))
+  (call (SoftMaxCrossEntropy :avoid-overflow avoid-overflow :delta delta) x y))
+
+

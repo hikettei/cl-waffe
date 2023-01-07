@@ -11,6 +11,9 @@
 	   #:data
 	   #:grad
 
+	   #:with-no-grad
+	   #:*no-grad*
+
 	   #:waffe-tensor-p
 	   
 	   #:defmodel

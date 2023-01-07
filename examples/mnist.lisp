@@ -4,39 +4,38 @@
 ; this file is excluded from cl-waffe-test
 ; here's mnist example codes and benchmark
 
-(defmodel MLP1 (activation)
+(defmodel MLP (activation)
   :parameters ((layer1 (cl-waffe.nn:denselayer (* 28 28) 512 T activation))
 	       (layer2 (cl-waffe.nn:denselayer 512 256 T activation))
-	       (layer3 (cl-waffe.nn:denselayer 256 10 T :softmax)))
+	       (layer3 (cl-waffe.nn:linearlayer 256 10 T)))
   :forward ((x)
 	    (call (self layer3)
 		  (call (self layer2)
 			(call (self layer1) x)))))
 
-(defmodel MLP (activation hidden-size)
+(defmodel MLP-Small (activation hidden-size)
   :parameters ((layer1 (cl-waffe.nn:denselayer (* 28 28) hidden-size T activation))
 	       (layer2 (cl-waffe.nn:denselayer hidden-size 10 T :softmax)))
   :forward ((x) (call (self layer2)
 		      (call (self layer1) x))))
 
 (deftrainer MLPTrainer (activation lr)
-  :model          (MLP activation 50)
+  :model          (MLP activation)
   :optimizer      cl-waffe.optimizers:SGD
   :optimizer-args (:lr lr)
   :step-model ((x y)
-	       (let ((out (cl-waffe.nn:cross-entropy (call (model) x) y)))
+	       (zero-grad)
+	       (let ((out (cl-waffe.nn:softmax-cross-entropy (call (model) x) y)))
 		 (backward out)
 		 (update)
-		 (zero-grad)
-		 out)))
+		 out))
+  :predict ((x) (call (model) x)))
 
 (defdataset Mnistdata (train valid batch-size)
   :parameters ((train train) (valid valid) (batch-size batch-size))
-  :forward ((i)
-	    (declare (ignore i))
-	    (let ((index (random (- 60000 (self batch-size)))))
-	      (list (!set-batch (self train) index (self batch-size))
-		    (!set-batch (self valid) index (self batch-size)))))
+  :forward ((index)
+	    (list (!set-batch (self train) index (self batch-size))
+		  (!set-batch (self valid) index (self batch-size))))
   :length (() (car (!shape (self train)))))
 
 
@@ -86,16 +85,15 @@
 
 (setq trainer (MLPTrainer :relu 1e-3))
 
+
 (setq train (MnistData mnist-dataset mnist-target 100))
-(setq valid (MnistData mnist-dataset-test mnist-target-test 100))
+(setq test (MnistData mnist-dataset-test mnist-target-test 100))
 
-
-(defun test-train ()
-  (train trainer train :max-iterate 100 :epoch 10))
-
-;(sb-profile:profile cl-waffe:!set-batch cl-waffe:backward cl-waffe:backward1 cl-waffe:callop)
-;(sb-sprof:start-profiling)
-(time (test-train))
-;(sb-sprof:report)
+(require 'sb-sprof)
+;(sb-profile:profile cl-waffe:!set-batch cl-waffe:backward cl-waffe:!aref cl-waffe.backends.mgl:kernel numcl:sum numcl:numcl-array-p
+;		    mgl-mat:mat-to-array mgl-mat:array-to-mat numcl:asarray)
+(sb-sprof:start-profiling)
+(time (train trainer train :max-iterate 600 :epoch 180 :batch-size 100 :valid-dataset test :verbose t :random t))
+(sb-sprof:report)
 ;(sb-profile:report)
 

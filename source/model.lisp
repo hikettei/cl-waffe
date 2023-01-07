@@ -3,10 +3,19 @@
 
 (declaim (inline call))
 
+(defparameter *no-grad* nil)
+
+(defmacro with-no-grad (&body body)
+  `(progn
+     (setq *no-grad* t)
+     ,@body
+     (setq *no-grad* nil)
+     nil))
+
 (defun call (model &rest args)  
   (let ((result (apply (slot-value model 'forward) model args)))
     (if (slot-value model 'hide-from-tree) ;assure model isnt model
-	(progn
+	(unless *no-grad*
 	  (setf (waffetensor-backward result) (slot-value model 'backward))
 	  (setf (waffetensor-state result)    model) ; last state
 	  (setf (waffetensor-variables result) args)
