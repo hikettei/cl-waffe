@@ -6,9 +6,13 @@
   (:export #:waffetensor
            #:tensor
 	   #:const
+	   #:sysconst
 	   
 	   #:data
 	   #:grad
+
+	   #:with-no-grad
+	   #:*no-grad*
 
 	   #:waffe-tensor-p
 	   
@@ -39,10 +43,6 @@
 
 	   #:!set-batch
 	   #:!reset-batch
-
-	   ;this is for benchmark
-	   #:backward1
-	   #:callop
 
 
 	   #:self

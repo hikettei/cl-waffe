@@ -17,6 +17,10 @@
 			 (lambda (tensor stream depth)
 			   (declare (ignore depth))
 			   (format stream (render-tensor tensor))))
+			(:constructor
+			    sysconst
+			    (value &key (backend *default-backend*) (extend nil)
+				     &aux (data value) (backend (check-backend backend extend)) (grad nil) (grad-tmp (make-grad-tmp))))
 	                (:constructor
 			    tensor
 			    (value &key (backend *default-backend*) (extend nil)
@@ -153,7 +157,7 @@
 	(error "grad can be implicitly created only for scalar outputs")))
   (backward1 tensor))
 
-(defun backward1 (tensor &optional (stop-backward nil))
+(defun backward1 (tensor)
   ;(declare (optimize (speed 3) (space 0) (safety 0)))
   (if (waffetensor-backward tensor) ;Backward exists?
       (let ((state (waffetensor-state tensor)))
@@ -171,8 +175,7 @@
 	      (dotimes (n (length grads))
 		(setfgradtmp (nth-var tensor n) (nth n grads)))
 
-	      (unless stop-backward
-		(backward1 (nth-var tensor i)))))))
+	      (backward1 (nth-var tensor i))))))
       (if (waffetensor-grad tensor) ; the tensor is the end of node.
 	  (if (grad-tmp-value (waffetensor-grad-tmp tensor)) ; is grad-tmp already created?
 	      (if (typep (waffetensor-grad tensor) 'cons) ; is it first value? or not?
@@ -359,14 +362,19 @@
 
 (defun !shape (tensor &optional (nth nil))
   (unless (typep (data tensor) 'waffe-array)
-    (error "Fixnum/Double/Float doesn't have a shape"))
+    (unless (typep (data tensor) 'function)
+      (error "Fixnum/Double/Float doesn't have a shape")))
     
   (if nth
       (let ((n (if (typep nth 'waffetensor)
 		   (data nth)
 		   nth)))
-	(mgl-mat:mat-dimension (data tensor) n))
-      (mgl-mat:mat-dimensions (data tensor))))
+	(if (typep (data tensor) 'function)
+	    (nth n (funcall (data tensor) t nil))
+	    (mgl-mat:mat-dimension (data tensor) n)))
+      (if (typep (data tensor) 'function)
+	  (funcall (data tensor) t nil)
+	  (mgl-mat:mat-dimensions (data tensor)))))
 
 (defun !dims (tensor)
   (length (!shape tensor)))
@@ -471,6 +479,7 @@
 	     (render-v (!aref-array data (1- (car (array-dimensions data)))) NIL)
 	     (write-string ")" stream)))))))
 
+; ridiculously slow
 (defun render-tensor (tensor &optional (newline T) (indent-size 0))
   (with-slots ((contents data) (backward backward) (backend backend) (grad grad)) tensor
     (with-output-to-string (res)

@@ -1,6 +1,8 @@
 
 (in-package :cl-waffe)
 
+(declaim (inline callop))
+
 (defparameter *kernels* `(:cpu :opencl :mgl))
 (defparameter *instructions* `(:add
 			       :sub
@@ -70,9 +72,9 @@
   (unless (assure-tensors variables)
     (error "all inputs must have same backends and be waffe tensor"))
   
-  (let* ((out (find-shape instruction variables))
+  (let* ((out nil);(find-shape instruction variables))
 	 (backend (waffetensor-backend (first variables)))
-	 (args (map 'list (lambda (x) (waffetensor-data x)) variables))
+	 (args (map 'list (lambda (x) (waffetensor-data x)) variables)) ; do not make copy...
 	 (all-not-array (every (lambda (x) (typep x 'waffesupporteddatatype)) args))
 	 (result (case backend
 		   (:cpu    (cl-waffe.backends.cpu:kernel instruction args out))
@@ -81,11 +83,11 @@
 			        (cl-waffe.backends.cpu:kernel instruction args out)
 				(cl-waffe.backends.mgl:kernel instruction args out)))
 		   (T (error "No such backends: ~a" backend))))
-	 (res-tensor (const result :backend backend)))
+	 (res-tensor (sysconst result :backend backend)))
 
-    (if (typep result 'mgl-mat:mat)
-	(unless out
-	  (setf (find-shape instruction variables) result)))
+    ;(if (typep result 'mgl-mat:mat)
+	;(unless out
+	 ; (setf (find-shape instruction variables) result)))
 
         res-tensor))
 

@@ -37,8 +37,16 @@
 (defun !tanh (x)
   (call (TanhTensor) (assure-tensor x)))
 
-(defun !softmax (x) ; backward
-  (let ((z (!sum (!exp x) 1 t)))
-    (!div (!exp x) z)))
+(defun !average (x)
+  (let ((z (!sum x 1))
+	(batch-size (!shape x 0)))
+    (!div z batch-size)))
+
+(defun !softmax (x &key (avoid-overflow t))
+  (let* ((x1 (if avoid-overflow
+		(!sub x (!average x))
+		x))
+	(z (!sum (!exp x1) 1 t)))
+    (!div (!exp x1) z)))
 
 

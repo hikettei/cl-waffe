@@ -7,4 +7,5 @@
            :linearlayer
 	   :denselayer
            :mse
+	   :softmax-cross-entropy
            :cross-entropy))
