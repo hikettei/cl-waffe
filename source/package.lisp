@@ -88,6 +88,8 @@
 
 	   #:!dot
 	   #:!sum
+
+	   #:!sqrt
 	  
 	   #:!pow
 	   #:!mean

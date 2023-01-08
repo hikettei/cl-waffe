@@ -3,13 +3,14 @@
 
 (declaim (inline callop))
 
-(defparameter *kernels* `(:cpu :opencl :mgl))
+(defparameter *kernels* `(:opencl :mgl))
 (defparameter *instructions* `(:add
 			       :sub
 			       :mul
 			       :div
 			       :log
 			       :pow
+			       :sqrt
 			       :sum
 			       :mean
 			       :dot

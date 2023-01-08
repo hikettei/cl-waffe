@@ -17,15 +17,9 @@
 		  (call (self layer2)
 			(call (self layer1) x)))))
 
-(defmodel MLP-Small (activation hidden-size)
-  :parameters ((layer1 (cl-waffe.nn:denselayer (* 28 28) hidden-size T activation))
-	       (layer2 (cl-waffe.nn:linearlayer hidden-size 10 T)))
-  :forward ((x) (call (self layer2)
-		      (call (self layer1) x))))
-
 (deftrainer MLPTrainer (activation lr)
   :model          (MLP activation)
-  :optimizer      cl-waffe.optimizers:SGD
+  :optimizer      cl-waffe.optimizers:Adam
   :optimizer-args (:lr lr)
   :step-model ((x y)
 	       (zero-grad)
@@ -58,10 +52,10 @@
   (let* ((data-list (svmformat:parse-file data-path))
          (len (length data-list))
          (target     (make-array (list len n-class)
-				       :element-type 'single-float
+				       :element-type 'float
 				       :initial-element 0.0))
          (datamatrix (make-array (list len data-dimension)
-				       :element-type 'single-float
+				       :element-type 'float
 				       :initial-element 0.0)))
     (loop for i fixnum from 0
           for datum in data-list
@@ -87,7 +81,7 @@
   (print "")
 
 
-  (setq trainer (MLPTrainer :relu 0.1))
+  (setq trainer (MLPTrainer :relu 1e-4))
 
   (setq train (MnistData mnist-dataset mnist-target 100))
   (setq test (MnistData mnist-dataset-test mnist-target-test 100))

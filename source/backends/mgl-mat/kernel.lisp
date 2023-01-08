@@ -10,7 +10,8 @@
 	   (mgl-mat:copy! ,args ,out)
 	   ,out)
 	 (progn
-	   (mgl-mat:copy-mat ,args)))))
+	   (let ((o (mgl-mat:make-mat (mgl-mat:mat-dimensions ,args))))
+	     (mgl-mat:copy! ,args o))))))
       
 
 (defun repeat (array n &key axis)
@@ -31,16 +32,8 @@
     (mgl-mat:make-mat (reverse dims)
 		      :initial-element value)))
 
-(defun mat-to-numcl (mat)
-  (error ""))
-;(numcl:asarray (mgl-mat:mat-to-array mat)))
-
 (defparameter *v2v-operations* `(:add :sub :mul :div :dot :matmul))
 (defparameter *abort-delay-instruction* :matmul)
-
-(defun numcl-to-mat (ncl)
-  ;(mgl-mat:array-to-mat ncl))
-  (error ""))
 
 (defmacro deliv-delay (tensor func &rest args)
   `(lambda (shape? step?)
@@ -98,14 +91,12 @@
 		(mgl-mat:m- (car args) (second args))))
       (:mul (let ((out (if out
 			   out
-			   (mgl-mat:make-mat (mgl-mat:mat-dimensions (car args))
-					     :initial-element 0))))
+			   (mgl-mat:make-mat (mgl-mat:mat-dimensions (car args))))))
 	      (mgl-mat:geem! 1 (car args) (second args) 0 out)
 	      out))
       (:div (let* ((out (if out
 			   out
-			   (mgl-mat:make-mat (mgl-mat:mat-dimensions (car args))
-					     :initial-element 0)))
+			   (mgl-mat:make-mat (mgl-mat:mat-dimensions (car args)))))
 		  (args-copy (mgl-mat:copy-mat (second args)))
 		  ;initilizing new mats...
 		  (inv (mgl-mat:.inv! args-copy)))
@@ -119,8 +110,7 @@
 						       (car  (mgl-mat:mat-dimensions (car args))))
 						  ,(if (second transpose-map)
 						       (second (reverse (mgl-mat:mat-dimensions (second args))))
-						       (second (mgl-mat:mat-dimensions (second args)))))
-						:initial-element 0))))
+						       (second (mgl-mat:mat-dimensions (second args)))))))))
 	      (unless (and (<= (length (mgl-mat:mat-dimensions (car args))) 2)
 			   (<= (length (mgl-mat:mat-dimensions (second args))) 2))
 		(error "cl-waffe.backends.mgl: :dot dotproduct failed due to unsatisfication with (!dims a) <= 2 and (!dims b) <= 2"))
@@ -129,15 +119,11 @@
       (:log (let ((o (decide-out-buffer out (car args))))
 	      (mgl-mat:.log! o)))
       (:exp (let ((o (decide-out-buffer out (car args))))
-		(mgl-mat:.exp! o)))
-      (:pow (if out
-		(progn
-		  (mgl-mat:copy! (car args) out)
-		  (mgl-mat:.expt! out (second args))
-		  out)
-		(let ((x (mgl-mat:copy-mat (car args))))
-		  (mgl-mat:.expt! x (second args))
-		  x)))
+	      (mgl-mat:.exp! o)))
+      (:pow (let ((o (decide-out-buffer out (car args))))
+	      (mgl-mat:.expt! o (second args))))
+      (:sqrt (let ((o (decide-out-buffer out (car args))))
+	       (mgl-mat:.sqrt! o)))
       (:sum  (let* ((dims (mgl-mat:mat-dimensions (car args)))
 		    (dims (if (and (= 1 (car (last dims)))
 				   (= 3 (length dims)))

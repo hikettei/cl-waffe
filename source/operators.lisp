@@ -41,11 +41,18 @@
   :parameters ((xi T) (yi T))
   :forward ((x1 y1) (setf (self xi) x1) (setf (self yi) y1)
 		    (callop :pow x1 y1))
-  :backward ((dy) ; ???
+  :backward ((dy)
 	     (list (callop :mul (callop :mul dy (self yi)) (callop :pow (self xi) (!sub (self yi) 1)))
 		   (callop :mul dy (callop :mul
 					   (callop :div (callop :log (callop :pow (self xi) (self yi))) (self yi))
 					   (callop :pow (self xi) (self yi)))))))
+
+(defnode SqrtTensor nil
+  :parameters ((xi T))
+  :forward ((x1) (setf (self xi) x1) 
+		 (callop :sqrt x1))
+  :backward ((dy)
+	     (list (callop :div dy (!mul 2 (callop :sqrt (self xi)))))))
 
 (defnode LogTensor nil
   :parameters ((x1 T))
@@ -158,6 +165,9 @@
 
 (defun !pow (x n)
   (call (PowTensor) (assure-tensor x) (assure-tensor n)))
+
+(defun !sqrt (x)
+  (call (SqrtTensor) (assure-tensor x)))
 
 (defun !log (x)
   (call (LogTensor) (assure-tensor x)))
