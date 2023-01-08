@@ -26,6 +26,7 @@
       (:mul (* (car args) (second args)))
       (:div (/ (car args) (second args)))
       (:log (log (car args)))
+      (:sqrt (sqrt (car args)))
       (:exp (exp (car args)))
       (:pow (expt (car args) (second args)))
       (:sum (numcl:sum (car args) :axes (second args)))

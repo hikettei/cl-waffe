@@ -10,6 +10,12 @@
    :init-optimizer
    
 
-   :SGD))
+   :SGD
+   :Momentum
+   :AdaGrad
+   :RMSProp
+   :Adam
+   :RAdam
+   :Amos))
 
 
