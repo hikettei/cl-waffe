@@ -51,6 +51,8 @@
 	   #:with-ignore-optimizer
 	   #:*ignore-optimizer*
 
+	   #:warranty
+
 	   #:self
 
 	   #:relu

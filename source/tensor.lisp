@@ -129,7 +129,7 @@
   ; todo: coerce: simple-array -> mgl-mat
 
   (let* ((content (if (typep content 'waffetensor)
-		      (data content)
+		      (data1 content)
 		      content)))
     (unless (typep content 'WaffeTensorContentType)
       (error "Waffetensor only supports of type of mgl-mat and fixnum/float/null but got: ~a" (type-of content)))

@@ -182,7 +182,7 @@
 		      (loss (data (step-model1 trainer args))))
 		 (push loss losses)
 		 ; in order to stop program
-		 (if (= index 0) (error "STOP(trainer)"))
+		 ;(if (= index 0) (error "STOP(trainer)"))
 		 (if (= (mod index 100) 0)
 		     (cl-cram:update status-bar 0 :desc (format nil "~a/~a, loss:~a" index (/ total-len batch-size) (/ (apply #'+ losses) (length losses)))))))
       (format stream "~C" #\newline)

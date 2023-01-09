@@ -2,19 +2,17 @@
 (in-package :cl-waffe.backends.mgl)
 
 ; Todo Rewrite with define-lisp-kernel
-
-(defparameter *copyed-num* 0)
+;(defparameter *copyed-num* 0)
 
 (defmacro duplicate-tensor (mat)
   `(let ((o (mgl-mat:make-mat (mgl-mat:mat-dimensions ,mat))))
-     (incf *copyed-num* 1)
-     (print *copyed-num*)
+     ;(incf *copyed-num* 1)
+     ;(print *copyed-num*)
      (mgl-mat:copy! ,mat o)
      o))
 
 (defmacro apply-destruct (out tensor)
   `(progn
-     (print "destructed!")
      (setf (waffetensor-report-index ,tensor)
 	   (waffetensor-report-index ,out)) ;dop(a,b)a=a, wait for refresh
      (setf (waffetensor-is-data-destructed? ,tensor) t)
@@ -104,12 +102,16 @@
 	    (args (ensure-shape ope args)))
     (case ope
       (:add (if (eq (mgl-mat:mat-dimensions (car args)) (mgl-mat:mat-dimensions (second args)))
-		(let ((o (decide-out-buffer out (second args) (second args) enable-optim)))
-		  (mgl-mat:axpy! 1.0 (car args) o))
+		(let ((o (mgl-mat:make-mat (mgl-mat:mat-dimensions (car args)))))
+		  (mgl-mat:axpy! 1.0 (car args) o)
+		  (mgl-mat:axpy! 1.0 (second args) o)
+		  o)
 		(mgl-mat:m+ (car args) (second args)))) ;slow
       (:sub (if (eq (mgl-mat:mat-dimensions (car args)) (mgl-mat:mat-dimensions (second args)))
-		(let ((o (decide-out-buffer out (car args) (second args) enable-optim)))
-		  (mgl-mat:axpy! -1.0 (second args) o))
+		(let ((o (mgl-mat:make-mat (mgl-mat:mat-dimensions (car args)))))
+		  (mgl-mat:axpy! -1.0 (second args) o)
+		  (mgl-mat:axpy! 1.0 (car args) o)
+		  o)
 		(mgl-mat:m- (car args) (second args)))) ;slow
       (:mul (let ((out (mgl-mat:make-mat (mgl-mat:mat-dimensions (car args)))))
 	      (mgl-mat:geem! 1 (car args) (second args) 0 out)
