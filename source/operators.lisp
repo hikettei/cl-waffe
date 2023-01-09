@@ -10,7 +10,8 @@
 
 (defnode AddTensor nil
   :parameters nil
-  :forward  ((x y) (callop :add x y))
+  :forward  ((x y)
+	     (callop :add x y))
   :backward ((dy) (list dy dy)))
 
 (defnode SubTensor nil
@@ -33,13 +34,14 @@
             (setf (self xi) (data x))
 	    (setf (self yi) (data y))
 	    (callop :div x y))
-  :backward ((dy) (list (detach (!div dy (self yi)))
-			(detach (!div (!mul (!mul dy (self xi)) -1)
-				      (!pow (self yi) 2))))))
+  :backward ((dy) (list (!div dy (self yi))
+			(!div (!mul (!mul dy (self xi)) -1)
+			      (!pow (self yi) 2)))))
 
 (defnode PowTensor nil
   :parameters ((xi T) (yi T))
-  :forward ((x1 y1) (setf (self xi) (data x1)) (setf (self yi) (data y1))
+  :forward ((x1 y1) (setf (self xi) (data x1))
+		    (setf (self yi) (data y1))
 		    (callop :pow x1 y1))
   :backward ((dy)
 	     (list (callop :mul (!mul dy (self yi)) (!pow (self xi) (!sub (self yi) 1)))
@@ -75,7 +77,7 @@
 	       (list (callop :dot dy (!transpose (self yi)))
 		     (callop :dot (!transpose (self xi)) dy))))
 
-(defnode TransposeTensor (shape)
+(defnode TransposeTensor (shape) ;sf
   :parameters ((prev-shape T) (shape shape))
   :forward ((x) (setf (self prev-shape) (!shape x)) (callop :transpose x (self shape)))
   :backward ((d1) (callop :transpose d1 (self prev-shape))))
@@ -87,16 +89,16 @@
 	    (callop :mean x (self axis)))
   :backward ((dy) (list (!repeats dy (self axis) (self repeats)))))
 
-(defnode SumTensor (axis keepdims)
+(defnode SumTensor (axis keepdims) ;df
   :parameters ((axis axis) (repeats T))
   :forward ((x)
 	    (setf (self repeats) (assure-tensor (!shape x (self axis))))
 	    (callop :sum x (self axis)))
   :backward ((dy)
-	     (list (detach (!div (!repeats dy (self axis) (self repeats))
-				 (self repeats))))))
+	     (list (!div (!repeats dy (self axis) (self repeats))
+			 (self repeats)))))
 
-(defnode RepeatTensor (axis repeats)
+(defnode RepeatTensor (axis repeats) ;sf
   :parameters ((axis axis) (repeats repeats))
   :forward ((x) (callop :repeat x (self axis) (self repeats)))
   :backward ((dy) (list (callop :sum dy (self axis)))))
@@ -113,8 +115,8 @@
 		  (setf (self yi) y)
 		  (callop :matmul x y))
   :backward ((dy)
-	     (list (detach (!matmul dy (!transpose (self yi))))
-		   (detach (!matmul (!transpose (self xi)) dy)))))
+	     (list (!matmul dy (!transpose (self yi)))
+		   (!matmul (!transpose (self xi)) dy))))
 
 ;(defnode CutTensor (result)
 ;  :parameters ((result1 result))

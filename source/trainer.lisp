@@ -1,12 +1,13 @@
 
 (in-package :cl-waffe)
 
-(defmacro deftrainer (name args &key model optimizer optimizer-args step-model predict (forward NIL))
+(defmacro deftrainer (name args &key model optimizer optimizer-args step-model predict (forward NIL) &aux (out-id (gensym)))
   (if forward (error ":forward is unavailable in deftrainer macro. use instead: :step-model"))
   (labels ((assure-args (x)
 	     (if (or (eq (symbol-name x) "model")
 		     (eq (symbol-name x) "predict")
 		     (eq (symbol-name x) "optimizer")
+		     (eq (symbol-name x) "optimizer-report")
 		     (eq (symbol-name x) "step-model"))
 		 (error "cant use ~a as a name" (symbol-name x))
 		 x)))
@@ -23,6 +24,7 @@
 													,@optimizer-args)))))
 		     (model NIL)
 		     (optimizer NIL)
+		     (optimizer-report t)
 		     (predict    ,(let ((largs (car predict))
 					(lbody (cdr predict))
 					(self-heap (gensym)))
@@ -34,11 +36,19 @@
 					(self-heap (gensym)))
 				    `(lambda ,(concatenate 'list (list self-heap) largs)
 				       (macrolet ((model     ()            `(slot-value ,',self-heap 'model))
-						  (update    (&rest args1) `(unless *no-grad* (call (slot-value ,',self-heap 'optimizer) ,@args1)))
+						  (update    (&rest args1) `(unless *no-grad* (with-ignore-optimizer
+												  (call (slot-value ,',self-heap 'optimizer) ,@args1))))
 						  (zero-grad ()            `(unless *no-grad* (funcall (slot-value (slot-value ,',self-heap 'optimizer) 'backward)
 												       (slot-value ,',self-heap 'optimizer)
 												       (slot-value ,',self-heap 'model)))))
-					   ,@lbody)))))
+					 (let ((,out-id (progn ,@lbody)))
+					   (if (typep ,out-id 'waffetensor)
+					       (progn
+						 (setf (slot-value ,self-heap 'optimizer-report) (waffetensor-optim-report ,out-id))
+						 (setf (networkvariablereport-lock (slot-value ,self-heap 'optimizer-report)) t)
+						 (setf (networkvariablereport-sp   (slot-value ,self-heap 'optimizer-report)) 0))
+					       (print "Warning: The trainer is not optimized. the last value of step-model is model-out"))
+					   ,out-id))))))
 	   (defun ,name (&rest init-args)
 	     (apply #',constructor-name init-args))))))
 
@@ -171,6 +181,8 @@
 		      (args (get-dataset dataset i))
 		      (loss (data (step-model1 trainer args))))
 		 (push loss losses)
+		 ; in order to stop program
+		 (if (= index 0) (error "STOP(trainer)"))
 		 (if (= (mod index 100) 0)
 		     (cl-cram:update status-bar 0 :desc (format nil "~a/~a, loss:~a" index (/ total-len batch-size) (/ (apply #'+ losses) (length losses)))))))
       (format stream "~C" #\newline)

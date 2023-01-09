@@ -44,8 +44,12 @@
 	   #:!set-batch
 	   #:!reset-batch
 
-	   ; for debug
-	   #:backward1
+	   #:waffetensor-destructively-calln
+	   #:waffetensor-destructive?
+	   #:waffetensor-is-data-destructed?
+	   #:waffetensor-report-index
+	   #:with-ignore-optimizer
+	   #:*ignore-optimizer*
 
 	   #:self
 
