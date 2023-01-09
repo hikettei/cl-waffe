@@ -44,6 +44,8 @@
 	   #:!set-batch
 	   #:!reset-batch
 
+	   ; for debug
+	   #:backward1
 
 	   #:self
 

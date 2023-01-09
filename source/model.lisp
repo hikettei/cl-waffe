@@ -19,6 +19,7 @@
 	  (setf (waffetensor-backward result) (slot-value model 'backward))
 	  (setf (waffetensor-state result)    model) ; last state
 	  (setf (waffetensor-variables result) args)
+	  (setf (waffetensor-is-ancestor-param result) (find t (map 'list (lambda (x) (waffetensor-is-ancestor-param x)) args)))
 	  result)
 	result)))
 

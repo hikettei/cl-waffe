@@ -11,6 +11,7 @@
 (defparameter *default-backend* :mgl)
 
 (defparameter mgl-mat:*DEFAULT-MAT-CTYPE* :float) ;double/float
+(setf lparallel:*kernel* (lparallel:make-kernel 4))
 
 ; utils
 (defstruct (WaffeTensor (:print-function
@@ -24,13 +25,13 @@
 	                (:constructor
 			    tensor
 			    (value &key (backend *default-backend*) (extend nil)
-			     &aux (data (init-waffe-tensor-data value)) (backend (check-backend backend extend)) (grad `(nil nil))
+			     &aux (data (init-waffe-tensor-data value)) (is-ancestor-param t) (backend (check-backend backend extend)) (grad `(nil nil))
 			       (grad-tmp (make-grad-tmp :value nil :grad-called nil))))
 			(:constructor
 			    const
 			    (value &key (backend *default-backend*) (extend nil)
 			     &aux (data (init-waffe-tensor-data value)) (backend (check-backend backend extend)) (grad nil) (grad-tmp (make-grad-tmp :value nil :grad-called nil)))))
-  data grad-tmp backward backend grad variables state)
+  data grad-tmp backward backend grad variables state is-ancestor-param)
 
 (defstruct grad-tmp value grad-called)
 
@@ -157,25 +158,31 @@
 	(error "grad can be implicitly created only for scalar outputs")))
   (backward1 tensor))
 
+(defun step-backward (tensor grad-before) ; (Node) -> (V1, V2, V3)...
+  (let ((grads (funcall (waffetensor-backward tensor)
+			(waffetensor-state tensor)
+			grad-before)))
+    
+    (unless (= (length (waffetensor-variables tensor))
+	       (length grads))
+      (error "backward error: The number of :forward args doesnt correspond with of :backward"))
+
+    (dotimes (n (length grads))
+      (setfgradtmp (nth-var tensor n) (nth n grads)))))
+
 (defun backward1 (tensor)
   ;(declare (optimize (speed 3) (space 0) (safety 0)))
   (if (waffetensor-backward tensor) ;Backward exists?
-      (let ((state (waffetensor-state tensor)))
-	(dotimes (i (length (waffetensor-variables tensor))) ; do loop for the node's variables
-	  (let* ((grad-tmp-before (waffetensor-grad-tmp tensor))
-		 (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top
-				  (grad-tmp-value grad-tmp-before)
-				  (const 1)))) ; when top, dy=1
-	    (let ((grads (funcall (waffetensor-backward tensor) state grad-before))) ; (length grads) == (length (waffetensor-variables tensor))
-	      
-	      (unless (= (length (waffetensor-variables tensor))
-			 (length grads))
-		(error "backward error: The number of :forward args doesnt correspond with of :backward"))
-	    
-	      (dotimes (n (length grads))
-		(setfgradtmp (nth-var tensor n) (nth n grads)))
-
-	      (backward1 (nth-var tensor i))))))
+      (let* ((grad-tmp-before (waffetensor-grad-tmp tensor))
+	     (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top
+			      (grad-tmp-value grad-tmp-before)
+			      (const 1))))
+	(step-backward tensor grad-before)
+	
+	(dotimes (n (length (waffetensor-variables tensor)))
+	  (if (waffetensor-is-ancestor-param (nth-var tensor n))
+	      (backward1 (nth-var tensor n))))
+	)
       (if (waffetensor-grad tensor) ; the tensor is the end of node.
 	  (if (grad-tmp-value (waffetensor-grad-tmp tensor)) ; is grad-tmp already created?
 	      (if (typep (waffetensor-grad tensor) 'cons) ; is it first value? or not?
