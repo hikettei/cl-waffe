@@ -54,7 +54,7 @@
 						    (!mul (!mul (!sub 1.0 (self decay-rate))
 								(grad (nth i (self params))))
 							  (grad (nth i (self params)))))))
-	     (mgl-mat:copy! (warrant (!sub (data (nth i (self params)))
+	     (mgl-mat:copy! (warranty (!sub (data (nth i (self params)))
 					   (!div (!mul (self lr) (grad (nth i (self params))))
 						 (!add (!sqrt (nth i (self h))) (self epsilon)))))
 			    (data (nth i (self params)))))))
@@ -78,10 +78,12 @@
 						      (!mul (!sub 1 (self beta2))
 							    (!sub (!pow (grad (nth i (self params))) 2)
 								  (nth i (self v)))))))
-	       (mgl-mat:copy! (warranty (!sub (nth i (self params))
-					      (!mul lr-t (!div
-							  (nth i (self m))
-							      (!add (!sqrt (nth i (self v))) (self epsilon))))))
+	       (mgl-mat:copy! (data
+				  (!sub (nth i (self params))
+					(!mul lr-t (!div
+						    (nth i (self m))
+						    (!add (!sqrt (nth i (self v))) (self epsilon))))))
 			      (data (nth i (self params))))))))
+
 
 

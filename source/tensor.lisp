@@ -168,8 +168,8 @@
 
      (if (typep (waffetensor-grad ,tensor) 'cons)
 	 (error "A grad is nil. Please remain you need to call (backward out) before using a grad"))
-  
-  (waffetensor-grad ,tensor)))
+
+     (waffetensor-grad ,tensor)))
 
 (defmacro parameter (tensor)
   ; make constants parameter

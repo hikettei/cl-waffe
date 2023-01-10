@@ -2,21 +2,16 @@
 (in-package :cl-waffe.backends.mgl)
 
 ; Todo Rewrite with define-lisp-kernel
-;(defparameter *copyed-num* 0)
 
 (defmacro duplicate-tensor (mat)
   `(let ((o (mgl-mat:make-mat (mgl-mat:mat-dimensions ,mat))))
-     ;(incf *copyed-num* 1)
-     ;(print *copyed-num*)
      (mgl-mat:copy! ,mat o)
      o))
 
-(defmacro apply-destruct (out tensor)
-  `(progn
-     (setf (waffetensor-report-index ,tensor)
-	   (waffetensor-report-index ,out)) ;dop(a,b)a=a, wait for refresh
-     (setf (waffetensor-is-data-destructed? ,tensor) t)
-     (incf (waffetensor-destructively-calln ,tensor) 1)))
+(defmacro apply-destruct (out)
+  `(progn ; tensor=out
+     (setf (waffetensor-is-data-destructed? ,out) t)
+     (setf (waffetensor-destructively-calln ,out) 1)))
 
 (defmacro assure-destructed? (out tensor)
   `(progn
@@ -26,13 +21,13 @@
 
 (defmacro decide-out-buffer (out args var enable-optim)
   `(progn
+     (apply-destruct ,var)
      (if ,out
 	 (progn
-	   (apply-destruct ,out ,var)
-	   (if ,enable-optim
+	   (if (and ,enable-optim (waffetensor-destructive? ,out))
 	       (assure-destructed? (data ,out) ,var)
-	       (duplicate-tensor ,args)))
-	 (duplicate-tensor ,args))))
+	       (duplicate-tensor (assure-destructed? ,args ,var))))
+	 (duplicate-tensor (assure-destructed? ,args ,var)))))
 
 (defun repeat (array n &key axis)
   (if (typep array 'mgl-mat:mat)
@@ -94,7 +89,7 @@
   ;(declare (optimize (speed 3) (space 0) (safety 0) (debug 0)))
   (if (and (find ope `(:mul :div :matmul))
 	   (find t (map 'list (lambda (x) (if (and (not (typep x 'mgl-mat:mat)) (not (typep x 'function))) (= x 1))) args)))
-      (if (and (eq ope :div) (= (car args) 1))
+      (if (and (eq ope :div) (= (car args) 1)) ; 1/tensor
 	  (let ((o (decide-out-buffer out (second args) (second variables) enable-optim)))
 	    (mgl-mat:.inv! o))
 	  (find 1 args :test (lambda (x y) (declare (ignore x)) (typep y 'mgl-mat:mat))))
@@ -116,10 +111,10 @@
       (:mul (let ((out (mgl-mat:make-mat (mgl-mat:mat-dimensions (car args)))))
 	      (mgl-mat:geem! 1 (car args) (second args) 0 out)
 	      out))
-      (:div (let* ((out (mgl-mat:make-mat (mgl-mat:mat-dimensions (car args))))
+      (:div (let* ((out       (mgl-mat:make-mat (mgl-mat:mat-dimensions (car args))))
 		   (args-copy (mgl-mat:copy-mat (second args)))
 		  ;initilizing new mats...
-		  (inv (mgl-mat:.inv! args-copy)))
+		   (inv (mgl-mat:.inv! args-copy)))
 	      (mgl-mat:geem! 1 (car args) inv 0 out)
 	      out))
       (:dot (mgl-mat:dot (car args) (second args))) ;slow
@@ -131,7 +126,7 @@
 						   (second (mgl-mat:mat-dimensions (second args))))))))
 	      (unless (and (<= (length (mgl-mat:mat-dimensions (car args))) 2)
 			   (<= (length (mgl-mat:mat-dimensions (second args))) 2))
-		(error "cl-waffe.backends.mgl: :dot dotproduct failed due to unsatisfied with (!dims a) <= 2 and (!dims b) <= 2"))
+		(error "cl-waffe.backends.mgl: :matmul failed due to unsatisfied with (!dims a) <= 2 and (!dims b) <= 2"))
 		 (mgl-mat:gemm! 1 (car args) (second args) 0 out :transpose-a? (car transpose-map) :transpose-b? (second transpose-map))
 		 out))
       (:log (let ((o (decide-out-buffer out (car args) (car variables) enable-optim)))

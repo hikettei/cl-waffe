@@ -36,8 +36,7 @@
 					(self-heap (gensym)))
 				    `(lambda ,(concatenate 'list (list self-heap) largs)
 				       (macrolet ((model     ()            `(slot-value ,',self-heap 'model))
-						  (update    (&rest args1) `(unless *no-grad* (with-ignore-optimizer
-												  (call (slot-value ,',self-heap 'optimizer) ,@args1))))
+						  (update    (&rest args1) `(unless *no-grad* (call (slot-value ,',self-heap 'optimizer) ,@args1)))
 						  (zero-grad ()            `(unless *no-grad* (funcall (slot-value (slot-value ,',self-heap 'optimizer) 'backward)
 												       (slot-value ,',self-heap 'optimizer)
 												       (slot-value ,',self-heap 'model)))))
@@ -182,7 +181,6 @@
 		      (loss (data (step-model1 trainer args))))
 		 (push loss losses)
 		 ; in order to stop program
-		 ;(if (= index 0) (error "STOP(trainer)"))
 		 (if (= (mod index 100) 0)
 		     (cl-cram:update status-bar 0 :desc (format nil "~a/~a, loss:~a" index (/ total-len batch-size) (/ (apply #'+ losses) (length losses)))))))
       (format stream "~C" #\newline)

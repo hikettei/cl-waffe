@@ -22,8 +22,8 @@
 (defnode MulTensor nil
   :parameters ((xi T) (yi T))
   :forward ((x y)
-	    (setf (self xi) (data x))
-	    (setf (self yi) (data y))
+	    (setf (self xi) x)
+	    (setf (self yi) y)
 	    (callop :mul x y))
   :backward ((dy) (list (!mul dy (self yi))
 			(!mul dy (self xi)))))
@@ -31,8 +31,8 @@
 (defnode DivTensor nil
   :parameters ((xi T) (yi T))
   :forward ((x y)
-            (setf (self xi) (data x))
-	    (setf (self yi) (data y))
+            (setf (self xi) x)
+	    (setf (self yi) y)
 	    (callop :div x y))
   :backward ((dy) (list (!div dy (self yi))
 			(!div (!mul (!mul dy (self xi)) -1)
@@ -40,8 +40,8 @@
 
 (defnode PowTensor nil
   :parameters ((xi T) (yi T))
-  :forward ((x1 y1) (setf (self xi) (data x1))
-		    (setf (self yi) (data y1))
+  :forward ((x1 y1) (setf (self xi) x1)
+		    (setf (self yi) y1)
 		    (callop :pow x1 y1))
   :backward ((dy)
 	     (list (callop :mul (!mul dy (self yi)) (!pow (self xi) (!sub (self yi) 1)))
@@ -51,10 +51,11 @@
 
 (defnode SqrtTensor nil
   :parameters ((xi T))
-  :forward ((x1) (setf (self xi) x1)
-		 (callop :sqrt x1))
+  :forward ((x1) (let ((result (callop :sqrt x1)))
+		   (setf (self xi) result)
+		   result))
   :backward ((dy)
-	     (list (callop :div dy (!mul 2 (callop :sqrt (self xi)))))))
+	     (list (callop :div dy (!mul 2 (self xi))))))
 
 (defnode LogTensor nil
   :parameters ((x1 T))
@@ -105,9 +106,10 @@
 
 (defnode ExpTensor ()
   :parameters ((xi T))
-  :forward ((x) (setf (self xi) x) (callop :exp x))
-  :backward ((dy) (list (callop :mul dy
-				(callop :exp (self xi))))))
+  :forward ((x) (let ((result (callop :exp x)))
+		  (setf (self xi) result)
+		  result))
+  :backward ((dy) (list (callop :mul dy (self xi)))))
 
 (defnode MatMulTensor ()
   :parameters ((xi T) (yi T))
