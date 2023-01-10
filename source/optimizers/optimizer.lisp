@@ -37,8 +37,13 @@
 	  (error "Could not find any parameter")
 	  (butlast parameters)))))
 
+(defun ls-to-hash (params)
+  (let ((table (make-hash-table)))
+    (dotimes (i (length params))
+      (setf (gethash i table) (nth i params)))
+    table))
 
 (defmacro init-optimizer (optim model &rest args) 
-  `(,optim (find-parameters ,model) ,@args))
+  `(,optim (ls-to-hash (find-parameters ,model)) ,@args))
 
 

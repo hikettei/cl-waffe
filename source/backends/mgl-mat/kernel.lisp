@@ -109,7 +109,9 @@
 	   (type cons args variables)
 	   (type null out)
 	   (type boolean enable-optim))
-  (if (and (find ope `(:mul :div :matmul))
+  (if (and (or (eq ope :mul)
+	       (eq ope :div)
+	       (eq ope :matmul))
 	   (find t (map 'list (lambda (x) (if (and (not (typep x 'mgl-mat:mat)) (not (typep x 'function))) (= x 1))) args)))
       (if (and (eq ope :div) (= (car args) 1)) ; 1/tensor
 	  (let ((o (decide-out-buffer out (second args) (second variables) enable-optim)))
