@@ -36,8 +36,7 @@
 			       (destructively-calln 0)
 			       (is-param? t)
 			       (backend (check-backend backend extend))
-			       (grad `(nil nil))
-			       (grad-tmp (make-grad-tmp :value nil :grad-called nil))))
+			       (grad `(nil nil))))
 			(:constructor
 			    const
 			    (value &key (backend *default-backend*) (extend nil)
@@ -46,26 +45,27 @@
 			       (calln 0)
 			       (destructively-calln 0)
 			       (grad nil)
-			       (destructive? t)
-			       (grad-tmp (make-grad-tmp :value nil :grad-called nil)))))
-  data
-  grad-tmp
+			       (destructive? t))))
+  (data nil :type waffetensorcontenttype)
+  (grad-tmp (make-grad-tmp :value nil :grad-called nil) :type grad-tmp)
   backward
-  backend
-  grad
+  (backend :mgl :type keyword)
+  (grad nil :type waffetensorcontenttype)
   variables
   state
-  calln
-  is-param?
-  destructively-calln
-  is-ancestor-param
-  destructive?
-  is-data-destructed?
+  (calln 0 :type fixnum)
+  (is-param? nil :type boolean)
+  (destructively-calln 0 :type fixnum)
+  (is-ancestor-param nil :type boolean)
+  (destructive? nil :type boolean)
+  (is-data-destructed? nil :type boolean)
   optim-report
-  report-index
-  belongs-to-nth-report)
+  (report-index 0 :type fixnum)
+  (belongs-to-nth-report 0 :type fixnum))
 
-(defstruct grad-tmp value grad-called)
+(defstruct grad-tmp
+  (value nil :type (or null waffetensor))
+  (grad-called nil :type boolean))
 
 (defmacro data (tensor)
   `(waffetensor-data ,tensor))
@@ -111,7 +111,7 @@
 
 
 (deftype WaffeSupportedDataType ()
-  `(or fixnum float null cons ratio)) ;cons?
+  `(or fixnum float null cons function ratio)) ;cons?
 
 (deftype waffe-array ()
   `(or mgl-mat:mat simple-array))
@@ -188,6 +188,7 @@
 	 (setf (grad-tmp-value (waffetensor-grad-tmp ,tensor)) ,value))))
 
 (defun backward (tensor)
+  (declare (type waffetensor tensor))
   (if (typep (data tensor) 'mgl-mat:mat)
       (unless (eq (!shape tensor) `(1))
 	(error "grad can be implicitly created only for scalar outputs")))
@@ -200,8 +201,10 @@
   (if (waffetensor-is-ancestor-param (nth-var tensor n))
       (backward1 (nth-var tensor n))))
 
-(defun backward1 (tensor &optional (multi-thread? nil) (kernel nil))
-  ;(declare (optimize (speed 3) (space 0) (safety 0)))
+(declaim (ftype (function (waffetensor) null) backward1))
+(defun backward1 (tensor)
+  (declare (optimize (speed 3) (space 0) (safety 0))
+	   (type waffetensor tenssor))
   (if (waffetensor-backward tensor) ;Backward exists?
       (let* ((grad-tmp-before (waffetensor-grad-tmp tensor))
 	     (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top

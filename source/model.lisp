@@ -11,23 +11,10 @@
      ,@body
      (setq *no-grad* nil)
      nil))
+(declaim (inline call))
 
 (defun call (model &rest args)
-  (let* ((result (apply (slot-value model 'forward) model args))
-	 (report-tmp (find t args :test (lambda (_ x) (declare (ignore _)) (waffetensor-optim-report x))))
-	 (report (or
-		  (if (typep result 'waffetensor)
-		      (waffetensor-optim-report result)
-		      nil)
-		  (if report-tmp
-		      (waffetensor-optim-report report-tmp)))))
-    (unless (null report)
-	(progn
-	  (dolist (v args)
-	    (setf (waffetensor-optim-report v) report))
-	  (if (typep result 'waffetensor)
-	      (setf (waffetensor-optim-report result) report))))
-    
+  (let* ((result (apply (slot-value model 'forward) model args)))
     (if (slot-value model 'hide-from-tree) ;assure model isnt model
 	(unless *no-grad*
 	  (setf (waffetensor-backward  result) (slot-value model 'backward))
@@ -68,7 +55,7 @@
 			   (let ((grad-tmp (waffetensor-grad-tmp p)))
 			     (setf (grad-tmp-grad-called grad-tmp) nil)
 			     (if (typep (grad-tmp-value grad-tmp) 'mgl-mat:mat)
-				 (mgl-mat:fill! (grad-tmp-value grad-tmp) 0)
+				 (setf (grad-tmo-value grad-tmp) nil);(mgl-mat:fill! (grad-tmp-value grad-tmp) 0)
 				 (setf (grad-tmp-value grad-tmp) nil))))
 		nil)
      :hide-from-tree nil))

@@ -21,7 +21,7 @@
 
 (defmacro decide-out-buffer (out args var enable-optim)
   `(progn
-     (apply-destruct ,var)
+     ;(apply-destruct ,var)
      (if ,out
 	 (progn
 	   (if (and ,enable-optim (waffetensor-destructive? ,out))
@@ -29,21 +29,34 @@
 	       (duplicate-tensor (assure-destructed? ,args ,var))))
 	 (duplicate-tensor (assure-destructed? ,args ,var)))))
 
-(defun repeat (array n &key axis)
-  (if (typep array 'mgl-mat:mat)
+(declaim (ftype (function (mgl-mat:mat fixnum) mgl-mat:mat) repeat))
+(defun repeat (tensor n &key axis)
+  (declaim (optimize (speed 3) (safety 0) (debug 0))
+	   (type mgl-mat:mat tensor)
+	   (type fixnum n axis))
+  (if (typep tensor 'mgl-mat:mat)
       (if axis
-	  (if (>= (length (mgl-mat:mat-dimensions array)) 2)
-              (mgl-mat:stack axis (loop for i below n collect array))
-	      (repeat (mgl-mat:reshape array `(,@(mgl-mat:mat-dimensions array) 1)) n :axis axis))
+	  (if (>= (length (mgl-mat:mat-dimensions tensor)) 2)
+              (mgl-mat:stack axis (loop for i below n collect tensor))
+	      (repeat (mgl-mat:reshape tensor `(,@(mgl-mat:mat-dimensions tensor) 1)) n :axis axis))
 	  (error "axis=-1"))
       (error "array != mat")))
 
+(declaim (ftype (function (mgl-mat:mat waffesupporteddatatype) mgl-mat:mat) trasposedmgl-full-like mgl-full-like))
+
 (defun mgl-full-like (tensor value)
+  (declare (optimize (speed 3) (safety 0) (debug 0))
+	   (type mgl-mat:mat tensor)
+	   (type waffesupporteddatatype value))
   (mgl-mat:make-mat (mgl-mat:mat-dimensions tensor)
 		    :initial-element value))
 
 (defun transposed-mgl-full-like (tensor value)
+  (declare (optimize (speed 3) (safety 0) (debug 0))
+	   (type mgl-mat:mat tensor)
+	   (type waffesupporteddatatype value))
   (let ((dims (mgl-mat:mat-dimensions tensor)))
+    (declare (type cons dims))
     (mgl-mat:make-mat (reverse dims)
 		      :initial-element value)))
 
@@ -69,7 +82,11 @@
 (defmacro receive-delay (delay)
   `(next-delay ,delay t))
 
+(declaim (ftype (function (keyword cons) cons) ensure-shape))
 (defun ensure-shape (ope args)
+  (declare (optimize (speed 3) (safety 0) (debug 0))
+	   (type keyword ope)
+	   (type cons args))
   (if (find ope *v2v-operations*)
       (let ((m (find 'mgl-mat:mat args :test (lambda (x y) (typep y x)))))
 	(unless m (error "Waffe Kernel Error"))
@@ -85,8 +102,13 @@
       ; suppose that args has at least 1 mats.
       args))
 
+(declaim (ftype (function (keyword cons null cons boolean) (or mgl-mat:mat waffesupporteddatatype)) kernel))
 (defun kernel (ope args out variables enable-optim)
-  ;(declare (optimize (speed 3) (space 0) (safety 0) (debug 0)))
+  (declare (optimize (speed 3) (safety 0) (debug 0))
+	   (type keyword ope)
+	   (type cons args variables)
+	   (type null out)
+	   (type boolean enable-optim))
   (if (and (find ope `(:mul :div :matmul))
 	   (find t (map 'list (lambda (x) (if (and (not (typep x 'mgl-mat:mat)) (not (typep x 'function))) (= x 1))) args)))
       (if (and (eq ope :div) (= (car args) 1)) ; 1/tensor
