@@ -1,6 +1,9 @@
 
 (in-package :cl-waffe.backends.cpu)
 
+(deftype WaffeSupportedDataType ()
+  `(or fixnum float null cons ratio))
+
 (defun repeat (array n &key axis)
   ; asserted array is not tensor and may be axis is always zero
   (let ((dims (case axis
@@ -9,16 +12,21 @@
 		(T (error "kernel error")))))
     (mgl-mat:make-mat dims :initial-element array)))
 
+(declaim (ftype (function (cons) cons) assure-args))
 (defun assure-args (args)
+  (declare (optimize (speed 3) (safety 0) (debug 0))
+	   (type cons args))
   (map 'list (lambda (x)
 	       (if (typep x 'function)
 		   (funcall x nil t)
 		   x))
        args))
 
-(defun kernel (ope args out)
-  (declare (ignore out))
-  ; (print "CPU Calling...") (print args) (print ope)
+(declaim (ftype (function (keyword cons) waffesupporteddatatype) kernel))
+(defun kernel (ope args)
+  (declare (optimize (speed 3) (safety 0) (debug 0))
+	   (type keyword ope)
+	   (type cons args))  
   (let* ((args (assure-args args)))
   (case ope
       (:add (+ (car args) (second args)))

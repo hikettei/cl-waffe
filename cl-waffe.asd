@@ -19,16 +19,13 @@
 		:components ((:file "package")
 			     (:file "kernel")))
 	       (:module "backends/mgl-mat"
+		:depends-on ("package")
 		:components ((:file "package")
 			     (:file "kernel")))
-	       (:module "backends/opencl"
-	       :components ((:file "package")
-			    (:file "kernel")))
-	       (:file "package" :depends-on ("backends/cpu"
-					     "backends/opencl"))
+	       (:file "package")
 	       (:file "model" :depends-on ("tensor"))
 	       (:file "tensor")
-	       (:file "kernel")
+               (:file "kernel")
 	       (:file "trainer" :depends-on ("optimizers"))
 	       (:file "functions")
 	       (:file "operators")

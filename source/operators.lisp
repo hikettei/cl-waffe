@@ -1,6 +1,7 @@
 
 (in-package :cl-waffe)
 
+(declaim (inline assure-tensor))
 (defun assure-tensor (x)
   (if (typep x 'WaffeTensor)
       x
@@ -10,7 +11,8 @@
 
 (defnode AddTensor nil
   :parameters nil
-  :forward  ((x y) (callop :add x y))
+  :forward  ((x y)
+	     (callop :add x y))
   :backward ((dy) (list dy dy)))
 
 (defnode SubTensor nil
@@ -21,35 +23,36 @@
 (defnode MulTensor nil
   :parameters ((xi T) (yi T))
   :forward ((x y)
-	    (setf (self xi) x)
-	    (setf (self yi) y)
+	    (setf (self xi) (data x))
+	    (setf (self yi) (data y))
 	    (callop :mul x y))
-  :backward ((dy) (list (callop :mul dy (self yi))
-			(callop :mul dy (self xi)))))
+  :backward ((dy) (list (!mul dy (self yi))
+			(!mul dy (self xi)))))
 
 (defnode DivTensor nil
   :parameters ((xi T) (yi T))
   :forward ((x y)
-            (setf (self xi) x)
-	    (setf (self yi) y)
+            (setf (self xi) (data x))
+	    (setf (self yi) (data y))
 	    (callop :div x y))
-  :backward ((dy) (list (detach (!div dy (self yi)))
-			(detach (!div (!mul (!mul dy (self xi)) -1)
-				      (!pow (self yi) 2))))))
+  :backward ((dy) (list (!div dy (self yi))
+			(!div (!mul (!mul dy (self xi)) -1)
+			      (!pow (self yi) 2)))))
 
 (defnode PowTensor nil
   :parameters ((xi T) (yi T))
-  :forward ((x1 y1) (setf (self xi) x1) (setf (self yi) y1)
+  :forward ((x1 y1) (setf (self xi) (data x1))
+		    (setf (self yi) (data y1))
 		    (callop :pow x1 y1))
   :backward ((dy)
-	     (list (callop :mul (callop :mul dy (self yi)) (callop :pow (self xi) (!sub (self yi) 1)))
+	     (list (callop :mul (!mul dy (self yi)) (!pow (self xi) (!sub (self yi) 1)))
 		   (callop :mul dy (callop :mul
-					   (callop :div (callop :log (callop :pow (self xi) (self yi))) (self yi))
-					   (callop :pow (self xi) (self yi)))))))
+					   (!div (!log (!pow (self xi) (self yi))) (self yi))
+					   (!pow (self xi) (self yi)))))))
 
 (defnode SqrtTensor nil
   :parameters ((xi T))
-  :forward ((x1) (setf (self xi) x1) 
+  :forward ((x1) (setf (self xi) x1)
 		 (callop :sqrt x1))
   :backward ((dy)
 	     (list (callop :div dy (!mul 2 (callop :sqrt (self xi)))))))
@@ -75,7 +78,7 @@
 	       (list (callop :dot dy (!transpose (self yi)))
 		     (callop :dot (!transpose (self xi)) dy))))
 
-(defnode TransposeTensor (shape)
+(defnode TransposeTensor (shape) ;sf
   :parameters ((prev-shape T) (shape shape))
   :forward ((x) (setf (self prev-shape) (!shape x)) (callop :transpose x (self shape)))
   :backward ((d1) (callop :transpose d1 (self prev-shape))))
@@ -87,25 +90,25 @@
 	    (callop :mean x (self axis)))
   :backward ((dy) (list (!repeats dy (self axis) (self repeats)))))
 
-(defnode SumTensor (axis keepdims)
+(defnode SumTensor (axis keepdims) ;df
   :parameters ((axis axis) (repeats T))
   :forward ((x)
 	    (setf (self repeats) (assure-tensor (!shape x (self axis))))
 	    (callop :sum x (self axis)))
   :backward ((dy)
-	     (list (detach (!div (!repeats dy (self axis) (self repeats))
-				 (self repeats))))))
+	     (list (!div (!repeats dy (self axis) (self repeats))
+			 (self repeats)))))
 
-(defnode RepeatTensor (axis repeats)
+(defnode RepeatTensor (axis repeats) ;sf
   :parameters ((axis axis) (repeats repeats))
   :forward ((x) (callop :repeat x (self axis) (self repeats)))
   :backward ((dy) (list (callop :sum dy (self axis)))))
 
 (defnode ExpTensor ()
   :parameters ((xi T))
-  :forward ((x) (setf (self xi) x) (callop :exp x))
-  :backward ((dy) (list (callop :mul dy
-				(callop :exp (self xi))))))
+  :forward ((x) (setf (self xi) x)
+		(callop :exp x))
+  :backward ((dy) (list (callop :mul dy (callop :exp (self xi))))))
 
 (defnode MatMulTensor ()
   :parameters ((xi T) (yi T))
@@ -113,8 +116,8 @@
 		  (setf (self yi) y)
 		  (callop :matmul x y))
   :backward ((dy)
-	     (list (detach (!matmul dy (!transpose (self yi))))
-		   (detach (!matmul (!transpose (self xi)) dy)))))
+	     (list (!matmul dy (!transpose (self yi)))
+		   (!matmul (!transpose (self xi)) dy))))
 
 ;(defnode CutTensor (result)
 ;  :parameters ((result1 result))

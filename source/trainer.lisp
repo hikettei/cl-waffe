@@ -1,12 +1,13 @@
 
 (in-package :cl-waffe)
 
-(defmacro deftrainer (name args &key model optimizer optimizer-args step-model predict (forward NIL))
+(defmacro deftrainer (name args &key model optimizer optimizer-args step-model predict (forward NIL) &aux (out-id (gensym)))
   (if forward (error ":forward is unavailable in deftrainer macro. use instead: :step-model"))
   (labels ((assure-args (x)
 	     (if (or (eq (symbol-name x) "model")
 		     (eq (symbol-name x) "predict")
 		     (eq (symbol-name x) "optimizer")
+		     (eq (symbol-name x) "optimizer-report")
 		     (eq (symbol-name x) "step-model"))
 		 (error "cant use ~a as a name" (symbol-name x))
 		 x)))
@@ -23,6 +24,7 @@
 													,@optimizer-args)))))
 		     (model NIL)
 		     (optimizer NIL)
+		     (optimizer-report t)
 		     (predict    ,(let ((largs (car predict))
 					(lbody (cdr predict))
 					(self-heap (gensym)))
@@ -34,11 +36,19 @@
 					(self-heap (gensym)))
 				    `(lambda ,(concatenate 'list (list self-heap) largs)
 				       (macrolet ((model     ()            `(slot-value ,',self-heap 'model))
-						  (update    (&rest args1) `(unless *no-grad* (call (slot-value ,',self-heap 'optimizer) ,@args1)))
+						  (update    (&rest args1) `(unless *no-grad* (with-ignore-optimizer
+												  (call (slot-value ,',self-heap 'optimizer) ,@args1))))
 						  (zero-grad ()            `(unless *no-grad* (funcall (slot-value (slot-value ,',self-heap 'optimizer) 'backward)
 												       (slot-value ,',self-heap 'optimizer)
 												       (slot-value ,',self-heap 'model)))))
-					   ,@lbody)))))
+					 (let ((,out-id (progn ,@lbody)))
+					   ;(if (typep ,out-id 'waffetensor)
+					    ;   (progn
+					;	 (setf (slot-value ,self-heap 'optimizer-report) (waffetensor-optim-report ,out-id))
+					;	 (setf (networkvariablereport-lock (slot-value ,self-heap 'optimizer-report)) t)
+					;	 (setf (networkvariablereport-sp   (slot-value ,self-heap 'optimizer-report)) 0))
+					 ;      (print "Warning: The trainer is not optimized. the last value of step-model is model-out"))
+					   ,out-id))))))
 	   (defun ,name (&rest init-args)
 	     (apply #',constructor-name init-args))))))
 
@@ -153,52 +163,32 @@
 				(width 45)
 				(random nil)
 				(height 10)) ; stream指定してtxtファイルにログを残せるようにしたい
-  (let ((losses `(0.0)) ; cl-termgraph assumes that loss >= 0
-	(prev-losses nil)
-	(prev-losses1 nil)
-	(status-bar nil))
+  (let ((losses nil) ; cl-termgraph assumes that loss >= 0
+	(status-bar nil)
+	(total-len (get-dataset-length dataset)))
     (if (and enable-animation verbose)
-	(cl-cram:init-progress-bar status-bar (format nil "loss:~a" (first losses)) (get-dataset-length dataset))
-	(format t "loss:~a~C" (first losses) #\newline)
-	)
+	(cl-cram:init-progress-bar status-bar (format nil "loss:~a" (first losses)) epoch))
     (dotimes (epoch-num epoch)
+      (setq losses nil)
       (if verbose
 	  (progn
 	    (format stream "~C~a~C" #\newline (eq-ntimes width "–") #\newline)
-	    (format stream "~C~a~C" #\newline  (format-title (format nil "|~a Epoch:|" epoch-num) 4 width) #\newline)
+	    (format stream "~C~a~C" #\newline (format-title (format nil "|~a Epoch:|" epoch-num) 4 width) #\newline)
 	    (format stream "~C~a~C" #\newline (eq-ntimes width "–") #\newline)))
+      
+      (loop for index below (/ total-len  batch-size)
+	    do (let* ((i (if random (random (- total-len batch-size)) index))
+		      (args (get-dataset dataset i))
+		      (loss (data (step-model1 trainer args))))
+		 (push loss losses)
+		 (if (= (mod index 100) 0)
+		     (cl-cram:update status-bar 0 :desc (format nil "~a/~a, loss:~a" index (/ total-len batch-size) (/ (apply #'+ losses) (length losses)))))))
+      
+      (format stream "~C" #\newline)
+      (format stream "~C" #\newline)
+      (cl-cram:update status-bar 1 :desc (format nil "loss:~a" (/ (apply #'+ losses) (length losses)))))
 
-      (let ((total-len (if max-iterate max-iterate (get-dataset-length dataset))))
-	(setq cl-termgraph:*dif* (if (< width total-len) (* width (/ 1 total-len)) (/ 1 total-len)))
-	(loop for index below total-len; by batch-size
-	      do (let* ((i (if random (random (- total-len batch-size)) index))
-			(args (get-dataset dataset i))
-			(loss (data (step-model1 trainer args))))
-		   (push loss losses)
-		   (if valid-dataset
-		       (if (= (mod index valid-each) 0)
-			   (progn;with-no-grad
-			     (valid trainer valid-dataset batch-size))))
-		   (if (and enable-animation verbose)
-		       (cl-cram:update status-bar 1 :desc (format nil "loss:~a" (first losses)))
-		       (format t "loss:~a~C" (first losses) #\newline)
-		       )))
-	(let* ((losses-aorder (map 'list (lambda (x) (* (/ x (maxlist (butlast losses))) (1+ height))) (cdr (reverse losses)))))
-	  ;     (pallet (cl-termgraph:make-listplot-frame (* 2 width) height)))
-	  ;(cl-termgraph:init-line pallet :white)
-	  ;(cl-termgraph:listplot-write pallet losses-aorder :blue)
-	  ;(if prev-losses
-	  ;    (cl-termgraph:listplot-write pallet prev-losses :red))
-	  ;(format stream "~C" #\newline)
-	  ;(cl-termgraph:listplot-print pallet :x-label "n" :y-label "loss" :title nil
-		;			      :descriptions (if prev-losses
-		;						`((:red "prev-losses" ,(apply #'min prev-losses1) ,(apply #'max prev-losses1))
-		;						  (:blue "losses" ,(apply #'min losses) ,(apply #'max losses)))
-		;						`((:blue "losses" ,(apply #'min losses) ,(apply #'max losses))))
-		;			      :stream stream)
-	  (setq prev-losses1 losses)
-	  (setq prev-losses losses-aorder)
-	  ;(cl-cram:update status-bar 0 :desc (format nil "Preparing for Next Batch...") :reset t)
-	  (setq losses `(0.0)))))))
+    (print "")
+    (valid trainer valid-dataset batch-size)))
 
 

@@ -20,19 +20,52 @@
 			(:constructor
 			    sysconst
 			    (value &key (backend *default-backend*) (extend nil)
-				     &aux (data value) (backend (check-backend backend extend)) (grad nil) (grad-tmp (make-grad-tmp))))
+			     &aux (data value)
+			       (backend (check-backend backend extend))
+			       (calln 0)
+			       (destructively-calln 0)
+			       (grad nil)
+			       (destructive? t)
+			       (grad-tmp (make-grad-tmp))))
 	                (:constructor
 			    tensor
 			    (value &key (backend *default-backend*) (extend nil)
-			     &aux (data (init-waffe-tensor-data value)) (backend (check-backend backend extend)) (grad `(nil nil))
-			       (grad-tmp (make-grad-tmp :value nil :grad-called nil))))
+			     &aux (data (init-waffe-tensor-data value))
+			       (is-ancestor-param t)
+			       (calln 0)
+			       (destructively-calln 0)
+			       (is-param? t)
+			       (backend (check-backend backend extend))
+			       (grad `(nil nil))))
 			(:constructor
 			    const
 			    (value &key (backend *default-backend*) (extend nil)
-			     &aux (data (init-waffe-tensor-data value)) (backend (check-backend backend extend)) (grad nil) (grad-tmp (make-grad-tmp :value nil :grad-called nil)))))
-  data grad-tmp backward backend grad variables state)
+			     &aux (data (init-waffe-tensor-data value))
+			       (backend (check-backend backend extend))
+			       (calln 0)
+			       (destructively-calln 0)
+			       (grad nil)
+			       (destructive? t))))
+  (data nil :type waffetensorcontenttype)
+  (grad-tmp (make-grad-tmp :value nil :grad-called nil) :type grad-tmp)
+  backward
+  (backend :mgl :type keyword)
+  (grad nil :type waffetensorcontenttype)
+  variables
+  state
+  (calln 0 :type fixnum)
+  (is-param? nil :type boolean)
+  (destructively-calln 0 :type fixnum)
+  (is-ancestor-param nil :type boolean)
+  (destructive? nil :type boolean)
+  (is-data-destructed? nil :type boolean)
+  optim-report
+  (report-index 0 :type fixnum)
+  (belongs-to-nth-report 0 :type fixnum))
 
-(defstruct grad-tmp value grad-called)
+(defstruct grad-tmp
+  (value nil :type (or null waffetensor))
+  (grad-called nil :type boolean))
 
 (defmacro data (tensor)
   `(waffetensor-data ,tensor))
@@ -78,7 +111,7 @@
 
 
 (deftype WaffeSupportedDataType ()
-  `(or fixnum float null cons ratio)) ;cons?
+  `(or fixnum float null cons function ratio)) ;cons?
 
 (deftype waffe-array ()
   `(or mgl-mat:mat simple-array))
@@ -96,7 +129,7 @@
   ; todo: coerce: simple-array -> mgl-mat
 
   (let* ((content (if (typep content 'waffetensor)
-		      (data content)
+		      (data1 content)
 		      content)))
     (unless (typep content 'WaffeTensorContentType)
       (error "Waffetensor only supports of type of mgl-mat and fixnum/float/null but got: ~a" (type-of content)))
@@ -127,13 +160,16 @@
 
 (defmacro grad (tensor)
   `(progn
+     (unless (typep ,tensor 'WaffeTensor)
+       (error "The tensor is not waffetensor"))
+     
      (unless (waffetensor-grad ,tensor)
        (error "The tensor is not a parameter. Constants doesn't have a grad"))
 
      (if (typep (waffetensor-grad ,tensor) 'cons)
 	 (error "A grad is nil. Please remain you need to call (backward out) before using a grad"))
-  
-  (waffetensor-grad ,tensor)))
+
+     (waffetensor-grad ,tensor)))
 
 (defmacro parameter (tensor)
   ; make constants parameter
@@ -152,30 +188,47 @@
 	 (setf (grad-tmp-value (waffetensor-grad-tmp ,tensor)) ,value))))
 
 (defun backward (tensor)
+  (declare (type waffetensor tensor))
   (if (typep (data tensor) 'mgl-mat:mat)
       (unless (eq (!shape tensor) `(1))
 	(error "grad can be implicitly created only for scalar outputs")))
+  
   (backward1 tensor))
 
-(defun backward1 (tensor)
-  ;(declare (optimize (speed 3) (space 0) (safety 0)))
-  (if (waffetensor-backward tensor) ;Backward exists?
-      (let ((state (waffetensor-state tensor)))
-	(dotimes (i (length (waffetensor-variables tensor))) ; do loop for the node's variables
-	  (let* ((grad-tmp-before (waffetensor-grad-tmp tensor))
-		 (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top
-				  (grad-tmp-value grad-tmp-before)
-				  (const 1)))) ; when top, dy=1
-	    (let ((grads (funcall (waffetensor-backward tensor) state grad-before))) ; (length grads) == (length (waffetensor-variables tensor))
-	      
-	      (unless (= (length (waffetensor-variables tensor))
-			 (length grads))
-		(error "backward error: The number of :forward args doesnt correspond with of :backward"))
-	    
-	      (dotimes (n (length grads))
-		(setfgradtmp (nth-var tensor n) (nth n grads)))
+(declaim (inline step-next-node))
 
-	      (backward1 (nth-var tensor i))))))
+(defun step-next-node (tensor n)
+  (if (waffetensor-is-ancestor-param (nth-var tensor n))
+      (backward1 (nth-var tensor n))))
+
+(declaim (ftype (function (waffetensor) null) backward1))
+(defun backward1 (tensor)
+  (declare (optimize (speed 3) (space 0) (safety 0))
+	   (type waffetensor tenssor))
+  (if (waffetensor-backward tensor) ;Backward exists?
+      (let* ((grad-tmp-before (waffetensor-grad-tmp tensor))
+	     (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top
+			      (grad-tmp-value grad-tmp-before)
+			      (const 1))))
+	(setf (waffetensor-optim-report grad-before)
+	      (waffetensor-optim-report tensor))
+	(let ((grads (funcall (waffetensor-backward tensor)
+			      (waffetensor-state tensor)
+			      grad-before)))
+
+	  (unless (= (length (waffetensor-variables tensor))
+		     (length grads))
+	    (error "backward error: The number of :forward args doesnt correspond with of :backward"))
+
+	  (dotimes (n (length grads))
+	    (setf (waffetensor-optim-report (nth n grads))
+		  (waffetensor-optim-report tensor))
+	    (setfgradtmp (nth-var tensor n) (nth n grads)))
+
+	  (dotimes (n (length grads))
+	    (setf (waffetensor-optim-report (nth-var tensor n))
+		  (waffetensor-optim-report tensor))
+	    (step-next-node tensor n))))
       (if (waffetensor-grad tensor) ; the tensor is the end of node.
 	  (if (grad-tmp-value (waffetensor-grad-tmp tensor)) ; is grad-tmp already created?
 	      (if (typep (waffetensor-grad tensor) 'cons) ; is it first value? or not?

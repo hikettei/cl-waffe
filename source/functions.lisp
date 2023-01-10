@@ -10,7 +10,7 @@
 	    (setf (self path-through) (callop :< x (self zero-buff)))
 	    (callop :mul (self path-through) x))
   :backward ((dy)
-	     (list (callop :mul (self path-through) dy))))
+	     (list (!mul (self path-through) dy))))
 
 (defun !relu (x)
   (call (ReLUTensor) (assure-tensor x)))
@@ -19,9 +19,9 @@
   :parameters ((xi T))
   :forward ((x)
 	    (setf (self xi) x)
-            (detach (!div (!add 1 (!tanh (!div x 2))) (const 2))))
+            (!div (!add 1 (!tanh (!div x 2))) (const 2)))
   :backward ((dy) (let ((p (!sigmoid (self xi))))
-		    (list (callop :mul p (!mul dy (!sub 1 p)))))))
+		    (list (!mul p (!mul dy (!sub 1 p)))))))
 
 (defun !sigmoid (x)
   (call (SigmoidTensor) (assure-tensor x)))
@@ -32,7 +32,7 @@
 	    (setf (self xi) x)
 	    (callop :tanh x))
   :backward ((dy)
-	     (list (callop :mul dy (callop :sub (const 1) (!pow (callop :tanh (self xi)) 2))))))
+	     (list (!mul dy (!sub (const 1) (!pow (!tanh (self xi)) 2))))))
 
 (defun !tanh (x)
   (call (TanhTensor) (assure-tensor x)))

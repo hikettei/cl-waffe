@@ -44,6 +44,12 @@
 	   #:!set-batch
 	   #:!reset-batch
 
+	   #:waffetensor-destructively-calln
+	   #:waffetensor-destructive?
+	   #:waffetensor-is-data-destructed?
+	   #:waffetensor-report-index
+	   #:with-ignore-optimizer
+	   #:*ignore-optimizer*
 
 	   #:self
 

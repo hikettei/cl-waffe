@@ -11,14 +11,16 @@
      ,@body
      (setq *no-grad* nil)
      nil))
+(declaim (inline call))
 
-(defun call (model &rest args)  
-  (let ((result (apply (slot-value model 'forward) model args)))
+(defun call (model &rest args)
+  (let* ((result (apply (slot-value model 'forward) model args)))
     (if (slot-value model 'hide-from-tree) ;assure model isnt model
 	(unless *no-grad*
-	  (setf (waffetensor-backward result) (slot-value model 'backward))
-	  (setf (waffetensor-state result)    model) ; last state
+	  (setf (waffetensor-backward  result) (slot-value model 'backward))
+	  (setf (waffetensor-state     result)    model) ; last state
 	  (setf (waffetensor-variables result) args)
+	  (setf (waffetensor-is-ancestor-param result) (find t (map 'list (lambda (x) (waffetensor-is-ancestor-param x)) args)))
 	  result)
 	result)))
 
@@ -53,13 +55,18 @@
 			   (let ((grad-tmp (waffetensor-grad-tmp p)))
 			     (setf (grad-tmp-grad-called grad-tmp) nil)
 			     (if (typep (grad-tmp-value grad-tmp) 'mgl-mat:mat)
-				 (mgl-mat:fill! (grad-tmp-value grad-tmp) 0)
+				 (setf (grad-tmo-value grad-tmp) nil);(mgl-mat:fill! (grad-tmp-value grad-tmp) 0)
 				 (setf (grad-tmp-value grad-tmp) nil))))
 		nil)
      :hide-from-tree nil))
 
 (defmacro defnode (name args &key parameters forward backward)
   `(defmodel ,name ,args :parameters ,parameters :forward ,forward :backward ,backward :hide-from-tree T))
+
+(defun check-destructive (variables)
+  (dolist (v variables)
+    (if (typep v 'waffetensor)
+	(setf (waffetensor-destructive? v) nil))))
 
 (defmacro defmodel (name args &key parameters forward backward hide-from-tree)
   #|
@@ -91,8 +98,8 @@
 		       (dolist (i largs) (assure-args i))
 			`(lambda ,(concatenate 'list (list self-heap) largs)
 			    ,(if (null parameters) `(declare (ignore ,self-heap)))
-			    (macrolet ((self (name)
-					 `(slot-value ,',self-heap ',name)))
+			   (macrolet ((self (name)
+					`(slot-value ,',self-heap ',name)))
 			      ,@lbody))))
 	   (backward ,(if backward
 			    (let ((largs (car backward))
@@ -108,6 +115,7 @@
 			    nil))
 	   ,@(map 'list (lambda (x) (assure-args (car x))) parameters))
 	 (defun ,name (&rest init-args)
+	   (check-destructive init-args)
 	   (apply #',constructor-name init-args))))))
 
 
