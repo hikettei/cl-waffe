@@ -1,9 +1,12 @@
 
 (in-package :cl-waffe.backends.cpu)
 
-(deftype WaffeSupportedDataType ()
-  `(or fixnum float null cons ratio))
+(deftype ResultType ()
+    `(VALUES
+      (OR FIXNUM FLOAT (COMPLEX SINGLE-FLOAT) (COMPLEX DOUBLE-FLOAT))
+      &OPTIONAL))
 
+;(declaim (ftype (function 
 (defun repeat (array n &key axis)
   ; asserted array is not tensor and may be axis is always zero
   (let ((dims (case axis
@@ -12,36 +15,31 @@
 		(T (error "kernel error")))))
     (mgl-mat:make-mat dims :initial-element array)))
 
-(declaim (ftype (function (cons) cons) assure-args))
+;(declaim (ftype (function (cons) cons) assure-args))
 (defun assure-args (args)
-  (declare (optimize (speed 3) (safety 0) (debug 0))
-	   (type cons args))
   (map 'list (lambda (x)
-	       (if (typep x 'function)
-		   (funcall x nil t)
-		   x))
+	       (if (typep (data x) 'function)
+		   (funcall (data x) nil t)
+		   (data x)))
        args))
 
-(declaim (ftype (function (keyword cons) waffesupporteddatatype) kernel))
-(defun kernel (ope args)
-  (declare (optimize (speed 3) (safety 0) (debug 0))
-	   (type keyword ope)
-	   (type cons args))  
+(declaim (ftype (function (keyword cons) ResultType) kernel))
+(defun dispatch-kernel (ope &rest args)
   (let* ((args (assure-args args)))
   (case ope
       (:add (+ (car args) (second args)))
       (:sub (- (car args) (second args)))
       (:mul (* (car args) (second args)))
       (:div (/ (car args) (second args)))
+      (:inv (/ 1 (car args)))
       (:log (log (car args)))
       (:sqrt (sqrt (car args)))
       (:exp (exp (car args)))
       (:pow (expt (car args) (second args)))
-      (:sum (numcl:sum (car args) :axes (second args)))
-      (:mean (numcl:mean (car args) :axes (second args)))
       (:tanh (tanh (car args)))
       (:repeat (repeat (car args) (third args) :axis (second args)))
       ;(:transpose (numcl:transpose (car args) (second args)))
       (T (error "~a is nt yet implemented" ope)))))
+
 
 (defun infomation ())

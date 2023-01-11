@@ -17,13 +17,18 @@
 
 (declaim (inline call))
 (defun call (model &rest args)
+  ; calculating op(x,y) -> result(x, y), state
   (let* ((result (apply (call-forward model) args)))
-    (if (slot-value model 'hide-from-tree) ;assure model isnt model
+    (if (slot-value model 'hide-from-tree) ;is a result model or not?, then is it the part of node?
 	(unless *no-grad*
 	  (setf (waffetensor-backward result) t)
-	  (setf (waffetensor-state result) model) ; last state
+	  (setf (waffetensor-state result) model)
 	  (setf (waffetensor-variables result) args)
-	  (setf (waffetensor-is-ancestor-param result) (find t (map 'list (lambda (x) (waffetensor-is-ancestor-param x)) args)))
+	  (setf (waffetensor-is-ancestor-param result) (if (member-if #'(lambda (x)
+									  (waffetensor-is-ancestor-param x))
+								      args)
+							   t
+							   nil))
 	  result)
 	result)))
 
@@ -75,14 +80,13 @@
 (defmacro define-node-method (fname name args body)
   (let ((f-ident   (gensym (symbol-name name)))
 	(self-heap (gensym (symbol-name name))))
-    `(prog1
+    `(progn
 	 (defun ,f-ident (,self-heap ,@args)
-	   (declare (typep waffetensor ,@args)
-		    (typeep ,name ,self-heap))
+	   ;(declare (type waffetensor ,@args))
 	   (macrolet ((self (name) `(slot-value ,',self-heap ',name)))
 	     ,@body))
        (defmethod ,fname ((self ,name))
-	 #'(lambda (&rest node-inputs) (apply #',f-ident self node-inputs))))))
+	 (lambda (&rest node-inputs) (apply #',f-ident self node-inputs))))))
 
 (defmacro defmodel (name args &key parameters forward backward hide-from-tree)
   #|

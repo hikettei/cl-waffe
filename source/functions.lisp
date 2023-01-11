@@ -7,8 +7,8 @@
   :forward ((x)
 	    (if (equal (self zero-buff) T)
 		(setf (self zero-buff) (!zeros (!shape x))))
-	    (setf (self path-through) (callop :< x (self zero-buff)))
-	    (callop :mul (self path-through) x))
+	    (setf (self path-through) (with-searching-calc-node :< x (self zero-buff)))
+	    (!mul (self path-through) x))
   :backward ((dy)
 	     (list (!mul (self path-through) dy))))
 
@@ -30,7 +30,7 @@
   :parameters ((xi T))
   :forward ((x)
 	    (setf (self xi) x)
-	    (callop :tanh x))
+	    (with-searching-calc-node :tanh x))
   :backward ((dy)
 	     (list (!mul dy (!sub (const 1) (!pow (!tanh (self xi)) 2))))))
 
@@ -48,5 +48,6 @@
 		x))
 	(z (!sum (!exp x1) 1 t)))
     (!div (!exp x1) z)))
+
 
 

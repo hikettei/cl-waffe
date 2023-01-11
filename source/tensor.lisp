@@ -12,81 +12,6 @@
 
 (defparameter mgl-mat:*DEFAULT-MAT-CTYPE* :float) ;double/float
 
-; utils
-(defstruct (WaffeTensor (:print-function
-			 (lambda (tensor stream depth)
-			   (declare (ignore depth))
-			   (format stream (render-tensor tensor))))
-			(:constructor
-			    sysconst
-			    (value &key (backend *default-backend*) (extend nil)
-			     &aux (data value)
-			       (backend (check-backend backend extend))
-			       (calln 0)
-			       (destructively-calln 0)
-			       (grad nil)
-			       (destructive? t)
-			       (grad-tmp (make-grad-tmp))))
-	                (:constructor
-			    tensor
-			    (value &key (backend *default-backend*) (extend nil)
-			     &aux (data (init-waffe-tensor-data value))
-			       (is-ancestor-param t)
-			       (calln 0)
-			       (destructively-calln 0)
-			       (is-param? t)
-			       (backend (check-backend backend extend))
-			       (grad `(nil nil))))
-			(:constructor
-			    const
-			    (value &key (backend *default-backend*) (extend nil)
-			     &aux (data (init-waffe-tensor-data value))
-			       (backend (check-backend backend extend))
-			       (calln 0)
-			       (destructively-calln 0)
-			       (grad nil)
-			       (destructive? t))))
-  (data nil :type waffetensorcontenttype)
-  (grad-tmp (make-grad-tmp :value nil :grad-called nil) :type grad-tmp)
-  backward
-  (backend :mgl :type keyword)
-  (grad nil :type waffetensorcontenttype)
-  variables
-  state
-  (calln 0 :type fixnum)
-  (is-param? nil :type boolean)
-  (destructively-calln 0 :type fixnum)
-  (is-ancestor-param nil :type boolean)
-  (destructive? nil :type boolean)
-  (is-data-destructed? nil :type boolean)
-  optim-report
-  report-index
-  (belongs-to-nth-report 0 :type fixnum))
-
-(defstruct grad-tmp
-  (value nil :type (or null waffetensor))
-  (grad-called nil :type boolean))
-
-(defmacro data (tensor)
-  `(waffetensor-data ,tensor))
-
-(defun double-random ()
-  (let ((i (random 1.0)))
-    (if (eq i 0.0)
-	(setq i (double-random)))
-    i))
-
-(defun gaussiandb-random (var mean)
-  (let* ((r (double-random))
-	 (c (sqrt (* -2 (log r)))))
-    (if (< (double-random) 0.5)
-	(+    (* c
-	      (sin (* 2.0 pi (double-random)))
-	      var)
-	      mean)
-	(+    (* c
-	      (cos (* 2.0 pi (double-random)))
-	      var)))))
 
 (deftype WaffeSupportedDataType ()
   `(or fixnum float null cons function ratio)) ;cons?
@@ -109,7 +34,89 @@
 (deftype WaffeTensorContentType ()
   `(or mgl-mat:mat
        waffesupporteddatatype))
-      ; (satisfies waffe-array)))
+					; (satisfies waffe-array)))
+
+(defstruct grad-tmp
+  (value nil)
+  (grad-called nil :type boolean))
+
+; utils
+(defstruct (WaffeTensor (:print-function
+			 (lambda (tensor stream depth)
+			   (declare (ignore depth))
+			   (format stream (render-tensor tensor))))
+			(:constructor
+			    sysconst
+			    (value &key (backend *default-backend*) (extend nil)
+			     &aux (data value)
+			       (backend (check-backend backend extend))
+			       (calln 0)
+			       (destructively-calln 0)
+			       (grad nil)
+			       (is-mat (typep value 'mgl-mat:mat))
+			       (destructive? t)
+			       (grad-tmp (make-grad-tmp))))
+	                (:constructor
+			    tensor
+			    (value &key (backend *default-backend*) (extend nil)
+			     &aux (data (init-waffe-tensor-data value))
+			       (is-ancestor-param t)
+			       (calln 0)
+			       (destructively-calln 0)
+			       (is-mat (typep value 'mgl-mat:mat))
+			       (is-param? t)
+			       (backend (check-backend backend extend))
+			       (grad `(nil nil))))
+			(:constructor
+			    const
+			    (value &key (backend *default-backend*) (extend nil)
+			     &aux (data (init-waffe-tensor-data value))
+			       (backend (check-backend backend extend))
+			       (calln 0)
+			       (is-mat (typep value 'mgl-mat:mat))
+			       (destructively-calln 0)
+			       (grad nil)
+			       (destructive? t))))
+  (data nil :type waffetensorcontenttype)
+  (grad-tmp (make-grad-tmp :value nil :grad-called nil) :type grad-tmp)
+  (backward nil :type boolean)
+  (backend :mgl :type keyword)
+  (grad nil :type waffetensorcontenttype)
+  (variables nil :type list)
+  state
+  (is-mat nil :type boolean)
+  (calln 0 :type fixnum)
+  (is-param? nil :type boolean)
+  (destructively-calln 0 :type fixnum)
+  (is-ancestor-param nil :type boolean)
+  (destructive? nil :type boolean)
+  (is-data-destructed? nil :type boolean)
+  optim-report
+  report-index
+  (belongs-to-nth-report 0 :type fixnum))
+
+(declaim (inline data))
+(defun data (tensor)
+  (declare (type waffetensor tensor))
+  (waffetensor-data tensor))
+
+(defun double-random ()
+  (let ((i (random 1.0)))
+    (if (eq i 0.0)
+	(setq i (double-random)))
+    i))
+
+(defun gaussiandb-random (var mean)
+  (let* ((r (double-random))
+	 (c (sqrt (* -2 (log r)))))
+    (if (< (double-random) 0.5)
+	(+    (* c
+	      (sin (* 2.0 pi (double-random)))
+	      var)
+	      mean)
+	(+    (* c
+	      (cos (* 2.0 pi (double-random)))
+	      var)))))
 
 (defun init-waffe-tensor-data (content)
   ; todo: coerce: simple-array -> mgl-mat
@@ -218,6 +225,7 @@
 	(setf (waffetensor-optim-report grad-before)
 	      (waffetensor-optim-report tensor))
 	(let ((grads (funcall (call-backward (waffetensor-state tensor)) grad-before)))
+	  (declare (type list grads))
 	  (unless (= (length (waffetensor-variables tensor))
 		     (length grads))
 	    (error "backward error: The number of :forward args doesnt correspond with of :backward"))
