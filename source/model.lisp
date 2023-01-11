@@ -74,7 +74,7 @@
      
 (defmacro define-node-method (fname name args body)
   `(defmethod ,fname ((self ,name))
-     (lambda ,args
+     #'(lambda ,args
        (declare (typep waffetensor ,@args))
        (macrolet ((self (name)
 		    `(slot-value self ',name)))
