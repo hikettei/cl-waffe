@@ -75,12 +75,15 @@
 						  (!mul (!sub 1 (self beta1))
 							(!sub (grad (gethash i (self params)))
 							      (gethash i (self m)))))))
+	       
 	       (setf (gethash i (self v)) (data (!add (gethash i (self v))
 						  (!mul (!sub 1 (self beta2))
 							(!sub (!pow (grad (gethash i (self params))) 2)
 							      (gethash i (self v)))))))
-	       (setf (data (gethash i (self params))) (data (!sub (gethash i (self params))
-							      (!mul lr-t (!div
-									  (gethash i (self m))
-									  (!add (!sqrt (gethash i (self v))) (self epsilon)))))))))))
+	       
+	       (mgl-mat:copy! (data (!sub (gethash i (self params))
+					  (!mul lr-t (!div
+						      (gethash i (self m))
+						      (!add (!sqrt (gethash i (self v))) (self epsilon))))))
+			      (data (gethash i (self params))))))))
 

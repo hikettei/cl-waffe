@@ -60,7 +60,7 @@
   (destructive? nil :type boolean)
   (is-data-destructed? nil :type boolean)
   optim-report
-  (report-index 0 :type fixnum)
+  report-index
   (belongs-to-nth-report 0 :type fixnum))
 
 (defstruct grad-tmp
@@ -212,10 +212,7 @@
 			      (const 1))))
 	(setf (waffetensor-optim-report grad-before)
 	      (waffetensor-optim-report tensor))
-	(let ((grads (funcall (waffetensor-backward tensor)
-			      (waffetensor-state tensor)
-			      grad-before)))
-
+	(let ((grads (funcall (call-backward (waffetensor-state tensor)) grad-before)))
 	  (unless (= (length (waffetensor-variables tensor))
 		     (length grads))
 	    (error "backward error: The number of :forward args doesnt correspond with of :backward"))

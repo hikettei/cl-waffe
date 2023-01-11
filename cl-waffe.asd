@@ -30,6 +30,7 @@
 	       (:file "functions")
 	       (:file "operators")
 	       (:module "optimizers"
+		:depends-on ("model")
 		:components ((:file "package")
 			     (:file "optimizers")
 			     (:file "optimizer")))

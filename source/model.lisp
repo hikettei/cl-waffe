@@ -5,20 +5,23 @@
 
 (defparameter *no-grad* nil)
 
+(defgeneric call-forward  (self))
+(defgeneric call-backward (self))
+
 (defmacro with-no-grad (&body body)
   `(progn
      (setq *no-grad* t)
      ,@body
      (setq *no-grad* nil)
      nil))
-(declaim (inline call))
 
+(declaim (inline call))
 (defun call (model &rest args)
-  (let* ((result (apply (slot-value model 'forward) model args)))
+  (let* ((result (apply (call-forward model) args)))
     (if (slot-value model 'hide-from-tree) ;assure model isnt model
 	(unless *no-grad*
-	  (setf (waffetensor-backward  result) (slot-value model 'backward))
-	  (setf (waffetensor-state     result)    model) ; last state
+	  (setf (waffetensor-backward result) t)
+	  (setf (waffetensor-state result) model) ; last state
 	  (setf (waffetensor-variables result) args)
 	  (setf (waffetensor-is-ancestor-param result) (find t (map 'list (lambda (x) (waffetensor-is-ancestor-param x)) args)))
 	  result)
@@ -43,22 +46,23 @@
 	  (error "Could not find any parameter")
 	  (butlast parameters)))))
 
-(defmacro defoptimizer (name args &key parameters update &aux (model (gensym)))
-  `(defmodel ,name ,args
-     :parameters ,parameters
-     :forward ,update
-     :backward ((,model) (dolist (p (find-variables ,model))
-			   (setf (waffetensor-state p) nil)
-			   (setf (waffetensor-backward p) nil)
-			   (setf (waffetensor-variables p) nil)
-			   (setf (waffetensor-grad p) `(nil nil))
-			   (let ((grad-tmp (waffetensor-grad-tmp p)))
-			     (setf (grad-tmp-grad-called grad-tmp) nil)
-			     (if (typep (grad-tmp-value grad-tmp) 'mgl-mat:mat)
-				 (setf (grad-tmo-value grad-tmp) nil);(mgl-mat:fill! (grad-tmp-value grad-tmp) 0)
-				 (setf (grad-tmp-value grad-tmp) nil))))
+(defmacro defoptimizer (name args &key parameters update)
+  `(progn
+     (defmodel ,name ,args
+       :parameters ,parameters
+       :forward ,update
+       :backward ((model) (dolist (p (find-variables model))
+			    (setf (waffetensor-state p) nil)
+			    (setf (waffetensor-backward p) nil)
+			    (setf (waffetensor-variables p) nil)
+			    (setf (waffetensor-grad p) `(nil nil))
+			    (let ((grad-tmp (waffetensor-grad-tmp p)))
+			      (setf (grad-tmp-grad-called grad-tmp) nil)
+			      (if (typep (grad-tmp-value grad-tmp) 'mgl-mat:mat)
+				  (setf (grad-tmo-value grad-tmp) nil);(mgl-mat:fill! (grad-tmp-value grad-tmp) 0)
+				  (setf (grad-tmp-value grad-tmp) nil))))
 		nil)
-     :hide-from-tree nil))
+     :hide-from-tree nil)))
 
 (defmacro defnode (name args &key parameters forward backward)
   `(defmodel ,name ,args :parameters ,parameters :forward ,forward :backward ,backward :hide-from-tree T))
@@ -67,6 +71,14 @@
   (dolist (v variables)
     (if (typep v 'waffetensor)
 	(setf (waffetensor-destructive? v) nil))))
+     
+(defmacro define-node-method (fname name args body)
+  `(defmethod ,fname ((self ,name))
+     (lambda ,args
+       (declare (typep waffetensor ,@args))
+       (macrolet ((self (name)
+		    `(slot-value self ',name)))
+	 ,@body))))
 
 (defmacro defmodel (name args &key parameters forward backward hide-from-tree)
   #|
@@ -85,38 +97,22 @@
       (error "insufficient forms"))
     (let ((constructor-name (gensym)))
       `(prog1
-	 (defstruct (,name
-		     (:print-function (lambda (m stream k)
-					(declare (ignore k))
-					(render-simple-model-structure stream m)))
-		     (:constructor ,constructor-name (,@args &aux ,@parameters)))
-	   (hide-from-tree ,hide-from-tree)
-	   (parameters ',(map 'list (lambda (x) (car x)) parameters))
-	   (forward ,(let ((largs (car forward))
-			   (lbody (cdr forward))
-			   (self-heap (gensym)))
-		       (dolist (i largs) (assure-args i))
-			`(lambda ,(concatenate 'list (list self-heap) largs)
-			    ,(if (null parameters) `(declare (ignore ,self-heap)))
-			   (macrolet ((self (name)
-					`(slot-value ,',self-heap ',name)))
-			      ,@lbody))))
-	   (backward ,(if backward
-			    (let ((largs (car backward))
-				  (lbody (cdr backward))
-				  (self-heap (gensym)))
-			      (dolist (i largs) (assure-args i))
-			      `(lambda ,(concatenate 'list (list self-heap) largs)
-				 ,(if (null parameters)
-				      `(declare (ignore ,self-heap)))
-				 (macrolet ((self (name)
-					      `(slot-value ,',self-heap ',name)))
-				   ,@lbody)))
-			    nil))
-	   ,@(map 'list (lambda (x) (assure-args (car x))) parameters))
-	 (defun ,name (&rest init-args)
-	   (check-destructive init-args)
-	   (apply #',constructor-name init-args))))))
+	   (defstruct (,name
+		       (:print-function (lambda (m stream k)
+					  (declare (ignore k))
+					  (render-simple-model-structure stream m)))
+		       (:constructor ,constructor-name (,@args &aux ,@parameters)))
+	     (hide-from-tree ,hide-from-tree)
+	     (forward  t)
+	     (backward t)
+	     (parameters ',(map 'list (lambda (x) (assure-args (car x))) parameters))
+	     ,@(map 'list (lambda (x) (assure-args (car x))) parameters))
+	   
+	   (define-node-method call-forward ,name ,(car forward) ,(cdr forward))
+	   (define-node-method call-backward ,name ,(car backward) ,(cdr backward))
+	   (defun ,name (&rest init-args)
+	     ;(check-destructive init-args)
+	     (apply #',constructor-name init-args))))))
 
 
 (defun render-simple-model-structure (stream model)
