@@ -73,12 +73,16 @@
 	(setf (waffetensor-destructive? v) nil))))
      
 (defmacro define-node-method (fname name args body)
-  `(defmethod ,fname ((self ,name))
-     #'(lambda ,args
-       (declare (typep waffetensor ,@args))
-       (macrolet ((self (name)
-		    `(slot-value self ',name)))
-	 ,@body))))
+  (let ((f-ident   (gensym (symbol-name name)))
+	(self-heap (gensym (symbol-name name))))
+    `(prog1
+	 (defun ,f-ident (,self-heap ,@args)
+	   (declare (typep waffetensor ,@args)
+		    (typeep ,name ,self-heap))
+	   (macrolet ((self (name) `(slot-value ,',self-heap ',name)))
+	     ,@body))
+       (defmethod ,fname ((self ,name))
+	 #'(lambda (&rest node-inputs) (apply #',f-ident self node-inputs))))))
 
 (defmacro defmodel (name args &key parameters forward backward hide-from-tree)
   #|
@@ -86,15 +90,17 @@
   Args: hide-from-tree ... if true, this node is detached from autograd. (that is, when backward, use backward defined in itself)
   |#
   (labels ((assure-args (x)
+	     (declare (type symbol x))
 	     (if (or (equal (symbol-name x) "forward")
 		     (equal (symbol-name x) "backward")
 		     (equal (symbol-name x) "hide-from-tree")
 		     (equal (symbol-name x) "parameters")
-		     (equal (symbol-name x) "self")) ; i am not sure if it is really enough
+		     (equal (symbol-name x) "self"))
 		 (error "the name ~a is not allowed to use" (symbol-name x))
 		 x)))
     (unless forward
-      (error "insufficient forms"))
+      (error ":forward slot is need to be fulfilled. When defining Model [~a]" name))
+    
     (let ((constructor-name (gensym)))
       `(prog1
 	   (defstruct (,name
@@ -102,16 +108,14 @@
 					  (declare (ignore k))
 					  (render-simple-model-structure stream m)))
 		       (:constructor ,constructor-name (,@args &aux ,@parameters)))
-	     (hide-from-tree ,hide-from-tree)
-	     (forward  t)
-	     (backward t)
+	     (hide-from-tree ,hide-from-tree :type boolean)
+	     (forward t :type boolean)
+	     (backward ,(if backward t nil) :type boolean)
 	     (parameters ',(map 'list (lambda (x) (assure-args (car x))) parameters))
 	     ,@(map 'list (lambda (x) (assure-args (car x))) parameters))
-	   
-	   (define-node-method call-forward ,name ,(car forward) ,(cdr forward))
+	   (define-node-method call-forward  ,name ,(car forward)  ,(cdr forward))
 	   (define-node-method call-backward ,name ,(car backward) ,(cdr backward))
 	   (defun ,name (&rest init-args)
-	     ;(check-destructive init-args)
 	     (apply #',constructor-name init-args))))))
 
 

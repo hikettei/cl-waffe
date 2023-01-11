@@ -1,13 +1,16 @@
 
 (in-package :cl-waffe)
 
-(declaim (inline assure-tensor))
-(defun assure-tensor (x)
-  (if (typep x 'WaffeTensor)
-      x
-      (const x)))
+(defgeneric assure-tensor (x))
 
-; callopは計算ノードから切り離されてることに注意
+(defmethod assure-tensor ((x waffetensor)) x)
+(defmethod assure-tensor ((x fixnum))   (const x))
+(defmethod assure-tensor ((x float))    (const x))
+(defmethod assure-tensor ((x null))     (const x))
+(defmethod assure-tensor ((x cons))     (const x))
+(defmethod assure-tensor ((x function)) (const x))
+(defmethod assure-tensor ((x ratio))    (const x))
+
 
 (defnode AddTensor nil
   :parameters nil
@@ -127,6 +130,8 @@
 ;ScalarMul
 
 (defun !add (x y)
+  ;from now on, static typing
+  (declare (typep (or waffetensor waffedatatype) x y))
   (call (AddTensor) (assure-tensor x) (assure-tensor y)))
     
 (defun !sub (x y)

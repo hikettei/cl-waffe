@@ -11,6 +11,9 @@
 	   #:data
 	   #:grad
 
+	   #:waffedatatype
+	   #:waffe-array
+
 	   #:with-no-grad
 	   #:*no-grad*
 

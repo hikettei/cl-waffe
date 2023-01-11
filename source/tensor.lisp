@@ -88,33 +88,19 @@
 	      (cos (* 2.0 pi (double-random)))
 	      var)))))
 
-(defun repeat-n (val n)
-  (let ((a `(,val)))
-    (dotimes (_ (1- n))
-      (push val a))
-    a))
-
-(defun repeat-c (n &key (start 0))
-  (let ((a `(,start))
-	(i start))
-    (dotimes (_ (1- n))
-      (incf i 1)
-      (push i a))
-    (reverse a)))
-
-(defmacro nth-var (tensor n)
-  `(nth ,n (slot-value ,tensor 'variables)))
-
-(defmacro nth-tensor (tensor n s)
-  ; the nth variavle of tensor
-  `(slot-value (nth-var ,tensor ,n) ,s))
-
-
 (deftype WaffeSupportedDataType ()
   `(or fixnum float null cons function ratio)) ;cons?
 
+(deftype WaffeDataType ()
+  `(or fixnum
+       float
+       null
+       cons
+       function
+       ratio))
+
 (deftype waffe-array ()
-  `(or mgl-mat:mat simple-array))
+  `(or mgl-mat:mat))
 
 (defun waffe-array (c)
   (and (typep c 'simple-array)
@@ -127,13 +113,12 @@
 
 (defun init-waffe-tensor-data (content)
   ; todo: coerce: simple-array -> mgl-mat
-
+  (declare (typep content (or waffetensor
+			      waffedatatype)))
+  
   (let* ((content (if (typep content 'waffetensor)
-		      (data1 content)
+		      (data content)
 		      content)))
-    (unless (typep content 'WaffeTensorContentType)
-      (error "Waffetensor only supports of type of mgl-mat and fixnum/float/null but got: ~a" (type-of content)))
-
     (if (typep content 'ratio)
 	(if (eq mgl-mat:*default-mat-ctype* :double) ;...
 	    (coerce content 'double-float)
@@ -176,6 +161,26 @@
   `(with-slots ((data data) (backend backend)) ,tensor
      (tensor data :backend backend)))
 
+(defun repeat-n (val n)
+  (let ((a `(,val)))
+    (dotimes (_ (1- n))
+      (push val a))
+    a))
+
+(defun repeat-c (n &key (start 0))
+  (let ((a `(,start))
+	(i start))
+    (dotimes (_ (1- n))
+      (incf i 1)
+      (push i a))
+    (reverse a)))
+
+(defmacro nth-var (tensor n)
+  `(nth ,n (slot-value ,tensor 'variables)))
+
+(defmacro nth-tensor (tensor n s)
+  ; the nth variavle of tensor
+  `(slot-value (nth-var ,tensor ,n) ,s))
 
 (defmacro setfgradtmp (tensor value)
   `(progn
@@ -204,7 +209,7 @@
 (declaim (ftype (function (waffetensor) null) backward1))
 (defun backward1 (tensor)
   (declare (optimize (speed 3) (space 0) (safety 0))
-	   (type waffetensor tenssor))
+	   (type waffetensor tensor))
   (if (waffetensor-backward tensor) ;Backward exists?
       (let* ((grad-tmp-before (waffetensor-grad-tmp tensor))
 	     (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top
