@@ -12,6 +12,34 @@
 
 (defparameter mgl-mat:*DEFAULT-MAT-CTYPE* :float) ;double/float
 
+
+(deftype WaffeSupportedDataType ()
+  `(or fixnum float null cons function ratio)) ;cons?
+
+(deftype WaffeDataType ()
+  `(or fixnum
+       float
+       null
+       cons
+       function
+       ratio))
+
+(deftype waffe-array ()
+  `(or mgl-mat:mat))
+
+(defun waffe-array (c)
+  (and (typep c 'simple-array)
+       (every (lambda (e) (typep e 'waffesupporteddatatype)) c)))
+
+(deftype WaffeTensorContentType ()
+  `(or mgl-mat:mat
+       waffesupporteddatatype))
+					; (satisfies waffe-array)))
+
+(defstruct grad-tmp
+  (value nil)
+  (grad-called nil :type boolean))
+
 ; utils
 (defstruct (WaffeTensor (:print-function
 			 (lambda (tensor stream depth)
@@ -20,11 +48,12 @@
 			(:constructor
 			    sysconst
 			    (value &key (backend *default-backend*) (extend nil)
-			     &aux (data value)
+			     &aux (data (init-waffe-tensor-data value))
 			       (backend (check-backend backend extend))
 			       (calln 0)
 			       (destructively-calln 0)
 			       (grad nil)
+			       (is-mat (typep value 'mgl-mat:mat))
 			       (destructive? t)
 			       (grad-tmp (make-grad-tmp))))
 	                (:constructor
@@ -34,6 +63,7 @@
 			       (is-ancestor-param t)
 			       (calln 0)
 			       (destructively-calln 0)
+			       (is-mat (typep value 'mgl-mat:mat))
 			       (is-param? t)
 			       (backend (check-backend backend extend))
 			       (grad `(nil nil))))
@@ -43,16 +73,18 @@
 			     &aux (data (init-waffe-tensor-data value))
 			       (backend (check-backend backend extend))
 			       (calln 0)
+			       (is-mat (typep value 'mgl-mat:mat))
 			       (destructively-calln 0)
 			       (grad nil)
 			       (destructive? t))))
   (data nil :type waffetensorcontenttype)
   (grad-tmp (make-grad-tmp :value nil :grad-called nil) :type grad-tmp)
-  backward
+  (backward nil :type boolean)
   (backend :mgl :type keyword)
   (grad nil :type waffetensorcontenttype)
-  variables
+  (variables nil :type list)
   state
+  (is-mat nil :type boolean)
   (calln 0 :type fixnum)
   (is-param? nil :type boolean)
   (destructively-calln 0 :type fixnum)
@@ -60,15 +92,13 @@
   (destructive? nil :type boolean)
   (is-data-destructed? nil :type boolean)
   optim-report
-  (report-index 0 :type fixnum)
+  report-index
   (belongs-to-nth-report 0 :type fixnum))
 
-(defstruct grad-tmp
-  (value nil :type (or null waffetensor))
-  (grad-called nil :type boolean))
-
-(defmacro data (tensor)
-  `(waffetensor-data ,tensor))
+(declaim (inline data))
+(defun data (tensor)
+  (declare (type waffetensor tensor))
+  (waffetensor-data tensor))
 
 (defun double-random ()
   (let ((i (random 1.0)))
@@ -88,52 +118,14 @@
 	      (cos (* 2.0 pi (double-random)))
 	      var)))))
 
-(defun repeat-n (val n)
-  (let ((a `(,val)))
-    (dotimes (_ (1- n))
-      (push val a))
-    a))
-
-(defun repeat-c (n &key (start 0))
-  (let ((a `(,start))
-	(i start))
-    (dotimes (_ (1- n))
-      (incf i 1)
-      (push i a))
-    (reverse a)))
-
-(defmacro nth-var (tensor n)
-  `(nth ,n (slot-value ,tensor 'variables)))
-
-(defmacro nth-tensor (tensor n s)
-  ; the nth variavle of tensor
-  `(slot-value (nth-var ,tensor ,n) ,s))
-
-
-(deftype WaffeSupportedDataType ()
-  `(or fixnum float null cons function ratio)) ;cons?
-
-(deftype waffe-array ()
-  `(or mgl-mat:mat simple-array))
-
-(defun waffe-array (c)
-  (and (typep c 'simple-array)
-       (every (lambda (e) (typep e 'waffesupporteddatatype)) c)))
-
-(deftype WaffeTensorContentType ()
-  `(or mgl-mat:mat
-       waffesupporteddatatype))
-      ; (satisfies waffe-array)))
-
 (defun init-waffe-tensor-data (content)
   ; todo: coerce: simple-array -> mgl-mat
-
+  (declare (typep content (or waffetensor
+			      waffedatatype)))
+  
   (let* ((content (if (typep content 'waffetensor)
-		      (data1 content)
+		      (data content)
 		      content)))
-    (unless (typep content 'WaffeTensorContentType)
-      (error "Waffetensor only supports of type of mgl-mat and fixnum/float/null but got: ~a" (type-of content)))
-
     (if (typep content 'ratio)
 	(if (eq mgl-mat:*default-mat-ctype* :double) ;...
 	    (coerce content 'double-float)
@@ -176,6 +168,26 @@
   `(with-slots ((data data) (backend backend)) ,tensor
      (tensor data :backend backend)))
 
+(defun repeat-n (val n)
+  (let ((a `(,val)))
+    (dotimes (_ (1- n))
+      (push val a))
+    a))
+
+(defun repeat-c (n &key (start 0))
+  (let ((a `(,start))
+	(i start))
+    (dotimes (_ (1- n))
+      (incf i 1)
+      (push i a))
+    (reverse a)))
+
+(defmacro nth-var (tensor n)
+  `(nth ,n (slot-value ,tensor 'variables)))
+
+(defmacro nth-tensor (tensor n s)
+  ; the nth variavle of tensor
+  `(slot-value (nth-var ,tensor ,n) ,s))
 
 (defmacro setfgradtmp (tensor value)
   `(progn
@@ -193,7 +205,8 @@
       (unless (eq (!shape tensor) `(1))
 	(error "grad can be implicitly created only for scalar outputs")))
   
-  (backward1 tensor))
+  (backward1 tensor)
+  nil)
 
 (declaim (inline step-next-node))
 
@@ -203,8 +216,8 @@
 
 (declaim (ftype (function (waffetensor) null) backward1))
 (defun backward1 (tensor)
-  (declare (optimize (speed 3) (space 0) (safety 0))
-	   (type waffetensor tenssor))
+  (declare ;(optimize (speed 3) (space 0) (safety 0))
+   (type waffetensor tensor))
   (if (waffetensor-backward tensor) ;Backward exists?
       (let* ((grad-tmp-before (waffetensor-grad-tmp tensor))
 	     (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top
@@ -212,10 +225,9 @@
 			      (const 1))))
 	(setf (waffetensor-optim-report grad-before)
 	      (waffetensor-optim-report tensor))
-	(let ((grads (funcall (waffetensor-backward tensor)
-			      (waffetensor-state tensor)
-			      grad-before)))
-
+	; calculating backward(state, dy) -> x.grad, y.grad...
+	(let ((grads (funcall (the function (call-backward (waffetensor-state tensor))) grad-before)))
+	  (declare (type list grads))
 	  (unless (= (length (waffetensor-variables tensor))
 		     (length grads))
 	    (error "backward error: The number of :forward args doesnt correspond with of :backward"))
@@ -239,7 +251,8 @@
 			    (setf (waffetensor-grad tensor) (data (!reshape new-grad (!shape tensor))))) ; is it due to bugs of reshape?
 			(setf (waffetensor-grad tensor) (data new-grad))))
 		  (setf (waffetensor-grad tensor)
-			(data (!add (waffetensor-grad tensor) (grad-tmp-value (waffetensor-grad-tmp tensor))))))))))
+			(data (!add (waffetensor-grad tensor) (grad-tmp-value (waffetensor-grad-tmp tensor)))))))))
+  nil)
 
 
 (defun !zeros (shape)

@@ -26,4 +26,3 @@
 (defun softmax-cross-entropy (x y &key (avoid-overflow t) (delta 1e-7))
   (call (SoftMaxCrossEntropy :avoid-overflow avoid-overflow :delta delta) x y))
 
-

@@ -1,31 +1,36 @@
 
 (in-package :cl-waffe)
 
-(declaim (inline assure-tensor))
-(defun assure-tensor (x)
-  (if (typep x 'WaffeTensor)
-      x
-      (const x)))
+(defgeneric assure-tensor (x))
 
-; callopは計算ノードから切り離されてることに注意
+(defmethod assure-tensor ((x waffetensor)) x)
+(defmethod assure-tensor ((x fixnum))   (const x))
+(defmethod assure-tensor ((x float))    (const x))
+(defmethod assure-tensor ((x null))     (const x))
+(defmethod assure-tensor ((x cons))     (const x))
+(defmethod assure-tensor ((x function)) (const x))
+(defmethod assure-tensor ((x ratio))    (const x))
+(defmethod assure-tensor ((x mgl-mat:mat)) (const x))
 
+
+(declaim (inline !add !sub !mul !div))
 (defnode AddTensor nil
   :parameters nil
   :forward  ((x y)
-	     (callop :add x y))
+	     (with-searching-calc-node :add x y))
   :backward ((dy) (list dy dy)))
 
 (defnode SubTensor nil
   :parameters ()
-  :forward ((x y) (callop :sub x y))
-  :backward ((dy) (list dy (callop :mul dy (const -1)))))
+  :forward ((x y) (with-searching-calc-node :sub x y))
+  :backward ((dy) (list dy (!mul dy (const -1)))))
 
 (defnode MulTensor nil
   :parameters ((xi T) (yi T))
   :forward ((x y)
 	    (setf (self xi) (data x))
 	    (setf (self yi) (data y))
-	    (callop :mul x y))
+	    (with-searching-calc-node :mul x y))
   :backward ((dy) (list (!mul dy (self yi))
 			(!mul dy (self xi)))))
 
@@ -34,7 +39,7 @@
   :forward ((x y)
             (setf (self xi) (data x))
 	    (setf (self yi) (data y))
-	    (callop :div x y))
+	    (with-searching-calc-node :div x y))
   :backward ((dy) (list (!div dy (self yi))
 			(!div (!mul (!mul dy (self xi)) -1)
 			      (!pow (self yi) 2)))))
@@ -43,90 +48,90 @@
   :parameters ((xi T) (yi T))
   :forward ((x1 y1) (setf (self xi) (data x1))
 		    (setf (self yi) (data y1))
-		    (callop :pow x1 y1))
+		    (with-searching-calc-node :pow x1 y1))
   :backward ((dy)
-	     (list (callop :mul (!mul dy (self yi)) (!pow (self xi) (!sub (self yi) 1)))
-		   (callop :mul dy (callop :mul
-					   (!div (!log (!pow (self xi) (self yi))) (self yi))
-					   (!pow (self xi) (self yi)))))))
+	     (list (!mul (!mul dy (self yi)) (!pow (self xi) (!sub (self yi) 1)))
+		   (!mul dy (!mul
+			     (!log (self xi))
+			     (!pow (self xi) (self yi)))))))
 
 (defnode SqrtTensor nil
   :parameters ((xi T))
   :forward ((x1) (setf (self xi) x1)
-		 (callop :sqrt x1))
+		 (with-searching-calc-node :sqrt x1))
   :backward ((dy)
-	     (list (callop :div dy (!mul 2 (callop :sqrt (self xi)))))))
+	     (list (!div dy (!mul 2 (!sqrt (self xi)))))))
 
 (defnode LogTensor nil
   :parameters ((x1 T))
-  :forward ((x1) (setf (self x1) x1) (callop :log x1))
+  :forward ((x1) (setf (self x1) x1)
+		 (with-searching-calc-node :log x1))
   :backward ((dy) (list (!div dy (self x1)))))
 
 (defnode ReshapeTensor (shape)
   :parameters ((prev-shape T) (shape shape))
-  :forward ((x) (setf (self prev-shape) (assure-tensor (!shape x))) (callop :reshape x (self shape)))
+  :forward ((x) (setf (self prev-shape) (assure-tensor (!shape x)))
+		(with-searching-calc-node :reshape x (self shape)))
   :backward ((dy)
-	     (list (callop :reshape dy (self prev-shape)))))
+	     (list (!reshape dy (self prev-shape)))))
 
 (defnode DotProductTensor nil
   :parameters ((xi T) (yi T))
   :forward ((x1 x2) ; only supports 2d and 2d arrays
 		    (setf (self xi) x1)
 		    (setf (self yi) x2)
-		    (callop :dot x1 x2))
+		    (with-searching-calc-node :dot x1 x2))
   :backward ((dy)
-	       (list (callop :dot dy (!transpose (self yi)))
-		     (callop :dot (!transpose (self xi)) dy))))
+	       (list (!dot dy (!transpose (self yi)))
+		     (!dot (!transpose (self xi)) dy))))
 
-(defnode TransposeTensor (shape) ;sf
+(defnode TransposeTensor (shape)
   :parameters ((prev-shape T) (shape shape))
-  :forward ((x) (setf (self prev-shape) (!shape x)) (callop :transpose x (self shape)))
-  :backward ((d1) (callop :transpose d1 (self prev-shape))))
+  :forward ((x)
+	    (setf (self prev-shape) (!shape x))
+	    (with-searching-calc-node :transpose x (self shape)))
+  :backward ((d1) (!transpose d1 (self prev-shape))))
 
 (defnode MeanTensor (axis)
   :parameters ((axis axis) (repeats T))
   :forward ((x)
 	    (setf (self repeats) (assure-tensor (!shape x (self axis))))
-	    (callop :mean x (self axis)))
+	    (with-searching-calc-node :mean x (self axis)))
   :backward ((dy) (list (!repeats dy (self axis) (self repeats)))))
 
-(defnode SumTensor (axis keepdims) ;df
+(defnode SumTensor (axis keepdims)
   :parameters ((axis axis) (repeats T))
   :forward ((x)
 	    (setf (self repeats) (assure-tensor (!shape x (self axis))))
-	    (callop :sum x (self axis)))
+	    (with-searching-calc-node :sum x (self axis)))
   :backward ((dy)
 	     (list (!div (!repeats dy (self axis) (self repeats))
 			 (self repeats)))))
 
-(defnode RepeatTensor (axis repeats) ;sf
+(defnode RepeatTensor (axis repeats) 
   :parameters ((axis axis) (repeats repeats))
-  :forward ((x) (callop :repeat x (self axis) (self repeats)))
-  :backward ((dy) (list (callop :sum dy (self axis)))))
+  :forward ((x) (with-searching-calc-node :repeat x (self axis) (self repeats)))
+  :backward ((dy) (list (!sum dy (self axis)))))
 
 (defnode ExpTensor ()
   :parameters ((xi T))
   :forward ((x) (setf (self xi) x)
-		(callop :exp x))
-  :backward ((dy) (list (callop :mul dy (callop :exp (self xi))))))
+		(with-searching-calc-node :exp x))
+  :backward ((dy)
+	     (list (!mul dy (!exp (self xi))))))
 
 (defnode MatMulTensor ()
   :parameters ((xi T) (yi T))
   :forward ((x y) (setf (self xi) x)
 		  (setf (self yi) y)
-		  (callop :matmul x y))
+		  (with-searching-calc-node :matmul x y))
   :backward ((dy)
 	     (list (!matmul dy (!transpose (self yi)))
 		   (!matmul (!transpose (self xi)) dy))))
 
-;(defnode CutTensor (result)
-;  :parameters ((result1 result))
-;  :forward ((x) (self result1))
-;  :backward ((dy) (list dy))) ; todo
-
-;ScalarMul
-
 (defun !add (x y)
+  ;from now on, static typing
+  (declare (typep (or waffetensor waffedatatype) x y))
   (call (AddTensor) (assure-tensor x) (assure-tensor y)))
     
 (defun !sub (x y)
@@ -136,6 +141,7 @@
   (call (MulTensor) (assure-tensor x) (assure-tensor y)))
 
 (defun !div-old (x y)
+  (unless (= x 1) (error "!div-old: x must be 1"))
   ; x must be 1, cl-waffe.backends.mgl:div has some problems?...
   (call (DivTensor) (assure-tensor x) (assure-tensor y)))
 

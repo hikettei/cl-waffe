@@ -11,6 +11,9 @@
 	   #:data
 	   #:grad
 
+	   #:waffedatatype
+	   #:waffe-array
+
 	   #:with-no-grad
 	   #:*no-grad*
 
@@ -104,6 +107,7 @@
 	   #:!transpose
 	   #:!exp
 	   #:!matmul
+	   #:!repeats
 
 	   #:!squeeze
 	   #:!unsqueeze

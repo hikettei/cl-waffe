@@ -2,5 +2,5 @@
 (in-package :cl-user)
 
 (defpackage cl-waffe.backends.cpu
-  (:use :cl)
-  (:export #:kernel #:infomation))
+  (:use :cl :cl-waffe)
+  (:export #:dispatch-kernel #:infomation))

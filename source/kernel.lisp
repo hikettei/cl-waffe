@@ -3,6 +3,8 @@
 
 (declaim (inline callop))
 
+; dispaches kernel based on backends. and optimize node
+
 (defparameter *kernels* `(:mgl))
 (defparameter *instructions* `(:add
 			       :sub
@@ -25,15 +27,6 @@
 (defparameter *num-reports* 0)
 (defparameter *ignore-optimizer* nil)
 
-;(defmacro warranty (tensor)
-  ;return tensor's data but until this macro called, it is guaranteed that the data is not destructed
-  ;`(data (callop :data ,tensor)))
-
-(defmacro apply-destruct (out)
-  `(progn
-     (setf (waffetensor-is-data-destructed? ,out) t)
-     (setf (waffetensor-destructively-calln ,out) 1)))
-
 (defmacro with-ignore-optimizer (&body body)
   ; doing all operations with destructive
   `(progn
@@ -49,29 +42,26 @@
     (error "Invaild kernel: ~a" (slot-value variable 'backend))
     T))
 
-(defun assure-tensors (variables)
-  (check-kernel (first variables))
-  (or (endp variables)
-      (let ((x (slot-value (first variables) 'backend)))
-	(every (lambda (y)
-		 (check-kernel y)
-		 (equal x (slot-value y 'backend)))
-	       (rest variables)))))
-
 (defstruct NetworkVariableReport
-  length
-  sp
-  lock
-  report-identifier
-  destruct-positions)
+  (length 0 :type fixnum)
+  (sp 0 :type fixnum)
+  (lock nil :type boolean)
+  (report-identifier 0 :type fixnum)
+  (destruct-positions (make-hash-table) :type hash-table))
+
 
 (defun report-reg (report var is-first-call?)
+  (declare (optimize (speed 3) (space 0) (safety 0))
+	   (type networkvariablereport report)
+	   (type waffetensor var)
+	   (type booleean is-first-call?))
   (if (car (waffetensor-report-index var))
       (let* ((old-report (gethash (car (waffetensor-report-index var))
 	   			  (networkvariablereport-destruct-positions report)))
 	     (new-report (if is-first-call?
 			     (+ old-report 1)
 			     old-report)))
+	(declare (type fixnum old-report))
 	(setf (gethash  (car (waffetensor-report-index var))
 			(networkvariablereport-destruct-positions report))
 	       new-report)))
@@ -87,88 +77,82 @@
 	      0))))
 
 (defun refer-report (report variables)
+  (declare (optimize (speed 3) (space 0) (safety 0))
+           (type networkvariablereport report))
   (let ((ls (networkvariablereport-destruct-positions report)))
     (map 'list (lambda (v)
+		 (declare (type waffetensor v))
 		 (let* ((index (networkvariablereport-sp report))
 			(rp (gethash index ls)))
 		   (incf (networkvariablereport-sp report) 1)
 		   (if (waffetensor-destructive? v)
 		       (case rp
-			 (0 nil)
+			 (0 v)
 			 (T nil))
 		       nil)))
 	 variables)))
 
-(defun decide-nth (instruction ls) ;rev
-  (if (eq instruction :div)
-      (second ls)
-      (car ls)))
+(defun find-report (variables)
+  (unless *ignore-optimizer*
+    (let ((tensor (find t variables :test #'(lambda (x y)
+					      (declare (ignore y))
+					      (waffetensor-optim-report y)))))
+      (unless (null tensor)
+	  (waffetensor-optim-report tensor)
+	  nil))))
 
-(declaim (inline callop)) 
-(defun callop (instruction &rest variables)
-  (declare (optimize (speed 3) (space 0) (safety 0) (debug 0)))
-  (unless (find instruction *instructions*) ;doesnt work?
-    (error "unsupported instruction: ~a" instruction))
+(defun with-searching-calc-node (kernel-function &rest args)
+  (let  ((is-all-array? (find t (map 'list (lambda (x) (declare (type waffetensor x)) (waffetensor-is-mat x)) args)))
+	 (res-tensor nil)
+	 (is-first-time-call? nil)
+	 (report nil)
+	 (destructable-variables nil)
+	 (result nil))
 
-  (unless (assure-tensors variables)
-    (error "all inputs must have same backends and be waffe tensor"))
+     (if is-all-array?
+	 (let* ((report (find-report args))
+		(is-first-time-call? (if report
+					 (not (networkvariablereport-lock report))
+					 t))
+		(destructable-variables (if (and report (not is-first-time-call?))
+					    (refer-report report args)
+					    args))
+		(result (cl-waffe.backends.mgl:dispatch-kernel
+			 kernel-function
+			 is-first-time-call?
+			 (car destructable-variables)
+			 (second destructable-variables)
+			 args)))
+	   (setq res-tensor (sysconst result)))
+	 (let* ((result (apply #'cl-waffe.backends.cpu:dispatch-kernel kernel-function args)))
+	   (setq res-tensor (sysconst result))))
 
-  (let* (;(rp-exists? (find t variables :test (lambda (x y)
-	;				       (declare (ignore y))
-	;				       (typep (waffetensor-optim-report y) 'NetworkVariableReport))))
-	 ;(report (if rp-exists? (waffetensor-optim-report rp-exists?) nil))
-	 ;(is-first-call? (if report (not (networkvariablereport-lock report)) t))
-	 ;(destructives (if (and report (not is-first-call?) (not *ignore-optimizer*))
-	;		   (refer-report report variables)
-	;		   variables))
-	 ;(out (if destructives
-	;	  (decide-nth instruction destructives)
-	;	  (decide-nth instruction variables))) ; optimize df(x) like log(x) where x is going to be abandoned
-	 ;(out            (if *ignore-optimizer* nil out))
-	 ;(report         (if *ignore-optimizer* nil report))
-         (out nil)
-	 (is-first-call? t);(if *ignore-optimizer* t is-first-call?))
-	 (backend (waffetensor-backend (first variables)))
-	 (args (map 'list (lambda (x) (waffetensor-data x)) variables)) ; do not make so many copy...
-	 (all-not-array (every (lambda (x) (typep x 'waffesupporteddatatype)) args))
-	 (result (case backend
-		       (:cpu    (cl-waffe.backends.cpu:kernel instruction args out))				   
-		       (:mgl    (if all-not-array ; Use CPU When like Const(1) + Const(1)
-				    (cl-waffe.backends.cpu:kernel instruction args out)
-				    (cl-waffe.backends.mgl:kernel instruction args out variables (not is-first-call?))))
-		       (T (error "No such backends: ~a" backend))))
-	 (res-tensor (sysconst result :backend backend)))
-    
-    ;(map 'list (lambda (x) (incf (waffetensor-calln x) 1)) variables)
-    
-    ;(if (and (null report) (not *ignore-optimizer*))
-     ; (let ((any-param (find t variables :test (lambda (x y)
-;						 (declare (ignore x))
-;						 (waffetensor-is-param? y)))))
-;	(unless (null any-param)
-;	  (progn (setf (waffetensor-optim-report any-param)
-;		       (make-networkvariablereport :length 0
-;						   :sp 0
-;						   :lock nil
-;						   :report-identifier *num-reports*
-;						   :destruct-positions (make-hash-table)))
-;		 (incf *num-reports* 1)
-;		 (setq report (waffetensor-optim-report any-param))))))
-;
- ;   (if (and report (not *ignore-optimizer*))
-;	(dolist (v variables)
-;	  (report-reg report v is-first-call?)))
-;
- ;   (if (and report (not *ignore-optimizer*))
-;	(setf (waffetensor-optim-report res-tensor) report))
-;
- ;  (if out
-;	(setf (waffetensor-report-index res-tensor) ;dop(a,b)a=a
-;	      (waffetensor-report-index out)))
+    (map 'list (lambda (x) (declare (type waffetensor x)) (incf (waffetensor-calln x) 1)) args)
 
-    res-tensor))
+    (if (and (null report) (not *ignore-optimizer*))
+      (let ((any-param (find t args :test (lambda (x y)
+					    (declare (ignore x)
+						     (type waffetensor y))
+					    (waffetensor-is-param? y)))))
+	(unless (null any-param)
+	  (progn (setf (waffetensor-optim-report any-param)
+		       (make-networkvariablereport :length 0
+						   :sp 0
+						   :lock nil
+						   :report-identifier *num-reports*))
+		 (incf *num-reports* 1)
+		 (setq report (waffetensor-optim-report any-param))))))
+     
+    (if (and report (not *ignore-optimizer*))
+	(dolist (v args)
+	  (report-reg report v is-first-time-call?)))
 
-(defun backends-available ())
+    (if (and report (not *ignore-optimizer*))
+	(setf (waffetensor-optim-report res-tensor) report))
 
-(defun check-supported-instruction (backend))
+    (if (and (car destructable-variables) (not *ignore-optimizer*))
+	(setf (waffetensor-report-index res-tensor) ;dop(a,b)a=a
+	      (waffetensor-report-index (car destructable-variables))))
+
+     res-tensor))
 

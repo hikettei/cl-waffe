@@ -1,6 +1,11 @@
 
 (in-package :cl-waffe)
 
+(defun uncheck-destructive (variables)
+  (dolist (v variables)
+    (if (typep v 'waffetensor)
+	(setf (waffetensor-destructive? v) nil))))
+
 (defmacro deftrainer (name args &key model optimizer optimizer-args step-model predict (forward NIL) &aux (out-id (gensym)))
   (if forward (error ":forward is unavailable in deftrainer macro. use instead: :step-model"))
   (labels ((assure-args (x)
@@ -18,7 +23,7 @@
 					 (declare (ignore trainer _))
 					 (format stream "[Trainer of ___]")))
 		      (:constructor ,constructor-name (,@(map 'list (lambda (x) (assure-args x)) args)
-						       &aux (model (funcall (lambda () ,model)))
+						       &aux (model ,model)
 							 (optimizer (cl-waffe.optimizers:init-optimizer ,optimizer
 													model
 													,@optimizer-args)))))
@@ -36,32 +41,38 @@
 					(self-heap (gensym)))
 				    `(lambda ,(concatenate 'list (list self-heap) largs)
 				       (macrolet ((model     ()            `(slot-value ,',self-heap 'model))
-						  (update    (&rest args1) `(unless *no-grad* (with-ignore-optimizer
-												  (call (slot-value ,',self-heap 'optimizer) ,@args1))))
-						  (zero-grad ()            `(unless *no-grad* (funcall (slot-value (slot-value ,',self-heap 'optimizer) 'backward)
-												       (slot-value ,',self-heap 'optimizer)
+						  (update    (&rest args1) `(unless *no-grad* 
+												  (funcall (call-forward (slot-value ,',self-heap 'optimizer)
+													   ,@args1))))
+						  (zero-grad ()            `(unless *no-grad* (funcall (call-backward (slot-value ,',self-heap 'optimizer))
 												       (slot-value ,',self-heap 'model)))))
 					 (let ((,out-id (progn ,@lbody)))
-					   ;(if (typep ,out-id 'waffetensor)
-					    ;   (progn
-					;	 (setf (slot-value ,self-heap 'optimizer-report) (waffetensor-optim-report ,out-id))
-					;	 (setf (networkvariablereport-lock (slot-value ,self-heap 'optimizer-report)) t)
-					;	 (setf (networkvariablereport-sp   (slot-value ,self-heap 'optimizer-report)) 0))
-					 ;      (print "Warning: The trainer is not optimized. the last value of step-model is model-out"))
+					   (if (typep ,out-id 'waffetensor)
+					       (if (waffetensor-optim-report ,out-id)
+						   (progn
+						     (setf (slot-value ,self-heap 'optimizer-report) (waffetensor-optim-report ,out-id))
+						     (setf (networkvariablereport-lock (slot-value ,self-heap 'optimizer-report)) t)
+						     (setf (networkvariablereport-sp   (slot-value ,self-heap 'optimizer-report)) 0)
+						 ))
+					       (print "Warning: The trainer is not optimized. the last value of step-model is model-out"))
 					   ,out-id))))))
 	   (defun ,name (&rest init-args)
 	     (apply #',constructor-name init-args))))))
 
 (defun step-model (trainer &rest args)
+  (uncheck-destructive args)
   (apply (slot-value trainer 'step-model) trainer args))
 
 (defun step-model1 (trainer args)
+  (uncheck-destructive args)
   (apply (slot-value trainer 'step-model) trainer args))
 
 (defun predict (trainer &rest args)
+  (uncheck-destructive args)
   (predict1 trainer args))
 
 (defun predict1 (trainer args)
+  (uncheck-destructive args)
   (apply (slot-value trainer 'predict) trainer args))
 
 (defmacro defdataset (name args &key parameters forward length)

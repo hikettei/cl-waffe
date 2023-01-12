@@ -16,6 +16,7 @@
 			     (:file "cl-termgraph")
 			     (:file "figure")))
 	       (:module "backends/cpu"
+		:depends-on ("package")
 		:components ((:file "package")
 			     (:file "kernel")))
 	       (:module "backends/mgl-mat"
@@ -28,8 +29,9 @@
                (:file "kernel")
 	       (:file "trainer" :depends-on ("optimizers"))
 	       (:file "functions")
-	       (:file "operators")
+	       (:file "operators" :depends-on ("tensor"))
 	       (:module "optimizers"
+		:depends-on ("model")
 		:components ((:file "package")
 			     (:file "optimizers")
 			     (:file "optimizer")))
