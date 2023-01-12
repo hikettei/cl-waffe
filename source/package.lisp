@@ -107,6 +107,7 @@
 	   #:!transpose
 	   #:!exp
 	   #:!matmul
+	   #:!repeats
 
 	   #:!squeeze
 	   #:!unsqueeze

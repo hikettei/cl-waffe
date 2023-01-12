@@ -52,7 +52,7 @@
   :backward ((dy)
 	     (list (!mul (!mul dy (self yi)) (!pow (self xi) (!sub (self yi) 1)))
 		   (!mul dy (!mul
-			     (!div (!log (!pow (self xi) (self yi))) (self yi))
+			     (!log (self xi))
 			     (!pow (self xi) (self yi)))))))
 
 (defnode SqrtTensor nil
@@ -117,7 +117,8 @@
   :parameters ((xi T))
   :forward ((x) (setf (self xi) x)
 		(with-searching-calc-node :exp x))
-  :backward ((dy) (list (!mul dy (!exp (self xi))))))
+  :backward ((dy)
+	     (list (!mul dy (!exp (self xi))))))
 
 (defnode MatMulTensor ()
   :parameters ((xi T) (yi T))
@@ -140,6 +141,7 @@
   (call (MulTensor) (assure-tensor x) (assure-tensor y)))
 
 (defun !div-old (x y)
+  (unless (= x 1) (error "!div-old: x must be 1"))
   ; x must be 1, cl-waffe.backends.mgl:div has some problems?...
   (call (DivTensor) (assure-tensor x) (assure-tensor y)))
 

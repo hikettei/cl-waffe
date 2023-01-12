@@ -11,7 +11,6 @@
 			       :mul
 			       :div
 			       :log
-			       :inv
 			       :pow
 			       :sqrt
 			       :sum
@@ -109,6 +108,7 @@
 	 (report nil)
 	 (destructable-variables nil)
 	 (result nil))
+
      (if is-all-array?
 	 (let* ((report (find-report args))
 		(is-first-time-call? (if report
@@ -126,9 +126,10 @@
 	   (setq res-tensor (sysconst result)))
 	 (let* ((result (apply #'cl-waffe.backends.cpu:dispatch-kernel kernel-function args)))
 	   (setq res-tensor (sysconst result))))
+
     (map 'list (lambda (x) (declare (type waffetensor x)) (incf (waffetensor-calln x) 1)) args)
-    
-    (if (and is-all-array? (null report) (not *ignore-optimizer*))
+
+    (if (and (null report) (not *ignore-optimizer*))
       (let ((any-param (find t args :test (lambda (x y)
 					    (declare (ignore x)
 						     (type waffetensor y))

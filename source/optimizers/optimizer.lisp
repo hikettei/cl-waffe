@@ -46,4 +46,3 @@
 (defmacro init-optimizer (optim model &rest args) 
   `(,optim (ls-to-hash (find-parameters ,model)) ,@args))
 
-

@@ -21,8 +21,8 @@
   (let* ((result (apply (call-forward model) args)))
     (if (slot-value model 'hide-from-tree) ;is a result model or not?, then is it the part of node?
 	(unless *no-grad*
-	  (setf (waffetensor-backward result) t)
-	  (setf (waffetensor-state result) model)
+	  (setf (waffetensor-backward result)  t)
+	  (setf (waffetensor-state result)     model)
 	  (setf (waffetensor-variables result) args)
 	  (setf (waffetensor-is-ancestor-param result) (if (member-if #'(lambda (x)
 									  (waffetensor-is-ancestor-param x))
@@ -55,28 +55,19 @@
   `(progn
      (defmodel ,name ,args
        :parameters ,parameters
-       :forward ,update
+       :forward ,update ;zero-grad
        :backward ((model) (dolist (p (find-variables model))
 			    (setf (waffetensor-state p) nil)
 			    (setf (waffetensor-backward p) nil)
 			    (setf (waffetensor-variables p) nil)
 			    (setf (waffetensor-grad p) `(nil nil))
-			    (let ((grad-tmp (waffetensor-grad-tmp p)))
-			      (setf (grad-tmp-grad-called grad-tmp) nil)
-			      (if (typep (grad-tmp-value grad-tmp) 'mgl-mat:mat)
-				  (setf (grad-tmo-value grad-tmp) nil);(mgl-mat:fill! (grad-tmp-value grad-tmp) 0)
-				  (setf (grad-tmp-value grad-tmp) nil))))
+			    (setf (waffetensor-grad-tmp p) (make-grad-tmp)))
 		nil)
      :hide-from-tree nil)))
 
 (defmacro defnode (name args &key parameters forward backward)
   `(defmodel ,name ,args :parameters ,parameters :forward ,forward :backward ,backward :hide-from-tree T))
 
-(defun uncheck-destructive (variables)
-  (dolist (v variables)
-    (if (typep v 'waffetensor)
-	(setf (waffetensor-destructive? v) nil))))
-     
 (defmacro define-node-method (fname name args body)
   (let ((f-ident   (gensym (symbol-name name)))
 	(self-heap (gensym (symbol-name name))))
@@ -85,8 +76,8 @@
 	   ;(declare (type waffetensor ,@args))
 	   (macrolet ((self (name) `(slot-value ,',self-heap ',name)))
 	     ,@body))
-       (defmethod ,fname ((self ,name))
-	 (lambda (&rest node-inputs) (apply #',f-ident self node-inputs))))))
+	 (defmethod ,fname ((self ,name))
+	   (lambda (&rest node-inputs) (apply #',f-ident self node-inputs))))))
 
 (defmacro defmodel (name args &key parameters forward backward hide-from-tree)
   #|

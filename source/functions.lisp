@@ -46,7 +46,7 @@
   (let* ((x1 (if avoid-overflow
 		(!sub x (!average x))
 		x))
-	(z (!sum (!exp x1) 1 t)))
+	 (z (!sum (!exp x1) 1 t)))
     (!div (!exp x1) z)))
 
 

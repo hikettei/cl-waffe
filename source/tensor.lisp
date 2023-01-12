@@ -48,7 +48,7 @@
 			(:constructor
 			    sysconst
 			    (value &key (backend *default-backend*) (extend nil)
-			     &aux (data value)
+			     &aux (data (init-waffe-tensor-data value))
 			       (backend (check-backend backend extend))
 			       (calln 0)
 			       (destructively-calln 0)
@@ -205,7 +205,8 @@
       (unless (eq (!shape tensor) `(1))
 	(error "grad can be implicitly created only for scalar outputs")))
   
-  (backward1 tensor))
+  (backward1 tensor)
+  nil)
 
 (declaim (inline step-next-node))
 
@@ -216,7 +217,7 @@
 (declaim (ftype (function (waffetensor) null) backward1))
 (defun backward1 (tensor)
   (declare ;(optimize (speed 3) (space 0) (safety 0))
-	   (type waffetensor tensor))
+   (type waffetensor tensor))
   (if (waffetensor-backward tensor) ;Backward exists?
       (let* ((grad-tmp-before (waffetensor-grad-tmp tensor))
 	     (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top
