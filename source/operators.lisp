@@ -10,6 +10,7 @@
 (defmethod assure-tensor ((x cons))     (const x))
 (defmethod assure-tensor ((x function)) (const x))
 (defmethod assure-tensor ((x ratio))    (const x))
+(defmethod assure-tensor ((x mgl-mat:mat)) (const x))
 
 
 (declaim (inline !add !sub !mul !div))

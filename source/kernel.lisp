@@ -48,7 +48,7 @@
   (sp 0 :type fixnum)
   (lock nil :type boolean)
   (report-identifier 0 :type fixnum)
-  (destruct-positions (make-hash-table :test #'=) :type hash-table))
+  (destruct-positions (make-hash-table) :type hash-table))
 
 
 (defun report-reg (report var is-first-call?)
@@ -112,8 +112,8 @@
      (if is-all-array?
 	 (let* ((report (find-report args))
 		(is-first-time-call? (if report
-					 (networkvariablereport-lock report)
-					 nil))
+					 (not (networkvariablereport-lock report))
+					 t))
 		(destructable-variables (if (and report (not is-first-time-call?))
 					    (refer-report report args)
 					    args))

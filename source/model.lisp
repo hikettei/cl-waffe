@@ -72,7 +72,7 @@
 (defmacro defnode (name args &key parameters forward backward)
   `(defmodel ,name ,args :parameters ,parameters :forward ,forward :backward ,backward :hide-from-tree T))
 
-(defun check-destructive (variables)
+(defun uncheck-destructive (variables)
   (dolist (v variables)
     (if (typep v 'waffetensor)
 	(setf (waffetensor-destructive? v) nil))))

@@ -44,9 +44,10 @@
 					 (let ((,out-id (progn ,@lbody)))
 					   (if (typep ,out-id 'waffetensor)
 					       (progn
-						 (setf (slot-value ,self-heap 'optimizer-report) (waffetensor-optim-report ,out-id))
-						 (setf (networkvariablereport-lock (slot-value ,self-heap 'optimizer-report)) t)
-						 (setf (networkvariablereport-sp   (slot-value ,self-heap 'optimizer-report)) 0))
+						 ;(setf (slot-value ,self-heap 'optimizer-report) (waffetensor-optim-report ,out-id))
+						 ;(setf (networkvariablereport-lock (slot-value ,self-heap 'optimizer-report)) t)
+						 ;(setf (networkvariablereport-sp   (slot-value ,self-heap 'optimizer-report)) 0)
+						 )
 					       (print "Warning: The trainer is not optimized. the last value of step-model is model-out"))
 					   ,out-id))))))
 	   (defun ,name (&rest init-args)

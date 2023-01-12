@@ -215,7 +215,7 @@
 
 (declaim (ftype (function (waffetensor) null) backward1))
 (defun backward1 (tensor)
-  (declare (optimize (speed 3) (space 0) (safety 0))
+  (declare ;(optimize (speed 3) (space 0) (safety 0))
 	   (type waffetensor tensor))
   (if (waffetensor-backward tensor) ;Backward exists?
       (let* ((grad-tmp-before (waffetensor-grad-tmp tensor))
@@ -224,7 +224,8 @@
 			      (const 1))))
 	(setf (waffetensor-optim-report grad-before)
 	      (waffetensor-optim-report tensor))
-	(let ((grads (funcall (call-backward (waffetensor-state tensor)) grad-before)))
+	; calculating backward(state, dy) -> x.grad, y.grad...
+	(let ((grads (funcall (the function (call-backward (waffetensor-state tensor))) grad-before)))
 	  (declare (type list grads))
 	  (unless (= (length (waffetensor-variables tensor))
 		     (length grads))
@@ -249,7 +250,8 @@
 			    (setf (waffetensor-grad tensor) (data (!reshape new-grad (!shape tensor))))) ; is it due to bugs of reshape?
 			(setf (waffetensor-grad tensor) (data new-grad))))
 		  (setf (waffetensor-grad tensor)
-			(data (!add (waffetensor-grad tensor) (grad-tmp-value (waffetensor-grad-tmp tensor))))))))))
+			(data (!add (waffetensor-grad tensor) (grad-tmp-value (waffetensor-grad-tmp tensor)))))))))
+  nil)
 
 
 (defun !zeros (shape)
