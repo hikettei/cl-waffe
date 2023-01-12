@@ -241,7 +241,7 @@
 	   (type boolean enable-optim)
            (type waffetensor out x y))
   (let ((o (decide-out-buffer out x enable-optim)))
-           (mgl-mat:.<! (data y) (data x))))
+           (mgl-mat:.<! (data y) o)))
 
 (defun sum-tensor (is-first-time-call? out x y)
   (declare (optimize (speed 3) (space 0) (safety 0))
