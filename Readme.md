@@ -1,58 +1,145 @@
 
-# cl-waffe
+# Extensible, mgl-mat based deep learning library, cl-waffe.
 
-Deeplearningのライブラリを自作しようとしている。。。冬休み終わったら時間なくて放棄しちゃうかも
+
+This package is still under development.
+
+
+I am trying my best to optimize the code, but this is also for my study in the first place, so it may not be practical.
+
 
 # Documents
 
 Coming soon...
 
+# MNIST Example
 
-# Run MNIST
+```lisp
+
+; full code is in examples/mnist.lisp
+
+
+; define cl-waffe model.  it can be accessed from a trainer-object defined by deftrainer
+(defmodel MLP (activation)
+  :parameters ((layer1 (cl-waffe.nn:denselayer (* 28 28) 512 T activation))
+	       (layer2 (cl-waffe.nn:denselayer 512 256 T activation))
+	       (layer3 (cl-waffe.nn:linearlayer 256 10 T)))
+  :forward ((x)
+	    (call (self layer3)
+		  (call (self layer2)
+			(call (self layer1) x)))))
+
+
+(deftrainer MLPTrainer (activation lr)
+  :model          (MLP activation)
+  :optimizer      cl-waffe.optimizers:Adam
+  :optimizer-args (:lr lr)
+  :step-model ((x y)
+	       (zero-grad)
+	       (let ((out (cl-waffe.nn:softmax-cross-entropy (call (model) x) y)))
+		 (backward out)
+		 (update)
+		 out))
+  :predict ((x) (call (model) x)))
+
+
+(defdataset Mnistdata (train valid batch-size)
+  :parameters ((train train) (valid valid) (batch-size batch-size))
+  :forward ((index)
+	    (list (!set-batch (self train) index (self batch-size))
+		  (!set-batch (self valid) index (self batch-size))))
+  :length (() (car (!shape (self train)))))
+
+
+...
+
+
+(defun demo ()
+  (multiple-value-bind (datamat target)
+      (read-data "examples/tmp/mnist.scale" 784 10 :most-min-class 0)
+    (defparameter mnist-dataset datamat)
+    (defparameter mnist-target target))
+
+  (multiple-value-bind (datamat target)
+      (read-data "examples/tmp/mnist.scale.t" 784 10 :most-min-class 0)
+    (defparameter mnist-dataset-test datamat)
+    (defparameter mnist-target-test target))
+
+  (format t "Training: ~a" (!shape mnist-dataset))
+  (format t "Valid   : ~a" (!shape mnist-target))
+  (print "")
+
+
+  (setq trainer (MLPTrainer :relu 1e-4))
+
+  (setq train (MnistData mnist-dataset mnist-target 100))
+  (setq test (MnistData mnist-dataset-test mnist-target-test 100))
+
+  (sb-sprof:start-profiling)
+  (time (train trainer train :max-iterate 600 :epoch 10 :batch-size 100 :valid-dataset test :verbose t :random t))
+  (sb-profile:report))
 
 ```
-$ ./run-test-model.ros
+
+# Features
+
+Full Version is Coming soon...
+
+As you can see from `./source/optimizers/optimizers.lisp`, or `./source/operators.lisp`,  the features like `defnode`, `defoptimizer` is exported for users.
+Here's examples.
+
+```lisp
+; in ./source/operators.lisp at 17th line
+(defnode AddTensor nil
+  :parameters nil
+  :forward  ((x y)
+	     (with-searching-calc-node :add x y))
+  :backward ((dy) (list dy dy)))
+
+; in ./source/optimizers/optimizers.lisp at 4th line
+
+(defoptimizer SGD (params &key (lr 1e-3))
+  :parameters ((params params) (lr lr))
+  :update (()
+	   (dotimes (i (hash-table-count (self params)))
+	     (mgl-mat:copy! (data (!sub (gethash i (self params))
+					(!mul (self lr) (grad (gethash i (self params))))))
+			    (data (gethash i (self params)))))))
 ```
 
-please remain that it requiers roswell.
+# Benchmark
+
+Coming soon...
+
+# Run MNIST With Roswell
+
+```
+$ cd examples
+$ sh install.sh
+$ cd ..
+$ ./run-test-model.ros mnist
+```
 
 
-チュートリアルやサンプルコード、Documentなどはもう少ししたら書きます。
+# Workload/Todo
 
-# Todo/Memos
+・Speed up whole code
 
-・Write readme in english
+・Implement the features for NLP, (e.g. Embedding, LSTM...)
 
-・最適化とメモリ消費量を減らすのを頑張る
+・Current definition of adam is too slow to use, so i need to optimize
 
-・Trainer使いやすくする
+・More functions for mathmatics.
 
-・Wikiを書く
+・3d mat operations
 
-・画像/テキストのloaderを作る CLのライブラリにいい感じのやつが見当たらない。。。
+・save models
 
-
-・ProgressBarに残り時間の推定を実装/Update-Frequencyを用意
-
-
-・学習時のLossの推移をSLIME上かtxtに保存できるように書いておく
-
-
-・モデルの計算式書く時にS式はしんどい、yaccで中置記法->S式に変換するマクロ作る (exa: (with-waffe-exp 1+ a))
-
-
-・OptimizerにAdam/Momentum/RMSPropを実装 (Amos試してみたいな...)
-
-
-・Embeddingやsinとか、機能を増やす LSTMの実装を目標に
-
-
-プロファイリングして最適化を頑張る。。。
-
+・Automatic optimization of compute nodes
 
 # Tutorials
 
-numclは大きめのヒープを要求するので、roswellを使ってるなら以下のコマンドを入力した方がいい
+It is better to run this command in advance, since training a model requires a lot of memory.
 
 ```
 $ ros config set dynamic-space-size 4gb
@@ -60,7 +147,7 @@ $ ros config set dynamic-space-size 4gb
 
 # Author
 
-RuliaChan (Twitter: @ichndm)
+hikettei (Twitter: @ichndm, github:@hikettei)
 
 ### memos
 

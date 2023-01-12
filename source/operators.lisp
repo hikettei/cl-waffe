@@ -13,7 +13,7 @@
 (defmethod assure-tensor ((x mgl-mat:mat)) (const x))
 
 
-(declaim (inline !add !sub !mul !div))
+(declaim (inline !add !sub !mul !div !exp !log !pow !sqrt !reshape !transpose !matmul))
 (defnode AddTensor nil
   :parameters nil
   :forward  ((x y)

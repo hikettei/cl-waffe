@@ -216,7 +216,7 @@
 
 (declaim (ftype (function (waffetensor) null) backward1))
 (defun backward1 (tensor)
-  (declare ;(optimize (speed 3) (space 0) (safety 0))
+  (declare (optimize (speed 3) (space 0) (safety 0))
    (type waffetensor tensor))
   (if (waffetensor-backward tensor) ;Backward exists?
       (let* ((grad-tmp-before (waffetensor-grad-tmp tensor))

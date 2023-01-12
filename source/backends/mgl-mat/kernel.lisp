@@ -21,21 +21,20 @@
      (data ,out)))
 
 (defmacro decide-out-buffer (out args enable-optim)
-  `(duplicate-tensor (assure-destructed? ,args)))
-  ;`(progn
-  ;   (apply-destruct ,out)
-  ;   (if ,out
-;	 (progn
-;	   (if (and ,(not enable-optim) (waffetensor-destructive? ,out))
-;	       (assure-destructed? (data ,out))
-;	       (duplicate-tensor (assure-destructed? ,args))))
-;	 (duplicate-tensor (assure-destructed? ,args)))))
+  `(progn
+     (apply-destruct ,out)
+     (if ,out
+	 (progn
+	   (if (and ,(not enable-optim) (waffetensor-destructive? ,out))
+	       (assure-destructed? (data ,out))
+	       (duplicate-tensor (assure-destructed? ,args))))
+	 (duplicate-tensor (assure-destructed? ,args)))))
 
-;(declaim (ftype (function (mgl-mat:mat fixnum) mgl-mat:mat) repeat))
+(declaim (ftype (function (mgl-mat:mat fixnum) mgl-mat:mat) repeat))
 (defun repeat (tensor n &key axis)
-;  (declaim (optimize (speed 3) (safety 0) (debug 0))
-;	   (type mgl-mat:mat tensor)
-;	   (type fixnum n axis))
+  (declaim (optimize (speed 3) (safety 0) (debug 0))
+	   (type mgl-mat:mat tensor)
+	   (type fixnum n axis))
   (if (typep tensor 'mgl-mat:mat)
       (if axis
 	  (if (>= (length (mgl-mat:mat-dimensions tensor)) 2)
@@ -44,18 +43,18 @@
 	  (error "axis=-1"))
       (error "array != mat")))
 
-;(declaim (ftype (function (mgl-mat:mat waffesupporteddatatype) mgl-mat:mat) trasposedmgl-full-like mgl-full-like))
+(declaim (ftype (function (mgl-mat:mat waffesupporteddatatype) mgl-mat:mat) trasposedmgl-full-like mgl-full-like))
 (defun mgl-full-like (tensor value)
-;  (declare (optimize (speed 3) (safety 0) (debug 0))
-;	   (type mgl-mat:mat tensor)
-;	   (type waffesupporteddatatype value))
+  (declare (optimize (speed 3) (safety 0) (debug 0))
+	   (type mgl-mat:mat tensor)
+	   (type waffesupporteddatatype value))
   (mgl-mat:make-mat (mgl-mat:mat-dimensions tensor)
 		    :initial-element value))
 
 (defun transposed-mgl-full-like (tensor value)
-;  (declare (optimize (speed 3) (safety 0) (debug 0))
-;	   (type mgl-mat:mat tensor)
-;	   (type waffesupporteddatatype value))
+  (declare (optimize (speed 3) (safety 0) (debug 0))
+	   (type mgl-mat:mat tensor)
+	   (type waffesupporteddatatype value))
   (let ((dims (mgl-mat:mat-dimensions tensor)))
     (declare (type cons dims))
     (mgl-mat:make-mat (reverse dims)
@@ -96,6 +95,21 @@
 
 (defun infomation ())
 
+(declaim (ftype (function (boolean waffetensor waffetensor waffetensor waffetensor) mgl-mat:mat)
+		add-scalar
+		sub-scalar
+		add-tensor
+		sub-tensor
+		mul-tensor
+		div-tensor))
+
+(declaim (ftype (function (boolean waffetensor waffetensor) mgl-mat:mat)
+		inv-tensor
+		sqrt-tensor
+		log-tensor
+		tanh-tensor
+		exp-tensor))
+		
 (defun add-scalar (enable-optimize? out out1 x y)
   (declare (optimize (speed 3) (space 0) (safety 0)))
   (if (typep (data x) 'mgl-mat:mat)
@@ -180,6 +194,11 @@
   (declare (ignore enable-optimize? out))
   (mgl-mat:dot (data x) (data y)))
 
+(declaim (ftype (function (boolean waffetensor waffetensor waffetensor) mgl-mat:mat)
+		matmul-tensor
+		pow-tensor
+		compare-tensor
+		sum-tensor))
 (defun matmul-tensor (enable-optimize? o x y)
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (ignore enable-optimize? o)
@@ -244,6 +263,7 @@
   (let ((o (decide-out-buffer out x enable-optim)))
            (mgl-mat:.<! (data y) o)))
 
+
 (defun sum-tensor (is-first-time-call? out x y)
   (declare (optimize (speed 3) (space 0) (safety 0))
            (type boolean is-first-time-call?)
@@ -288,6 +308,7 @@
 	  (mgl-mat:mref o 0 0)
 	  o))))
 
+(declaim (ftype (function (booleean waffetensor waffetensor waffetensor) mgl-mat:mat) reshape-tensor))
 (defun reshape-tensor (enable-optimize out x y)
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type boolean enable-optimize)
