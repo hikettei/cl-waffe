@@ -25,7 +25,7 @@
 			       :repeat))
 
 (defparameter *num-reports* 0)
-(defparameter *ignore-optimizer* nil)
+(defparameter *ignore-optimizer* t) ;nil
 
 (defmacro with-ignore-optimizer (&body body)
   ; doing all operations with destructive
@@ -101,7 +101,10 @@
 	  (waffetensor-optim-report tensor)
 	  nil))))
 
+(declaim (ftype (function (keyword &rest waffetensor) waffetensor) with-searching-calc-node))
 (defun with-searching-calc-node (kernel-function &rest args)
+  (declare (optimize (speed 3) (space 0) (safety 0))
+	   (type keyword kernel-function))
   (let  ((is-all-array? (find t (map 'list (lambda (x) (declare (type waffetensor x)) (waffetensor-is-mat x)) args)))
 	 (res-tensor nil)
 	 (is-first-time-call? nil)

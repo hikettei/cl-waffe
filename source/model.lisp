@@ -68,12 +68,12 @@
 (defmacro defnode (name args &key parameters forward backward)
   `(defmodel ,name ,args :parameters ,parameters :forward ,forward :backward ,backward :hide-from-tree T))
 
-(defmacro define-node-method (fname name args body)
+(defmacro define-node-method (fname name args body hide-from-tree)
   (let ((f-ident   (gensym (symbol-name name)))
 	(self-heap (gensym (symbol-name name))))
     `(progn
 	 (defun ,f-ident (,self-heap ,@args)
-	   ;(declare (type waffetensor ,@args))
+	   ,(if hide-from-tree `(declare (type waffetensor ,@args)) nil)
 	   (macrolet ((self (name) `(slot-value ,',self-heap ',name)))
 	     ,@body))
 	 (defmethod ,fname ((self ,name))
@@ -108,8 +108,8 @@
 	     (backward ,(if backward t nil) :type boolean)
 	     (parameters ',(map 'list (lambda (x) (assure-args (car x))) parameters))
 	     ,@(map 'list (lambda (x) (assure-args (car x))) parameters))
-	   (define-node-method call-forward  ,name ,(car forward)  ,(cdr forward))
-	   (define-node-method call-backward ,name ,(car backward) ,(cdr backward))
+	   (define-node-method call-forward  ,name ,(car forward)  ,(cdr forward) ,hide-from-tree)
+	   (define-node-method call-backward ,name ,(car backward) ,(cdr backward) ,hide-from-tree)
 	   (defun ,name (&rest init-args)
 	     (apply #',constructor-name init-args))))))
 
