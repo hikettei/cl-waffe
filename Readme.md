@@ -1,14 +1,15 @@
 
-# Extensible, mgl-mat based deep learning library, cl-waffe.
-
+# cl-waffe, a deep-learning library, that is mgl-based and extensible and easy to use.
 
 This package is still under development.
 
+I'm building this package for my studying data science. So the features could be insufficient to practice.
 
-I am trying my best to optimize the code, but this is also for my study in the first place, so it may not be practical.
+The future goal is that easy to use, not speed, since building neural networks in common lisp is tend to be complicated.
 
+However, cl-waffe is at least faster than PyTorch in the benchmark following, using excellent libraries such as mgl-mat, and numcl.
 
-# Documents
+# Benchmark
 
 Coming soon...
 
@@ -120,6 +121,9 @@ $ cd ..
 $ ./run-test-model.ros mnist
 ```
 
+# Documents
+
+Coming soon...
 
 # Workload/Todo
 
