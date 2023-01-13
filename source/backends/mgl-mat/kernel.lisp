@@ -6,7 +6,7 @@
 (defmacro duplicate-tensor (mat)
   `(let ((o (mgl-mat:make-mat (mgl-mat:mat-dimensions ,mat))))
      (mgl-mat:copy! ,mat o)
-     o))
+     (the mgl-mat:mat o)))
 
 (defmacro apply-destruct (out)
   `(progn ; tensor=out
@@ -18,26 +18,25 @@
   `(progn
      (unless (waffetensor-destructive? ,out)
        (error "Kernel Error: Modifying tensor that is not allowed to destruct"))
-     (data ,out)))
-
+     (the mgl-mat:mat (data ,out))))
 
 (defgeneric decide-out-buffer (out args enable-optim))
 
 (defmethod decide-out-buffer ((out waffetensor) (args waffetensor) enable-optim)
   (apply-destruct out)
-  (if (and (not enable-optim) (waffetensor-destructive? out))
-      (assure-destructed? args)
-      (duplicate-tensor (assure-destructed? out))))
+  (if (and enable-optim (waffetensor-destructive? out)) ; tにすると早くなる
+      (assure-destructed? out)
+      (duplicate-tensor (data args))))
 
 (defmethod decide-out-buffer ((out waffetensor) (args mgl-mat:mat) enable-optim)
   (apply-destruct out)
-  (if (and (not enable-optim) (waffetensor-destructive? out))
-      args
-      (duplicate-tensor (assure-destructed? out))))
+  (if (and enable-optim (waffetensor-destructive? out)) ; tにすると早くなる
+      (assure-destructed? out)
+      (duplicate-tensor args)))
 
 (defmethod decide-out-buffer ((out null) (args waffetensor) enable-optim)
   (declare (ignore out enable-optim))
-  (duplicate-tensor (assure-destructed? args)))
+  (duplicate-tensor (data args)))
 
 (defmethod decide-out-buffer ((out null) (args mgl-mat:mat) enable-optim)
   (declare (ignore out enable-optim))
@@ -121,9 +120,8 @@
 (defmethod add-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) (y mgl-mat:mat))
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (ignore out1))
-  (if (eq (mgl-mat:mat-dimensions x) (mgl-mat:mat-dimensions y))
-      (let ((o (mgl-mat:make-mat (mgl-mat:mat-dimensions x))))
-	(mgl-mat:axpy! 1.0 x o)
+  (if (eql (mgl-mat:mat-dimensions x) (mgl-mat:mat-dimensions y))
+      (let ((o (decide-out-buffer out x enable-optimize?)))
 	(mgl-mat:axpy! 1.0 y o)
 	o)
       (mgl-mat:m+ x y)))
@@ -140,14 +138,12 @@
   (let ((o (decide-out-buffer out1 y enable-optimize?)))
     (the mgl-mat:mat (mgl-mat:.+! x o))))
 
-
 (defgeneric sub-tensor (enable-optimize? out out1 x y))
 (defmethod sub-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) (y mgl-mat:mat))
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (ignore out1))
-  (if (eq (mgl-mat:mat-dimensions x) (mgl-mat:mat-dimensions y))
-      (let ((o (mgl-mat:make-mat (mgl-mat:mat-dimensions x))))
-	(mgl-mat:axpy!  1.0 x o)
+  (if (eql (mgl-mat:mat-dimensions x) (mgl-mat:mat-dimensions y))
+      (let ((o (decide-out-buffer out x enable-optimize?)))
 	(mgl-mat:axpy! -1.0 y o)
 	o)
       (mgl-mat:m- x y)))
@@ -333,18 +329,18 @@
 	   (type waffetensor destructable-tensor)
 	   (type cons args))
   (case function
-    (:add    (add-tensor is-first-time-call? destructable-tensor destructable-tensor1 (data (car args)) (data (second args))))
-    (:sub    (sub-tensor is-first-time-call? destructable-tensor destructable-tensor1 (data (car args)) (data (second args))))
-    (:mul    (mul-tensor is-first-time-call? destructable-tensor destructable-tensor1 (data (car args)) (data (second args))))
-    (:div    (div-tensor is-first-time-call? destructable-tensor destructable-tensor1 (car args) (second args)))
-    (:dot    (dot-tensor is-first-time-call? destructable-tensor (car args) (second args)))
-    (:matmul (matmul-tensor is-first-time-call? destructable-tensor (car args) (second args)))
-    (:log    (log-tensor is-first-time-call? destructable-tensor (car args)))
-    (:exp    (exp-tensor is-first-time-call? destructable-tensor (car args)))
-    (:pow    (pow-tensor is-first-time-call? destructable-tensor (car args) (second args)))
-    (:sqrt   (sqrt-tensor is-first-time-call? destructable-tensor (car args)))
-    (:sum    (sum-tensor is-first-time-call? destructable-tensor (car args) (second args)))
-    (:mean   (mean-tensor is-first-time-call? destructable-tensor (car args) (second args)))
+    (:add     (add-tensor is-first-time-call? destructable-tensor destructable-tensor1 (data (car args)) (data (second args))))
+    (:sub     (sub-tensor is-first-time-call? destructable-tensor destructable-tensor1 (data (car args)) (data (second args))))
+    (:mul     (mul-tensor is-first-time-call? destructable-tensor destructable-tensor1 (data (car args)) (data (second args))))
+    (:div     (div-tensor is-first-time-call? destructable-tensor destructable-tensor1 (car args) (second args)))
+    (:dot     (dot-tensor is-first-time-call? destructable-tensor (car args) (second args)))
+    (:matmul  (matmul-tensor is-first-time-call? destructable-tensor (car args) (second args)))
+    (:log     (log-tensor is-first-time-call? destructable-tensor (car args)))
+    (:exp     (exp-tensor is-first-time-call? destructable-tensor (car args)))
+    (:pow     (pow-tensor is-first-time-call? destructable-tensor (car args) (second args)))
+    (:sqrt    (sqrt-tensor is-first-time-call? destructable-tensor (car args)))
+    (:sum     (sum-tensor is-first-time-call? destructable-tensor (car args) (second args)))
+    (:mean    (mean-tensor is-first-time-call? destructable-tensor (car args) (second args)))
     (:tanh    (tanh-tensor is-first-time-call? destructable-tensor (car args)))
     (:reshape (reshape-tensor is-first-time-call? destructable-tensor (car args) (second args)))
     (:<       (compare-tensor is-first-time-call? destructable-tensor (car args) (second args)))

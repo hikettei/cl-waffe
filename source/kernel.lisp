@@ -7,27 +7,19 @@
 
 (defparameter *kernels* `(:mgl))
 
-(defparameter *num-reports* 0)
-(defparameter *ignore-optimizer* t) ;nil
+(defparameter *destructive-operation* nil)
 
-(defmacro with-ignore-optimizer (&body body)
+(defmacro with-optimized-operation (&body body)
   ; doing all operations with destructive
   `(progn
-     (setf *ignore-optimizer* t)
-     ,@body
-     (setf *ignore-optimizer* nil)))
-
-(defstruct NetworkVariableReport
-  (length             0 :type fixnum)
-  (sp                 0 :type fixnum)
-  (lock               nil :type boolean)
-  (report-identifier *num-reports* :type fixnum)
-  (destruct-positions (make-hash-table) :type hash-table))
-
+     (setf *destructive-operation* t)
+     (let ((result (prog1 ,@body)))
+       (setf *destructive-operation* nil)
+       result)))
 
 (declaim (dtype (function (keyword cons) waffetensor) invoke-mgl-kernel invoke-cpu-kenel))
 (defun invoke-mgl-kernel (kernel-function variables tensor)
-  (sysconst (cl-waffe.backends.mgl:dispatch-kernel kernel-function t (car variables) (second variables) variables)))
+  (sysconst (cl-waffe.backends.mgl:dispatch-kernel kernel-function *destructive-operation* (car variables) (second variables) variables)))
 
 (defun invoke-cpu-kernel (kernel-function variables)
   (sysconst (cl-waffe.backends.cpu:dispatch-kernel kernel-function variables)))

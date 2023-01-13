@@ -12,8 +12,18 @@
 (defmethod assure-tensor ((x ratio))    (const x))
 (defmethod assure-tensor ((x mgl-mat:mat)) (const x))
 
-
-(declaim (inline !add !sub !mul !div !exp !log !pow !sqrt !reshape !transpose !matmul))
+(defparameter *instruction-map* (alist-hash-table `((:+= . :add)
+						    (:-= . :sub)
+						    (:*= . :mul)
+						    (:/= . :div)
+						    (:log . :log)
+						    (:exp . :exp)
+						    (:pow . :pow)
+					            (:sqrt . :sqrt)
+				                    (:tanh . :tanh)
+				        	    (:reshape . :reshape)
+						    (:< . :<))))
+(declaim (inline !div !reshape !transpose))
 
 (defnode AddTensor nil
   :parameters nil
@@ -130,27 +140,33 @@
 	     (list (!matmul dy (!transpose (self yi)))
 		   (!matmul (!transpose (self xi)) dy))))
 
-(defun !add (x y)
-  ;from now on, static typing
-  (call (AddTensor) (assure-tensor x) (assure-tensor y)))
+(defmacro defope (name node-object tensor args &body body &aux (common-node (gensym)))
+  `(prog1
+     (defparameter ,common-node ,node-object)
+     (defun ,name ,args
+       (let* ((,tensor (if *no-grad* ,common-node ,node-object)))
+	 ,@body))))
+		   
+(defope !add (AddTensor) node (x y)
+  (call node (assure-tensor x) (assure-tensor y)))
     
-(defun !sub (x y)
-  (call (SubTensor) (assure-tensor x) (assure-tensor y)))
+(defope !sub (SubTensor) node (x y)
+  (call node (assure-tensor x) (assure-tensor y)))
 
-(defun !mul (x y)
-  (call (MulTensor) (assure-tensor x) (assure-tensor y)))
+(defope !mul (MulTensor) node (x y)
+  (call node (assure-tensor x) (assure-tensor y)))
 
-(defun !div-old (x y)
+(defope !div-old (DivTensor) node (x y)
   (unless (= x 1) (error "!div-old: x must be 1"))
   ; x must be 1, cl-waffe.backends.mgl:div has some problems?...
-  (call (DivTensor) (assure-tensor x) (assure-tensor y)))
+  (call node (assure-tensor x) (assure-tensor y)))
 
+; its much faster
 (defun !div (x y)
-  ; its faster
   (!mul x (!div-old 1 y)))
   
-(defun !dot (x y)
-  (call (DotProductTensor) (assure-tensor x) (assure-tensor y)))
+(defope !dot (DotProductTensor) node (x y)
+  (call node (assure-tensor x) (assure-tensor y)))
 
 (defun !sum (x &optional (axis nil) (keepdims nil))
   (if (null axis)
@@ -172,14 +188,14 @@
 	(!repeats (!unsqueeze result axis) axis nrepeat)
 	result)))
 
-(defun !pow (x n)
-  (call (PowTensor) (assure-tensor x) (assure-tensor n)))
+(defope !pow (PowTensor) node (x n)
+  (call node (assure-tensor x) (assure-tensor n)))
 
-(defun !sqrt (x)
-  (call (SqrtTensor) (assure-tensor x)))
+(defope !sqrt (SqrtTensor) node (x)
+  (call node (assure-tensor x)))
 
-(defun !log (x)
-  (call (LogTensor) (assure-tensor x)))
+(defope !log (LogTensor) node (x)
+  (call node (assure-tensor x)))
 
 (defun !reshape (x dim)
   (call (ReshapeTensor (assure-tensor dim)) (assure-tensor x)))
@@ -190,15 +206,15 @@
 (defun !transpose (x &optional result)
   (call (TransposeTensor (assure-tensor (if result (numcl:asarray result)))) (assure-tensor x)))
 
-(defun !matmul (x y)
+(defope !matmul (MatmulTensor) node (x y)
   (cond
     ((and (= (!dims x) (!dims y))
 	  (= (!dims x) 2))
-     (call (MatMulTensor) (assure-tensor x) (assure-tensor y)))
+     (call node (assure-tensor x) (assure-tensor y)))
     ((and (= (!dims x) 1) (= (!dims y) 2))
-     (call (MatMulTensor) (!unsqueeze (assure-tensor x) -1) (assure-tensor y)))
+     (call node (!unsqueeze (assure-tensor x) -1) (assure-tensor y)))
     ((and (= (!dims x) 2) (= (!dims y) 1))
-     (call (MatMulTensor) (assure-tensor x) (!unsqueeze (assure-tensor y) -1)))
+     (call node (assure-tensor x) (!unsqueeze (assure-tensor y) -1)))
     (T (error "matmul for 3d/4d tensor is coming soon..."))))
 
 (defun !unsqueeze (x &optional (dim 0))
@@ -230,7 +246,17 @@
 		       s))))
       (!reshape x s))))
 
-(defun !exp (x)
-  (call (ExpTensor) (assure-tensor x)))
+(defope !exp (ExpTensor) node (x)
+  (call node (assure-tensor x)))
 
+(defmacro !modify (target instruction &rest args)
+  ;The macro that allows destructively operations, always changing the target.
+  ;If you need mgl-mat-wise operations for speed and low memory, this is useful.
+  ;Directly Calling Mgl-mat Operations.
+  ;Please remain that it won't make backwards because of speed problems.
+  `(progn
+     (unless (gethash ,instruction *instruction-map*)
+       (error "!modify: The instruction ~a is not found. please check the documentation" ,instruction))
+     (with-optimized-operation
+       (with-searching-calc-node (gethash ,instruction *instruction-map*) ,target ,@args))))
 

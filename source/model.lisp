@@ -16,21 +16,22 @@
      nil))
 
 (declaim (inline call))
+(declaim (ftype (function (t &rest waffetensor) waffetensor) call))
 (defun call (model &rest args)
   ; calculating op(x,y) -> result(x, y), state
   (let* ((result (apply (call-forward model) args)))
-    (if (slot-value model 'hide-from-tree) ;is a result model or not?, then is it the part of node?
-	(unless *no-grad*
-	  (setf (waffetensor-backward result)  t)
-	  (setf (waffetensor-state result)     model)
-	  (setf (waffetensor-variables result) args)
-	  (setf (waffetensor-is-ancestor-param result) (if (member-if #'(lambda (x)
-									  (waffetensor-is-ancestor-param x))
+    (unless *no-grad*
+      (if (slot-value model 'hide-from-tree) 
+	  (progn
+	    (setf (waffetensor-backward result) t)
+	    (setf (waffetensor-state result) model)
+	    (setf (waffetensor-variables result) args)
+	    (setf (waffetensor-is-ancestor-param result) (if (member-if #'(lambda (x)
+				                                            (waffetensor-is-ancestor-param x))
 								      args)
 							   t
-							   nil))
-	  result)
-	result)))
+							   nil)))))
+    result))
 
 (defmacro is-waffe-model (model)
   `(and (slot-exists-p ,model 'parameters)

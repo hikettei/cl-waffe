@@ -75,6 +75,7 @@
 						      (!mul (!sub 1 (self beta1))
 							    (!sub (grad (gethash i (self params)))
 								  (gethash i (self m)))))))
+	       
 	       (setf (gethash i (self v)) (data (!add (gethash i (self v))
 						      (!mul (!sub 1 (self beta2))
 							    (!sub (!pow (grad (gethash i (self params))) 2)
