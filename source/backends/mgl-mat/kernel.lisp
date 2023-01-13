@@ -156,13 +156,13 @@
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (ignore out1))
   (let ((o (decide-out-buffer out x enable-optimize?)))
-    (the mgl-mat:mat (mgl-mat:.+! (* -1 y) o))))
+    (the mgl-mat:mat (mgl-mat:.+! (* -1.0 y) o))))
 
 (defmethod sub-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) x (y mgl-mat:mat))
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (ignore out))
   (let ((o (decide-out-buffer out1 y enable-optimize?)))
-    (the mgl-mat:mat (mgl-mat:.+! (* -1 x) o))))
+    (the mgl-mat:mat (mgl-mat:.+! (* -1.0 x) o))))
 
 (defgeneric mul-tensor (enable-optimize? out out1 x y))
 (defmethod mul-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) (y mgl-mat:mat))
@@ -325,7 +325,7 @@
     (mgl-mat:reshape! x1 (data y))
     x1))
 
-;(declaim (ftype (function (keyword boolean values waffetensor (or null waffetensor) cons) (or mgl-mat:mat cl-waffe:waffedatatype)) dispatch-kernel))
+(declaim (ftype (function (keyword boolean waffetensor waffetensor cons) (or mgl-mat:mat cl-waffe:waffedatatype)) dispatch-kernel))
 (defun dispatch-kernel (function is-first-time-call? destructable-tensor destructable-tensor1 args)
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type keyword function)

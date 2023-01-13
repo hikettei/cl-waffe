@@ -26,6 +26,9 @@
 	   #:defdataset
 	   
 	   #:step-model
+	   #:predict
+	   #:get-dataset
+	   #:get-dataset-length
 
 	   #:model
 	   #:update
