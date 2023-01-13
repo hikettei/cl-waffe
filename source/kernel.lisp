@@ -6,23 +6,6 @@
 ; dispaches kernel based on backends. and optimize node
 
 (defparameter *kernels* `(:mgl))
-(defparameter *instructions* `(:add
-			       :sub
-			       :mul
-			       :div
-			       :log
-			       :pow
-			       :sqrt
-			       :sum
-			       :mean
-			       :dot
-			       :<
-			       :matmul
-			       :exp
-			       :tanh
-			       :reshape
-			       :transpose
-			       :repeat))
 
 (defparameter *num-reports* 0)
 (defparameter *ignore-optimizer* t) ;nil
@@ -33,14 +16,6 @@
      (setf *ignore-optimizer* t)
      ,@body
      (setf *ignore-optimizer* nil)))
-
-(defun check-kernel (variable)
-  (unless (typep variable 'WaffeTensor)
-    (error "The inputs must be tensor got: ~a" variable))
-  
-  (unless (find (slot-value variable 'backend) *kernels*)
-    (error "Invaild kernel: ~a" (slot-value variable 'backend))
-    T))
 
 (defstruct NetworkVariableReport
   (length 0 :type fixnum)
@@ -95,72 +70,41 @@
 (defun find-report (variables)
   (unless *ignore-optimizer*
     (let ((tensor (find t variables :test #'(lambda (x y)
-					      (declare (ignore y))
 					      (waffetensor-optim-report y)))))
       (unless (null tensor)
 	  (waffetensor-optim-report tensor)
 	  nil))))
 
-; Todo: optimize it
-(declaim (ftype (function (keyword &rest waffetensor) waffetensor) with-searching-calc-node))
-(defun with-searching-calc-node (kernel-function &rest args)
+(declaim (dtype (function (keyword cons) waffetensor) invoke-mgl-kernel invoke-cpu-kenel))
+(defun invoke-mgl-kernel (kernel-function variables)
+  (sysconst (cl-waffe.backends.mgl:dispatch-kernel kernel-function t (car variables) (second variables) variables)))
+
+(defun invoke-cpu-kernel (kernel-function variables)
+  (sysconst (cl-waffe.backends.cpu:dispatch-kernel kernel-function variables)))
+
+(defgeneric invoke-kernel (kernel-function variables first-argument i))
+
+(defmethod invoke-kernel (kernel-function
+			  (variables cons)
+			  (first-argument mgl-mat:mat)
+			  (i fixnum))
   (declare (optimize (speed 3) (space 0) (safety 0))
+	   (ignore first-argument i))
+  (invoke-mgl-kernel kernel-function variables))
+
+(defmethod invoke-kernel (kernel-function
+			  (variables cons)
+			  first-argument
+			  (i fixnum))
+  (declare (optimize (speed 3) (space 0) (safety 0))
+	   (ignore first-argument))
+  (if (= i 0)
+      (invoke-kernel kernel-function variables (data (second variables)) (+ i 1))
+      (invoke-cpu-kernel kernel-function variables)))
+
+(declaim (ftype (function (keyword &rest waffetensor) waffetensor)))
+(defun with-searching-calc-node (kernel-function &rest args)
+  (declare (optimize (speed 3) (space 0) (space 0))
 	   (type keyword kernel-function))
-  (let  ((is-all-array? (find t (map 'list (lambda (x) (declare (type waffetensor x)) (waffetensor-is-mat x)) args))) ; its slow, and it can be replaced with an multiple dispatch
-	 (res-tensor nil)
-	 (is-first-time-call? nil)
-	 (report nil)
-	 (destructable-variables nil)
-	 (result nil))
-
-     (if is-all-array?
-	 (let* ((report (find-report args)) ; call only when mgl-kenel invoked. and i dont need anymore to call loop
-		(is-first-time-call? (if report
-					 (not (networkvariablereport-lock report))
-					 t))
-		(destructable-variables (if (and report (not is-first-time-call?))
-					    (refer-report report args) ; call only when mgl-kernel invoked.
-					    args))
-		(result (cl-waffe.backends.mgl:dispatch-kernel
-			 kernel-function
-			 is-first-time-call?
-			 (car destructable-variables)
-			 (second destructable-variables)
-			 args)))
-	   (setq res-tensor (sysconst result)))
-	 (let* ((result (apply #'cl-waffe.backends.cpu:dispatch-kernel kernel-function args)))
-	   (setq res-tensor (sysconst result))))
-
-    (map 'list (lambda (x) (declare (type waffetensor x)) (incf (waffetensor-calln x) 1)) args)
-
-    ; the code below is ugly. mode to mgl-mat/kernel.lisp
-    (if (and (null report) (not *ignore-optimizer*))
-      (let ((any-param (find t args :test (lambda (x y)
-					    (declare (ignore x)
-						     (type waffetensor y))
-					    (waffetensor-is-param? y)))))
-	(unless (null any-param)
-	  (progn (setf (waffetensor-optim-report any-param)
-		       (make-networkvariablereport :length 0
-						   :sp 0
-						   :lock nil
-						   :report-identifier *num-reports*))
-		 (incf *num-reports* 1)
-		 (setq report (waffetensor-optim-report any-param))))))
-
-    ; The work of this function is that dispatch kernel based on type of tensor given, and make bottom node extend
-    ; the report which logged the timing of a tensor destructed in the compute node.
-    ; the report used in order to achive this: as long as const is the end of node, the kernel destructively change the tensor for performance.
-    (if (and report (not *ignore-optimizer*))
-	(dolist (v args)
-	  (report-reg report v is-first-time-call?)))
-
-    (if (and report (not *ignore-optimizer*))
-	(setf (waffetensor-optim-report res-tensor) report))
-
-    (if (and (car destructable-variables) (not *ignore-optimizer*))
-	(setf (waffetensor-report-index res-tensor) ;dop(a,b)a=a
-	      (waffetensor-report-index (car destructable-variables))))
-
-     res-tensor))
+  (invoke-kernel kernel-function args (data (car args)) 0))
 

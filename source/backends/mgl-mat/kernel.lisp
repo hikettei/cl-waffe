@@ -46,7 +46,7 @@
 (declaim (ftype (function (mgl-mat:mat fixnum &key (:axis fixnum)) mgl-mat:mat) mgl-repeat))
 (defun mgl-repeat (tensor n &key axis)
   (declare (optimize (speed 3) (safety 0) (debug 0))
-	   (type waffetensor tensor)
+	   (type mgl-mat:mat tensor)
 	   (type fixnum n axis))
   (if (>= axis 0)
       (if (>= (length (the cons (mgl-mat:mat-dimensions tensor))) 2)
