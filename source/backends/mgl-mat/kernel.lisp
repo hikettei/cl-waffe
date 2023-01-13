@@ -164,7 +164,6 @@
   (let ((o (decide-out-buffer out1 y enable-optimize?)))
     (the mgl-mat:mat (mgl-mat:.+! (* -1 x) o))))
 
-
 (defgeneric mul-tensor (enable-optimize? out out1 x y))
 (defmethod mul-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) (y mgl-mat:mat))
   (declare (optimize (speed 3) (space 0) (safety 0)))

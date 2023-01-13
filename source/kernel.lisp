@@ -101,11 +101,12 @@
 	  (waffetensor-optim-report tensor)
 	  nil))))
 
+; Todo: optimize it
 (declaim (ftype (function (keyword &rest waffetensor) waffetensor) with-searching-calc-node))
 (defun with-searching-calc-node (kernel-function &rest args)
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type keyword kernel-function))
-  (let  ((is-all-array? (find t (map 'list (lambda (x) (declare (type waffetensor x)) (waffetensor-is-mat x)) args)))
+  (let  ((is-all-array? (find t (map 'list (lambda (x) (declare (type waffetensor x)) (waffetensor-is-mat x)) args))) ; its slow, and it can be replaced with an multiple dispatch
 	 (res-tensor nil)
 	 (is-first-time-call? nil)
 	 (report nil)
@@ -113,12 +114,12 @@
 	 (result nil))
 
      (if is-all-array?
-	 (let* ((report (find-report args))
+	 (let* ((report (find-report args)) ; call only when mgl-kenel invoked. and i dont need anymore to call loop
 		(is-first-time-call? (if report
 					 (not (networkvariablereport-lock report))
 					 t))
 		(destructable-variables (if (and report (not is-first-time-call?))
-					    (refer-report report args)
+					    (refer-report report args) ; call only when mgl-kernel invoked.
 					    args))
 		(result (cl-waffe.backends.mgl:dispatch-kernel
 			 kernel-function
@@ -132,6 +133,7 @@
 
     (map 'list (lambda (x) (declare (type waffetensor x)) (incf (waffetensor-calln x) 1)) args)
 
+    ; the code below is ugly. mode to mgl-mat/kernel.lisp
     (if (and (null report) (not *ignore-optimizer*))
       (let ((any-param (find t args :test (lambda (x y)
 					    (declare (ignore x)
@@ -145,7 +147,10 @@
 						   :report-identifier *num-reports*))
 		 (incf *num-reports* 1)
 		 (setq report (waffetensor-optim-report any-param))))))
-     
+
+    ; The work of this function is that dispatch kernel based on type of tensor given, and make bottom node extend
+    ; the report which logged the timing of a tensor destructed in the compute node.
+    ; the report used in order to achive this: as long as const is the end of node, the kernel destructively change the tensor for performance.
     (if (and report (not *ignore-optimizer*))
 	(dolist (v args)
 	  (report-reg report v is-first-time-call?)))
