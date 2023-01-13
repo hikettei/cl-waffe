@@ -19,7 +19,7 @@
 
 (deftrainer MLPTrainer (activation lr)
   :model          (MLP activation)
-  :optimizer      cl-waffe.optimizers:Adam
+  :optimizer      cl-waffe.optimizers:SGD
   :optimizer-args (:lr lr)
   :step-model ((x y)
 	       (zero-grad)
@@ -31,7 +31,7 @@
 
 (defdataset Mnistdata (train valid batch-size)
   :parameters ((train train) (valid valid) (batch-size batch-size))
-  :forward ((index)
+  :next    ((index)
 	    (list (!set-batch (self train) index (self batch-size))
 		  (!set-batch (self valid) index (self batch-size))))
   :length (() (car (!shape (self train)))))

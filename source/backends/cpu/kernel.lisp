@@ -6,7 +6,7 @@
       (OR FIXNUM FLOAT (COMPLEX SINGLE-FLOAT) (COMPLEX DOUBLE-FLOAT))
       &OPTIONAL))
 
-;(declaim (ftype (function 
+
 (defun repeat (array n &key axis)
   ; asserted array is not tensor and may be axis is always zero
   (let ((dims (case axis
@@ -15,16 +15,17 @@
 		(T (error "kernel error")))))
     (mgl-mat:make-mat dims :initial-element array)))
 
-;(declaim (ftype (function (cons) cons) assure-args))
+(declaim (ftype (function (cons) cons) assure-args))
 (defun assure-args (args)
   (map 'list (lambda (x)
-	       (if (typep (data x) 'function)
-		   (funcall (data x) nil t)
-		   (data x)))
+	       (declare (type waffetensor x))
+	       (typecase (data x)
+		 (function (funcall (data x) nil t))
+		 (T (data x))))
        args))
 
 (declaim (ftype (function (keyword cons) ResultType) kernel))
-(defun dispatch-kernel (ope &rest args)
+(defun dispatch-kernel (ope args)
   (let* ((args (assure-args args)))
   (case ope
       (:add (+ (car args) (second args)))

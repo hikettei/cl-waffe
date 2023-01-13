@@ -6,6 +6,37 @@
     (if (typep v 'waffetensor)
 	(setf (waffetensor-destructive? v) nil))))
 
+(defgeneric trainer-step-model (trainer))
+(defgeneric trainer-predict   (trainer))
+
+(defgeneric dataset-next      (trainer))
+(defgeneric dataset-length    (trainer))
+
+(defmacro define-trainer-method (fname name args body)
+  (let ((f-ident   (gensym (symbol-name name)))
+	(self-heap (gensym (symbol-name name))))
+    `(progn
+	 (defun ,f-ident (,self-heap ,@args)
+	   (macrolet ((self (name) `(slot-value ,',self-heap ',name))
+		      (model () `(self model))
+		      (update (&rest args1) `(unless *no-grad*
+				                 (funcall (call-forward (self optimizer)) ,@args1)))
+		      (zero-grad () `(unless *no-grad*
+				          (funcall (call-backward (self optimizer)) (self model)))))
+	     ,@body))
+	 (defmethod ,fname ((self ,name))
+	   (lambda (&rest node-inputs) (apply #',f-ident self node-inputs))))))
+
+(defmacro define-dataset-method (fname name args body)
+  (let ((f-ident   (gensym (symbol-name name)))
+	(self-heap (gensym (symbol-name name))))
+    `(progn
+	 (defun ,f-ident (,self-heap ,@args)
+	   (macrolet ((self (name) `(slot-value ,',self-heap ',name)))
+	     ,@body))
+	 (defmethod ,fname ((self ,name))
+	   (lambda (&rest node-inputs) (apply #',f-ident self node-inputs))))))
+
 (defmacro deftrainer (name args &key model optimizer optimizer-args step-model predict (forward NIL) &aux (out-id (gensym)))
   (if forward (error ":forward is unavailable in deftrainer macro. use instead: :step-model"))
   (labels ((assure-args (x)
@@ -16,6 +47,11 @@
 		     (eq (symbol-name x) "step-model"))
 		 (error "cant use ~a as a name" (symbol-name x))
 		 x)))
+     (unless step-model
+       (error "deftrainer: the slot :step-model is nil. Please fill here"))
+    (unless predict
+       (error "deftrainer: the slot :predict is nil. Please fill here"))
+    
      (let ((constructor-name (gensym)))
 	`(prog1
 	  (defstruct (,name
@@ -24,48 +60,26 @@
 					 (format stream "[Trainer of ___]")))
 		      (:constructor ,constructor-name (,@(map 'list (lambda (x) (assure-args x)) args)
 						       &aux (model ,model)
-							 (optimizer (cl-waffe.optimizers:init-optimizer ,optimizer
-													model
-													,@optimizer-args)))))
+							    (optimizer (cl-waffe.optimizers:init-optimizer ,optimizer
+							   		              			    model
+										         		    ,@optimizer-args)))))
 		     (model NIL)
 		     (optimizer NIL)
 		     (optimizer-report t)
-		     (predict    ,(let ((largs (car predict))
-					(lbody (cdr predict))
-					(self-heap (gensym)))
-				    `(lambda ,(concatenate 'list (list self-heap) largs)
-				       (macrolet ((model () `(slot-value ,',self-heap 'model)))
-					 ,@lbody))))
-		     (step-model ,(let ((largs (car step-model))
-					(lbody (cdr step-model))
-					(self-heap (gensym)))
-				    `(lambda ,(concatenate 'list (list self-heap) largs)
-				       (macrolet ((model     ()            `(slot-value ,',self-heap 'model))
-						  (update    (&rest args1) `(unless *no-grad* 
-												  (funcall (call-forward (slot-value ,',self-heap 'optimizer)
-													   ,@args1))))
-						  (zero-grad ()            `(unless *no-grad* (funcall (call-backward (slot-value ,',self-heap 'optimizer))
-												       (slot-value ,',self-heap 'model)))))
-					 (let ((,out-id (progn ,@lbody)))
-					   (if (typep ,out-id 'waffetensor)
-					       (if (waffetensor-optim-report ,out-id)
-						   (progn
-						     (setf (slot-value ,self-heap 'optimizer-report) (waffetensor-optim-report ,out-id))
-						     (setf (networkvariablereport-lock (slot-value ,self-heap 'optimizer-report)) t)
-						     (setf (networkvariablereport-sp   (slot-value ,self-heap 'optimizer-report)) 0)
-						 ))
-					       (print "Warning: The trainer is not optimized. the last value of step-model is model-out"))
-					   ,out-id))))))
+		     (predict    ,(if predict t nil))
+		     (step-model ,(if step-model t nil)))
+	   (define-trainer-method trainer-step-model ,name ,(car step-model) ,(cdr step-model))
+	   (define-trainer-method trainer-predict    ,name ,(car predict)    ,(cdr predict))
 	   (defun ,name (&rest init-args)
 	     (apply #',constructor-name init-args))))))
 
 (defun step-model (trainer &rest args)
   (uncheck-destructive args)
-  (apply (slot-value trainer 'step-model) trainer args))
+  (apply (trainer-step-model trainer) args))
 
 (defun step-model1 (trainer args)
   (uncheck-destructive args)
-  (apply (slot-value trainer 'step-model) trainer args))
+  (apply (trainer-step-model trainer) args))
 
 (defun predict (trainer &rest args)
   (uncheck-destructive args)
@@ -73,19 +87,20 @@
 
 (defun predict1 (trainer args)
   (uncheck-destructive args)
-  (apply (slot-value trainer 'predict) trainer args))
+  (apply (trainer-predict trainer) args))
 
-(defmacro defdataset (name args &key parameters forward length)
+(defmacro defdataset (name args &key parameters next length)
   (labels ((assure-args (x)
 		     (if (or (eq (symbol-name x) "parameters")
-			     (eq (symbol-name x) "forward")
+			     (eq (symbol-name x) "next")
 			     (eq (symbol-name x) "length"))
 			 (error "cant use ~a as a name" (symbol-name x))
 			 x)))
-    (unless forward
-      (error ""))
+    (unless next
+      (error "defdataset: the slot :next is nil. Please fill here the code returning next batch data"))
     (unless length
-      (error ""))
+      (error "defdataset: the slot :length is nil. Please fill here the code returning the total size of a training data."))
+    
      (let ((constructor-name (gensym)))
        `(prog1
 	    (defstruct (,name
@@ -93,27 +108,19 @@
 					   (declare (ignore trainer _))
 					   (format stream "[Dataset of ___]")))
 			(:constructor ,constructor-name (,@args &aux ,@parameters)))
-	    ,@(map 'list (lambda (x) (assure-args (car x))) parameters)
-	    (length ,(let ((largs (car length))
-			   (lbody (cdr length))
-			   (self-heap (gensym)))
-		       `(lambda ,(concatenate 'list (list self-heap) largs)
-			  (macrolet ((self (name) `(slot-value ,',self-heap ',name)))
-			    ,@lbody))))
-	    (forward ,(let ((largs (car forward))
-			    (lbody (cdr forward))
-			    (self-heap (gensym)))
-			`(lambda ,(concatenate 'list (list self-heap) largs)
-			   (macrolet ((self (name) `(slot-value ,',self-heap ',name)))
-			     ,@lbody)))))
+	    ,@(map 'list (lambda (x) (assure-args (car x))) parameters)  
+	    (length       t :type boolean)
+	    (dataset-next t :type boolean))
+	  (define-dataset-method dataset-next   ,name ,(car next)   ,(cdr next))
+	  (define-dataset-method dataset-length ,name ,(car length) ,(cdr length))
 	  (defun ,name (&rest init-args)
 	    (apply #',constructor-name init-args))))))
 
 (defun get-dataset (dataset index)
-  (funcall (slot-value dataset 'forward) dataset index))
+  (funcall (dataset-next dataset) index))
 
 (defun get-dataset-length (dataset)
-  (apply (slot-value dataset 'length) (list dataset)))
+  (funcall (dataset-length dataset)))
 
 (defun eq-ntimes (width &optional (word "="))
   (with-output-to-string (str) (dotimes (_ (* 2 width)) (format str word))))
