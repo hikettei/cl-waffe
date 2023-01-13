@@ -123,7 +123,7 @@
   (declaim (ftype (function (waffetensorcontenttype) (or waffetensorcontenttype)) init-waffe-tensor-data))
   (defun init-waffe-tensor-data (content)
   ; todo: coerce: simple-array -> mgl-mat
-    (declare (typep content waffedatatype))
+    (declare (typep content 'waffedatatype))
     (if (typep content 'ratio)
 	(if (eq mgl-mat:*default-mat-ctype* :double) ;...
 	    (coerce content 'double-float)
