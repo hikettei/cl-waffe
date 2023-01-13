@@ -14,6 +14,7 @@
 
 
 (declaim (inline !add !sub !mul !div !exp !log !pow !sqrt !reshape !transpose !matmul))
+
 (defnode AddTensor nil
   :parameters nil
   :forward  ((x y)
@@ -131,7 +132,6 @@
 
 (defun !add (x y)
   ;from now on, static typing
-  (declare (typep (or waffetensor waffedatatype) x y))
   (call (AddTensor) (assure-tensor x) (assure-tensor y)))
     
 (defun !sub (x y)

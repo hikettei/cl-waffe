@@ -30,16 +30,15 @@
 	       (duplicate-tensor (assure-destructed? ,args))))
 	 (duplicate-tensor (assure-destructed? ,args)))))
 
-(declaim (ftype (function (mgl-mat:mat fixnum) mgl-mat:mat) repeat))
-(defun repeat (tensor n &key axis)
-  (declaim (optimize (speed 3) (safety 0) (debug 0))
+(defun mgl-repeat (tensor n &key axis)
+  (declare (optimize (speed 3) (safety 0) (debug 0))
 	   (type mgl-mat:mat tensor)
 	   (type fixnum n axis))
   (if (typep tensor 'mgl-mat:mat)
       (if axis
 	  (if (>= (length (mgl-mat:mat-dimensions tensor)) 2)
               (mgl-mat:stack axis (loop for i below n collect tensor))
-	      (repeat (mgl-mat:reshape tensor `(,@(mgl-mat:mat-dimensions tensor) 1)) n :axis axis))
+	      (mgl-repeat (mgl-mat:reshape tensor `(,@(mgl-mat:mat-dimensions tensor) 1)) n :axis axis))
 	  (error "axis=-1"))
       (error "array != mat")))
 
@@ -71,10 +70,10 @@
 	     (funcall ,func ,tensor ,@args) ; receive before node
 	     ,tensor)))) ; abort before node
 
-(defmacro next-delay (delay state)
-  `(if (typep ,delay 'function)
-       (funcall ,delay nil ,state)
-       ,delay))
+(defun next-delay (delay state)
+  (if (typep delay 'function)
+      (funcall delay nil state)
+      delay))
 
 (defmacro abort-delay (delay)
   `(next-delay ,delay nil))
@@ -126,7 +125,7 @@
 	(mgl-mat:.+! (* (the waffedatatype (data y)) -1.0) o))
       (let ((o (decide-out-buffer out1 y enable-optimize?)))
 	(mgl-mat:.+! (data x)
-		     (mul-tensor enable-optimize? out1 out1 y (const -1.0))))))
+		     (mul-tensor enable-optimize? out1 out1 o (const -1.0))))))
       
 (defun add-tensor (enable-optimize? out out1 x y)
   (declare (optimize (speed 3) (space 0) (safety 0))
@@ -158,7 +157,6 @@
 
 (defun mul-tensor (enable-optimize? out out1 x y)
   (declare (optimize (speed 3) (space 0) (safety 0))
-	   (ignore out)
 	   (type boolean enable-optimize?)
 	   (type waffetensor out out1 x y))
   
@@ -186,8 +184,7 @@
 (defun div-tensor (enable-optimize? out out1 x y)
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type boolean enable-optimize?)
-	   (type waffetensor out x y)
-	   (ignore y))
+	   (type waffetensor out x y))
   (inv-tensor enable-optimize? out1 y))
 
 (defun dot-tensor (enable-optimize? out x y)
@@ -308,7 +305,7 @@
 	  (mgl-mat:mref o 0 0)
 	  o))))
 
-(declaim (ftype (function (booleean waffetensor waffetensor waffetensor) mgl-mat:mat) reshape-tensor))
+(declaim (ftype (function (boolean waffetensor waffetensor waffetensor) mgl-mat:mat) reshape-tensor))
 (defun reshape-tensor (enable-optimize out x y)
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type boolean enable-optimize)
@@ -340,7 +337,7 @@
     (:tanh    (tanh-tensor is-first-time-call? destructable-tensor (car args)))
     (:reshape (reshape-tensor is-first-time-call? destructable-tensor (car args) (second args)))
     (:<       (compare-tensor is-first-time-call? destructable-tensor (car args) (second args)))
-    (:repeat  (repeat (data (car args)) (data (third args)) :axis (data (second args))))
-    (:transpose (deliv-delay (data (car args)) mgl-mat:transpose))
+    (:repeat  (mgl-repeat (data (car args)) (data (third args)) :axis (data (second args))))
+    (:transpose (deliv-delay (data (car args)) (the function mgl-mat:transpose)))
     (T (error "~a is not yet implemented" ope))))
 

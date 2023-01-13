@@ -36,9 +36,10 @@
        waffesupporteddatatype))
 					; (satisfies waffe-array)))
 
-(defstruct grad-tmp
-  (value nil)
-  (grad-called nil :type boolean))
+(eval-when (:compile-toplevel)
+  (defstruct grad-tmp
+    (value nil :type (or null waffetensor))
+    (grad-called nil :type boolean)))
 
 ; utils
 (defstruct (WaffeTensor (:print-function
@@ -78,7 +79,7 @@
 			       (grad nil)
 			       (destructive? t))))
   (data nil :type waffetensorcontenttype)
-  (grad-tmp (make-grad-tmp :value nil :grad-called nil) :type grad-tmp)
+  (grad-tmp (make-grad-tmp) :type grad-tmp)
   (backward nil :type boolean)
   (backend :mgl :type keyword)
   (grad nil :type waffetensorcontenttype)
@@ -118,14 +119,11 @@
 	      (cos (* 2.0 pi (double-random)))
 	      var)))))
 
-(defun init-waffe-tensor-data (content)
+(eval-when (:compile-toplevel)
+  (declaim (ftype (function (waffetensorcontenttype) (or waffetensorcontenttype)) init-waffe-tensor-data))
+  (defun init-waffe-tensor-data (content)
   ; todo: coerce: simple-array -> mgl-mat
-  (declare (typep content (or waffetensor
-			      waffedatatype)))
-  
-  (let* ((content (if (typep content 'waffetensor)
-		      (data content)
-		      content)))
+    (declare (typep content waffedatatype))
     (if (typep content 'ratio)
 	(if (eq mgl-mat:*default-mat-ctype* :double) ;...
 	    (coerce content 'double-float)
@@ -193,7 +191,7 @@
   `(progn
      (setf (grad-tmp-grad-called (waffetensor-grad-tmp ,tensor)) t)
      (if (and (typep (data ,tensor) 'mgl-mat:mat)
-	      (typep (data ,value) 'mgl-mat:mat))
+	      (typep (data ,value)  'mgl-mat:mat))
 	 (if (equal (!shape ,tensor) (!shape ,value))
 	     (setf (grad-tmp-value (waffetensor-grad-tmp ,tensor)) ,value)
 	     (setf (grad-tmp-value (waffetensor-grad-tmp ,tensor)) (!reshape ,value (!shape ,tensor))))

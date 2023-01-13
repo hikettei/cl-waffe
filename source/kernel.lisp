@@ -54,7 +54,7 @@
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type networkvariablereport report)
 	   (type waffetensor var)
-	   (type booleean is-first-call?))
+	   (type boolean is-first-call?))
   (if (car (waffetensor-report-index var))
       (let* ((old-report (gethash (car (waffetensor-report-index var))
 	   			  (networkvariablereport-destruct-positions report)))
