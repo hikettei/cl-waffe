@@ -255,11 +255,13 @@
   ;If you need mgl-mat-wise operations for speed and low memory, this is useful.
   ;Directly Calling Mgl-mat Operations.
   ;Please remain that it won't make backwards because of speed problems.
-
+  ;Always return `target` tensor. target always changed, and args sometimes changed
   (unless (gethash instruction *instruction-map*)
     (error "!modify: The instruction ~a is not found. please check the documentation" instruction))
   
   (with-optimized-operation
-    (apply #'with-searching-calc-node (gethash instruction *instruction-map*) (assure-tensor target)
-      (map 'list (lambda (x) (assure-tensor x)) args))))
+      (with-searching-calc-node-optim (gethash instruction *instruction-map*)
+	(data (assure-tensor target))
+	(assure-tensor target)
+        (map 'list (lambda (x) (assure-tensor x)) args))))
 

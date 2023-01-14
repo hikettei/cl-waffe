@@ -46,7 +46,21 @@
 
 (declaim (ftype (function (keyword &rest waffetensor) waffetensor)))
 (defun with-searching-calc-node (kernel-function &rest args)
-  (declare (optimize (speed 3) (space 0) (space 0))
+  (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type keyword kernel-function))
   (invoke-kernel kernel-function args (data (car args)) 0))
+
+(defgeneric with-searching-calc-node-optim (kernel-function target-data target-tensor args))
+
+(defmethod with-searching-calc-node-optim (kernel-function (target-data mgl-mat:mat) target-tensor args)
+  (declare (optimize (speed 3) (space 0) (safety 0))
+	   (type keyword kernel-function))
+  (invoke-kernel kernel-function `(,target-tensor ,@args) target-data 0)
+  target-tensor)
+
+(defmethod with-searching-calc-node-optim (kernel-function target-data target-tensor args)
+  (declare (optimize (speed 3) (space 0) (safety 0))
+	   (type keyword kernel-function))
+  (setf (data target-tensor) (data (invoke-kernel kernel-function `(,target-tensor ,@args) target-data 0)))
+  target-tensor)
 
