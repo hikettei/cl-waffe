@@ -75,7 +75,7 @@
   (let ((f-ident   (gensym (symbol-name name)))
 	(self-heap (gensym (symbol-name name))))
     `(progn
-         (declaim (ftype (function (,name ,@(map 'list (lambda (x) `waffetensor) `,args)) (or null waffetensor)) ,f-ident))
+         (declaim (ftype (function (,name ,@(map 'list (lambda (x) (declare (ignore x)) `waffetensor) `,args)) (or null waffetensor)) ,f-ident))
 	 (defun ,f-ident (,self-heap ,@args)
 	   ,(if optimize
 		`(declare (optimize (speed 3) (space 0) (safety 0))

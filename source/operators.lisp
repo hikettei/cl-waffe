@@ -268,7 +268,7 @@
 
 (declaim (ftype (function ((or mgl-mat:mat waffetensor) keyword &rest (or waffedatatype waffetensor)) waffetensor) !modify))
 (defun !modify (target instruction &rest args)
-  (declare (speed 3) (space 0) (safety 0))
+  (declare (optimize (speed 3) (space 0) (safety 0)))
   ;The function that allows destructively operations, always changing the target.
   ;If you need mgl-mat-wise operations for speed and low memory, this is useful.
   ;Directly Calling Mgl-mat Operations.
