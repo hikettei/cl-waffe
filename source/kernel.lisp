@@ -17,8 +17,8 @@
        (setf *destructive-operation* nil)
        result)))
 
-(declaim (dtype (function (keyword cons) waffetensor) invoke-mgl-kernel invoke-cpu-kenel))
-(defun invoke-mgl-kernel (kernel-function variables tensor)
+(declaim (ftype (function (keyword cons) waffetensor) invoke-mgl-kernel invoke-cpu-kenel))
+(defun invoke-mgl-kernel (kernel-function variables)
   (sysconst (cl-waffe.backends.mgl:dispatch-kernel kernel-function *destructive-operation* (car variables) (second variables) variables)))
 
 (defun invoke-cpu-kernel (kernel-function variables)
@@ -31,8 +31,8 @@
 			  (first-argument mgl-mat:mat)
 			  (i fixnum))
   (declare (optimize (speed 3) (space 0) (safety 0))
-	   (ignore i))
-  (invoke-mgl-kernel kernel-function variables first-argument))
+	   (ignore i first-argument))
+  (invoke-mgl-kernel kernel-function variables))
 
 (defmethod invoke-kernel (kernel-function
 			  (variables cons)
