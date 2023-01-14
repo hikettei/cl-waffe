@@ -26,17 +26,20 @@
 (declaim (inline !div !reshape !transpose))
 
 (defnode AddTensor nil
+  :optimize t
   :parameters nil
   :forward  ((x y)
 	     (with-searching-calc-node :add x y))
   :backward ((dy) (list dy dy)))
 
 (defnode SubTensor nil
+  :optimize t
   :parameters ()
   :forward ((x y) (with-searching-calc-node :sub x y))
   :backward ((dy) (list dy (!mul dy (const -1)))))
 
 (defnode MulTensor nil
+  :optimize t
   :parameters ((xi T) (yi T))
   :forward ((x y)
 	    (setf (self xi) (data x))
@@ -46,6 +49,7 @@
 			(!modify (self xi) :*= dy))))
 
 (defnode DivTensor nil
+  :optimize t
   :parameters ((xi T) (yi T))
   :forward ((x y)
             (setf (self xi) (data x))
@@ -56,6 +60,7 @@
 			      (!modify (self yi) :^= 2)))))
 
 (defnode PowTensor nil
+  :optimize t
   :parameters ((xi T) (yi T))
   :forward ((x1 y1) (setf (self xi) (data x1))
 		    (setf (self yi) (data y1))
@@ -68,6 +73,7 @@
 			    :*= dy))))
 
 (defnode SqrtTensor nil
+  :optimize t
   :parameters ((xi T))
   :forward ((x1) (setf (self xi) x1)
 		 (with-searching-calc-node :sqrt x1))
@@ -75,12 +81,14 @@
 	     (list (!div dy (!modify (!modify (self xi) :sqrt) :*= 2)))))
 
 (defnode LogTensor nil
+  :optimize t
   :parameters ((x1 T))
   :forward ((x1) (setf (self x1) x1)
 		 (with-searching-calc-node :log x1))
   :backward ((dy) (list (!div dy (self x1)))))
 
 (defnode ReshapeTensor (shape)
+  :optimize t
   :parameters ((prev-shape T) (shape shape))
   :forward ((x) (setf (self prev-shape) (assure-tensor (!shape x)))
 		(with-searching-calc-node :reshape x (self shape)))
@@ -88,6 +96,7 @@
 	     (list (!reshape dy (self prev-shape)))))
 
 (defnode DotProductTensor nil
+  :optimize t
   :parameters ((xi T) (yi T))
   :forward ((x1 x2) ; only supports 2d and 2d arrays
 		    (setf (self xi) x1)
@@ -98,6 +107,7 @@
 		     (!dot (!transpose (self xi)) dy))))
 
 (defnode TransposeTensor (shape)
+  :optimize t
   :parameters ((prev-shape T) (shape shape))
   :forward ((x)
 	    (setf (self prev-shape) (!shape x))
@@ -105,6 +115,7 @@
   :backward ((d1) (!transpose d1 (self prev-shape))))
 
 (defnode MeanTensor (axis)
+  :optimize t
   :parameters ((axis axis) (repeats T))
   :forward ((x)
 	    (setf (self repeats) (assure-tensor (!shape x (self axis))))
@@ -112,6 +123,7 @@
   :backward ((dy) (list (!repeats dy (self axis) (self repeats)))))
 
 (defnode SumTensor (axis keepdims)
+  :optimize t
   :parameters ((axis axis) (repeats T))
   :forward ((x)
 	    (setf (self repeats) (assure-tensor (!shape x (self axis))))
@@ -120,12 +132,14 @@
 	     (list (!div (!repeats dy (self axis) (self repeats))
 			 (self repeats)))))
 
-(defnode RepeatTensor (axis repeats) 
+(defnode RepeatTensor (axis repeats)
+  :optimize t
   :parameters ((axis axis) (repeats repeats))
   :forward ((x) (with-searching-calc-node :repeat x (self axis) (self repeats)))
   :backward ((dy) (list (!sum dy (self axis)))))
 
 (defnode ExpTensor ()
+  :optimize t
   :parameters ((xi T))
   :forward ((x) (setf (self xi) x)
 		(with-searching-calc-node :exp x))
@@ -133,6 +147,7 @@
 	     (list (!modify (!exp (self xi)) :*= dy))))
 
 (defnode MatMulTensor ()
+  :optimize t
   :parameters ((xi T) (yi T))
   :forward ((x y) (setf (self xi) x)
 		  (setf (self yi) y)
@@ -250,8 +265,10 @@
 (defope !exp (ExpTensor) node (x)
   (call node (assure-tensor x)))
 
-(declaim (inline !modify))
+
+(declaim (ftype (function ((or mgl-mat:mat waffetensor) keyword &rest (or waffedatatype waffetensor)) waffetensor) !modify))
 (defun !modify (target instruction &rest args)
+  (declare (speed 3) (space 0) (safety 0))
   ;The function that allows destructively operations, always changing the target.
   ;If you need mgl-mat-wise operations for speed and low memory, this is useful.
   ;Directly Calling Mgl-mat Operations.
@@ -264,5 +281,8 @@
       (with-searching-calc-node-optim (gethash instruction *instruction-map*)
 	(data (assure-tensor target))
 	(assure-tensor target)
-        (map 'list (lambda (x) (assure-tensor x)) args))))
+        (map 'list (lambda (x)
+		     (declare (type (or waffetensor waffedatatype) x))
+		     (the waffetensor (assure-tensor x)))
+	     args))))
 

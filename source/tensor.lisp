@@ -263,7 +263,11 @@
      (mgl-mat:copy! (data ,tensor) (data ,new-tensor))
      ,new-tensor))
 
+(declaim (ftype (function (waffetensor fixnum fixnum) waffetensor) !set-batch))
 (defun !set-batch (dataset start-row-index batch-size)
+  (declare (optimize (speed 3) (space 0) (safety 0))
+	   (type waffetensor dataset)
+	   (type fixnum start-row-index batch-size))
   (let ((dim (mgl-mat:mat-dimension (data dataset) 1)))
     (mgl-mat:reshape-and-displace! (data dataset)
                            (list batch-size dim)

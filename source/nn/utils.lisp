@@ -2,6 +2,7 @@
 (in-package :cl-waffe.nn)
 
 (defmodel LinearLayer (in-features out-features &optional (bias T))
+  :optimize t
   :parameters ((weight (parameter (!mul 0.01 (!randn `(,in-features ,out-features)))))
 	      (bias (if bias
 			(parameter (!zeros `(,out-features 1)))
@@ -10,6 +11,7 @@
 
 
 (defmodel DenseLayer (in-features out-features &optional (bias T) (activation :relu))
+  :optimize t
   :parameters ((layer (linearlayer in-features out-features bias)) (activation activation))
   :forward ((x)
 	    (case (cl-waffe:self activation)
