@@ -14,7 +14,7 @@
      (setf (waffetensor-destructively-calln ,out) 1))
   nil)
 
-(defmacro assure-destructed? (out)
+(defmacro assure-destructed? (out) ;for automatic !modify
   `(progn
      (unless (waffetensor-destructive? ,out)
        (error "Kernel Error: Modifying tensor that is not allowed to destruct"))
@@ -23,15 +23,17 @@
 (defgeneric decide-out-buffer (out args enable-optim))
 
 (defmethod decide-out-buffer ((out waffetensor) (args waffetensor) enable-optim)
+  (declare (ignore out))
   (apply-destruct out)
-  (if (and enable-optim (waffetensor-destructive? out)) ; tにすると早くなる
-      (assure-destructed? out)
+  (if enable-optim; (waffetensor-destructive? out)) ; when =t, 4x times faster.
+      (data args);(assure-destructed? out)
       (duplicate-tensor (data args))))
 
 (defmethod decide-out-buffer ((out waffetensor) (args mgl-mat:mat) enable-optim)
+  (declare (ignore out))
   (apply-destruct out)
-  (if (and enable-optim (waffetensor-destructive? out)) ; tにすると早くなる
-      (assure-destructed? out)
+  (if enable-optim ;(waffetensor-destructive? out)) 
+      args;(assure-destructed? out)
       (duplicate-tensor args)))
 
 (defmethod decide-out-buffer ((out null) (args waffetensor) enable-optim)
@@ -120,11 +122,9 @@
 (defmethod add-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) (y mgl-mat:mat))
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (ignore out1))
-  (if (eql (mgl-mat:mat-dimensions x) (mgl-mat:mat-dimensions y))
-      (let ((o (decide-out-buffer out x enable-optimize?)))
-	(mgl-mat:axpy! 1.0 y o)
-	o)
-      (mgl-mat:m+ x y)))
+  (let ((o (decide-out-buffer out x enable-optimize?)))
+    (mgl-mat:axpy! 1.0 y o)
+    o))
 
 (defmethod add-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) y)
   (declare (optimize (speed 3) (space 0) (safety 0))
@@ -142,11 +142,9 @@
 (defmethod sub-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) (y mgl-mat:mat))
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (ignore out1))
-  (if (eql (mgl-mat:mat-dimensions x) (mgl-mat:mat-dimensions y))
-      (let ((o (decide-out-buffer out x enable-optimize?)))
-	(mgl-mat:axpy! -1.0 y o)
-	o)
-      (mgl-mat:m- x y)))
+  (let ((o (decide-out-buffer out x enable-optimize?)))
+    (mgl-mat:axpy! -1.0 y o)
+    o))
 
 (defmethod sub-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) y)
   (declare (optimize (speed 3) (space 0) (safety 0))

@@ -18,7 +18,7 @@
 						    (:/= . :div)
 						    (:log . :log)
 						    (:exp . :exp)
-						    (:pow . :pow)
+						    (:^= . :pow)
 					            (:sqrt . :sqrt)
 				                    (:tanh . :tanh)
 				        	    (:reshape . :reshape)
@@ -249,14 +249,17 @@
 (defope !exp (ExpTensor) node (x)
   (call node (assure-tensor x)))
 
-(defmacro !modify (target instruction &rest args)
-  ;The macro that allows destructively operations, always changing the target.
+(declaim (inline !modify))
+(defun !modify (target instruction &rest args)
+  ;The function that allows destructively operations, always changing the target.
   ;If you need mgl-mat-wise operations for speed and low memory, this is useful.
   ;Directly Calling Mgl-mat Operations.
   ;Please remain that it won't make backwards because of speed problems.
-  `(progn
-     (unless (gethash ,instruction *instruction-map*)
-       (error "!modify: The instruction ~a is not found. please check the documentation" ,instruction))
-     (with-optimized-operation
-       (with-searching-calc-node (gethash ,instruction *instruction-map*) ,target ,@args))))
+
+  (unless (gethash instruction *instruction-map*)
+    (error "!modify: The instruction ~a is not found. please check the documentation" instruction))
+  
+  (with-optimized-operation
+    (apply #'with-searching-calc-node (gethash instruction *instruction-map*) (assure-tensor target)
+      (map 'list (lambda (x) (assure-tensor x)) args))))
 
