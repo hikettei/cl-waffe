@@ -71,13 +71,15 @@
 	   (let ((lr-t (* (self lr) (/ (sqrt (- 1.0 (expt (self beta2) (self n))))
 					     (- 1.0 (expt (self beta1) (self n)))))))
 	     (dotimes (i (hash-table-count (self params)))
-	       (!modify (gethash i (self m)) :+= (!mul (- 1 (self beta1))
-						       (!sub (grad (gethash i (self params)))
-							     (gethash i (self m)))))
+	       (!modify (gethash i (self m)) :+= (!modify (!sub (grad (gethash i (self params)))
+								(gethash i (self m)))
+							  :*= (- 1 (self beta1))))
 	       
-	       (!modify (gethash i (self v)) :+= (!mul (- 1 (self beta2))
-						       (!sub (!modify (grad (gethash i (self params))) :^= 2)
-							     (gethash i (self v)))))
+	       (!modify (gethash i (self v)) :+= (!modify
+						  (!modify
+						   (!modify (grad (gethash i (self params))) :^= 2)
+						   :-= (gethash i (self v)))
+	   					    :*= (- 1 (self beta2))))
 
-	       (!modify (gethash i (self params)) :-= (!div (!mul lr-t   (gethash i (self m)))
-							    (!add (!sqrt (gethash i (self v))) (self epsilon))))))))
+	       (!modify (gethash i (self params)) :-= (!div (!mul lr-t (gethash i (self m)))
+							       (!modify (!sqrt (gethash i (self v))) :+= (self epsilon))))))))

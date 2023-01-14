@@ -42,8 +42,8 @@
 	    (setf (self xi) (data x))
 	    (setf (self yi) (data y))
 	    (with-searching-calc-node :mul x y))
-  :backward ((dy) (list (!mul dy (self yi))
-			(!mul dy (self xi)))))
+  :backward ((dy) (list (!modify (self yi) :*= dy)
+			(!modify (self xi) :*= dy))))
 
 (defnode DivTensor nil
   :parameters ((xi T) (yi T))
@@ -52,8 +52,8 @@
 	    (setf (self yi) (data y))
 	    (with-searching-calc-node :div x y))
   :backward ((dy) (list (!div dy (self yi))
-			(!div (!mul (!mul dy (self xi)) -1)
-			      (!pow (self yi) 2)))))
+			(!div (!modify (!modify (self xi) :*= dy) :*= -1)
+			      (!modify (self yi) :^= 2)))))
 
 (defnode PowTensor nil
   :parameters ((xi T) (yi T))
@@ -61,17 +61,18 @@
 		    (setf (self yi) (data y1))
 		    (with-searching-calc-node :pow x1 y1))
   :backward ((dy)
-	     (list (!mul (!mul dy (self yi)) (!pow (self xi) (!sub (self yi) 1)))
-		   (!mul dy (!mul
-			     (!log (self xi))
-			     (!pow (self xi) (self yi)))))))
+	     (list (!modify (!mul dy (self yi)) :*= (!pow (self xi) (- (self yi) 1)))
+		   (!modify (!modify
+			     (!log (self xi)) :*=
+			     (!modify (self xi) :^= (self yi)))
+			    :*= dy))))
 
 (defnode SqrtTensor nil
   :parameters ((xi T))
   :forward ((x1) (setf (self xi) x1)
 		 (with-searching-calc-node :sqrt x1))
   :backward ((dy)
-	     (list (!div dy (!mul 2 (!sqrt (self xi)))))))
+	     (list (!div dy (!modify (!modify (self xi) :sqrt) :*= 2)))))
 
 (defnode LogTensor nil
   :parameters ((x1 T))
@@ -129,7 +130,7 @@
   :forward ((x) (setf (self xi) x)
 		(with-searching-calc-node :exp x))
   :backward ((dy)
-	     (list (!mul dy (!exp (self xi))))))
+	     (list (!modify (!exp (self xi)) :*= dy))))
 
 (defnode MatMulTensor ()
   :parameters ((xi T) (yi T))
