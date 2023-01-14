@@ -108,10 +108,6 @@ Here's examples.
 			    (data (gethash i (self params)))))))
 ```
 
-# Benchmark
-
-Coming soon...
-
 # Run MNIST With Roswell
 
 ```
@@ -137,9 +133,9 @@ Coming soon...
 
 ・3d mat operations
 
-・save models
+・save and restore models
 
-・Automatic optimization of compute nodes
+・Automatic convert from non-destructive operation to !modify call in forward process.
 
 # Tutorials
 
