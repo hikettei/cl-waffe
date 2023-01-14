@@ -2,7 +2,7 @@
 (in-package :cl-user)
 
 (defpackage cl-waffe
-  (:use :cl :mgl-mat)
+  (:use :cl :mgl-mat :alexandria)
   (:export #:waffetensor
            #:tensor
 	   #:const
@@ -29,6 +29,8 @@
 	   #:predict
 	   #:get-dataset
 	   #:get-dataset-length
+
+	   #:with-optimized-operation
 
 	   #:model
 	   #:update
@@ -115,6 +117,8 @@
 	   #:!squeeze
 	   #:!unsqueeze
 
+	   #:!modify
+	   
 	   #:!relu
 	   #:!sigmoid
 	   #:!tanh

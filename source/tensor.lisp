@@ -91,10 +91,7 @@
   (destructively-calln 0 :type fixnum)
   (is-ancestor-param nil :type boolean)
   (destructive? nil :type boolean)
-  (is-data-destructed? nil :type boolean)
-  optim-report
-  report-index
-  (belongs-to-nth-report 0 :type fixnum))
+  (is-data-destructed? nil :type boolean))
 
 (declaim (inline data))
 (defun data (tensor)
@@ -221,24 +218,19 @@
 	     (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top
 			      (grad-tmp-value grad-tmp-before)
 			      (const 1))))
-	(setf (waffetensor-optim-report grad-before)
-	      (waffetensor-optim-report tensor))
 	; calculating backward(state, dy) -> x.grad, y.grad...
-	(let ((grads (funcall (the function (call-backward (waffetensor-state tensor))) grad-before)))
-	  (declare (type list grads))
-	  (unless (= (length (waffetensor-variables tensor))
-		     (length grads))
-	    (error "backward error: The number of :forward args doesnt correspond with of :backward"))
+        (with-no-grad
+	  (let ((grads (funcall (the function (call-backward (waffetensor-state tensor))) grad-before)))
+	    (declare (type list grads))
+	    (unless (= (length (waffetensor-variables tensor))
+		       (length grads))
+	      (error "backward error: The number of :forward args doesnt correspond with of :backward"))
 
-	  (dotimes (n (length grads))
-	    (setf (waffetensor-optim-report (nth n grads))
-		  (waffetensor-optim-report tensor))
-	    (setfgradtmp (nth-var tensor n) (nth n grads)))
+	    (dotimes (n (length grads))
+	      (setfgradtmp (nth-var tensor n) (nth n grads)))
 
-	  (dotimes (n (length grads))
-	    (setf (waffetensor-optim-report (nth-var tensor n))
-		  (waffetensor-optim-report tensor))
-	    (step-next-node tensor n))))
+	    (dotimes (n (length grads))
+	      (step-next-node tensor n)))))
       (if (waffetensor-grad tensor) ; the tensor is the end of node.
 	  (if (grad-tmp-value (waffetensor-grad-tmp tensor)) ; is grad-tmp already created?
 	      (if (typep (waffetensor-grad tensor) 'cons) ; is it first value? or not?
@@ -271,7 +263,11 @@
      (mgl-mat:copy! (data ,tensor) (data ,new-tensor))
      ,new-tensor))
 
+(declaim (ftype (function (waffetensor fixnum fixnum) waffetensor) !set-batch))
 (defun !set-batch (dataset start-row-index batch-size)
+  (declare (optimize (speed 3) (space 0) (safety 0))
+	   (type waffetensor dataset)
+	   (type fixnum start-row-index batch-size))
   (let ((dim (mgl-mat:mat-dimension (data dataset) 1)))
     (mgl-mat:reshape-and-displace! (data dataset)
                            (list batch-size dim)

@@ -12,64 +12,83 @@
 (defmethod assure-tensor ((x ratio))    (const x))
 (defmethod assure-tensor ((x mgl-mat:mat)) (const x))
 
-
-(declaim (inline !add !sub !mul !div !exp !log !pow !sqrt !reshape !transpose !matmul))
+(defparameter *instruction-map* (alist-hash-table `((:+= . :add)
+						    (:-= . :sub)
+						    (:*= . :mul)
+						    (:/= . :div)
+						    (:log . :log)
+						    (:exp . :exp)
+						    (:^= . :pow)
+					            (:sqrt . :sqrt)
+				                    (:tanh . :tanh)
+				        	    (:reshape . :reshape)
+						    (:< . :<))))
+(declaim (inline !div !reshape !transpose))
 
 (defnode AddTensor nil
+  :optimize t
   :parameters nil
   :forward  ((x y)
 	     (with-searching-calc-node :add x y))
   :backward ((dy) (list dy dy)))
 
 (defnode SubTensor nil
+  :optimize t
   :parameters ()
   :forward ((x y) (with-searching-calc-node :sub x y))
   :backward ((dy) (list dy (!mul dy (const -1)))))
 
 (defnode MulTensor nil
+  :optimize t
   :parameters ((xi T) (yi T))
   :forward ((x y)
 	    (setf (self xi) (data x))
 	    (setf (self yi) (data y))
 	    (with-searching-calc-node :mul x y))
-  :backward ((dy) (list (!mul dy (self yi))
-			(!mul dy (self xi)))))
+  :backward ((dy) (list (!modify (self yi) :*= dy)
+			(!modify (self xi) :*= dy))))
 
 (defnode DivTensor nil
+  :optimize t
   :parameters ((xi T) (yi T))
   :forward ((x y)
             (setf (self xi) (data x))
 	    (setf (self yi) (data y))
 	    (with-searching-calc-node :div x y))
   :backward ((dy) (list (!div dy (self yi))
-			(!div (!mul (!mul dy (self xi)) -1)
-			      (!pow (self yi) 2)))))
+			(!div (!modify (!modify (self xi) :*= dy) :*= -1)
+			      (!modify (self yi) :^= 2)))))
 
 (defnode PowTensor nil
+  :optimize t
   :parameters ((xi T) (yi T))
   :forward ((x1 y1) (setf (self xi) (data x1))
 		    (setf (self yi) (data y1))
 		    (with-searching-calc-node :pow x1 y1))
   :backward ((dy)
-	     (list (!mul (!mul dy (self yi)) (!pow (self xi) (!sub (self yi) 1)))
-		   (!mul dy (!mul
-			     (!log (self xi))
-			     (!pow (self xi) (self yi)))))))
+	     (list (!modify (!mul dy (self yi)) :*= (!pow (self xi) (- (self yi) 1)))
+		   (!modify (!modify
+			     (!log (self xi)) :*=
+			     (!modify (self xi) :^= (self yi)))
+			    :*= dy))))
 
 (defnode SqrtTensor nil
+  :optimize t
   :parameters ((xi T))
   :forward ((x1) (setf (self xi) x1)
 		 (with-searching-calc-node :sqrt x1))
   :backward ((dy)
-	     (list (!div dy (!mul 2 (!sqrt (self xi)))))))
+	     (list (!div dy (!modify (!modify (self xi) :sqrt) :*= 2)))))
 
 (defnode LogTensor nil
+  :optimize t
   :parameters ((x1 T))
   :forward ((x1) (setf (self x1) x1)
 		 (with-searching-calc-node :log x1))
   :backward ((dy) (list (!div dy (self x1)))))
 
 (defnode ReshapeTensor (shape)
+  :optimize t
   :parameters ((prev-shape T) (shape shape))
   :forward ((x) (setf (self prev-shape) (assure-tensor (!shape x)))
 		(with-searching-calc-node :reshape x (self shape)))
@@ -77,6 +96,7 @@
 	     (list (!reshape dy (self prev-shape)))))
 
 (defnode DotProductTensor nil
+  :optimize t
   :parameters ((xi T) (yi T))
   :forward ((x1 x2) ; only supports 2d and 2d arrays
 		    (setf (self xi) x1)
@@ -87,6 +107,7 @@
 		     (!dot (!transpose (self xi)) dy))))
 
 (defnode TransposeTensor (shape)
+  :optimize t
   :parameters ((prev-shape T) (shape shape))
   :forward ((x)
 	    (setf (self prev-shape) (!shape x))
@@ -94,6 +115,7 @@
   :backward ((d1) (!transpose d1 (self prev-shape))))
 
 (defnode MeanTensor (axis)
+  :optimize t
   :parameters ((axis axis) (repeats T))
   :forward ((x)
 	    (setf (self repeats) (assure-tensor (!shape x (self axis))))
@@ -101,6 +123,7 @@
   :backward ((dy) (list (!repeats dy (self axis) (self repeats)))))
 
 (defnode SumTensor (axis keepdims)
+  :optimize t
   :parameters ((axis axis) (repeats T))
   :forward ((x)
 	    (setf (self repeats) (assure-tensor (!shape x (self axis))))
@@ -109,19 +132,22 @@
 	     (list (!div (!repeats dy (self axis) (self repeats))
 			 (self repeats)))))
 
-(defnode RepeatTensor (axis repeats) 
+(defnode RepeatTensor (axis repeats)
+  :optimize t
   :parameters ((axis axis) (repeats repeats))
   :forward ((x) (with-searching-calc-node :repeat x (self axis) (self repeats)))
   :backward ((dy) (list (!sum dy (self axis)))))
 
 (defnode ExpTensor ()
+  :optimize t
   :parameters ((xi T))
   :forward ((x) (setf (self xi) x)
 		(with-searching-calc-node :exp x))
   :backward ((dy)
-	     (list (!mul dy (!exp (self xi))))))
+	     (list (!modify (!exp (self xi)) :*= dy))))
 
 (defnode MatMulTensor ()
+  :optimize t
   :parameters ((xi T) (yi T))
   :forward ((x y) (setf (self xi) x)
 		  (setf (self yi) y)
@@ -130,27 +156,33 @@
 	     (list (!matmul dy (!transpose (self yi)))
 		   (!matmul (!transpose (self xi)) dy))))
 
-(defun !add (x y)
-  ;from now on, static typing
-  (call (AddTensor) (assure-tensor x) (assure-tensor y)))
+(defmacro defope (name node-object tensor args &body body &aux (common-node (gensym)))
+  `(prog1
+     (defparameter ,common-node ,node-object)
+     (defun ,name ,args
+       (let* ((,tensor (if *no-grad* ,common-node ,node-object)))
+	 ,@body))))
+		   
+(defope !add (AddTensor) node (x y)
+  (call node (assure-tensor x) (assure-tensor y)))
     
-(defun !sub (x y)
-  (call (SubTensor) (assure-tensor x) (assure-tensor y)))
+(defope !sub (SubTensor) node (x y)
+  (call node (assure-tensor x) (assure-tensor y)))
 
-(defun !mul (x y)
-  (call (MulTensor) (assure-tensor x) (assure-tensor y)))
+(defope !mul (MulTensor) node (x y)
+  (call node (assure-tensor x) (assure-tensor y)))
 
-(defun !div-old (x y)
+(defope !div-old (DivTensor) node (x y)
   (unless (= x 1) (error "!div-old: x must be 1"))
   ; x must be 1, cl-waffe.backends.mgl:div has some problems?...
-  (call (DivTensor) (assure-tensor x) (assure-tensor y)))
+  (call node (assure-tensor x) (assure-tensor y)))
 
+; its much faster
 (defun !div (x y)
-  ; its faster
   (!mul x (!div-old 1 y)))
   
-(defun !dot (x y)
-  (call (DotProductTensor) (assure-tensor x) (assure-tensor y)))
+(defope !dot (DotProductTensor) node (x y)
+  (call node (assure-tensor x) (assure-tensor y)))
 
 (defun !sum (x &optional (axis nil) (keepdims nil))
   (if (null axis)
@@ -172,14 +204,14 @@
 	(!repeats (!unsqueeze result axis) axis nrepeat)
 	result)))
 
-(defun !pow (x n)
-  (call (PowTensor) (assure-tensor x) (assure-tensor n)))
+(defope !pow (PowTensor) node (x n)
+  (call node (assure-tensor x) (assure-tensor n)))
 
-(defun !sqrt (x)
-  (call (SqrtTensor) (assure-tensor x)))
+(defope !sqrt (SqrtTensor) node (x)
+  (call node (assure-tensor x)))
 
-(defun !log (x)
-  (call (LogTensor) (assure-tensor x)))
+(defope !log (LogTensor) node (x)
+  (call node (assure-tensor x)))
 
 (defun !reshape (x dim)
   (call (ReshapeTensor (assure-tensor dim)) (assure-tensor x)))
@@ -190,15 +222,15 @@
 (defun !transpose (x &optional result)
   (call (TransposeTensor (assure-tensor (if result (numcl:asarray result)))) (assure-tensor x)))
 
-(defun !matmul (x y)
+(defope !matmul (MatmulTensor) node (x y)
   (cond
     ((and (= (!dims x) (!dims y))
 	  (= (!dims x) 2))
-     (call (MatMulTensor) (assure-tensor x) (assure-tensor y)))
+     (call node (assure-tensor x) (assure-tensor y)))
     ((and (= (!dims x) 1) (= (!dims y) 2))
-     (call (MatMulTensor) (!unsqueeze (assure-tensor x) -1) (assure-tensor y)))
+     (call node (!unsqueeze (assure-tensor x) -1) (assure-tensor y)))
     ((and (= (!dims x) 2) (= (!dims y) 1))
-     (call (MatMulTensor) (assure-tensor x) (!unsqueeze (assure-tensor y) -1)))
+     (call node (assure-tensor x) (!unsqueeze (assure-tensor y) -1)))
     (T (error "matmul for 3d/4d tensor is coming soon..."))))
 
 (defun !unsqueeze (x &optional (dim 0))
@@ -230,7 +262,27 @@
 		       s))))
       (!reshape x s))))
 
-(defun !exp (x)
-  (call (ExpTensor) (assure-tensor x)))
+(defope !exp (ExpTensor) node (x)
+  (call node (assure-tensor x)))
 
+
+(declaim (ftype (function ((or mgl-mat:mat waffetensor) keyword &rest (or waffedatatype waffetensor)) waffetensor) !modify))
+(defun !modify (target instruction &rest args)
+  (declare (speed 3) (space 0) (safety 0))
+  ;The function that allows destructively operations, always changing the target.
+  ;If you need mgl-mat-wise operations for speed and low memory, this is useful.
+  ;Directly Calling Mgl-mat Operations.
+  ;Please remain that it won't make backwards because of speed problems.
+  ;Always return `target` tensor. target always changed, and args sometimes changed
+  (unless (gethash instruction *instruction-map*)
+    (error "!modify: The instruction ~a is not found. please check the documentation" instruction))
+  
+  (with-optimized-operation
+      (with-searching-calc-node-optim (gethash instruction *instruction-map*)
+	(data (assure-tensor target))
+	(assure-tensor target)
+        (map 'list (lambda (x)
+		     (declare (type (or waffetensor waffedatatype) x))
+		     (the waffetensor (assure-tensor x)))
+	     args))))
 

@@ -3,6 +3,7 @@
 
 
 (defnode ReLUTensor nil
+  :optimize t
   :parameters ((path-through T) (zero-buff T))
   :forward ((x)
 	    (if (equal (self zero-buff) T)
@@ -16,6 +17,7 @@
   (call (ReLUTensor) (assure-tensor x)))
 
 (defnode SigmoidTensor nil
+  :optimize t
   :parameters ((xi T))
   :forward ((x)
 	    (setf (self xi) x)
@@ -27,6 +29,7 @@
   (call (SigmoidTensor) (assure-tensor x)))
 
 (defnode TanhTensor nil
+  :optimize t
   :parameters ((xi T))
   :forward ((x)
 	    (setf (self xi) x)

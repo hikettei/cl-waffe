@@ -16,21 +16,23 @@
      nil))
 
 (declaim (inline call))
+(declaim (ftype (function (t &rest waffetensor) waffetensor) call))
 (defun call (model &rest args)
   ; calculating op(x,y) -> result(x, y), state
   (let* ((result (apply (call-forward model) args)))
-    (if (slot-value model 'hide-from-tree) ;is a result model or not?, then is it the part of node?
-	(unless *no-grad*
-	  (setf (waffetensor-backward result)  t)
-	  (setf (waffetensor-state result)     model)
-	  (setf (waffetensor-variables result) args)
-	  (setf (waffetensor-is-ancestor-param result) (if (member-if #'(lambda (x)
-									  (waffetensor-is-ancestor-param x))
+    (declare (type (or null waffetensor) result))
+    (unless *no-grad*
+      (if (slot-value model 'hide-from-tree) 
+	  (progn
+	    (setf (waffetensor-backward result) t)
+	    (setf (waffetensor-state result) model)
+	    (setf (waffetensor-variables result) args)
+	    (setf (waffetensor-is-ancestor-param result) (if (member-if #'(lambda (x)
+				                                            (waffetensor-is-ancestor-param x))
 								      args)
 							   t
-							   nil))
-	  result)
-	result)))
+							   nil)))))
+    result))
 
 (defmacro is-waffe-model (model)
   `(and (slot-exists-p ,model 'parameters)
@@ -51,10 +53,11 @@
 	  (error "Could not find any parameter")
 	  (butlast parameters)))))
 
-(defmacro defoptimizer (name args &key parameters update)
+(defmacro defoptimizer (name args &key parameters update optimize)
   `(progn
      (defmodel ,name ,args
        :parameters ,parameters
+       :optimize ,optimize
        :forward ,update ;zero-grad
        :backward ((model) (dolist (p (find-variables model))
 			    (setf (waffetensor-state p) nil)
@@ -65,21 +68,27 @@
 		nil)
      :hide-from-tree nil)))
 
-(defmacro defnode (name args &key parameters forward backward)
-  `(defmodel ,name ,args :parameters ,parameters :forward ,forward :backward ,backward :hide-from-tree T))
+(defmacro defnode (name args &key parameters forward backward optimize)
+  `(defmodel ,name ,args :parameters ,parameters :forward ,forward :backward ,backward :hide-from-tree T :optimize ,optimize))
 
-(defmacro define-node-method (fname name args body hide-from-tree)
+(defmacro define-node-method (fname name args body hide-from-tree optimize)
   (let ((f-ident   (gensym (symbol-name name)))
 	(self-heap (gensym (symbol-name name))))
     `(progn
+         (declaim (ftype (function (,name ,@(map 'list (lambda (x) `waffetensor) `,args)) (or null waffetensor)) ,f-ident))
 	 (defun ,f-ident (,self-heap ,@args)
+	   ,(if optimize
+		`(declare (optimize (speed 3) (space 0) (safety 0))
+			  (type ,name ,self-heap))
+		`(declare (type ,name ,self-heap)))
 	   ,(if hide-from-tree `(declare (type waffetensor ,@args)) nil)
 	   (macrolet ((self (name) `(slot-value ,',self-heap ',name)))
 	     ,@body))
+	 (declaim (ftype (function (,name) function) ,fname))
 	 (defmethod ,fname ((self ,name))
 	   (lambda (&rest node-inputs) (apply #',f-ident self node-inputs))))))
 
-(defmacro defmodel (name args &key parameters forward backward hide-from-tree)
+(defmacro defmodel (name args &key parameters forward backward hide-from-tree optimize)
   #|
   Define an node.
   Args: hide-from-tree ... if true, this node is detached from autograd. (that is, when backward, use backward defined in itself)
@@ -102,14 +111,14 @@
 		       (:print-function (lambda (m stream k)
 					  (declare (ignore k))
 					  (render-simple-model-structure stream m)))
-		       (:constructor ,constructor-name (,@args &aux ,@parameters)))
+		       (:constructor ,constructor-name (,@args &aux ,@(map 'list (lambda (x) `(,(car x) ,(second x))) parameters))))
 	     (hide-from-tree ,hide-from-tree :type boolean)
 	     (forward t :type boolean)
 	     (backward ,(if backward t nil) :type boolean)
 	     (parameters ',(map 'list (lambda (x) (assure-args (car x))) parameters))
-	     ,@(map 'list (lambda (x) (assure-args (car x))) parameters))
-	   (define-node-method call-forward  ,name ,(car forward)  ,(cdr forward) ,hide-from-tree)
-	   (define-node-method call-backward ,name ,(car backward) ,(cdr backward) ,hide-from-tree)
+	     ,@(map 'list (lambda (x) `(,(assure-args (car x)) ,(second x) ,@(cddr x))) parameters))
+	   (define-node-method call-forward  ,name ,(car forward)  ,(cdr forward) ,hide-from-tree ,optimize)
+	   (define-node-method call-backward ,name ,(car backward) ,(cdr backward) ,hide-from-tree ,optimize)
 	   (defun ,name (&rest init-args)
 	     (apply #',constructor-name init-args))))))
 

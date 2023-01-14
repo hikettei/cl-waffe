@@ -20,7 +20,7 @@
 	   (macrolet ((self (name) `(slot-value ,',self-heap ',name))
 		      (model () `(self model))
 		      (update (&rest args1) `(unless *no-grad*
-				                 (funcall (call-forward (self optimizer)) ,@args1)))
+				                 (with-no-grad (funcall (call-forward (self optimizer)) ,@args1))))
 		      (zero-grad () `(unless *no-grad*
 				          (funcall (call-backward (self optimizer)) (self model)))))
 	     ,@body))
