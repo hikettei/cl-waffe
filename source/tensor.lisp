@@ -91,6 +91,7 @@
   (is-param? nil :type boolean)
   (destructively-calln 0 :type fixnum)
   (is-ancestor-param nil :type boolean)
+  (is-allowed-to-destruct? nil :type boolean)
   (destructive? nil :type boolean)
   (is-data-destructed? nil :type boolean))
 
