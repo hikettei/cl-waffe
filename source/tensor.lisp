@@ -234,7 +234,8 @@
 	      (setfgradtmp (nth-var tensor n) (nth n grads)))
 
 	    (dotimes (n (length grads))
-	      (step-next-node tensor n)))))
+	      (step-next-node tensor n)))
+	  nil))
       (if (waffetensor-grad tensor) ; the tensor is the end of node.
 	  (if (grad-tmp-value (waffetensor-grad-tmp tensor)) ; is grad-tmp already created?
 	      (if (typep (waffetensor-grad tensor) 'cons) ; is it first value? or not?

@@ -6,7 +6,10 @@
   (:export :linear
            :linearlayer
 	   :denselayer
-	   :dropout
-           :mse
+	   
+           :dropout
+           :batchnorm2d
+	   
+	   :mse
 	   :softmax-cross-entropy
            :cross-entropy))

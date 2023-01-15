@@ -195,7 +195,7 @@
       (let ((nrepeat (!shape x axis))
 	    (result (call (SumTensor (assure-tensor axis)) (assure-tensor x))))
 	(if keepdims
-	    (!repeats (!unsqueeze result axis) axis nrepeat)
+	    (!repeats result axis nrepeat)
 	    result))))
 
 (defun !mean (x &optional (axis nil) (keepdims nil))
@@ -208,7 +208,7 @@
       (let ((nrepeat (!shape x axis))
 	    (result (call (MeanTensor (assure-tensor axis)) (assure-tensor x))))
 	(if keepdims
-	    (!repeats (!unsqueeze result axis) axis nrepeat)
+	    (!repeats result axis nrepeat)
 	    result))))
 
 (defope !pow (PowTensor) node (x n)
