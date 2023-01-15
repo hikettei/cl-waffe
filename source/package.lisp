@@ -83,7 +83,7 @@
 	   #:!random-with
 	   #:!normal
 	   #:!randn
-	   #:!binomial
+	   #:!bernoulli
 	   #:!beta
 	   #:!gamma
 	   #:!chisquare

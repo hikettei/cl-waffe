@@ -8,6 +8,7 @@
 (defgeneric call-forward  (self))
 (defgeneric call-backward (self))
 
+; TODO: Rename -> with-predict-mode
 (defmacro with-no-grad (&body body)
   `(progn
      (setq *no-grad* t)

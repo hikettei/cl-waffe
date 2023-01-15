@@ -332,7 +332,41 @@
     (mgl-mat:reshape! x1 (data y))
     x1))
 
-(declaim (ftype (function (keyword boolean waffetensor waffetensor cons) (or mgl-mat:mat cl-waffe:waffedatatype)) dispatch-kernel))
+
+(define-lisp-kernel (bernoulli-lisp)
+    ((mask :mat :io)
+     (start-mask fixnum)
+     (n fixnum)
+     (p single-float))
+  (loop for mi upfrom start-mask below (the fixnum (+ start-mask n))
+	do (cond ((< (aref mask mi) p)
+		  (setf (aref mask mi) 0.0))
+		 (t
+		  (setf (aref mask mi) 1.0)))))
+
+; having not cuda gpus, i can't test this code lol T_T
+(define-cuda-kernel (bernoulli-cuda)
+    (void ((mask :mat :io) (n int) (p float)))
+  (let ((i (+ (* block-dim-mask block-idx-mask) thread-idx-mask)))
+    (when (< i n)
+      (if (< (aref x i) p)
+	  (set (aref x i) 0.0)
+          (set (aref x i) 1.0)))))
+
+(defun bernoulli-tensor (enable-optimize out return-tensor rate)
+  (declare (type boolean enable-optimize)
+	   (type waffetensor return-tensor x rate))
+  (let ((o (decide-out-buffer out return-tensor enable-optimize)))
+    (mgl-mat:uniform-random! o)
+    (if (use-cuda-p (data return-tensor))
+	(progn
+	  (print "having not gpus, i've not tested cl-waffe.backends.mgl:bernoulli-tensor yet in cuda.")
+	(bernoulli-cuda o (mat-size o) (data rate)
+			:grid-dim (list (ceiling (mat-size o) 256) 1 1)
+			:block-dim (list 256 1 1)))
+	(bernoulli-lisp o (mat-displacement o) (mat-size o) (data rate)))))
+
+;(declaim (ftype (function (keyword boolean waffetensor waffetensor cons) (or mgl-mat:mat cl-waffe:waffedatatype)) dispatch-kernel))
 (defun dispatch-kernel (function is-first-time-call? destructable-tensor destructable-tensor1 args)
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type keyword function)
@@ -356,6 +390,7 @@
     (:reshape (reshape-tensor is-first-time-call? destructable-tensor (car args) (second args)))
     (:<       (compare-tensor is-first-time-call? destructable-tensor (car args) (second args)))
     (:repeat  (mgl-repeat (data (car args)) (data (third args)) :axis (data (second args))))
-    (:transpose (deliv-delay (data (car args)) (the function mgl-mat:transpose)))
-    (T (error "~a is not yet implemented" ope))))
+    (:bernoulli (bernoulli-tensor is-first-time-call? destructable-tensor (car args) (second args)))
+    (:transpose (deliv-delay (data (car args)) #'mgl-mat:transpose))
+    (T (error "~a is not yet implemented" function))))
 
