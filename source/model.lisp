@@ -8,12 +8,26 @@
 (defgeneric call-forward  (self))
 (defgeneric call-backward (self))
 
+; TODO: Rename -> with-predict-mode
 (defmacro with-no-grad (&body body)
   `(progn
      (setq *no-grad* t)
      ,@body
      (setq *no-grad* nil)
      nil))
+
+(defmacro with-calling-layers (input &rest layers)
+  ; todo rewrite, cuz this definition is temporary
+  `(let ((,input ,input))
+       ,@(map 'list (lambda (layer)
+		      ; everytime call layer, input is allowed to be destructed at once.
+		     (declare (type cons layer))
+		     `(setq ,input (call (self ,(car layer)) ,@(cdr layer))))
+	      layers)
+     ,input))
+
+(defmacro call-apply (model args)
+  `(call ,model ,@args))
 
 (declaim (inline call))
 (declaim (ftype (function (t &rest waffetensor) waffetensor) call))
@@ -22,7 +36,7 @@
   (let* ((result (apply (call-forward model) args)))
     (declare (type (or null waffetensor) result))
     (unless *no-grad*
-      (if (slot-value model 'hide-from-tree) 
+      (if (slot-value model 'hide-from-tree) ;is model defined by defmodel?
 	  (progn
 	    (setf (waffetensor-backward result) t)
 	    (setf (waffetensor-state result) model)
@@ -63,7 +77,8 @@
 			    (setf (waffetensor-state p) nil)
 			    (setf (waffetensor-backward p) nil)
 			    (setf (waffetensor-variables p) nil)
-			    (setf (waffetensor-grad p) `(nil nil))
+			    (if (waffetensor-grad p) ; only params have grad
+				(setf (waffetensor-grad p) `(nil nil)))
 			    (setf (waffetensor-grad-tmp p) (make-grad-tmp)))
 		nil)
      :hide-from-tree nil)))
@@ -82,7 +97,8 @@
 			  (type ,name ,self-heap))
 		`(declare (type ,name ,self-heap)))
 	   ,(if hide-from-tree `(declare (type waffetensor ,@args)) nil)
-	   (macrolet ((self (name) `(slot-value ,',self-heap ',name)))
+	   (macrolet ((self (name) `(slot-value ,',self-heap ',name))
+		      (myself () ',self-heap))
 	     ,@body))
 	 (declaim (ftype (function (,name) function) ,fname))
 	 (defmethod ,fname ((self ,name))
@@ -104,6 +120,9 @@
 		 x)))
     (unless forward
       (error ":forward slot is need to be fulfilled. When defining Model [~a]" name))
+
+    (if (and hide-from-tree backward)
+	(print "Warning: backward with hide-from-tree=nil never called in backward processes"))
     
     (let ((constructor-name (gensym)))
       `(prog1

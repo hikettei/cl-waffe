@@ -33,6 +33,7 @@
 
 (deftype WaffeTensorContentType ()
   `(or mgl-mat:mat
+       simple-array
        waffesupporteddatatype))
 					; (satisfies waffe-array)))
 
@@ -121,11 +122,13 @@
   (defun init-waffe-tensor-data (content)
   ; todo: coerce: simple-array -> mgl-mat
     (declare (type content waffedatatype))
-    (if (typep content 'ratio)
+    (etypecase content
+      (ratio
 	(if (eq mgl-mat:*default-mat-ctype* :double) ;...
 	    (coerce content 'double-float)
-	    (coerce content 'float))
-	content)))
+	    (coerce content 'float)))
+      (simple-array (mgl-mat:array-to-mat content))
+      (T content))))
 
 (defun check-backend (backend tensor)
   (if (null tensor)
@@ -211,7 +214,7 @@
 
 (declaim (ftype (function (waffetensor) null) backward1))
 (defun backward1 (tensor)
-  (declare (optimize (speed 3) (space 0) (safety 0))
+  (declare (optimize (speed 3) (space 0) (safety 1))
    (type waffetensor tensor))
   (if (waffetensor-backward tensor) ;Backward exists?
       (let* ((grad-tmp-before (waffetensor-grad-tmp tensor))
@@ -221,7 +224,7 @@
 	; calculating backward(state, dy) -> x.grad, y.grad...
         (with-no-grad
 	  (let ((grads (funcall (the function (call-backward (waffetensor-state tensor))) grad-before)))
-	    (declare (type list grads))
+	    (declare (type list grads)) ; Print Error
 	    (unless (= (length (waffetensor-variables tensor))
 		       (length grads))
 	      (error "backward error: The number of :forward args doesnt correspond with of :backward"))
@@ -389,13 +392,17 @@
                    (+ (random tmp-limit) lower-limit)))
     res))
 
+(declaim (ftype (function (cons function) waffetensor) !random-with))
 (defun !random-with (dims f)
-  (let* ((res (!zeros dims))
+  (declare (optimize (speed 3) (safety 0) (space 0))
+	   (type cons dims)
+	   (type function f))
+  (let* ((res (make-array dims :initial-element 0))
          (len (if (listp dims) (reduce #'* dims) dims)))
     (loop for n from 0 to (1- len)
-          do (setf (!row-major-aref res n)
+          do (setf (row-major-aref res n)
                    (funcall f)))
-    f))
+    (const res)))
 
 (defun !normal (dims &optional (mean 2.0) (var 1.0))
   (let* ((res (!zeros dims))
@@ -407,9 +414,6 @@
 (defmacro !randn (dims)
   `(!normal ,dims 0 1))
 
-(defun !binomial (dims n p)
-  (declare (ignore dims n p)))
-
 (defun !beta (dims a b)
   (declare (ignore dims a b)))
 
@@ -419,6 +423,11 @@
 (defun !chisquare (dims df)
   (declare (ignore dims df)))
 
+(declaim (ftype (function (cons single-float) waffetensor) !bernoulli))
+(defun !bernoulli (dims rate)
+  (declare (type cons dims)
+	   (type single-float rate))
+  (!modify (!zeros dims) :bernoulli (const rate)))
 
 (defun !shape (tensor &optional (nth nil))
   (unless (typep (data tensor) 'waffe-array)

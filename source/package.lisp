@@ -24,6 +24,8 @@
 	   #:defoptimizer
 	   #:deftrainer
 	   #:defdataset
+
+	   #:myself
 	   
 	   #:step-model
 	   #:predict
@@ -83,7 +85,7 @@
 	   #:!random-with
 	   #:!normal
 	   #:!randn
-	   #:!binomial
+	   #:!bernoulli
 	   #:!beta
 	   #:!gamma
 	   #:!chisquare
@@ -94,6 +96,8 @@
 	   #:!zeros-like
 	   #:!ones-like
 	   #:!full-like
+
+	   #:with-calling-layers
 
 	   #:!add
 	   #:!sub

@@ -22,7 +22,8 @@
 					            (:sqrt . :sqrt)
 				                    (:tanh . :tanh)
 				        	    (:reshape . :reshape)
-						    (:< . :<))))
+						    (:< . :<)
+						    (:bernoulli . :bernoulli))))
 (declaim (inline !div !reshape !transpose))
 
 (defnode AddTensor nil

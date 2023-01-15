@@ -6,6 +6,7 @@
   (:export :linear
            :linearlayer
 	   :denselayer
+	   :dropout
            :mse
 	   :softmax-cross-entropy
            :cross-entropy))
