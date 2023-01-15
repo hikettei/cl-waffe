@@ -214,7 +214,7 @@
 
 (declaim (ftype (function (waffetensor) null) backward1))
 (defun backward1 (tensor)
-  (declare (optimize (speed 3) (space 0) (safety 0))
+  (declare (optimize (speed 3) (space 0) (safety 1))
    (type waffetensor tensor))
   (if (waffetensor-backward tensor) ;Backward exists?
       (let* ((grad-tmp-before (waffetensor-grad-tmp tensor))
@@ -224,7 +224,7 @@
 	; calculating backward(state, dy) -> x.grad, y.grad...
         (with-no-grad
 	  (let ((grads (funcall (the function (call-backward (waffetensor-state tensor))) grad-before)))
-	    (declare (type list grads))
+	    (declare (type list grads)) ; Print Error
 	    (unless (= (length (waffetensor-variables tensor))
 		       (length grads))
 	      (error "backward error: The number of :forward args doesnt correspond with of :backward"))

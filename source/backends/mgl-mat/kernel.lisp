@@ -366,7 +366,7 @@
 			:block-dim (list 256 1 1)))
 	(bernoulli-lisp o (mat-displacement o) (mat-size o) (data rate)))))
 
-;(declaim (ftype (function (keyword boolean waffetensor waffetensor cons) (or mgl-mat:mat cl-waffe:waffedatatype)) dispatch-kernel))
+(declaim (ftype (function (keyword boolean waffetensor waffetensor cons) (or mgl-mat:mat cl-waffe:waffedatatype)) dispatch-kernel))
 (defun dispatch-kernel (function is-first-time-call? destructable-tensor destructable-tensor1 args)
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type keyword function)

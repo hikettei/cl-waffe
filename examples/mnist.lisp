@@ -1,6 +1,6 @@
 
 (defpackage :mnist-example
-  (:use :cl :cl-waffe :cl-libsvm-format)
+  (:use :cl :cl-waffe :cl-waffe.nn :cl-libsvm-format)
   (:export demo))
 
 (in-package :mnist-example)
@@ -9,17 +9,20 @@
 ; here's mnist example codes and benchmark
 
 (defmodel MLP (activation)
-  :parameters ((layer1 (cl-waffe.nn:denselayer (* 28 28) 512 T activation))
-	       (layer2 (cl-waffe.nn:denselayer 512 256 T activation))
-	       (layer3 (cl-waffe.nn:linearlayer 256 10 T)))
+  :parameters ((layer1   (denselayer (* 28 28) 512 T activation))
+	       (dropout1 (dropout 0.5))
+	       (layer2   (denselayer 512 256 T activation))
+	       (layer3   (linearlayer 256 10 T)))
   :forward ((x)
-	    (call (self layer3)
-		  (call (self layer2)
-			(call (self layer1) x)))))
+	    (with-calling-layers x
+	      (layer1 x)
+	      (dropout1 x)
+ 	      (layer2 x)
+	      (layer3 x))))
 
 (deftrainer MLPTrainer (activation lr)
   :model          (MLP activation)
-  :optimizer      cl-waffe.optimizers:SGD
+  :optimizer      cl-waffe.optimizers:Adam
   :optimizer-args (:lr lr)
   :step-model ((x y)
 	       (zero-grad)
@@ -80,13 +83,10 @@
   (format t "Valid   : ~a" (!shape mnist-target))
   (print "")
 
-
   (setq trainer (MLPTrainer :relu 1e-4))
 
   (setq train (MnistData mnist-dataset mnist-target 100))
   (setq test (MnistData mnist-dataset-test mnist-target-test 100))
 
-  (sb-sprof:start-profiling)
-  (time (train trainer train :max-iterate 600 :epoch 10 :batch-size 100 :valid-dataset test :verbose t :random t))
-  (sb-profile:report))
+  (time (train trainer train :max-iterate 600 :epoch 10 :batch-size 100 :valid-dataset test :verbose t :random t)))
 
