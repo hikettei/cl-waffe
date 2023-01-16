@@ -1,7 +1,9 @@
 
-# English version is coming soon... i will rewrite it when i am free.
+# English version is coming soon... i promise that i will rewrite this draft in english when i am free.
 
 勉強と趣味で書いてるんで、実用的になるかわからんけど・・・
+
+自分まだにわかなんで、間違ってるところあったら許して欲しい〜〜
 
 チュートリアルを書くついでに、cl-waffeの設計とか、TODOをここに書いておきます。
 
@@ -58,7 +60,50 @@ cl-waffeを利用してモデルの設計を始めるにあたって、最低で
 
 ## モデルと計算ノード
 
-cl-waffeでは自動微分をサポートします。
+### ライブラリの構造
+
+自分は元々Chainerの設計が好きだったので、cl-waffeの設計もそれに強く影響されています。
+
+`Define by run`という設計思想のDeeplearningライブラリは、`Define and run`という設計思想と対称的に、実行と同時に計算ノードを生成します。
+
+架空のライブラリで実例を提示します。
+
+### 1. Define by run
+
+```
+x = tensor(1)
+y = tensor(2)
+
+if ~~~:
+    a = x * y
+else:
+    a = x + y ; 実行時に辿ったルートを基に計算ノードを生成する。
+```
+
+### 2. Define and run 
+
+(ChainerとTorchしか触ってこなかった人間なので間違ってるかも)
+
+```
+x = tensor(1)
+y = tensor(2)
+
+if ~~~:
+    a = x * y
+else:
+    a = x + y ; 実行と同時に計算ノードが定義されるので、処理によって分岐が変わることは許されない
+```
+
+cl-waffeは1のdefine by runで設計されています。
+
+define by runは計算ノードの最適化が難しいという欠点がありますが、次の項で述べる`(with-waffe-expression)`マクロを用いてそれを解決しています。(TODO, 多分将来的にそうなる予定)
+
+### ノードの定義
+
+cl-waffeでは、毎回計算をする時に生成される計算ノードを、場合に応じて`defmodel`, `defnode`, `defoptimizer`というマクロを用いて定義します。
+
+文章量の都合上、`defnode`と`defoptimizer`は発展的なので、(#ライブラリを拡張する)の項目で触れています。
+
 
 ## 非破壊的代入と破壊的代入
 
@@ -132,7 +177,7 @@ Evaluation took:
 
 この場合、破壊的代入は非破壊的代入の約5.28倍早いという結果になりました。
 
-これが、計算のbackendに使用しているmgl-matという行列演算のライブラリが、破壊的代入を前提として設計されているからです。
+これは、計算のbackendに使用しているmgl-matという行列演算のライブラリが、破壊的代入を前提として設計されているからです。
 
 そのため、ユーザーが計算ノードを生成しながら高速に記述するために、以下のマクロが提供されています。
 
@@ -140,7 +185,7 @@ Evaluation took:
 
 `target`を破壊的に代入して、`instruction`に応じたカーネルを`args`を引数として呼び出します。
 
-**計算ノードは生成しません**, そのため、:forwardスロットの内部や、`defnode`など、自動微分を利用しない関数の:backwardスロットで利用できますが、後述の`with-waffe-expression`が一番簡潔です。
+**この関数は計算ノードは生成しません**, そのため、:forwardスロットの内部や、`defnode`など、自動微分を利用しない関数の:backwardスロットで利用できますが、後述の`with-waffe-expression`が一番簡潔です。
 
 Example:
 
