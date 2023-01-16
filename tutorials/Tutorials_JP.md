@@ -1,11 +1,11 @@
 
-# English version is coming soon... i promise that i will rewrite this draft in english when i am free.
+# English version is coming soon... i promise that i will rewrite this draft when i am free
 
 勉強と趣味で書いてるんで、実用的になるかわからんけど・・・
 
-自分まだにわかなんで、間違ってるところあったら許して欲しい〜〜
-
 チュートリアルを書くついでに、cl-waffeの設計とか、TODOをここに書いておきます。
+
+まだ僕にわかなので、間違ってる箇所があったらすみません。
 
 将来こんな感じにしたいな〜〜〜ってやつ、所詮趣味やから何年かかるかわからんけど
 
@@ -48,7 +48,7 @@ LossをグラフにPlotする
 
 ## 導入
 
-cl-waffeはCommonLispの深層学習ライブラリです。以下を目標に設計しました。
+cl-waffeはCommonLispで実装された深層学習のためのライブラリです。以下を目標に設計しました。
 
 ・簡潔に数式の記述が可能、学習が簡単
 
@@ -56,54 +56,216 @@ cl-waffeはCommonLispの深層学習ライブラリです。以下を目標に�
 
 ・Define by run (計算と同時にノードを構築)
 
-cl-waffeを利用してモデルの設計を始めるにあたって、最低でも以下の三つの項目には目を通して頂けるとすぐ使い始められると思います。
+cl-waffeを利用してモデルの設計を始めるにあたって、最低でも(#サンプルコードとデータローダー)という項までは目を通して頂けるとすぐ使い始められると思います。
 
 ## モデルと計算ノード
 
-### ライブラリの構造
+個人的に昔からChainerの設計が好きで、cl-waffeの設計もそれに強く影響を受けています。
 
-自分は元々Chainerの設計が好きだったので、cl-waffeの設計もそれに強く影響されています。
+cl-waffeでは自動微分をサポートしていますから、他の同様のライブラリのように実行時に計算ノードを生成します。
 
-`Define by run`という設計思想のDeeplearningライブラリは、`Define and run`という設計思想と対称的に、実行と同時に計算ノードを生成します。
+### Define by run vs Define and run
 
-架空のライブラリで実例を提示します。
+背景として、Deeplearningのライブラリには、`define by run`という設計思想と、それに対称的な`define and run`という設計思想が存在します。
+
+架空のライブラリを用いて、軽い実例を提示します。
+
+(Tensorflowあまり扱ってこなかったので、間違ってたら申し訳ない・・・)
 
 ### 1. Define by run
 
 ```
-x = tensor(1)
-y = tensor(2)
+a = tensor(1)
+b = tensor(2)
 
 if ~~~:
-    a = x * y
+    z = a * b
 else:
-    a = x + y ; 実行時に辿ったルートを基に計算ノードを生成する。
+    z = a + b ; 実行時に辿ったルートを基に計算ノードを作成、仮にEpochごとに辿るルートが変わってもノードが生成される。
 ```
 
-### 2. Define and run 
-
-(ChainerとTorchしか触ってこなかった人間なので間違ってるかも)
+### 2. Define and run
 
 ```
-x = tensor(1)
-y = tensor(2)
+a = tensor(1)
+b = tensor(2)
 
 if ~~~:
-    a = x * y
+    z = a * b
 else:
-    a = x + y ; 実行と同時に計算ノードが定義されるので、処理によって分岐が変わることは許されない
+    z = a + b ; コードが定義された時のルートを基に計算ルートを作成、最適化がしやすいが柔軟性が失われる欠点がある。
 ```
 
-cl-waffeは1のdefine by runで設計されています。
+cl-waffeでは、1.の`Define by run`で設計しています。計算ノードの最適化が難しいという欠点がありますが、CommonLispの柔軟性と後述(#非破壊的代入と破壊的代入)の`(with-waffe-expression)`というマクロを用いて計算ノードを最適化して、この問題を解決するつもりです。**(This is included in TODO 多分きっとそうなる予定)**
 
-define by runは計算ノードの最適化が難しいという欠点がありますが、次の項で述べる`(with-waffe-expression)`マクロを用いてそれを解決しています。(TODO, 多分将来的にそうなる予定)
 
-### ノードの定義
+### モデルとノードを定義する
 
-cl-waffeでは、毎回計算をする時に生成される計算ノードを、場合に応じて`defmodel`, `defnode`, `defoptimizer`というマクロを用いて定義します。
+cl-waffeでは、ノードを定義するために`defmodel` `defnode`という二つのマクロを提供しています。
 
-文章量の都合上、`defnode`と`defoptimizer`は発展的なので、(#ライブラリを拡張する)の項目で触れています。
+それではまず、`z = (!mul a b)`という計算を、逆伝搬に対応しつつ行う場合から考えていきましょう。
 
+cl-waffe!mulの定義は以下のようになっています。(簡単のため一部省略)
+
+
+```lisp
+(defun !mul (x y)
+  (call (MulTensor) x y))
+```
+
+
+関数`!mul`が呼び出された時、マクロ`defnode`(使い方は後述)で定義された構造体`MulTensor`を初期化し、関数`call`を用いて、構造体`MulTensor`に対応したメソッド`call-forward`を呼び出しています。
+
+そのため、ユーザーは、計算が行われるたびに生成される構造体(この場合`MulTensor`)の雛形を定義すれば、逆電波に対応したネットワークが作成できます。
+
+そのためのマクロ`cl-waffe:defnode`を実例と一緒に紹介します。
+
+
+**マクロ`(defnode name args &key parameters forward backward optimize)`**
+
+**Return: nil**
+
+  構造体`(gensym (symbol-name name))`を定義します。(学習時大量に生成するので内部的にはただの構造体です)
+
+  構造体のスロットは、`parameters`に応じて定義されます。
+
+
+**parameters -> (変数名 初期値)若しくは(変数名 初期値 :type 型)で構成されるリスト**
+
+  マクロ`defnode`を評価すると、式`(defun name (&rest init-args) (構造体の生成))`が展開されます。
+
+  ですから、シンボル`name`というノードを初期化するときは、式`(name args1 args2 ...)`のように呼び出します。
+
+  構造体は:constructorを持ちますから、リスト`args`に応じた引数を上記の式に入力することで、Parameterの初期値を変更できます。
+
+
+**forward -> list, (引数 body)**
+
+ この関数の返り値の型は`WaffeTensor`である必要があります。
+
+引数に指定されたTensorは、cl-waffeの自動微分によって勾配が求められます。（ただしこれは、任意の条件によって最適化され除外される場合もある）
+
+
+**backward -> list, (引数 body)**
+
+ この関数の返り値は`list`である必要があります。（後述）
+
+
+forward, backwardスロットに定義された関数は一度`defnode`と同じスコープに関数`(gensym)`として定義されます。
+
+
+内部ではこれらを呼び出すために、総称関数`(call-backward model)`, `(call-forward model)`を呼び出していますが、通常の利用であれば`(call)`でforward関数を呼び出せます。
+
+
+`defnode`で定義された計算ノードは、自動微分の範囲外であるため、必ず:forward :backwardスロットが必要である点に留意してください。
+
+**optimize -> boolean**
+
+  :forward :backward関数内で`(declare (speed 3) (space 0) (safety 0))`をつけるかどうか？(default: nil)
+
+### Backward関数の記述の仕方
+
+cl-waffeの自動微分はトップダウン型です。
+
+例えばforward関数の引数が`(x y)`であったとします。
+
+backward関数の引数`(dy)`(これは固定)は、計算グラフで言えば一つ上のノードの勾配を受け取ります。
+
+backward関数はこれをもとに、`(list 次のノードのxの勾配 次のノードのyの勾配)`を返してください。
+
+Example:
+
+```lisp
+; operators.lispから抜粋
+
+(defnode MulTensor nil
+  :optimize t
+  :parameters ((xi T) (yi T))
+  :forward ((x y)
+      (setf (self xi) (data x))
+      (setf (self yi) (data y))
+      (with-searching-calc-node :mul x y))
+  :backward ((dy) (list (!modify (self yi) :*= dy)
+      (!modify (self xi) :*= dy))))
+
+;Example: (call (MulTensor) tensor1 tensor2)
+
+(defnode MeanTensor (axis)
+  :optimize t
+  :parameters ((axis axis) (repeats T))
+  :forward ((x)
+      (setf (self repeats) (assure-tensor (!shape x (self axis))))
+      (with-searching-calc-node :mean x (self axis)))
+  :backward ((dy) (list (!repeats dy (self axis) (self repeats)))))
+
+;Example: (call (MeanTensor 1) tensor1)
+```
+
+### Forward/Backwardにおいて、Parameterと値のやり取りをする。
+
+forward/backward関数の内部において、macroletで定義されたマクロ`(self name)`があります。
+
+これを用いて、Parameterと値をやり取りします。
+
+### モデルを定義する
+
+前の項で紹介した`defnode`は自動微分に対応しておらず、内部の処理を定義するために作られたマクロなので、通常ユーザーが使う必要はありません。
+
+`defnode`で構成された計算ノードを基にDeeplearningモデルを定義するためには、マクロ`defmodel`を使います。
+
+**マクロ`(defmodel name args &key parameters forward backward hide-from-tree optimize)`**
+
+`defnode`と基本同じですが、`backward`スロットは基本的にnilを指定し、自動微分で勾配を求めます。
+
+**`hide-from-tree` -> boolean, Tの時`defnode`と同義として扱われる。`(default -> nil)`**
+
+この`defmodel`マクロを使って、簡単なMLPモデルを実装してみましょう。
+
+cl-waffeでは、パッケージ`cl-waffe.nn`にLinearやCNNなど、基本的なモデルが標準で定義されています。
+
+```lisp
+(defmodel MLP (activation)
+  :parameters ((layer1   (denselayer (* 28 28) 512 T activation))
+               (layer2   (denselayer 512 256 T activation))
+               (layer3   (linearlayer 256 10 T)))
+  :forward ((x)
+      (call (self layer3)
+            (call (self layer2)
+                  (call (self layer1))))
+```
+
+このように定義されますが、:forwardのネストが深くて不恰好です。
+
+それを解決するためにマクロ`(with-calling-layers input &rest layers)`がexportされています。
+
+速度の面からも基本的に`(with-calling-layers)`を使う方が優れています、詳細は次の項で解説されています。
+
+このように書き換えることができます。
+
+```lisp
+:forward (x)
+  (with-calling-layers x
+    (layer1 x)
+    (layer2 x)
+    (layer3 x))
+
+    ; => x
+```
+
+補足ですが、x以外の引数を取りたい場合は、
+
+
+```lisp
+:forward (x)
+  (with-calling-layers x
+    (layerA x 1 2)
+    (layerB x a)
+    (layerC x))
+
+    ; => x
+```
+
+のように記述できます。
 
 ## 非破壊的代入と破壊的代入
 
@@ -179,13 +341,15 @@ Evaluation took:
 
 これは、計算のbackendに使用しているmgl-matという行列演算のライブラリが、破壊的代入を前提として設計されているからです。
 
-そのため、ユーザーが計算ノードを生成しながら高速に記述するために、以下のマクロが提供されています。
+この問題を解決するため、cl-waffeではユーザーが計算ノードを生成しながら高速に記述するために、以下のマクロが提供されています。
 
-`(!modify target instruction &rest args)`
+**function `(!modify target instruction &rest args)`**
 
-`target`を破壊的に代入して、`instruction`に応じたカーネルを`args`を引数として呼び出します。
+**Return: 破壊された`target`**
 
-**この関数は計算ノードは生成しません**, そのため、:forwardスロットの内部や、`defnode`など、自動微分を利用しない関数の:backwardスロットで利用できますが、後述の`with-waffe-expression`が一番簡潔です。
+  `target`を破壊的に代入して、`instruction`に応じたカーネルを`args`を引数として呼び出します。
+
+  **この関数は計算ノードは生成しません**, そのため、:forwardスロットの内部や、`defnode`など、自動微分を利用しない関数の:backwardスロットで利用できますが、後述の`with-waffe-expression`が一番簡潔です。
 
 Example:
 
@@ -194,9 +358,10 @@ Coming Soon...
 ```
 
 
-`(with-calling-layers input &rest layers)`
+**macro `(with-calling-layers input &rest layers)`**
 
-Returns: 計算されたinput
+**Returns: 計算されたinput**
+
 `defmodel` `defoptimizer` `defnode` 内部において、inputを引数として、inputを破壊的に代入しながらlayersを適用していきます。
 
 layerが適用される順番は、上から下です。
@@ -207,7 +372,7 @@ Example:
 Coming soon...
 ```
 
-`(with-waffe-expression ... )` <= Todo
+**macro `(with-waffe-expression ... )` <= Todo**
 
 `with-waffe-expression`内部では、中置記法をサポートしているので、(個人的にはS式が好きなんですが・・・)、見慣れた手順でForwardProcessを定義できます。
 
