@@ -9,6 +9,15 @@ The future goal is that easy to use, not speed, since building neural networks i
 
 However, cl-waffe is at least faster than PyTorch in the benchmark following, using excellent libraries such as mgl-mat, and numcl.
 
+
+# Tutorials
+
+日本語でのチュートリアルは, `./tutorials/tutorial_JP.md`を参照してください
+
+For those who don't speak Japanese, I'm sorry but i've not prepared English ver tutorials yet (even in japanese this is in progress...).
+
+even so, if you want to read it somehow, please use DeepL.
+
 # Benchmark
 
 Coming soon...
@@ -26,9 +35,10 @@ Coming soon...
 	       (layer2 (cl-waffe.nn:denselayer 512 256 T activation))
 	       (layer3 (cl-waffe.nn:linearlayer 256 10 T)))
   :forward ((x)
-	    (call (self layer3)
-		  (call (self layer2)
-			(call (self layer1) x)))))
+            (with-calling-layers x
+	        (layer1 x)
+		(layer2 x)
+		(layer3 x))))
 
 
 (deftrainer MLPTrainer (activation lr)
@@ -54,31 +64,12 @@ Coming soon...
 
 ...
 
+(setq trainer (MLPTrainer :relu 1e-4))
 
-(defun demo ()
-  (multiple-value-bind (datamat target)
-      (read-data "examples/tmp/mnist.scale" 784 10 :most-min-class 0)
-    (defparameter mnist-dataset datamat)
-    (defparameter mnist-target target))
+(setq train (MnistData mnist-dataset mnist-target 100))
+(setq test (MnistData mnist-dataset-test mnist-target-test 100))
 
-  (multiple-value-bind (datamat target)
-      (read-data "examples/tmp/mnist.scale.t" 784 10 :most-min-class 0)
-    (defparameter mnist-dataset-test datamat)
-    (defparameter mnist-target-test target))
-
-  (format t "Training: ~a" (!shape mnist-dataset))
-  (format t "Valid   : ~a" (!shape mnist-target))
-  (print "")
-
-
-  (setq trainer (MLPTrainer :relu 1e-4))
-
-  (setq train (MnistData mnist-dataset mnist-target 100))
-  (setq test (MnistData mnist-dataset-test mnist-target-test 100))
-
-  (sb-sprof:start-profiling)
-  (time (train trainer train :max-iterate 600 :epoch 10 :batch-size 100 :valid-dataset test :verbose t :random t))
-  (sb-profile:report))
+(time (train trainer train :max-iterate 600 :epoch 10 :batch-size 100 :valid-dataset test :verbose t :random t))
 
 ```
 
@@ -116,10 +107,6 @@ $ sh install.sh
 $ cd ..
 $ ./run-test-model.ros mnist
 ```
-
-# Documents
-
-Coming soon...
 
 # Workload/Todo
 
