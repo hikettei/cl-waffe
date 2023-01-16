@@ -297,7 +297,7 @@
 	  (mgl-mat:mref o 0 0)
 	  o))))
 
-(defun mean-tensor (is-first-time-call? out x y) ; =sum????? dimのlengthで割る
+(defun mean-tensor (is-first-time-call? out x y)
   (declare (optimize (speed 3) (space 0) (safety 0))
            (type boolean is-first-time-call?)
            (type waffetensor out x y)
@@ -314,9 +314,9 @@
 		 (0 `(1 ,@(cdr dims)))
 		 (T (error "Sum only supports a 2d matrix")))))
     (let ((o (mgl-mat:make-mat dims :initial-element 0))
-	  (s (nth (data y) dims)))
+	  (s (nth (data y) (mgl-mat:mat-dimensions (data x)))))
       (mgl-mat:sum! x1 o :axis (data y) :beta 1)
-      (mgl-mat:scal! (/ 1 s) x1)
+      (mgl-mat:scal! (/ 1 (the integer s)) x1)
       (mgl-mat:reshape! o dims)
       (if (equal dims `(1 1))
 	  (mgl-mat:mref o 0 0)

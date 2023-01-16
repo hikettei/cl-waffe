@@ -123,7 +123,7 @@
 	    (with-searching-calc-node :mean x (self axis)))
   :backward ((dy) (list (!repeats dy (self axis) (self repeats)))))
 
-(defnode SumTensor (axis keepdims)
+(defnode SumTensor (axis)
   :optimize t
   :parameters ((axis axis) (repeats T))
   :forward ((x)
@@ -193,17 +193,23 @@
 	  (setq result (!sum result (1- (- axis-size i)))))
 	result)
       (let ((nrepeat (!shape x axis))
-	    (result (call (SumTensor (assure-tensor axis) (if (null keepdims) -1 1)) (assure-tensor x))))
+	    (result (call (SumTensor (assure-tensor axis)) (assure-tensor x))))
 	(if keepdims
-	    (!repeats (!unsqueeze result axis) axis nrepeat)
+	    (!repeats result axis nrepeat)
 	    result))))
 
 (defun !mean (x &optional (axis nil) (keepdims nil))
-  (let ((nrepeat (!shape x axis))
-	(result (call (MeanTensor (assure-tensor axis)) (assure-tensor x))))
-    (if keepdims
-	(!repeats (!unsqueeze result axis) axis nrepeat)
-	result)))
+  (if (null axis)
+      (let ((axis-size (!dims x))
+	    (result x))
+	(dotimes (i axis-size)
+	  (setq result (!mean result (1- (- axis-size i)))))
+	result)
+      (let ((nrepeat (!shape x axis))
+	    (result (call (MeanTensor (assure-tensor axis)) (assure-tensor x))))
+	(if keepdims
+	    (!repeats result axis nrepeat)
+	    result))))
 
 (defope !pow (PowTensor) node (x n)
   (call node (assure-tensor x) (assure-tensor n)))

@@ -91,6 +91,7 @@
   (is-param? nil :type boolean)
   (destructively-calln 0 :type fixnum)
   (is-ancestor-param nil :type boolean)
+  (is-allowed-to-destruct? nil :type boolean)
   (destructive? nil :type boolean)
   (is-data-destructed? nil :type boolean))
 
@@ -233,7 +234,8 @@
 	      (setfgradtmp (nth-var tensor n) (nth n grads)))
 
 	    (dotimes (n (length grads))
-	      (step-next-node tensor n)))))
+	      (step-next-node tensor n)))
+	  nil))
       (if (waffetensor-grad tensor) ; the tensor is the end of node.
 	  (if (grad-tmp-value (waffetensor-grad-tmp tensor)) ; is grad-tmp already created?
 	      (if (typep (waffetensor-grad tensor) 'cons) ; is it first value? or not?
