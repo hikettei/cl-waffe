@@ -7,6 +7,5 @@
   :author "hikettei"
   :licence nil
   :depends-on (:cl-waffe :cl-libsvm-format :sb-sprof)
-  :components ((:module "examples" :components ((:file "mnist")
-						(:file "cifar-10")))))
+  :components ((:module "examples" :components ((:file "mnist")))))
 
