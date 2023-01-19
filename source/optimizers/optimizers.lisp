@@ -63,20 +63,6 @@
 					(!div (!mul (self lr) (grad (gethash i (self params))))
 					      (!add (!sqrt (gethash i (self h))) (self epsilon)))))
 			    (data (gethash i (self params)))))))
-
-
-(defun adam-update (m
-		    v
-		    beta1
-		    beta2
-		    param
-		    paramgrads
-		    matsize
-		    epsilon
-		    lr-t)
-  (adam-stepm-lisp m paramgrads beta1 matsize)
-  (adam-stepv-lisp v paramgrads beta2 matsize)
-  (adam-step-grads param m v epsilon lr-t matsize))
   
 ; still too slow...
 (defoptimizer Adam (params &key (lr 1e-3) (epsilon 1e-7) (beta1 0.9) (beta2 0.999))
