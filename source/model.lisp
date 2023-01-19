@@ -20,14 +20,12 @@
   ; todo rewrite, cuz this definition is temporary
   `(let ((,input ,input))
        ,@(map 'list (lambda (layer)
-		      ; everytime call layer, input is allowed to be destructed at once.
-		     (declare (type cons layer))
-		     `(setq ,input (call (self ,(car layer)) ,@(cdr layer))))
+		      (declare (type cons layer))
+		      `(progn
+			 (!allow-destruct ,input)
+			 (setq ,input (call (self ,(car layer)) ,@(cdr layer)))))
 	      layers)
      ,input))
-
-(defmacro call-apply (model args)
-  `(call ,model ,@args))
 
 (declaim (inline call))
 (declaim (ftype (function (t &rest waffetensor) waffetensor) call))
@@ -98,7 +96,10 @@
 		`(declare (type ,name ,self-heap)))
 	   ,(if hide-from-tree `(declare (type waffetensor ,@args)) nil)
 	   (macrolet ((self (name) `(slot-value ,',self-heap ',name))
-		      (myself () ',self-heap))
+		      (save-for-backward (name value)
+			`(let ((smaller-value (detach ,value)))
+			   (!allow-destruct smaller-value)
+			   (setf (self ,name) smaller-value))))
 	     ,@body))
 	 (declaim (ftype (function (,name) function) ,fname))
 	 (defmethod ,fname ((self ,name))
@@ -140,7 +141,6 @@
 	   (define-node-method call-backward ,name ,(car backward) ,(cdr backward) ,hide-from-tree ,optimize)
 	   (defun ,name (&rest init-args)
 	     (apply #',constructor-name init-args))))))
-
 
 (defun render-simple-model-structure (stream model)
   (format stream "[~a: ~a]" (if (slot-value model 'hide-from-tree)

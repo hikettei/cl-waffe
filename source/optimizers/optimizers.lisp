@@ -64,6 +64,20 @@
 					      (!add (!sqrt (gethash i (self h))) (self epsilon)))))
 			    (data (gethash i (self params)))))))
 
+
+(defun adam-update (m
+		    v
+		    beta1
+		    beta2
+		    param
+		    paramgrads
+		    matsize
+		    epsilon
+		    lr-t)
+  (adam-stepm-lisp m paramgrads beta1 matsize)
+  (adam-stepv-lisp v paramgrads beta2 matsize)
+  (adam-step-grads param m v epsilon lr-t matsize))
+  
 ; still too slow...
 (defoptimizer Adam (params &key (lr 1e-3) (epsilon 1e-7) (beta1 0.9) (beta2 0.999))
   :optimize t
@@ -78,23 +92,19 @@
   :update (()
 	   (if (= (hash-table-count (self m)) 0)
 	       (dotimes (i (hash-table-count (self params)))
-		 (setf (gethash i (self m)) (const 0))
-		 (setf (gethash i (self v)) (const 0))))
+		 (setf (gethash i (self m)) (data (!zeros (!shape (gethash i (self params))))))
+		 (setf (gethash i (self v)) (data (!zeros (!shape (gethash i (self params))))))))
 	   (incf (self n) 1)
 	   (let ((lr-t (* (self lr) (/ (sqrt (- 1.0 (expt (self beta2) (self n))))
 					     (- 1.0 (expt (self beta1) (self n)))))))
 	     (dotimes (i (hash-table-count (self params)))
-	       (!modify (the waffetensor (gethash i (self m)))
-			:+= (!modify (!sub (grad (gethash i (self params)))
-					   (gethash i (self m)))
-				     :*= (- 1 (self beta1))))
-	       
-	       (!modify (the waffetensor (gethash i (self v)))
-			:+= (!modify
-			     (!modify
-			      (!modify (grad (gethash i (self params))) :^= 2)
-			      :-= (gethash i (self v)))
-	   		       :*= (- 1 (self beta2))))
-	       
-	       (!modify (the waffetensor (gethash i (self params))) :-= (!modify (!mul lr-t (gethash i (self m))) :/=
-							    (!modify (!sqrt (gethash i (self v))) :+= (self epsilon))))))))
+	       (cl-waffe.backends.mgl:adam-update
+		            (gethash i (self m))
+			    (gethash i (self v))
+			    (self beta1)
+			    (self beta2)
+			    (data (gethash i (self params)))
+			    (grad (gethash i (self params)))
+			    (mgl-mat:mat-size (gethash i (self m)))
+			    (self epsilon)
+			    lr-t)))))

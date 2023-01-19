@@ -18,6 +18,7 @@
 	   #:*no-grad*
 
 	   #:waffe-tensor-p
+	   #:waffetensor-is-next-destruct?
 	   
 	   #:defmodel
 	   #:defnode
@@ -25,7 +26,7 @@
 	   #:deftrainer
 	   #:defdataset
 
-	   #:myself
+	   #:save-for-backward
 	   
 	   #:step-model
 	   #:predict

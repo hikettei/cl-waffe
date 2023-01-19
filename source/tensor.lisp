@@ -87,12 +87,12 @@
   (variables nil :type list)
   state
   (is-mat nil :type boolean)
-  (calln 0 :type fixnum)
+  (calln 0 :type fixnum) ; unnecessary
   (is-param? nil :type boolean)
-  (destructively-calln 0 :type fixnum)
+  (destructively-calln 0 :type fixnum) ; unnecessary
   (is-ancestor-param nil :type boolean)
-  (is-allowed-to-destruct? nil :type boolean)
-  (destructive? nil :type boolean)
+  (is-next-destruct? nil :type boolean) ; when t, the next node's operation can be done destructively
+  (destructive? nil :type boolean) ; unnecessary
   (is-data-destructed? nil :type boolean))
 
 (declaim (inline data))
@@ -139,6 +139,9 @@
 (defmacro extend-from (new-tensor old-tensor)
   ; (extend-from (!randn `(10 10)) old-tensor) :backendとかを引き継ぐ
   (declare (ignore new-tensor old-tensor)))
+
+(defmacro !allow-destruct (tensor)
+  `(setf (waffetensor-is-next-destruct? ,tensor) t))
 
 (defun (setf data) (val &optional tensor)
   (if tensor
@@ -222,6 +225,8 @@
 	     (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top
 			      (grad-tmp-value grad-tmp-before)
 			      (const 1))))
+	;ただし,最後に constから生成されてたやつは使わないので上書きする
+	(setf (waffetensor-is-next-destruct? grad-before) nil) ; assure grad-before won't be changed
 	; calculating backward(state, dy) -> x.grad, y.grad...
         (with-no-grad
 	  (let ((grads (funcall (the function (call-backward (waffetensor-state tensor))) grad-before)))
@@ -236,17 +241,18 @@
 	    (dotimes (n (length grads))
 	      (step-next-node tensor n)))
 	  nil))
-      (if (waffetensor-grad tensor) ; the tensor is the end of node.
-	  (if (grad-tmp-value (waffetensor-grad-tmp tensor)) ; is grad-tmp already created?
-	      (if (typep (waffetensor-grad tensor) 'cons) ; is it first value? or not?
-                  (let ((new-grad (grad-tmp-value (waffetensor-grad-tmp tensor))))
-		    (if (typep (data new-grad) 'mgl-mat:mat)
-			(if (equal (!shape new-grad) (!shape tensor))
-			    (setf (waffetensor-grad tensor) (data new-grad))
-			    (setf (waffetensor-grad tensor) (data (!reshape new-grad (!shape tensor))))) ; is it due to bugs of reshape?
-			(setf (waffetensor-grad tensor) (data new-grad))))
-		  (setf (waffetensor-grad tensor)
-			(data (!add (waffetensor-grad tensor) (grad-tmp-value (waffetensor-grad-tmp tensor)))))))))
+      (with-no-grad
+	(if (waffetensor-grad tensor) ; the tensor is the end of node.
+	    (if (grad-tmp-value (waffetensor-grad-tmp tensor)) ; is grad-tmp already created?
+		(if (typep (waffetensor-grad tensor) 'cons) ; is it first value? or not?
+		    (let ((new-grad (grad-tmp-value (waffetensor-grad-tmp tensor))))
+		      (if (typep (data new-grad) 'mgl-mat:mat)
+			  (if (equal (!shape new-grad) (!shape tensor))
+			      (setf (waffetensor-grad tensor) (data new-grad))
+			      (setf (waffetensor-grad tensor) (data (!reshape new-grad (!shape tensor))))) ; is it due to bugs of reshape?
+			  (setf (waffetensor-grad tensor) (data new-grad))))
+		    (setf (waffetensor-grad tensor)
+			  (data (!add (waffetensor-grad tensor) (grad-tmp-value (waffetensor-grad-tmp tensor))))))))))
   nil)
 
 
@@ -465,7 +471,9 @@
 (defun !full-like ())
 
 (defmacro detach (tensor)
-  `(const (data ,tensor)))
+  `(typecase (data ,tensor)
+     (mgl-mat:mat (const (the mgl-mat:mat (mgl-mat:copy-mat (data ,tensor)))))
+     (T (const (data ,tensor)))))
 
 (defun write-description (res backward backend)
   ; Parameter { ... <= here }
