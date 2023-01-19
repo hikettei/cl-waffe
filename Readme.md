@@ -1,14 +1,15 @@
 
-# cl-waffe, a deep-learning library, that is mgl-based and extensible and easy to use.
+# cl-waffe
 
-This package is still under development.
+**This package is still under development.**
 
-I'm building this package for my studying data science. So the features could be insufficient to practice.
+cl-waffe is a deeplearning framework for CommonLisp.
 
-The future goal is that easy to use, not speed, since building neural networks in common lisp is tend to be complicated.
+I'm building this package for my data science studies. So the features might not be sufficient for practical use.
 
-However, cl-waffe is at least faster than PyTorch in the benchmark following, using excellent libraries such as mgl-mat, and numcl.
+The future goal is ease of use, not speed, as building neural networks in common lisp is rather complicated.
 
+However, cl-waffe is at least faster than PyTorch ~~in the following benchmark~~, using excellent libraries like mgl-mat, and numcl.
 
 # Tutorials
 
@@ -110,19 +111,23 @@ $ ./run-test-model.ros mnist
 
 # Workload/Todo
 
-・Speed up whole code
+・Make full documentations and quickstart guide for JP and EN.
+
+・Speed up whole codes, especially when forward
+
+・Implement a convenient data loader package and avoid users having to implement it themselves.
+
+・support cuda in some operations
 
 ・Implement the features for NLP, (e.g. Embedding, LSTM...)
 
-・Current definition of adam is too slow to use, so i need to optimize
+・~~Current definition of adam is too slow to use, so i need to optimize~~ (Done)
 
 ・More functions for mathmatics.
 
 ・3d mat operations
 
 ・save and restore models
-
-・Automatic convert from non-destructive operation to !modify call in forward process.
 
 # Tutorials
 
@@ -147,10 +152,3 @@ hikettei (Twitter: @ichndm, github:@hikettei)
 SBCL 2.2.5
 macOS Monterey version 12.4
 ```
-
-
-# Welcome To cl-waffe!
-
-cl-waffeはCommonLispで実装されたDeeplearningのライブラリです。
-
-cl-waffeでは以下の3つのマクロと2つの拡張用のマクロを用いてネットワークを定義していきます。
