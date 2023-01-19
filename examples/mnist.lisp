@@ -10,13 +10,11 @@
 
 (defmodel MLP (activation)
   :parameters ((layer1   (denselayer (* 28 28) 512 T activation))
-	       (dropout1 (dropout 0.5))
 	       (layer2   (denselayer 512 256 T activation))
 	       (layer3   (linearlayer 256 10 T)))
   :forward ((x)
 	    (with-calling-layers x
 	      (layer1 x)
-	      (dropout1 x)
  	      (layer2 x)
 	      (layer3 x))))
 
