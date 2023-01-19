@@ -221,7 +221,22 @@
   (call node (assure-tensor x)))
 
 (defun !reshape (x dim)
-  (call (ReshapeTensor (assure-tensor dim)) (assure-tensor x)))
+  "(!reshape x dim) ,if dim has t, t is automatically predicted."
+  (if (find t dim)
+      (progn
+	(unless (= (count t dim) 1)
+	  (error "cl-waffe:!reshape: auto inference of shape supports only when (count t dim) = 1"))
+	(let* ((dim (copy-list dim))
+	       (total-size  (apply #'* (!shape x)))
+	       (remain-size (apply #'* (map 'list (lambda (x)
+						    (if (eql x T)
+							1
+							x))
+					    dim)))
+	       (predicted-dim (/ total-size remain-size)))
+	  (setf (nth (position t dim) dim) predicted-dim)
+	  (call (ReshapeTensor (assure-tensor dim)) (assure-tensor x))))
+      (call (ReshapeTensor (assure-tensor dim)) (assure-tensor x))))
 
 (defun !repeats (x axis repeats)
   (call (RepeatTensor (assure-tensor axis) (assure-tensor repeats)) (assure-tensor x)))
