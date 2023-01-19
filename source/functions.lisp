@@ -8,8 +8,9 @@
   :forward ((x)
 	    (if (equal (self zero-buff) T)
 		(setf (self zero-buff) (!zeros (!shape x))))
-	    (setf (self path-through) (with-searching-calc-node :< x (self zero-buff)))
-	    (!mul (self path-through) x))
+	    (let ((mask (with-searching-calc-node :< x (self zero-buff))))
+	      (save-for-backward path-through mask)
+	      (!mul mask x)))
   :backward ((dy)
 	     (list (!mul (self path-through) dy))))
 
@@ -20,7 +21,7 @@
   :optimize t
   :parameters ((xi T))
   :forward ((x)
-	    (setf (self xi) x)
+	    (save-for-backward xi x)
             (!div (!add 1 (!tanh (!div x 2))) (const 2)))
   :backward ((dy) (let ((p (!sigmoid (self xi))))
 		    (list (!mul p (!mul dy (!sub 1 p)))))))
@@ -32,7 +33,7 @@
   :optimize t
   :parameters ((xi T))
   :forward ((x)
-	    (setf (self xi) x)
+	    (save-for-backward xi x)
 	    (with-searching-calc-node :tanh x))
   :backward ((dy)
 	     (list (!mul dy (!sub (const 1) (!pow (!tanh (self xi)) 2))))))

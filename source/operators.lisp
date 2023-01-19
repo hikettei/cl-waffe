@@ -24,7 +24,7 @@
 				        	    (:reshape . :reshape)
 						    (:< . :<)
 						    (:bernoulli . :bernoulli))))
-(declaim (inline !div !reshape !transpose))
+(declaim (inline !div !transpose))
 
 (defnode AddTensor nil
   :optimize t
@@ -43,8 +43,8 @@
   :optimize t
   :parameters ((xi T) (yi T))
   :forward ((x y)
-	    (setf (self xi) (data x))
-	    (setf (self yi) (data y))
+	    (setf (self xi) x)
+	    (setf (self yi) y)
 	    (with-searching-calc-node :mul x y))
   :backward ((dy) (list (!modify (self yi) :*= dy)
 			(!modify (self xi) :*= dy))))
@@ -53,8 +53,8 @@
   :optimize t
   :parameters ((xi T) (yi T))
   :forward ((x y)
-            (setf (self xi) (data x))
-	    (setf (self yi) (data y))
+            (save-for-backward xi x)
+	    (save-for-backward yi y)
 	    (with-searching-calc-node :div x y))
   :backward ((dy) (list (!div dy (self yi))
 			(!div (!modify (!modify (self xi) :*= dy) :*= -1)
@@ -63,11 +63,12 @@
 (defnode PowTensor nil
   :optimize t
   :parameters ((xi T) (yi T))
-  :forward ((x1 y1) (setf (self xi) (data x1))
-		    (setf (self yi) (data y1))
-		    (with-searching-calc-node :pow x1 y1))
+  :forward ((x1 y1)
+	    (save-for-backward xi x1)
+	    (save-for-backward yi y1)
+	    (with-searching-calc-node :pow x1 y1))
   :backward ((dy)
-	     (list (!modify (!mul dy (self yi)) :*= (!pow (self xi) (- (self yi) 1)))
+	     (list (!modify (!mul dy (self yi)) :*= (!pow (self xi) (- (data (self yi)) 1)))
 		   (!modify (!modify
 			     (!log (self xi)) :*=
 			     (!modify (self xi) :^= (self yi)))
@@ -76,7 +77,7 @@
 (defnode SqrtTensor nil
   :optimize t
   :parameters ((xi T))
-  :forward ((x1) (setf (self xi) x1)
+  :forward ((x1) (save-for-backward xi x1)
 		 (with-searching-calc-node :sqrt x1))
   :backward ((dy)
 	     (list (!div dy (!modify (!modify (self xi) :sqrt) :*= 2)))))
@@ -84,7 +85,7 @@
 (defnode LogTensor nil
   :optimize t
   :parameters ((x1 T))
-  :forward ((x1) (setf (self x1) x1)
+  :forward ((x1) (save-for-backward x1 x1)
 		 (with-searching-calc-node :log x1))
   :backward ((dy) (list (!div dy (self x1)))))
 
@@ -100,8 +101,8 @@
   :optimize t
   :parameters ((xi T) (yi T))
   :forward ((x1 x2) ; only supports 2d and 2d arrays
-		    (setf (self xi) x1)
-		    (setf (self yi) x2)
+		    (save-for-backward xi x1)
+		    (save-for-backward yi x2)
 		    (with-searching-calc-node :dot x1 x2))
   :backward ((dy)
 	       (list (!dot dy (!transpose (self yi)))
@@ -142,7 +143,7 @@
 (defnode ExpTensor ()
   :optimize t
   :parameters ((xi T))
-  :forward ((x) (setf (self xi) x)
+  :forward ((x) (save-for-backward xi x)
 		(with-searching-calc-node :exp x))
   :backward ((dy)
 	     (list (!modify (!exp (self xi)) :*= dy))))
@@ -150,8 +151,8 @@
 (defnode MatMulTensor ()
   :optimize t
   :parameters ((xi T) (yi T))
-  :forward ((x y) (setf (self xi) x)
-		  (setf (self yi) y)
+  :forward ((x y) (save-for-backward xi x)
+		  (save-for-backward yi y)
 		  (with-searching-calc-node :matmul x y))
   :backward ((dy)
 	     (list (!matmul dy (!transpose (self yi)))
@@ -221,7 +222,22 @@
   (call node (assure-tensor x)))
 
 (defun !reshape (x dim)
-  (call (ReshapeTensor (assure-tensor dim)) (assure-tensor x)))
+  "(!reshape x dim) ,if dim has t, t is automatically predicted."
+  (if (find t dim)
+      (progn
+	(unless (= (count t dim) 1)
+	  (error "cl-waffe:!reshape: auto inference of shape supports only when (count t dim) = 1"))
+	(let* ((dim (copy-list dim))
+	       (total-size  (apply #'* (!shape x)))
+	       (remain-size (apply #'* (map 'list (lambda (x)
+						    (if (eql x T)
+							1
+							x))
+					    dim)))
+	       (predicted-dim (/ total-size remain-size)))
+	  (setf (nth (position t dim) dim) predicted-dim)
+	  (call (ReshapeTensor (assure-tensor dim)) (assure-tensor x))))
+      (call (ReshapeTensor (assure-tensor dim)) (assure-tensor x))))
 
 (defun !repeats (x axis repeats)
   (call (RepeatTensor (assure-tensor axis) (assure-tensor repeats)) (assure-tensor x)))

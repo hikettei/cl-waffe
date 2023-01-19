@@ -10,30 +10,32 @@
 
 (defmacro apply-destruct (out)
   `(progn ; tensor=out
-     (setf (waffetensor-is-data-destructed? ,out) t)
-     (setf (waffetensor-destructively-calln ,out) 1))
+     (setf (waffetensor-is-data-destructed? ,out) t))
   nil)
 
 (defmacro assure-destructed? (out) ;for automatic !modify
   `(progn
-     (unless (waffetensor-destructive? ,out)
+     (if (waffetensor-is-data-destructed? ,out)
        (error "Kernel Error: Modifying tensor that is not allowed to destruct"))
      (the mgl-mat:mat (data ,out))))
+
+(defmacro will-be-destructed (tensor)
+  `(waffetensor-is-next-destruct? ,tensor))
 
 (defgeneric decide-out-buffer (out args enable-optim))
 
 (defmethod decide-out-buffer ((out waffetensor) (args waffetensor) enable-optim)
-  (declare (ignore out))
-  (apply-destruct out)
-  (if enable-optim; (waffetensor-destructive? out)) ; when =t, 4x times faster.
-      (data args);(assure-destructed? out)
+  (if (or enable-optim (waffetensor-is-next-destruct? out)) ; when =t, 4x times faster.
+      (let ((result (assure-destructed? out)))
+	(apply-destruct out)
+	result)
       (duplicate-tensor (data args))))
 
 (defmethod decide-out-buffer ((out waffetensor) (args mgl-mat:mat) enable-optim)
-  (declare (ignore out))
-  (apply-destruct out)
-  (if enable-optim ;(waffetensor-destructive? out)) 
-      args;(assure-destructed? out)
+  (if (or enable-optim (waffetensor-is-next-destruct? out))
+      (let ((result (assure-destructed? out)))
+	(apply-destruct out)
+	result)
       (duplicate-tensor args)))
 
 (defmethod decide-out-buffer ((out null) (args waffetensor) enable-optim)
@@ -119,9 +121,16 @@
 (defmethod add-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) (y mgl-mat:mat))
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (ignore out1))
-  (let ((o (decide-out-buffer out x enable-optimize?)))
-    (mgl-mat:axpy! 1.0 y o)
-    o))
+  (cond
+    ((will-be-destructed out)
+     (let ((o (decide-out-buffer out x enable-optimize?)))
+       (mgl-mat:axpy! 1.0 y o)
+       o))
+    ((will-be-destructed out1)
+     (add-tensor enable-optimize? out1 out y x))
+    (T (let ((o (decide-out-buffer out x enable-optimize?)))
+	 (mgl-mat:axpy! 1.0 y o)
+	 o))))
 
 (defmethod add-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) y)
   (declare (optimize (speed 3) (space 0) (safety 0))
@@ -139,9 +148,16 @@
 (defmethod sub-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) (y mgl-mat:mat))
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (ignore out1))
-  (let ((o (decide-out-buffer out x enable-optimize?)))
-    (mgl-mat:axpy! -1.0 y o)
-    o))
+  (cond
+    ((will-be-destructed out)
+     (let ((o (decide-out-buffer out x enable-optimize?)))
+       (mgl-mat:axpy! -1.0 y o)
+       o))
+    ((will-be-destructed out1) ;x-y, -(y-x) = x-y
+     (mgl-mat:scal! -1.0 (sub-tensor enable-optimize? out1 out y x)))
+    (T (let ((o (decide-out-buffer out x enable-optimize?)))
+	 (mgl-mat:axpy! -1.0 y o)
+	 o))))
 
 (defmethod sub-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) y)
   (declare (optimize (speed 3) (space 0) (safety 0))
@@ -158,8 +174,16 @@
 (defgeneric mul-tensor (enable-optimize? out out1 x y))
 (defmethod mul-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) (y mgl-mat:mat))
   (declare (optimize (speed 3) (space 0) (safety 0)))
-  (let ((o (mgl-mat:make-mat (mgl-mat:mat-dimensions x))))
-    (mgl-mat:geem! 1 x y 0 o)))
+
+  (cond
+    ((will-be-destructed out)
+     (let ((o (decide-out-buffer out x enable-optimize?)))
+       (mgl-mat:geem! 1 x y 0 o)))
+    ((will-be-destructed out1)
+     (mul-tensor enable-optimize? out1 out y x))
+    (T
+     (let ((o (mgl-mat:make-mat (mgl-mat:mat-dimensions x))))
+       (mgl-mat:geem! 1 x y 0 o)))))
 
 (defmethod mul-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) x (y mgl-mat:mat))
   (declare (optimize (speed 3) (space 0) (safety 0))
@@ -365,6 +389,44 @@
 			:grid-dim (list (ceiling (mat-size o) 256) 1 1)
 			:block-dim (list 256 1 1)))
 	(bernoulli-lisp o (mat-displacement o) (mat-size o) (data rate)))))
+
+(define-lisp-kernel (embedding-forward-lisp)
+    ((out :mat :io)
+     (x :mat :io)
+     (weights :mat :io)
+     (n fixnum)
+     (vocab-size fixnum)
+     (pad-idx fixnum)
+     (slen fixnum))
+  (loop for xi upfrom 0 below n
+	do (multiple-value-bind (i _) (round (aref x xi))
+	     (let ((nth (round (/ xi slen))))
+	     (declare (ignore _))
+	     (cond ((= i pad-idx) nil)
+		   (t (loop for ei upfrom 0 below vocab-size
+			    do (if (= ei i)
+				   (setf (aref out (+ xi ei (* nth vocab-size)))
+					 1.0)
+				   (setf (aref out (+ xi ei (* nth vocab-size)))
+					 0.0)))))))))
+
+(defun embedding-forward (enable-optimize x weights vocab-size pad-idx)
+  (declare (type boolean enable-optimize)
+	   (type waffetensor out x weights vocab-size pad-idx)
+	   (ignore enable-optimize))
+  (let* ((batch-size (mat-dimension (data x) 0))
+	 (total-size (mat-dimension (data x) 1))
+	 (out (mgl-mat:make-mat `(,batch-size ,total-size ,(data vocab-size)))))
+    ; no cuda ver...
+    (embedding-forward-lisp
+     out
+     (data x)
+     (data weights)
+     (mat-size (data x))
+     (data vocab-size)
+     (data pad-idx)
+     total-size)
+    out))
 
 (declaim (ftype (function (keyword boolean waffetensor waffetensor cons) (or mgl-mat:mat cl-waffe:waffedatatype)) dispatch-kernel))
 (defun dispatch-kernel (function is-first-time-call? destructable-tensor destructable-tensor1 args)
