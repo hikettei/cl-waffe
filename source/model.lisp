@@ -140,6 +140,7 @@
 	   (define-node-method call-forward  ,name ,(car forward)  ,(cdr forward) ,hide-from-tree ,optimize)
 	   (define-node-method call-backward ,name ,(car backward) ,(cdr backward) ,hide-from-tree ,optimize)
 	   (defun ,name (&rest init-args)
+	     ; args cant displayed in emacs slime
 	     (apply #',constructor-name init-args))))))
 
 (defun render-simple-model-structure (stream model)

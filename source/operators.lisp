@@ -43,8 +43,8 @@
   :optimize t
   :parameters ((xi T) (yi T))
   :forward ((x y)
-	    (setf (self xi) x)
-	    (setf (self yi) y)
+	    (save-for-backward xi x)
+	    (save-for-backward yi y)
 	    (with-searching-calc-node :mul x y))
   :backward ((dy) (list (!modify (self yi) :*= dy)
 			(!modify (self xi) :*= dy))))

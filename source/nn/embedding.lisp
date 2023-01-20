@@ -9,20 +9,24 @@
   :parameters ((xi T)
 	       (vocab-size vocab-size :type fixnum)
 	       (embedding-dim embedding-dim :type fixnum)
-	       (padding-idx (if padding-idx
-				padding-idx
-				-1)
-			    :type fixnum)
+	       (padding-idx (if pad-idx
+				(const pad-idx)
+				(const -1))
+			    :type waffetensor)
 	       (weights (parameter (!mul 0.01 (!randn `(,vocab-size, embedding-dim))))))
 
   :forward ((x)
 	    "Embedding(x) where x is the shape of (batch-size length)"
-	    (setf (self xi) x)
+	    (save-for-backward xi x)
 	    (with-searching-calc-node :embedding-forward
 	      x
 	      (self weights)
-	      (self vocab-size)
 	      (self padding-idx)))
 
   :backward ((dy)
-	     (list (with-searching-calc-node :embedding-backward (self x) (self weights)))))
+	     (list
+	      (with-searching-calc-node :embedding-backward
+		(self xi)
+		dy
+		(self weights)
+		(self pad-idx)))))

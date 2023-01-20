@@ -9,7 +9,9 @@
 	   
            :dropout
            :batchnorm2d
-	   
+
+           :embedding
+   
 	   :mse
 	   :softmax-cross-entropy
            :cross-entropy))
