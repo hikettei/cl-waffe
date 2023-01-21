@@ -1,7 +1,6 @@
 
 (in-package :cl-waffe.nn)
 
-; not working...
 (defnode Embedding (vocab-size
 		    embedding-dim
 		    &optional
