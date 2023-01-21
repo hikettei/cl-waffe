@@ -40,6 +40,9 @@
 	   #:update
 	   #:zero-grad
 
+	   #:model-list
+	   #:with-model-list
+
 	   #:forward
 	   #:backward
 	   #:parameters

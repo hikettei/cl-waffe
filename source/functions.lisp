@@ -53,5 +53,50 @@
 	 (z (!sum (!exp x1) 1 t)))
     (!div (!exp x1) z)))
 
+(defmodel model-list (model-args)
+  ;Define model sequentially, (e.g. x = (sequence `((layer1) (layer2))), (call x 1 tensor) => layer1's output)
+  :parameters ((mlist model-args))
+  :forward ((index &rest args)
+	    (apply #'call (nth (data index) (self mlist)) args)))
 
+(defun !faref (tensor &rest dims)
+  "Example: (!aref vector 1 t t) (!aref vector '(1 3) t t)"
+  (let* ((dims (cond
+		((> (!dims tensor) (length dims))
+		 (concatenate ; complement lacking dims with t
+		  'list
+		  dims
+		  (repeat-n t (- (!dims tensor) (length dims)))))
+		((= (!dims tensor) (length dims))
+		 dims)
+		(T
+		 (error "!aref: dim ~a beyonds tensor's dim" dims))))
+	 (dims-result (mapcar (lambda (x y) (if (typep x 'fixnum)
+						1
+						(if (typep x 'list)
+						    (progn
+						      (unless (= (length x) 2)
+							(error "!aref: an argument is following: index, t, '(from start). ~a is invaild." x))
+						      (- (second x) (car x)))
+						    y)))
+			      dims (!shape tensor)))
+	 (dims-displacements (map 'list (lambda (x)
+					  (typecase x
+					    (fixnum x)
+					    (list (car x))
+					    (T 0)))
+				  dims))
+	 (result (!zeros dims-result)))
 
+    (loop for dim upfrom 0 below (cond
+				   ((= 1 (!dims tensor))
+				    1)
+				   (T (1- (!dims tensor))))
+	  do (dotimes (nth-axis (!shape result dim))
+	       (cl-waffe.backends.mgl:write-to-nth-dim-with-range
+		(data result)
+		(data tensor)
+		dim
+		nth-axis
+		(nth dim dims-displacements))))
+    result))

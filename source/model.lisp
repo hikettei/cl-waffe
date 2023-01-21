@@ -46,6 +46,9 @@
 							   nil)))))
     result))
 
+(defmacro with-model-list (&rest models)
+  `(model-list ,models))
+
 (defmacro is-waffe-model (model)
   `(and (slot-exists-p ,model 'parameters)
         (slot-exists-p ,model 'hide-from-tree)
@@ -55,11 +58,15 @@
 (defun find-variables (model)
   (let ((parameters `(T)))
     (labels ((search-param (m)
-	       (if (is-waffe-model m)
-		   (dolist (p (slot-value m 'parameters))
-		     (search-param (slot-value m p)))
-		   (if (typep m 'WaffeTensor)
-		       (push m parameters)))))
+	       (cond
+		 ((typep m 'model-list)
+		  (dolist (p (slot-value m 'mlist))
+		    (search-param p)))
+		 ((is-waffe-model m)
+		  (dolist (p (slot-value m 'parameters))
+		    (search-param (slot-value m p))))
+		 ((typep m 'WaffeTensor)
+		  (push m parameters)))))
       (search-param model)
       (if (= (length parameters) 1)
 	  (error "Could not find any parameter")
@@ -140,7 +147,7 @@
 	   (define-node-method call-forward  ,name ,(car forward)  ,(cdr forward) ,hide-from-tree ,optimize)
 	   (define-node-method call-backward ,name ,(car backward) ,(cdr backward) ,hide-from-tree ,optimize)
 	   (defun ,name (&rest init-args)
-	     ; args cant displayed in emacs slime
+	     ; cant displayed args in emacs, slime
 	     (apply #',constructor-name init-args))))))
 
 (defun render-simple-model-structure (stream model)

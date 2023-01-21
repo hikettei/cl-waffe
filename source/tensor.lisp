@@ -293,11 +293,14 @@
 
 
 ; !aref is ridiculously slow... due to mainly mref. for refering batch, use !cut-batch
-(defun !aref (tensor &rest dims) ; example: (aref vector 1 t t)
-  (let* ((tensor-dims (!shape tensor)) ; Todo: (aref vector '(1 3) t t)
+(defun !aref (tensor &rest dims) ; example: (aref vector 1 t t), (aref vector `(1 3) t t)
+  (let* ((tensor-dims (!shape tensor))
 	 (dims (cond
-		   ((> (!dims tensor) (length dims)) ;supply dims
-		    (concatenate 'list dims (repeat-n t (- (!dims tensor) (length dims)))) )
+		   ((> (!dims tensor) (length dims))
+		    (concatenate ; complement lacking dims with t
+		     'list
+		     dims
+		     (repeat-n t (- (!dims tensor) (length dims)))))
 		 ((= (!dims tensor) (length dims)) dims)
 		 (T (error "!aref: dim ~a beyonds tensor's dim" dims))))
 	 (dims-result (mapcar (lambda (x y) (if (typep x 'fixnum)
@@ -317,6 +320,7 @@
 					 (repeat-c (- (second x) (car x)) :start (car x))
 					 (repeat-c y))))
 			       dims dims-result)))
+    
     (labels ((next-node (drest args rargs)
 	       (if (= (length args) (length dims))
 		   (progn ; emmm...
@@ -330,53 +334,12 @@
 		     (next-node (cdr drest)
 				(concatenate 'list args `(,(nth i (car drest))))
 			        (concatenate 'list rargs `(,i)))))))
-
 	(next-node dims-indices nil nil)
 
       ;(call (CutTensor result) tensor))
-    result)))
+      result)))
 
-(defun (setf !aref) (value &optional tensor &rest dims) ; (setf tensor value)
-  (let* ((tensor-dims (!shape value))
-	 (dims (cond
-		   ((> (!dims tensor) (length dims)) ;supply dims
-		    (concatenate 'list dims (repeat-n t (- (!dims tensor) (length dims)))) )
-		 ((= (!dims tensor) (length dims)) dims)
-		 (T (error "!aref: dim ~a beyonds tensor's dim" dims))))
-	 (dims-result (mapcar (lambda (x y) (if (typep x 'fixnum)
-						 1
-						 y))
-			      dims tensor-dims))
-	 (result (!copy tensor))
-	 (dims-indices (mapcar (lambda (x y)
-				 (if (typep x 'fixnum)
-				     1
-				     (repeat-c y)))
-			       dims dims-result)))
-    (unless (and (mapcar (lambda (x y)
-			   (if (typep y 'fixnum)
-			       (eq x y)
-			       t))
-			 (!shape value) dims-result))
-      (error "(setf !aref): mismatch dims ~a and ~a" (!shape value) dims-result))
-    
-    (labels ((next-node (drest args rargs)
-	       (if (= (length args) (length dims))
-		   (progn
-		     (eval `(setf (mgl-mat:mref (data ,result) ,@args)
-				  (mgl-mat:mref (data ,value)  ,@rargs)))))
-	       (if (typep (car drest) 'fixnum)
-		   (next-node (cdr drest) (concatenate 'list args
-						       `(,(nth (length args) dims)))
-			      (concatenate 'list rargs `(0)))
-		   (dolist (m (car drest))
-		     (next-node (cdr drest)
-				(concatenate 'list args `(,m))
-				(concatenate 'list rargs `(,m)))))))
-      (next-node dims-indices nil nil)
-      ;(setf tensor (call (CutTensor value) tensor))
-      (setf tensor result))))
-
+	 
 (defmacro !where ()) ; todo
 (defmacro !index ()) ; todo
 
