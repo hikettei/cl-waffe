@@ -86,17 +86,34 @@
 					    (list (car x))
 					    (T 0)))
 				  dims))
-	 (result (!zeros dims-result)))
+	 (result (!zeros dims-result))
+	 (bias 0)
+	 (total-bias 0))
+    
+    (map 'list (lambda (x y)
+		 (etypecase y
+		   (boolean nil)
+		   (fixnum (if (<= x y)
+			       (error "!aref: the number ~a must be < ~a" y x)))
+		   (list (if (<= x (second y))
+			     (error "!aref: the number ~a must be < ~a" y x)))
+		   (T nil)))			     
+	 (!shape tensor) dims)
 
-    (loop for dim upfrom 0 below (cond
-				   ((= 1 (!dims tensor))
-				    1)
-				   (T (1- (!dims tensor))))
-	  do (dotimes (nth-axis (!shape result dim))
-	       (cl-waffe.backends.mgl:write-to-nth-dim-with-range
-		(data result)
-		(data tensor)
-		dim
-		nth-axis
-		(nth dim dims-displacements))))
+    (loop for dim upfrom 0 below (!dims tensor)
+	  do
+	     (if (or (= dim 0)
+		     (not (eql T (nth dim dims))))
+		 (progn
+		 (dotimes (nth-axis (!shape result dim))
+		   (setq bias
+		    (cl-waffe.backends.mgl:write-to-nth-dim-with-range
+		    (data result)
+		    (data tensor)
+		    dim
+		    nth-axis
+		    (nth dim dims-displacements)
+		    total-bias)))
+		 (if (not (eql T (nth dim dims)))
+		     (incf total-bias bias)))))
     result))

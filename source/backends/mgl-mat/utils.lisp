@@ -7,13 +7,14 @@
      (target-axis fixnum)
      (start fixnum)
      (doeach-out fixnum)
-     (doeach fixnum))
+     (doeach fixnum)
+     (bias fixnum))
   (loop for oi of-type fixnum upfrom 0 below doeach-out
         do (setf (aref out (+ oi
 			      (the fixnum
 				   (* target-axis doeach-out))))
 		 (aref copy-from-mat
-		       (+ oi
+		       (+ oi bias
 			  (the fixnum
 			       (* (the fixnum (+ start target-axis)) doeach)))))))
 
@@ -38,7 +39,8 @@
 				    copy-from-mat
 				    target-dim
 				    target-axis
-				    start)
+				    start
+				    bias)
   (if t;(use-cuda-p out)
       (write-to-nth-dim-with-range-lisp
        out
@@ -46,5 +48,6 @@
        target-axis
        start
        (get-difference out target-dim)
-       (get-difference copy-from-mat target-dim)))
-  out)
+       (get-difference copy-from-mat target-dim)
+       bias))
+  (get-difference copy-from-mat target-dim))
