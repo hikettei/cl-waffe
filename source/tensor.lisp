@@ -291,54 +291,17 @@
     (reshape-and-displace! (data dataset) (list len dim) 0)
     dataset))
 
-
-; !aref is ridiculously slow... due to mainly mref. for refering batch, use !cut-batch
 (defun !aref (tensor &rest dims) ; example: (aref vector 1 t t), (aref vector `(1 3) t t)
-  (let* ((tensor-dims (!shape tensor))
-	 (dims (cond
-		   ((> (!dims tensor) (length dims))
-		    (concatenate ; complement lacking dims with t
-		     'list
-		     dims
-		     (repeat-n t (- (!dims tensor) (length dims)))))
-		 ((= (!dims tensor) (length dims)) dims)
-		 (T (error "!aref: dim ~a beyonds tensor's dim" dims))))
-	 (dims-result (mapcar (lambda (x y) (if (typep x 'fixnum)
-						1
-						(if (typep x 'list)
-						    (progn
-						      (unless (= (length x) 2)
-							(error "!aref: an argument is following: index t `(from start)"))
-						      (- (second x) (car x)))
-						    y)))
-			      dims tensor-dims))
-	 (result (!zeros dims-result))
-	 (dims-indices (mapcar (lambda (x y)
-				 (if (typep x 'fixnum)
-				     1
-				     (if (typep x 'list)
-					 (repeat-c (- (second x) (car x)) :start (car x))
-					 (repeat-c y))))
-			       dims dims-result)))
-    
-    (labels ((next-node (drest args rargs)
-	       (if (= (length args) (length dims))
-		   (progn ; emmm...
-		     (eval `(setf (mgl-mat:mref (data ,result) ,@rargs)
-				  (mgl-mat:mref (data ,tensor) ,@args)))))
-	       (if (typep (car drest) 'fixnum)
-		   (next-node (cdr drest) (concatenate 'list args
-						       `(,(nth (length args) dims)))
-			      (concatenate 'list rargs `(0)))
-		   (dotimes (i (length (car drest)))
-		     (next-node (cdr drest)
-				(concatenate 'list args `(,(nth i (car drest))))
-			        (concatenate 'list rargs `(,i)))))))
-	(next-node dims-indices nil nil)
+  (call (ArefTensor dims) tensor))
 
-      ;(call (CutTensor result) tensor))
-      result)))
+(defun !areflist (tensor dims)
+  (call (ArefTensor dims) tensor))
 
+(defun (setf !aref) (value tensor &rest dims)
+  (setf (!areflist tensor dims) value))
+
+(defun (setf !areflist) (value tensor dims)
+  )
 	 
 (defmacro !where ()) ; todo
 (defmacro !index ()) ; todo

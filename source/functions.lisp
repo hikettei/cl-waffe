@@ -59,8 +59,19 @@
   :forward ((index &rest args)
 	    (apply #'call (nth (data index) (self mlist)) args)))
 
+(defnode ArefTensor (shape)
+  :parameters ((shape shape)
+	       (base-shape T))
+
+  :forward ((x) (setf (self base-shape) (!shape x))
+		(apply #'!faref x (self shape)))
+  :backward ((dy)
+	     (let ((dy-n (!zeros (self base-shape))))
+	       (setf (!areflist dy-n (self shape)) dy))))
+
 (defun !faref (tensor &rest dims)
-  "Example: (!aref vector 1 t t) (!aref vector '(1 3) t t)"
+  "Example: (!aref vector 1 t t) (!aref vector '(1 3) t t)
+  list args: (a b), cut arbitary dims in the range of a<=x<b"
   (let* ((dims (cond
 		((> (!dims tensor) (length dims))
 		 (concatenate ; complement lacking dims with t
@@ -104,6 +115,65 @@
 	  do
 	     (if (or (= dim 0)
 		     (not (eql T (nth dim dims))))
+		 (progn
+		 (dotimes (nth-axis (!shape result dim))
+		   (setq bias
+		    (cl-waffe.backends.mgl:write-to-nth-dim-with-range
+		    (data result)
+		    (data tensor)
+		    dim
+		    nth-axis
+		    (nth dim dims-displacements)
+		    total-bias)))
+		 (if (not (eql T (nth dim dims)))
+		     (incf total-bias bias)))))
+    result))
+
+(defun !write-faref (target tensor &rest dims)
+  "Example: (!aref vector 1 t t) (!aref vector '(1 3) t t)"
+  (let* ((dims (cond
+		((> (!dims tensor) (length dims))
+		 (concatenate ; complement lacking dims with t
+		  'list
+		  dims
+		  (repeat-n t (- (!dims tensor) (length dims)))))
+		((= (!dims tensor) (length dims))
+		 dims)
+		(T
+		 (error "!aref: dim ~a beyonds tensor's dim" dims))))
+	 (dims-result (mapcar (lambda (x y) (if (typep x 'fixnum)
+						1
+						(if (typep x 'list)
+						    (progn
+						      (unless (= (length x) 2)
+							(error "!aref: an argument is following: index, t, '(from start). ~a is invaild." x))
+						      (- (second x) (car x)))
+						    y)))
+			      dims (!shape tensor)))
+	 (dims-displacements (map 'list (lambda (x)
+					  (typecase x
+					    (fixnum x)
+					    (list (car x))
+					    (T 0)))
+				  dims))
+	 (result target)
+	 (bias 0)
+	 (total-bias 0))
+    (declare (ignore dims-result))
+    
+    (map 'list (lambda (x y)
+		 (etypecase y
+		   (boolean nil)
+		   (fixnum (if (<= x y)
+			       (error "!aref: the number ~a must be < ~a" y x)))
+		   (list (if (<= x (second y))
+			     (error "!aref: the number ~a must be < ~a" y x)))
+		   (T nil)))			     
+	 (!shape tensor) dims)
+
+    (loop for dim upfrom 0 below (!dims tensor)
+	  do
+	     (if (not (eql T (nth dim dims)))
 		 (progn
 		 (dotimes (nth-axis (!shape result dim))
 		   (setq bias
