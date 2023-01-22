@@ -86,6 +86,6 @@
 					 xn-s
 					 h)
 				    1)))
-			 (setf (!aref hs t xn t) h)))
+			 (setf (!aref hs t xn) h)))
 	      hs)))
 			 
