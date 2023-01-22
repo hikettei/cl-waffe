@@ -206,8 +206,10 @@
   (if (typep (data tensor) 'mgl-mat:mat)
       (unless (eq (!shape tensor) `(1))
 	(error "grad can be implicitly created only for scalar outputs")))
-  
+
+  (setq *no-grad* nil)
   (backward1 tensor)
+  (setq *no-grad* nil)
   nil)
 
 (declaim (inline step-next-node))
@@ -228,7 +230,7 @@
 	;ただし,最後に constから生成されてたやつは使わないので上書きする
 	(setf (waffetensor-is-next-destruct? grad-before) nil) ; assure grad-before won't be changed
 	; calculating backward(state, dy) -> x.grad, y.grad...
-        (with-no-grad
+        (progn
 	  (let ((grads (funcall (the function (call-backward (waffetensor-state tensor))) grad-before)))
 	    (declare (type list grads)) ; Print Error
 	    (unless (= (length (waffetensor-variables tensor))
@@ -241,7 +243,7 @@
 	    (dotimes (n (length grads))
 	      (step-next-node tensor n)))
 	  nil))
-      (with-no-grad
+      (progn
 	(if (waffetensor-grad tensor) ; the tensor is the end of node.
 	    (if (grad-tmp-value (waffetensor-grad-tmp tensor)) ; is grad-tmp already created?
 		(if (typep (waffetensor-grad tensor) 'cons) ; is it first value? or not?
@@ -301,7 +303,7 @@
   (setf (!areflist tensor dims) value))
 
 (defun (setf !areflist) (value tensor dims)
-  )
+  (apply #'!write-faref tensor value dims))
 	 
 (defmacro !where ()) ; todo
 (defmacro !index ()) ; todo

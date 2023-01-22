@@ -92,7 +92,7 @@
 (defnode ReshapeTensor (shape)
   :optimize t
   :parameters ((prev-shape T) (shape shape))
-  :forward ((x) (setf (self prev-shape) (assure-tensor (!shape x)))
+  :forward ((x) (setf (self prev-shape) (!shape x))
 		(with-searching-calc-node :reshape x (self shape)))
   :backward ((dy)
 	     (list (!reshape dy (self prev-shape)))))

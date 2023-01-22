@@ -67,7 +67,8 @@
 		(apply #'!faref x (self shape)))
   :backward ((dy)
 	     (let ((dy-n (!zeros (self base-shape))))
-	       (setf (!areflist dy-n (self shape)) dy))))
+	       (setf (!areflist dy-n (self shape)) dy)
+	       (list dy-n))))
 
 (defun !faref (tensor &rest dims)
   "Example: (!aref vector 1 t t) (!aref vector '(1 3) t t)
@@ -169,7 +170,7 @@
 		   (list (if (<= x (second y))
 			     (error "!aref: the number ~a must be < ~a" y x)))
 		   (T nil)))			     
-	 (!shape tensor) dims)
+	 (!shape target) dims)
 
     (loop for dim upfrom 0 below (!dims tensor)
 	  do
@@ -187,3 +188,4 @@
 		 (if (not (eql T (nth dim dims)))
 		     (incf total-bias bias)))))
     result))
+
