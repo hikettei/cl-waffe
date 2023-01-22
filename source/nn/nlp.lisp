@@ -58,16 +58,10 @@
 					   :dropout dropout))))
 	       (num-layers num-layers)
 	       (hidden-size hidden-size)
-	       (h-w T))
+	       (biredical biredical))
 
   :forward ((x)
 	    "Input: X = (BatchSize SentenceLength Embedding_Dim)"
-
-	    (if (eql (self h-w) T)
-		(setf (self h-w)
-		      (parameter (!zeros `(,(!shape x 2)
-					   ,(self hidden-size))))))
-	    ;h-wは最後にかける
 
 	    (let* ((batch-size (!shape x 0))
 		   (s-len (!shape x 1))
@@ -84,8 +78,8 @@
 				    (call (self rnn-layers)
 					 (const i)
 					 xn-s
-					 h)
+					 (!squeeze h 1))
 				    1)))
-			 (setf (!aref hs t xn) h)))
+			 (setq hs (setf (!aref hs t xn) h))))
 	      hs)))
-			 
+

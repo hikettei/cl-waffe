@@ -207,7 +207,7 @@
       (unless (eq (!shape tensor) `(1))
 	(error "grad can be implicitly created only for scalar outputs")))
 
-  (setq *no-grad* nil)
+  (setq *no-grad* t)
   (backward1 tensor)
   (setq *no-grad* nil)
   nil)
@@ -221,7 +221,7 @@
 (declaim (ftype (function (waffetensor) null) backward1))
 (defun backward1 (tensor)
   (declare (optimize (speed 3) (space 0) (safety 1))
-   (type waffetensor tensor))
+	   (type waffetensor tensor))
   (if (waffetensor-backward tensor) ;Backward exists?
       (let* ((grad-tmp-before (waffetensor-grad-tmp tensor))
 	     (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top
@@ -300,10 +300,12 @@
   (call (ArefTensor dims) tensor))
 
 (defun (setf !aref) (value tensor &rest dims)
-  (setf (!areflist tensor dims) value))
+  (setf tensor (setf (!areflist tensor dims) value)))
 
 (defun (setf !areflist) (value tensor dims)
-  (apply #'!write-faref tensor value dims))
+  ; For backward, you need to call it like (setq z (setf (!aref x ~) ~))
+  ; To solve this problem, i guess i need more macros.
+  (setf tensor (call (SetfArefTensor dims) tensor value)))
 	 
 (defmacro !where ()) ; todo
 (defmacro !index ()) ; todo

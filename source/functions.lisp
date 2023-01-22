@@ -70,6 +70,16 @@
 	       (setf (!areflist dy-n (self shape)) dy)
 	       (list dy-n))))
 
+(defnode SetfArefTensor (shape)
+  :parameters ((shape shape)
+	       (base-shape T))
+  :forward ((x y)
+	    (setf (self base-shape) (map 'list
+					 (lambda (x) (1- x)) (!shape y)))
+	    (const (data (apply #'!write-faref x y (self shape)))))
+  :backward ((dy)
+	     (list dy (apply #'!faref dy (self base-shape)))))
+
 (defun !faref (tensor &rest dims)
   "Example: (!aref vector 1 t t) (!aref vector '(1 3) t t)
   list args: (a b), cut arbitary dims in the range of a<=x<b"

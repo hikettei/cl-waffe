@@ -150,7 +150,7 @@
 	     ; cant displayed args in emacs, slime
 	     (apply #',constructor-name init-args))))))
 
-(defun render-simple-model-structure (stream model)
+(defun render-simple-model-structure (stream model) ; Todo: More Details
   (format stream "[~a: ~a]" (if (slot-value model 'hide-from-tree)
 				"Node "
 				"Model")
@@ -163,6 +163,7 @@
 (defparameter *initial-indent-size* 4)
 
 (defun render-model-structure (stream model &optional (indent-level 0) (total-param 0) (model-name "Model") (indent-increase 4) (prefix "Param"))
+  ; Todo: More Details
   (if (and (slot-exists-p model 'parameters)
 	   (slot-exists-p model 'hide-from-tree)
 	   (slot-exists-p model 'forward)

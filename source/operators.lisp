@@ -289,7 +289,6 @@
 (defope !exp (ExpTensor) node (x)
   (call node (assure-tensor x)))
 
-
 (declaim (ftype (function ((or mgl-mat:mat waffetensor) keyword &rest (or waffedatatype waffetensor)) waffetensor) !modify))
 (defun !modify (target instruction &rest args)
   (declare (optimize (speed 3) (space 0) (safety 0)))
