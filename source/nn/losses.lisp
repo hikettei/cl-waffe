@@ -14,7 +14,7 @@
   :parameters ((delta delta) (avoid-overflow avoid-overflow) (batch-size T) (out T) (target T))
   :forward ((x y)
 	    (setf (self batch-size) (!shape y 0))
-	    (setf (self target) y)
+	    (save-for-backward target y)
 	    (let ((z (!softmax x :avoid-overflow (self avoid-overflow))))
 	      (setf (self out) z)
 	      (cross-entropy z y (self delta))))

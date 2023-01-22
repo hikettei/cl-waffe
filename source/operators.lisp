@@ -43,8 +43,8 @@
   :optimize t
   :parameters ((xi T) (yi T))
   :forward ((x y)
-	    (setf (self xi) x)
-	    (setf (self yi) y)
+	    (save-for-backward xi x)
+	    (save-for-backward yi y)
 	    (with-searching-calc-node :mul x y))
   :backward ((dy) (list (!modify (self yi) :*= dy)
 			(!modify (self xi) :*= dy))))
@@ -92,7 +92,7 @@
 (defnode ReshapeTensor (shape)
   :optimize t
   :parameters ((prev-shape T) (shape shape))
-  :forward ((x) (setf (self prev-shape) (assure-tensor (!shape x)))
+  :forward ((x) (setf (self prev-shape) (!shape x))
 		(with-searching-calc-node :reshape x (self shape)))
   :backward ((dy)
 	     (list (!reshape dy (self prev-shape)))))
@@ -184,6 +184,7 @@
   (!mul x (!div-old 1 y)))
   
 (defope !dot (DotProductTensor) node (x y)
+  ; Todo: dot excepts 1d tensor
   (call node (assure-tensor x) (assure-tensor y)))
 
 (defun !sum (x &optional (axis nil) (keepdims nil))
@@ -287,7 +288,6 @@
 
 (defope !exp (ExpTensor) node (x)
   (call node (assure-tensor x)))
-
 
 (declaim (ftype (function ((or mgl-mat:mat waffetensor) keyword &rest (or waffedatatype waffetensor)) waffetensor) !modify))
 (defun !modify (target instruction &rest args)

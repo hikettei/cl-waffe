@@ -19,7 +19,8 @@
 
 	   #:waffe-tensor-p
 	   #:waffetensor-is-next-destruct?
-	   
+
+	   #:with-searching-calc-node
 	   #:defmodel
 	   #:defnode
 	   #:defoptimizer
@@ -38,6 +39,9 @@
 	   #:model
 	   #:update
 	   #:zero-grad
+
+	   #:model-list
+	   #:with-model-list
 
 	   #:forward
 	   #:backward

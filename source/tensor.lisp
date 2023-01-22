@@ -206,8 +206,10 @@
   (if (typep (data tensor) 'mgl-mat:mat)
       (unless (eq (!shape tensor) `(1))
 	(error "grad can be implicitly created only for scalar outputs")))
-  
+
+  (setq *no-grad* t)
   (backward1 tensor)
+  (setq *no-grad* nil)
   nil)
 
 (declaim (inline step-next-node))
@@ -219,7 +221,7 @@
 (declaim (ftype (function (waffetensor) null) backward1))
 (defun backward1 (tensor)
   (declare (optimize (speed 3) (space 0) (safety 1))
-   (type waffetensor tensor))
+	   (type waffetensor tensor))
   (if (waffetensor-backward tensor) ;Backward exists?
       (let* ((grad-tmp-before (waffetensor-grad-tmp tensor))
 	     (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top
@@ -228,7 +230,7 @@
 	;ただし,最後に constから生成されてたやつは使わないので上書きする
 	(setf (waffetensor-is-next-destruct? grad-before) nil) ; assure grad-before won't be changed
 	; calculating backward(state, dy) -> x.grad, y.grad...
-        (with-no-grad
+        (progn
 	  (let ((grads (funcall (the function (call-backward (waffetensor-state tensor))) grad-before)))
 	    (declare (type list grads)) ; Print Error
 	    (unless (= (length (waffetensor-variables tensor))
@@ -241,7 +243,7 @@
 	    (dotimes (n (length grads))
 	      (step-next-node tensor n)))
 	  nil))
-      (with-no-grad
+      (progn
 	(if (waffetensor-grad tensor) ; the tensor is the end of node.
 	    (if (grad-tmp-value (waffetensor-grad-tmp tensor)) ; is grad-tmp already created?
 		(if (typep (waffetensor-grad tensor) 'cons) ; is it first value? or not?
@@ -291,92 +293,20 @@
     (reshape-and-displace! (data dataset) (list len dim) 0)
     dataset))
 
+(defun !aref (tensor &rest dims) ; example: (aref vector 1 t t), (aref vector `(1 3) t t)
+  (call (ArefTensor dims) tensor))
 
-; !aref is ridiculously slow... due to mainly mref. for refering batch, use !cut-batch
-(defun !aref (tensor &rest dims) ; example: (aref vector 1 t t)
-  (let* ((tensor-dims (!shape tensor)) ; Todo: (aref vector '(1 3) t t)
-	 (dims (cond
-		   ((> (!dims tensor) (length dims)) ;supply dims
-		    (concatenate 'list dims (repeat-n t (- (!dims tensor) (length dims)))) )
-		 ((= (!dims tensor) (length dims)) dims)
-		 (T (error "!aref: dim ~a beyonds tensor's dim" dims))))
-	 (dims-result (mapcar (lambda (x y) (if (typep x 'fixnum)
-						1
-						(if (typep x 'list)
-						    (progn
-						      (unless (= (length x) 2)
-							(error "!aref: an argument is following: index t `(from start)"))
-						      (- (second x) (car x)))
-						    y)))
-			      dims tensor-dims))
-	 (result (!zeros dims-result))
-	 (dims-indices (mapcar (lambda (x y)
-				 (if (typep x 'fixnum)
-				     1
-				     (if (typep x 'list)
-					 (repeat-c (- (second x) (car x)) :start (car x))
-					 (repeat-c y))))
-			       dims dims-result)))
-    (labels ((next-node (drest args rargs)
-	       (if (= (length args) (length dims))
-		   (progn ; emmm...
-		     (eval `(setf (mgl-mat:mref (data ,result) ,@rargs)
-				  (mgl-mat:mref (data ,tensor) ,@args)))))
-	       (if (typep (car drest) 'fixnum)
-		   (next-node (cdr drest) (concatenate 'list args
-						       `(,(nth (length args) dims)))
-			      (concatenate 'list rargs `(0)))
-		   (dotimes (i (length (car drest)))
-		     (next-node (cdr drest)
-				(concatenate 'list args `(,(nth i (car drest))))
-			        (concatenate 'list rargs `(,i)))))))
+(defun !areflist (tensor dims)
+  (call (ArefTensor dims) tensor))
 
-	(next-node dims-indices nil nil)
+(defun (setf !aref) (value tensor &rest dims)
+  (setf tensor (setf (!areflist tensor dims) value)))
 
-      ;(call (CutTensor result) tensor))
-    result)))
-
-(defun (setf !aref) (value &optional tensor &rest dims) ; (setf tensor value)
-  (let* ((tensor-dims (!shape value))
-	 (dims (cond
-		   ((> (!dims tensor) (length dims)) ;supply dims
-		    (concatenate 'list dims (repeat-n t (- (!dims tensor) (length dims)))) )
-		 ((= (!dims tensor) (length dims)) dims)
-		 (T (error "!aref: dim ~a beyonds tensor's dim" dims))))
-	 (dims-result (mapcar (lambda (x y) (if (typep x 'fixnum)
-						 1
-						 y))
-			      dims tensor-dims))
-	 (result (!copy tensor))
-	 (dims-indices (mapcar (lambda (x y)
-				 (if (typep x 'fixnum)
-				     1
-				     (repeat-c y)))
-			       dims dims-result)))
-    (unless (and (mapcar (lambda (x y)
-			   (if (typep y 'fixnum)
-			       (eq x y)
-			       t))
-			 (!shape value) dims-result))
-      (error "(setf !aref): mismatch dims ~a and ~a" (!shape value) dims-result))
-    
-    (labels ((next-node (drest args rargs)
-	       (if (= (length args) (length dims))
-		   (progn
-		     (eval `(setf (mgl-mat:mref (data ,result) ,@args)
-				  (mgl-mat:mref (data ,value)  ,@rargs)))))
-	       (if (typep (car drest) 'fixnum)
-		   (next-node (cdr drest) (concatenate 'list args
-						       `(,(nth (length args) dims)))
-			      (concatenate 'list rargs `(0)))
-		   (dolist (m (car drest))
-		     (next-node (cdr drest)
-				(concatenate 'list args `(,m))
-				(concatenate 'list rargs `(,m)))))))
-      (next-node dims-indices nil nil)
-      ;(setf tensor (call (CutTensor value) tensor))
-      (setf tensor result))))
-
+(defun (setf !areflist) (value tensor dims)
+  ; For backward, you need to call it like (setq z (setf (!aref x ~) ~))
+  ; To solve this problem, i guess i need more macros.
+  (setf tensor (call (SetfArefTensor dims) tensor value)))
+	 
 (defmacro !where ()) ; todo
 (defmacro !index ()) ; todo
 
@@ -419,7 +349,7 @@
           do (setf (!row-major-aref res n) (gaussiandb-random var mean)))
     res))
 
-(defmacro !randn (dims)
+(defmacro !randn (dims) ; this can be rewrited it by mgl-mat
   `(!normal ,dims 0 1))
 
 (defun !beta (dims a b)

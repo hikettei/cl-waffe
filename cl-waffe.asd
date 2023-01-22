@@ -22,6 +22,7 @@
 	       (:module "backends/mgl-mat"
 		:depends-on ("package" "tensor")
 		:components ((:file "package")
+			     (:file "utils")
 			     (:file "optimizers")
 			     (:file "kernel")))
 	       (:file "package")
@@ -42,6 +43,7 @@
 			     (:file "losses")
 			     (:file "functional")
 			     (:file "norms")
+			     (:file "nlp")
 			     (:file "layers")
 			     (:file "embedding")
 			     (:file "cnn")))))

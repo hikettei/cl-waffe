@@ -390,42 +390,87 @@
 			:block-dim (list 256 1 1)))
 	(bernoulli-lisp o (mat-displacement o) (mat-size o) (data rate)))))
 
+
+;optimize is failed.
 (define-lisp-kernel (embedding-forward-lisp)
     ((out :mat :io)
-     (x :mat :io)
-     (weights :mat :io)
+     (x :mat)
+     (weights :mat)
      (n fixnum)
-     (vocab-size fixnum)
      (pad-idx fixnum)
-     (slen fixnum))
-  (loop for xi upfrom 0 below n
-	do (multiple-value-bind (i _) (round (aref x xi))
-	     (let ((nth (round (/ xi slen))))
-	     (declare (ignore _))
-	     (cond ((= i pad-idx) nil)
-		   (t (loop for ei upfrom 0 below vocab-size
-			    do (if (= ei i)
-				   (setf (aref out (+ xi ei (* nth vocab-size)))
-					 1.0)
-				   (setf (aref out (+ xi ei (* nth vocab-size)))
-					 0.0)))))))))
+     (embedding-dim fixnum))
+  (loop for xi of-type fixnum upfrom 0 below n
+	do (cond
+	     ((= pad-idx (round (aref x xi)))
+	      nil)
+	     (T
+	      (loop for ei of-type fixnum upfrom 0 below embedding-dim
+		    do (setf (aref out (+ (the fixnum
+					       (* embedding-dim xi))
+					  ei))
+			     (aref weights
+				     (+ ei
+				      (the fixnum (* (round (aref x xi)) embedding-dim))))))))))
 
-(defun embedding-forward (enable-optimize x weights vocab-size pad-idx)
+(defun embedding-forward (enable-optimize x weights pad-idx)
+  "(with-searching-calc-node :embedding-forward x weights pad-idx) -> embeddings"
   (declare (type boolean enable-optimize)
-	   (type waffetensor out x weights vocab-size pad-idx)
+	   (type waffetensor out x weights pad-idx)
 	   (ignore enable-optimize))
   (let* ((batch-size (mat-dimension (data x) 0))
 	 (total-size (mat-dimension (data x) 1))
-	 (out (mgl-mat:make-mat `(,batch-size ,total-size ,(data vocab-size)))))
-    ; no cuda ver...
+	 (out (mgl-mat:make-mat `(,batch-size ,total-size ,(!shape weights 1))
+				:initial-element 0.0)))
+    ; there's no cuda ver...
     (embedding-forward-lisp
      out
      (data x)
      (data weights)
      (mat-size (data x))
-     (data vocab-size)
      (data pad-idx)
-     total-size)
+     (!shape weights 1))
+    out))
+
+(define-lisp-kernel (embedding-backward-lisp)
+    ((out :mat :io)
+     (x :mat)
+     (dy :mat)
+     (n fixnum)
+     (pad-idx fixnum)
+     (embedding-dim fixnum))
+  (loop for xi of-type fixnum upfrom 0 below n
+	do (cond
+	     ((= pad-idx (round (aref x xi)))
+	      nil)
+	     (T
+	      (loop for ei of-type fixnum upfrom 0 below embedding-dim
+		    do (setf (aref out
+				   (+ ei
+				      (the fixnum
+					   (* embedding-dim
+					    (round (aref x xi))))))
+			     (+ (aref out
+				      (+ ei
+					 (the fixnum
+					      (* embedding-dim
+						 (round (aref x xi))))))
+				(aref dy (+ ei
+					    (the fixnum
+						 (* xi
+						    embedding-dim)))))))))))
+
+(defun embedding-backward (enable-optimize x dy weights pad-idx)
+  (declare (type boolean enable-optimize)
+	   (type waffetensor dy weights)
+	   (ignore enable-optimize))
+  (let ((out (mgl-mat:make-mat (!shape weights))))
+    (embedding-backward-lisp
+     out
+     (data x)
+     (data dy)
+     (mgl-mat:mat-size (data x))
+     (data pad-idx)
+     (!shape dy 2))
     out))
 
 (declaim (ftype (function (keyword boolean waffetensor waffetensor cons) (or mgl-mat:mat cl-waffe:waffedatatype)) dispatch-kernel))
@@ -454,5 +499,13 @@
     (:repeat  (mgl-repeat (data (car args)) (data (third args)) :axis (data (second args))))
     (:bernoulli (bernoulli-tensor is-first-time-call? destructable-tensor (car args) (second args)))
     (:transpose (deliv-delay (data (car args)) #'mgl-mat:transpose))
+    (:embedding-forward (embedding-forward nil (car args)
+					   (second args)
+					   (third args)))
+    (:embedding-backward (embedding-backward nil
+					     (car args)
+					     (second args)
+					     (third args)
+					     (fourth args)))
     (T (error "~a is not yet implemented" function))))
 

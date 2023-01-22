@@ -53,5 +53,145 @@
 	 (z (!sum (!exp x1) 1 t)))
     (!div (!exp x1) z)))
 
+(defmodel model-list (model-args)
+  ;Define model sequentially, (e.g. x = (sequence `((layer1) (layer2))), (call x 1 tensor) => layer1's output)
+  :parameters ((mlist model-args))
+  :forward ((index &rest args)
+	    (apply #'call (nth (data index) (self mlist)) args)))
 
+(defnode ArefTensor (shape)
+  :parameters ((shape shape)
+	       (base-shape T))
+
+  :forward ((x) (setf (self base-shape) (!shape x))
+		(apply #'!faref x (self shape)))
+  :backward ((dy)
+	     (let ((dy-n (!zeros (self base-shape))))
+	       (setf (!areflist dy-n (self shape)) dy)
+	       (list dy-n))))
+
+(defnode SetfArefTensor (shape)
+  :parameters ((shape shape)
+	       (base-shape T))
+  :forward ((x y)
+	    (setf (self base-shape) (map 'list
+					 (lambda (x) (1- x)) (!shape y)))
+	    (const (data (apply #'!write-faref x y (self shape)))))
+  :backward ((dy)
+	     (list dy (apply #'!faref dy (self base-shape)))))
+
+(defun !faref (tensor &rest dims)
+  "Example: (!aref vector 1 t t) (!aref vector '(1 3) t t)
+  list args: (a b), cut arbitary dims in the range of a<=x<b"
+  (let* ((dims (cond
+		((> (!dims tensor) (length dims))
+		 (concatenate ; complement lacking dims with t
+		  'list
+		  dims
+		  (repeat-n t (- (!dims tensor) (length dims)))))
+		((= (!dims tensor) (length dims))
+		 dims)
+		(T
+		 (error "!aref: dim ~a beyonds tensor's dim" dims))))
+	 (dims-result (mapcar (lambda (x y) (if (typep x 'fixnum)
+						1
+						(if (typep x 'list)
+						    (progn
+						      (unless (= (length x) 2)
+							(error "!aref: an argument is following: index, t, '(from start). ~a is invaild." x))
+						      (- (second x) (car x)))
+						    y)))
+			      dims (!shape tensor)))
+	 (dims-displacements (map 'list (lambda (x)
+					  (typecase x
+					    (fixnum x)
+					    (list (car x))
+					    (T 0)))
+				  dims))
+	 (result (!zeros dims-result))
+	 (bias 0)
+	 (total-bias 0))
+    
+    (map 'list (lambda (x y)
+		 (etypecase y
+		   (boolean nil)
+		   (fixnum (if (<= x y)
+			       (error "!aref: the number ~a must be < ~a" y x)))
+		   (list (if (<= x (second y))
+			     (error "!aref: the number ~a must be < ~a" y x)))
+		   (T nil)))			     
+	 (!shape tensor) dims)
+
+    (loop for dim upfrom 0 below (!dims tensor)
+	  do
+	     (if (or (= dim 0)
+		     (not (eql T (nth dim dims))))
+		 (progn
+		 (dotimes (nth-axis (!shape result dim))
+		   (setq bias
+		    (cl-waffe.backends.mgl:write-to-nth-dim-with-range
+		    (data result)
+		    (data tensor)
+		    dim
+		    nth-axis
+		    (nth dim dims-displacements)
+		    total-bias)))
+		 (if (not (eql T (nth dim dims)))
+		     (incf total-bias bias)))))
+    result))
+
+(defun !write-faref (target tensor &rest dims)
+  "Example: (!aref vector 1 t t) (!aref vector '(1 3) t t)
+  This can be called by (setf(!aref) ~)"
+  (let* ((dims (cond
+		((> (!dims tensor) (length dims))
+		 (concatenate ; complement lacking dims with t
+		  'list
+		  dims
+		  (repeat-n t (- (!dims tensor) (length dims)))))
+		((= (!dims tensor) (length dims))
+		 dims)
+		(T
+		 (error "!aref: dim ~a beyonds tensor's dim" dims))))
+	 (dims-result (mapcar (lambda (x y) (if (typep x 'fixnum)
+						1
+						(if (typep x 'list)
+						    (progn
+						      (unless (= (length x) 2)
+							(error "!aref: an argument is following: index, t, '(from start). ~a is invaild." x))
+						      (- (second x) (car x)))
+						    y)))
+			      dims (!shape tensor)))
+	 (dims-displacements (map 'list (lambda (x)
+					  (typecase x
+					    (fixnum x)
+					    (list (car x))
+					    (T 0)))
+				  dims))
+	 (result target)
+	 (first-dim (the fixnum (find 'fixnum dims :test
+				      (lambda (x y) (typep y x)))))
+	 (total-bias (* first-dim (apply #'* (!shape
+					      (apply #'!aref target dims))))))
+    (declare (ignore dims-result))
+
+    (unless (= (apply #'* (!shape (apply #'!aref target dims)))
+	       (apply #'* (!shape tensor)))
+      (error "(setf aref): Mismatch dims...(due to the waffe's bug)")) ; Todo: Cut tensor by args
+
+    
+    (map 'list (lambda (x y)
+		 (etypecase y
+		   (boolean nil)
+		   (fixnum (if (<= x y)
+			       (error "!aref: the number ~a must be < ~a" y x)))
+		   (list (if (<= x (second y))
+			     (error "!aref: the number ~a must be < ~a" y x)))
+		   (T nil)))			     
+	 (!shape target) dims)
+    (cl-waffe.backends.mgl:write-to-nth-dim-with-range1
+     (data result)
+     (data tensor)
+     total-bias)
+result))
 
