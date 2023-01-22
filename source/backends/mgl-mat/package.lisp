@@ -4,4 +4,5 @@
   (:export #:dispatch-kernel
 	   #:adam-update
 	   #:write-to-nth-dim-with-range
-	   #:write-to-nth-dim-with-range1))
+	   #:write-to-nth-dim-with-range1
+	   #:get-difference))

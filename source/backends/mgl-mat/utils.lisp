@@ -21,20 +21,11 @@
 (define-lisp-kernel (write-to-nth-dim-with-range-lisp1)
     ((out :mat :io)
      (copy-from-mat :mat)
-     (target-axis fixnum)
-     (start fixnum)
-     (doeach-out fixnum)
-     (doeach fixnum)
+     (size fixnum)
      (bias fixnum))
-  (loop for oi of-type fixnum upfrom 0 below doeach
-        do (setf (aref out
-		       (+ oi bias
-			      (the fixnum
-				   (* (the fixnum (+ start target-axis)) doeach-out))))
-		 (aref copy-from-mat
-		       (+ oi
-			  (the fixnum
-			       (* target-axis doeach)))))))
+  (loop for oi of-type fixnum upfrom 0 below size
+        do (setf (aref out (+ oi bias))
+		 (aref copy-from-mat oi))))
 
 (defun fill-with-d (mat i n)
   (let ((index -1))
@@ -73,19 +64,12 @@
 
 (defun write-to-nth-dim-with-range1 (out
 				     copy-from-mat
-				     target-dim
-				     target-axis
-				     start
-				     bias)
+				     start)
   (if t;(use-cuda-p out)
       (write-to-nth-dim-with-range-lisp1
        out
        copy-from-mat
-       target-axis
-       start
-       (get-difference out target-dim)
-       (get-difference copy-from-mat target-dim)
-       bias))
-  (get-difference copy-from-mat target-dim))
+       (mgl-mat:mat-size copy-from-mat)
+       start)))
 
 

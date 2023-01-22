@@ -159,9 +159,16 @@
 					    (T 0)))
 				  dims))
 	 (result target)
-	 (bias 0)
-	 (total-bias 0))
+	 (first-dim (the fixnum (find 'fixnum dims :test
+				      (lambda (x y) (typep y x)))))
+	 (total-bias (* first-dim (apply #'* (!shape
+					      (apply #'!aref target dims))))))
     (declare (ignore dims-result))
+
+    (unless (= (apply #'* (!shape (apply #'!aref target dims)))
+	       (apply #'* (!shape tensor)))
+      (error "(setf aref): Mismatch dims...(due to the waffe's bug)")) ; Todo: Cut tensor by args
+
     
     (map 'list (lambda (x y)
 		 (etypecase y
@@ -172,20 +179,9 @@
 			     (error "!aref: the number ~a must be < ~a" y x)))
 		   (T nil)))			     
 	 (!shape target) dims)
-
-    (loop for dim upfrom 0 below (!dims tensor)
-	  do (if (or (= dim 0) (not (eql T (nth dim dims))))
-   	         (progn
-		 (dotimes (nth-axis (!shape tensor dim))
-		   (setq bias
-			 (cl-waffe.backends.mgl:write-to-nth-dim-with-range1
-			 (data result)
-			 (data tensor)
-			 dim
-			 nth-axis
-			 (nth dim dims-displacements)
-			 total-bias)))
-		 (if (not (eql T (nth dim dims)))
-		     (incf total-bias bias)))))
-    result))
+    (cl-waffe.backends.mgl:write-to-nth-dim-with-range1
+     (data result)
+     (data tensor)
+     total-bias)
+result))
 
