@@ -173,19 +173,17 @@
 	 (!shape target) dims)
 
     (loop for dim upfrom 0 below (!dims tensor)
-	  do
-	     (if (not (eql T (nth dim dims)))
-		 (progn
-		 (dotimes (nth-axis (!shape result dim))
+	  do (if (not (eql T (nth dim dims)))
+   	         (progn
+		 (dotimes (nth-axis (!shape tensor dim))
 		   (setq bias
-		    (cl-waffe.backends.mgl:write-to-nth-dim-with-range
-		    (data result)
-		    (data tensor)
-		    dim
-		    nth-axis
-		    (nth dim dims-displacements)
-		    total-bias)))
+			 (cl-waffe.backends.mgl:write-to-nth-dim-with-range1
+			 (data result)
+			 (data tensor)
+			 dim
+			 nth-axis
+			 (nth dim dims-displacements)
+			 total-bias)))
 		 (if (not (eql T (nth dim dims)))
 		     (incf total-bias bias)))))
     result))
-

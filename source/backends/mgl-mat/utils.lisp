@@ -18,8 +18,6 @@
 			  (the fixnum
 			       (* (the fixnum (+ start target-axis)) doeach)))))))
 
-
-
 (define-lisp-kernel (write-to-nth-dim-with-range-lisp1)
     ((out :mat :io)
      (copy-from-mat :mat)
@@ -28,14 +26,15 @@
      (doeach-out fixnum)
      (doeach fixnum)
      (bias fixnum))
-  (loop for oi of-type fixnum upfrom 0 below doeach-out
-        do (setf (aref copy-from-mat
+  (loop for oi of-type fixnum upfrom 0 below doeach
+        do (setf (aref out
 		       (+ oi bias
-			  (the fixnum
-			       (* (the fixnum (+ start target-axis)) doeach))))
-		 (aref out (+ oi
 			      (the fixnum
-				   (* target-axis doeach-out)))))))
+				   (* (the fixnum (+ start target-axis)) doeach-out))))
+		 (aref copy-from-mat
+		       (+ oi
+			  (the fixnum
+			       (* target-axis doeach)))))))
 
 (defun fill-with-d (mat i n)
   (let ((index -1))
@@ -73,12 +72,11 @@
 
 
 (defun write-to-nth-dim-with-range1 (out
-				    copy-from-mat
-				    target-dim
-				    target-axis
-				    start
+				     copy-from-mat
+				     target-dim
+				     target-axis
+				     start
 				     bias)
-  ; same as above but out.shape = copy-from-mat.shape
   (if t;(use-cuda-p out)
       (write-to-nth-dim-with-range-lisp1
        out
@@ -89,3 +87,5 @@
        (get-difference copy-from-mat target-dim)
        bias))
   (get-difference copy-from-mat target-dim))
+
+
