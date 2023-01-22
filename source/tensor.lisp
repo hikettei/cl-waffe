@@ -347,7 +347,7 @@
           do (setf (!row-major-aref res n) (gaussiandb-random var mean)))
     res))
 
-(defmacro !randn (dims)
+(defmacro !randn (dims) ; this can be rewrited it by mgl-mat
   `(!normal ,dims 0 1))
 
 (defun !beta (dims a b)

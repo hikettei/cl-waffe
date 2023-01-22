@@ -131,7 +131,8 @@
     result))
 
 (defun !write-faref (target tensor &rest dims)
-  "Example: (!aref vector 1 t t) (!aref vector '(1 3) t t)"
+  "Example: (!aref vector 1 t t) (!aref vector '(1 3) t t)
+  This can be called by (setf(!aref) ~)"
   (let* ((dims (cond
 		((> (!dims tensor) (length dims))
 		 (concatenate ; complement lacking dims with t
@@ -173,7 +174,7 @@
 	 (!shape target) dims)
 
     (loop for dim upfrom 0 below (!dims tensor)
-	  do (if (not (eql T (nth dim dims)))
+	  do (if (or (= dim 0) (not (eql T (nth dim dims))))
    	         (progn
 		 (dotimes (nth-axis (!shape tensor dim))
 		   (setq bias
@@ -187,3 +188,4 @@
 		 (if (not (eql T (nth dim dims)))
 		     (incf total-bias bias)))))
     result))
+

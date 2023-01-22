@@ -184,6 +184,7 @@
   (!mul x (!div-old 1 y)))
   
 (defope !dot (DotProductTensor) node (x y)
+  ; Todo: dot excepts 1d tensor
   (call node (assure-tensor x) (assure-tensor y)))
 
 (defun !sum (x &optional (axis nil) (keepdims nil))

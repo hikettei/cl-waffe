@@ -8,7 +8,7 @@
 			  (activation :tanh)
 			  (bias nil)
 			  (dropout nil))
-  :parameters ((weight (parameter (!div (!randn `(,hidden-size ,input-size))
+  :parameters ((weight (parameter (!div (!randn `(,input-size ,hidden-size))
 					(sqrt hidden-size))))
 	       (reccurent-weight (if reccurent-weight
 				     reccurent-weight
@@ -36,7 +36,7 @@
 		   (h1 (case (self activation)
 			   (:tanh (!tanh h1))
 			   (:relu (!relu h1)))))
-	      (setf (self reccurent-weight) h)
+	      (setf (self reccurent-weight) (!transpose h))
 	      h1)))
 
 (defmodel RNN (input-size
@@ -60,15 +60,32 @@
 	       (hidden-size hidden-size)
 	       (h-w T))
 
-  :forward ((x) ; X=(Batch_Size Sentence-Length Embedding-dim)
+  :forward ((x)
+	    "Input: X = (BatchSize SentenceLength Embedding_Dim)"
+
 	    (if (eql (self h-w) T)
 		(setf (self h-w)
 		      (parameter (!zeros `(,(!shape x 2)
 					   ,(self hidden-size))))))
-	    (let ((h (!zeros `(,(self hidden-size)v1))))
-	      (dotimes (i (self num-layers))
-		(setq h (call (self rnn-layers) (const i) x h)))
-	      h)))
+	    ;h-wは最後にかける
 
-;make !aref faster and 3d matmul
-
+	    (let* ((batch-size (!shape x 0))
+		   (s-len (!shape x 1))
+		   (hs (!zeros `(,batch-size
+				 ,s-len
+				 ,(self hidden-size)))))
+	      
+	      (loop for xn upfrom 0 below s-len ; when biredical, rev it
+		    do (let ((h (!zeros `(,batch-size
+					  ,(self hidden-size))))
+			     (xn-s (!squeeze (!aref x t xn t) 1)))
+			 (dotimes (i (self num-layers))
+			   (setq h (!unsqueeze
+				    (call (self rnn-layers)
+					 (const i)
+					 xn-s
+					 h)
+				    1)))
+			 (setf (!aref hs t xn t) h)))
+	      hs)))
+			 
