@@ -58,7 +58,8 @@
 					   :dropout dropout))))
 	       (num-layers num-layers)
 	       (hidden-size hidden-size)
-	       (biredical biredical))
+	       (biredical biredical)
+	       (wo (linearlayer hidden-size input-size)))
 
   :forward ((x)
 	    "Input: X = (BatchSize SentenceLength Embedding_Dim)"
@@ -79,5 +80,5 @@
 					 xn-s
 					 h)))
 			 (setq hs (setf (!aref hs t xn) h))))
-	      hs)))
+	      (values (call (self wo) hs) hs))))
 
