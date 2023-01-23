@@ -262,7 +262,7 @@
 	    (x (assure-tensor x))
 	    (y (assure-tensor y)))
        (dotimes (i (!shape x 0))
-	 (setf (!aref result i) (call node (!squeeze (!aref x i) 0) y)))
+	 (setq result (setf (!aref result i) (call node (!squeeze (!aref x i) 0) y))))
        result))
     ((and (= (!dims x) 2) (= (!dims y) 3))
      (!matmul y x))
