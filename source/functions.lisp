@@ -71,14 +71,11 @@
 	       (list dy-n))))
 
 (defnode SetfArefTensor (shape)
-  :parameters ((shape shape)
-	       (base-shape T))
+  :parameters ((shape shape))
   :forward ((x y)
-	    (setf (self base-shape) (map 'list
-					 (lambda (x) (1- x)) (!shape y)))
 	    (const (data (apply #'!write-faref x y (self shape)))))
   :backward ((dy)
-	     (list dy (apply #'!faref dy (self base-shape)))))
+	     (list dy (apply #'!faref dy (self shape)))))
 
 (defun !faref (tensor &rest dims)
   "Example: (!aref vector 1 t t) (!aref vector '(1 3) t t)
