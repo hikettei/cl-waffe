@@ -11,6 +11,7 @@
            :batchnorm2d
 
            :embedding
+           :RNN   
    
 	   :mse
 	   :softmax-cross-entropy

@@ -24,5 +24,6 @@
 	       (list dx dx))))
 
 (defun softmax-cross-entropy (x y &key (avoid-overflow t) (delta 1e-7))
+  ; Todo For Batched.
   (call (SoftMaxCrossEntropy :avoid-overflow avoid-overflow :delta delta) x y))
 

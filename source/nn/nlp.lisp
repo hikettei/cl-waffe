@@ -74,12 +74,10 @@
 					  ,(self hidden-size))))
 			     (xn-s (!squeeze (!aref x t xn t) 1)))
 			 (dotimes (i (self num-layers))
-			   (setq h (!unsqueeze
-				    (call (self rnn-layers)
+			   (setq h (call (self rnn-layers)
 					 (const i)
 					 xn-s
-					 (!squeeze h 1))
-				    1)))
+					 h)))
 			 (setq hs (setf (!aref hs t xn) h))))
 	      hs)))
 

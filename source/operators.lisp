@@ -187,7 +187,7 @@
   ; Todo: dot excepts 1d tensor
   (call node (assure-tensor x) (assure-tensor y)))
 
-(defun !sum (x &optional (axis nil) (keepdims nil))
+(defun !sum-2d (x &optional (axis nil) (keepdims nil))
   (if (null axis)
       (let ((axis-size (!dims x))
 	    (result x))
@@ -199,6 +199,29 @@
 	(if keepdims
 	    (!repeats result axis nrepeat)
 	    result))))
+
+(defun !sum (x &optional (axis nil) (keepdims nil))
+  (case (!dims x)
+    (0 (error "!sum: the tensor given is a number"))
+    (1 (!sum-2d x axis keepdims))
+    (2 (!sum-2d x axis keepdims))
+    (T
+     (if (null axis)
+	 (let ((result (!sum (!squeeze (!aref x 0)))))
+	   (loop for i upfrom 1 below (!shape x 0)
+		 do (setq result (!add result (!sum (!aref x i)))))
+	   result)
+	 (let* ((dims (!shape x axis))
+	       ; Note: keepdims is ignored. And May need exclusive kernel for it because its too slow when forward and backward.
+
+		(sum-dims #'(lambda (n) (loop for i upfrom 0 below (!dims x)
+	 				      collect (if (= i axis)
+							  n
+							  t))))
+		(result (!zeros (!shape (apply #'!aref x (funcall sum-dims 0))))))
+	   (dotimes (i dims)
+	     (setq result (!add result (apply #'!aref x (funcall sum-dims i)))))
+	   result)))))
 
 (defun !mean (x &optional (axis nil) (keepdims nil))
   (if (null axis)
@@ -255,7 +278,18 @@
      (call node (!unsqueeze (assure-tensor x) -1) (assure-tensor y)))
     ((and (= (!dims x) 2) (= (!dims y) 1))
      (call node (assure-tensor x) (!unsqueeze (assure-tensor y) -1)))
-    (T (error "matmul for 3d/4d tensor is coming soon..."))))
+    ((and (= (!dims x) 3) (= (!dims y) 2)) ; Doesn't support batch...
+     (let* ((result (!zeros `(,(!shape x 0)
+			      ,(!shape x 1)
+			      ,(!shape y 1))))
+	    (x (assure-tensor x))
+	    (y (assure-tensor y)))
+       (dotimes (i (!shape x 0))
+	 (setq result (setf (!aref result i) (call node (!squeeze (!aref x i) 0) y))))
+       result))
+    ((and (= (!dims x) 2) (= (!dims y) 3))
+     (!matmul y x))
+    (T (error "!matmul: support shapes are following: (a) * (b), (a b) * (c d), (a b c) * (d e), (a b) * (c d e). more will be added..."))))
 
 (defun !unsqueeze (x &optional (dim 0))
   ; display error when (!dims x) >= dim
