@@ -205,16 +205,23 @@
     (0 (error ""))
     (1 (!sum-2d x axis keepdims))
     (2 (!sum-2d x axis keepdims))
-    (T (let* ((dims (!shape x axis))
-    ; Note: keepdims is ignored. And May need exclusive kernel for it because its too slow when forward and backward.
-	      (sum-dims #'(lambda (n) (loop for i upfrom 0 below (!dims x)
-			 		  collect (if (= i axis)
-						       n
-						       t))))
-	      (result (!zeros (!shape (apply #'!aref x (funcall sum-dims 0))))))
-	 (dotimes (i dims)
-	   (setq result (!add result (apply #'!aref x (funcall sum-dims i)))))
-	 result))))
+    (T
+     (if (null axis)
+	 (let ((result (!sum (!squeeze (!aref x 0)))))
+	   (loop for i upfrom 1 below (!shape x 0)
+		 do (setq result (!add result (!sum (!aref x i)))))
+	   result)
+	 (let* ((dims (!shape x axis))
+	       ; Note: keepdims is ignored. And May need exclusive kernel for it because its too slow when forward and backward.
+
+		(sum-dims #'(lambda (n) (loop for i upfrom 0 below (!dims x)
+	 				      collect (if (= i axis)
+							  n
+							  t))))
+		(result (!zeros (!shape (apply #'!aref x (funcall sum-dims 0))))))
+	   (dotimes (i dims)
+	     (setq result (!add result (apply #'!aref x (funcall sum-dims i)))))
+	   result)))))
 
 (defun !mean (x &optional (axis nil) (keepdims nil))
   (if (null axis)
