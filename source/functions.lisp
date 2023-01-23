@@ -48,7 +48,7 @@
 
 (defun !softmax (x &key (avoid-overflow t))
   (case (!dims x)
-    (1 (!unsqueeze x))
+    (1 (!softmax (!unsqueeze x)))
     (2 (let* ((x1 (if avoid-overflow
 		      (!sub x (!average x))
 		      x))
