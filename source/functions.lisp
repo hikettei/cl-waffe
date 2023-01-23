@@ -47,11 +47,19 @@
     (!div z batch-size)))
 
 (defun !softmax (x &key (avoid-overflow t))
-  (let* ((x1 (if avoid-overflow
-		(!sub x (!average x))
-		x))
-	 (z (!sum (!exp x1) 1 t)))
-    (!div (!exp x1) z)))
+  (case (!dims x)
+    (1 (!unsqueeze x))
+    (2 (let* ((x1 (if avoid-overflow
+		      (!sub x (!average x))
+		      x))
+	      (z (!sum (!exp x1) 1 t)))
+	 (!div (!exp x1) z)))
+    (3 (let* ((result (!zeros (!shape x)))) ; For batched inputs
+	 (dotimes (i (!shape x 0))
+	   (setq result (setf (!aref result i)
+			      (!softmax (!squeeze (!aref x i) 0)))))
+	 result))
+    (T (error "!softmax: softmax only supports where (!dims tensor) <= 3."))))
 
 (defmodel model-list (model-args)
   ;Define model sequentially, (e.g. x = (sequence `((layer1) (layer2))), (call x 1 tensor) => layer1's output)
