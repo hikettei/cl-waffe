@@ -255,7 +255,18 @@
      (call node (!unsqueeze (assure-tensor x) -1) (assure-tensor y)))
     ((and (= (!dims x) 2) (= (!dims y) 1))
      (call node (assure-tensor x) (!unsqueeze (assure-tensor y) -1)))
-    (T (error "matmul for 3d/4d tensor is coming soon..."))))
+    ((and (= (!dims x) 3) (= (!dims y) 2)) ; Doesn't support batch...
+     (let* ((result (!zeros `(,(!shape x 0)
+			      ,(!shape x 1)
+			      ,(!shape y 1))))
+	    (x (assure-tensor x))
+	    (y (assure-tensor y)))
+       (dotimes (i (!shape x 0))
+	 (setf (!aref result i) (call node (!squeeze (!aref x i) 0) y)))
+       result))
+    ((and (= (!dims x) 2) (= (!dims y) 3))
+     (!matmul y x))
+    (T (error "!matmul: support shapes are following: (a) * (b), (a b) * (c d), (a b c) * (d e), (a b) * (c d e). more will be added..."))))
 
 (defun !unsqueeze (x &optional (dim 0))
   ; display error when (!dims x) >= dim
