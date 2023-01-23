@@ -7,7 +7,6 @@
 (defun cross-entropy (x y &optional (delta 1e-7))
   ; x...
   ; y ... (batch-size n-classes)
-  ; Todo: 4 3d Tensors
   (!div (!mul -1 (!sum (!mul y (!log (!add x delta))))) (!shape y 0)))
 
 

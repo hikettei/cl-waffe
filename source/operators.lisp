@@ -202,7 +202,7 @@
 
 (defun !sum (x &optional (axis nil) (keepdims nil))
   (case (!dims x)
-    (0 (error ""))
+    (0 (error "!sum: the tensor given is a number"))
     (1 (!sum-2d x axis keepdims))
     (2 (!sum-2d x axis keepdims))
     (T
