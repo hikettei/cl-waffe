@@ -7,6 +7,7 @@
 (defun cross-entropy (x y &optional (delta 1e-7))
   ; x...
   ; y ... (batch-size n-classes)
+  ; Todo: 4 3d Tensors
   (!div (!mul -1 (!sum (!mul y (!log (!add x delta))))) (!shape y 0)))
 
 
@@ -24,5 +25,6 @@
 	       (list dx dx))))
 
 (defun softmax-cross-entropy (x y &key (avoid-overflow t) (delta 1e-7))
+  ; Todo For Batched.
   (call (SoftMaxCrossEntropy :avoid-overflow avoid-overflow :delta delta) x y))
 
