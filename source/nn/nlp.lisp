@@ -62,7 +62,8 @@
 	       (wo (linearlayer hidden-size input-size)))
 
   :forward ((x)
-	    "Input: X = (BatchSize SentenceLength Embedding_Dim)"
+	    "Input: X = (BatchSize SentenceLength Embedding_Dim)
+             Output (values x{t+1} h{t+1})"
 
 	    (let* ((batch-size (!shape x 0))
 		   (s-len (!shape x 1))
@@ -70,15 +71,29 @@
 				 ,s-len
 				 ,(self hidden-size)))))
 	      
-	      (loop for xn upfrom 0 below s-len ; when biredical, rev it
-		    do (let ((h (!zeros `(,batch-size
-					  ,(self hidden-size))))
-			     (xn-s (!squeeze (!aref x t xn t) 1)))
-			 (dotimes (i (self num-layers))
-			   (setq h (call (self rnn-layers)
-					 (const i)
-					 xn-s
-					 h)))
-			 (setq hs (setf (!aref hs t xn) h))))
+	      (if (self biredical)
+		  ; when biredical=t, calc in the around way
+		  (loop for xn downfrom (1- s-len) to 0
+			do (let ((h (!zeros `(,batch-size
+					      ,(self hidden-size))))
+				 (xn-s (!squeeze (!aref x t xn t) 1)))
+			     (dotimes (i (self num-layers))
+			       (setq h (call (self rnn-layers)
+					     (const i)
+					     xn-s
+					     h)))
+			     (setq hs (setf (!aref hs t xn) h))))
+
+		  ; when biredical=nil, calc in order.
+		  (loop for xn upfrom 0 below s-len
+			do (let ((h (!zeros `(,batch-size
+					      ,(self hidden-size))))
+				 (xn-s (!squeeze (!aref x t xn t) 1)))
+			     (dotimes (i (self num-layers))
+			       (setq h (call (self rnn-layers)
+					     (const i)
+					     xn-s
+					     h)))
+			     (setq hs (setf (!aref hs t xn) h)))))
 	      (values (call (self wo) hs) hs))))
 
