@@ -26,6 +26,7 @@
 	   #:defoptimizer
 	   #:deftrainer
 	   #:defdataset
+	   #:WaffeDataset
 
 	   #:save-for-backward
 	   

@@ -28,11 +28,11 @@
      ,input))
 
 (declaim (inline call))
-(declaim (ftype (function (t &rest waffetensor) waffetensor) call))
+;(declaim (ftype (function (t &rest waffetensor) waffetensor) call))
 (defun call (model &rest args)
   ; calculating op(x,y) -> result(x, y), state
   (let* ((result (apply (call-forward model) args)))
-    (declare (type (or null waffetensor) result))
+    (declare (type (or null waffetensor list) result))
     (unless *no-grad*
       (if (slot-value model 'hide-from-tree) ;is model defined by defmodel?
 	  (progn

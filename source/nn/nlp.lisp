@@ -60,17 +60,18 @@
 	       (num-layers num-layers)
 	       (hidden-size hidden-size)
 	       (biredical biredical)
-	       (wo (linearlayer hidden-size input-size)))
+	       (wo (linearlayer hidden-size hidden-size)))
 
-  :forward ((x)
+  :forward ((x &optional (hs (const NIL)))
 	    "Input: X = (BatchSize SentenceLength Embedding_Dim)
              Output (values x{t+1} h{t+1})"
 
 	    (let* ((batch-size (!shape x 0))
 		   (s-len (!shape x 1))
-		   (hs (!zeros `(,batch-size
-				 ,s-len
-				 ,(self hidden-size)))))
+		   (hs (if (null (data hs))
+			 (!zeros `(,batch-size
+				   ,s-len
+				   ,(self hidden-size))))))
 	      
 	      (if (self biredical)
 		  ; when biredical=t, calc in the around way
@@ -96,5 +97,5 @@
 					     xn-s
 					     h)))
 			     (setq hs (setf (!aref hs t xn) h)))))
-	      (values (call (self wo) hs) hs))))
+	      (call (self wo) hs))))
 
