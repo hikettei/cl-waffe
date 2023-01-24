@@ -8,14 +8,15 @@
 			  (activation :tanh)
 			  (bias nil)
 			  (dropout nil))
-  :parameters ((weight (parameter (!div (!randn `(,input-size ,hidden-size))
+  :parameters ((weight (parameter (!div (!randn `(,input-size
+						  ,hidden-size))
 					(sqrt hidden-size))))
 	       (reccurent-weight (if reccurent-weight
 				     reccurent-weight
 				     (!div (!randn `(,hidden-size ,hidden-size))
 					   (sqrt hidden-size))))
                (bias (if bias
-			 (parameter (!zeros `(,hidden-size 1)))
+			 (parameter (!zeros `(1 ,hidden-size)))
 			 nil))
 	       (dropout (if dropout
 			    (dropout dropout)
@@ -59,26 +60,43 @@
 	       (num-layers num-layers)
 	       (hidden-size hidden-size)
 	       (biredical biredical)
-	       (wo (linearlayer hidden-size input-size)))
+	       (wo (linearlayer hidden-size hidden-size)))
 
-  :forward ((x)
-	    "Input: X = (BatchSize SentenceLength Embedding_Dim)"
+  :forward ((x &optional (hs (const NIL)))
+	    "Input: X = (BatchSize SentenceLength Embedding_Dim)
+             Output (values x{t+1} h{t+1})"
 
 	    (let* ((batch-size (!shape x 0))
 		   (s-len (!shape x 1))
-		   (hs (!zeros `(,batch-size
-				 ,s-len
-				 ,(self hidden-size)))))
+		   (hs (if (null (data hs))
+			 (!zeros `(,batch-size
+				   ,s-len
+				   ,(self hidden-size)))
+			 hs)))
 	      
-	      (loop for xn upfrom 0 below s-len ; when biredical, rev it
-		    do (let ((h (!zeros `(,batch-size
-					  ,(self hidden-size))))
-			     (xn-s (!squeeze (!aref x t xn t) 1)))
-			 (dotimes (i (self num-layers))
-			   (setq h (call (self rnn-layers)
-					 (const i)
-					 xn-s
-					 h)))
-			 (setq hs (setf (!aref hs t xn) h))))
-	      (values (call (self wo) hs) hs))))
+	      (if (self biredical)
+		  ; when biredical=t, calc in the around way
+		  (loop for xn downfrom (1- s-len) to 0
+			do (let ((h (!zeros `(,batch-size
+					      ,(self hidden-size))))
+				 (xn-s (!squeeze (!aref x t xn t) 1)))
+			     (dotimes (i (self num-layers))
+			       (setq h (call (self rnn-layers)
+					     (const i)
+					     xn-s
+					     h)))
+			     (setq hs (setf (!aref hs t xn) h))))
+
+		  ; when biredical=nil, calc in order.
+		  (loop for xn upfrom 0 below s-len
+			do (let ((h (!zeros `(,batch-size
+					      ,(self hidden-size))))
+				 (xn-s (!squeeze (!aref x t xn t) 1)))
+			     (dotimes (i (self num-layers))
+			       (setq h (call (self rnn-layers)
+					     (const i)
+					     xn-s
+					     h)))
+			     (setq hs (setf (!aref hs t xn) h)))))
+	      (call (self wo) hs))))
 

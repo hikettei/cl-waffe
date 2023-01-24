@@ -7,5 +7,8 @@
   :author "hikettei"
   :licence nil
   :depends-on (:cl-waffe :cl-libsvm-format :sb-sprof)
-  :components ((:module "examples" :components ((:file "mnist")))))
+  :components ((:module "examples" :components ((:file "mnist")
+						(:file "rnn"
+						       :depends-on ("kftt-data-parser"))
+						(:file "kftt-data-parser")))))
 

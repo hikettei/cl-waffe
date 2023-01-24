@@ -16,7 +16,8 @@
 			     (:file "cl-termgraph")
 			     (:file "figure")))
 	       (:module "backends/cpu"
-		:depends-on ("package")
+		:depends-on ("package"
+			     "backends/mgl-mat")
 		:components ((:file "package")
 			     (:file "kernel")))
 	       (:module "backends/mgl-mat"

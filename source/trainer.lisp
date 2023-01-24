@@ -209,4 +209,10 @@
     (print "")
     (valid trainer valid-dataset batch-size)))
 
+(defdataset WaffeDataset (train valid &key (batch-size 1))
+  :parameters ((train train) (valid valid) (batch-size batch-size))
+  :next    ((index)
+	    (list (!set-batch (self train) index (self batch-size))
+		  (!set-batch (self valid) index (self batch-size))))
+  :length (() (car (!shape (self train)))))
 

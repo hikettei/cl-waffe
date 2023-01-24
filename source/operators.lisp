@@ -112,9 +112,10 @@
   :optimize t
   :parameters ((prev-shape T) (shape shape))
   :forward ((x)
-	    (setf (self prev-shape) (!shape x))
+	    (setf (self prev-shape) (assure-tensor (!shape x)))
 	    (with-searching-calc-node :transpose x (self shape)))
-  :backward ((d1) (!transpose d1 (self prev-shape))))
+  :backward ((d1)
+	     (list (const (mgl-mat:transpose (data d1))))))
 
 (defnode MeanTensor (axis)
   :optimize t
@@ -267,7 +268,7 @@
   (call (RepeatTensor (assure-tensor axis) (assure-tensor repeats)) (assure-tensor x)))
 
 (defun !transpose (x &optional result)
-  (call (TransposeTensor (assure-tensor (if result (numcl:asarray result)))) (assure-tensor x)))
+  (call (TransposeTensor (assure-tensor result)) (assure-tensor x)))
 
 (defope !matmul (MatmulTensor) node (x y)
   (cond
@@ -288,6 +289,7 @@
 	 (setq result (setf (!aref result i) (call node (!squeeze (!aref x i) 0) y))))
        result))
     ((and (= (!dims x) 2) (= (!dims y) 3))
+     (error "todo: matmul")
      (!matmul y x))
     (T (error "!matmul: support shapes are following: (a) * (b), (a b) * (c d), (a b c) * (d e), (a b) * (c d e). more will be added..."))))
 

@@ -3,7 +3,7 @@
 
 (defnode Embedding (vocab-size
 		    embedding-dim
-		    &optional
+		    &key
 		    (pad-idx nil))
   :parameters ((xi T)
 	       (vocab-size vocab-size :type fixnum)
