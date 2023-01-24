@@ -71,7 +71,8 @@
 		   (hs (if (null (data hs))
 			 (!zeros `(,batch-size
 				   ,s-len
-				   ,(self hidden-size))))))
+				   ,(self hidden-size)))
+			 hs)))
 	      
 	      (if (self biredical)
 		  ; when biredical=t, calc in the around way
