@@ -8,14 +8,15 @@
 			  (activation :tanh)
 			  (bias nil)
 			  (dropout nil))
-  :parameters ((weight (parameter (!div (!randn `(,input-size ,hidden-size))
+  :parameters ((weight (parameter (!div (!randn `(,input-size
+						  ,hidden-size))
 					(sqrt hidden-size))))
 	       (reccurent-weight (if reccurent-weight
 				     reccurent-weight
 				     (!div (!randn `(,hidden-size ,hidden-size))
 					   (sqrt hidden-size))))
                (bias (if bias
-			 (parameter (!zeros `(,hidden-size 1)))
+			 (parameter (!zeros `(1 ,hidden-size)))
 			 nil))
 	       (dropout (if dropout
 			    (dropout dropout)

@@ -6,7 +6,7 @@
   (:export
    :is-waffe-model
    :find-parameters
-   :find-variables
+   ;:find-variables
    :init-optimizer
    
 

@@ -63,8 +63,8 @@
 					(!div (!mul (self lr) (grad (gethash i (self params))))
 					      (!add (!sqrt (gethash i (self h))) (self epsilon)))))
 			    (data (gethash i (self params)))))))
-  
-; still too slow...
+
+
 (defoptimizer Adam (params &key (lr 1e-3) (epsilon 1e-7) (beta1 0.9) (beta2 0.999))
   :optimize t
   :parameters ((params params  :type hash-table)

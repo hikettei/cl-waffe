@@ -60,7 +60,8 @@
     (labels ((search-param (m)
 	       (cond
 		 ((typep m 'model-list)
-		  (dolist (p (slot-value m 'mlist))
+		  (dolist (p (slot-value m
+					 (car (slot-value m 'parameters))))
 		    (search-param p)))
 		 ((is-waffe-model m)
 		  (dolist (p (slot-value m 'parameters))

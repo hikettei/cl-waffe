@@ -5,4 +5,6 @@
 	   #:adam-update
 	   #:write-to-nth-dim-with-range
 	   #:write-to-nth-dim-with-range1
-	   #:get-difference))
+	   #:get-difference
+	   #:receive-delay
+	   #:abort-delay))
