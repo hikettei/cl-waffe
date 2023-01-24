@@ -8,7 +8,6 @@
 (defmodel Encoder (vocab-size embedding-dim hidden-size)
   :parameters ((embedding (Embedding vocab-size embedding-dim :pad-idx 0))
                (layer     (RNN embedding-dim hidden-size :num-layers 1)))
-  
   :forward ((x)
 	    (with-calling-layers x
 	      (embedding x)
@@ -17,7 +16,7 @@
 (defmodel Decoder (vocab-size embedding-dim hidden-size)
   :parameters ((embedding (Embedding vocab-size embedding-dim :pad-idx 0))
                (layer     (RNN embedding-dim hidden-size :num-layers 1))
-	       (h2l       (linearlayer hidden-size vocab-size)))
+	       (h2l       (linearlayer hidden-size embedding-dim)))
   
   :forward ((encoder-state y)
 	    (let* ((ye (call (self embedding) y))
@@ -41,10 +40,7 @@
   :step-model ((x y)
 	       (zero-grad)
 	       (let* ((outs (call (model) x y))
-		      (x-out (car outs))
-		      (y-out (second outs))
-		      (out (softmax-cross-entropy x-out y-out)))
-		 (print out)
+		      (out (softmax-cross-entropy (car outs) y)))
 		 (backward out)
 		 (update)
 		 out))

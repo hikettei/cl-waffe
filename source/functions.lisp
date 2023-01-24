@@ -120,10 +120,10 @@
     (map 'list (lambda (x y)
 		 (etypecase y
 		   (boolean nil)
-		   (fixnum (if (<= x y)
-			       (error "!aref: the number ~a must be < ~a" y x)))
-		   (list (if (<= x (second y))
-			     (error "!aref: the number ~a must be < ~a" y x)))
+		   (fixnum (if (< x y)
+			       (error "!aref: the number ~A must be<= ~a" y x)))
+		   (list (if (< x (second y))
+			     (error "!aref: the number ~a must be <= ~a" y x)))
 		   (T nil)))			     
 	 (!shape tensor) dims)
 
@@ -188,9 +188,9 @@
     (map 'list (lambda (x y)
 		 (etypecase y
 		   (boolean nil)
-		   (fixnum (if (<= x y)
+		   (fixnum (if (< x y)
 			       (error "!aref: the number ~a must be < ~a" y x)))
-		   (list (if (<= x (second y))
+		   (list (if (< x (second y))
 			     (error "!aref: the number ~a must be < ~a" y x)))
 		   (T nil)))			     
 	 (!shape target) dims)
