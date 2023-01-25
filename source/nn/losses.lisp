@@ -13,17 +13,17 @@
 			 (mgl-mat:mref (data label) 0 0))))
 	  (const (make-array '(1)
 			     :initial-element (- 1 epsilon))))
-    (!unsqueeze v)))
+    (!unsqueeze (!unsqueeze v))))
 
 (defun to-onehot (ps vec epsilon)
-  (let ((result (!fill (!shape ps) epsilon)))
+  (let ((result (!zeros (!shape ps))))
     (loop for batch upfrom 0 below (!shape ps 0)
 	  do (loop for i upfrom 0 below (!shape ps 1)
-		   do (setf (!aref result batch i)
-			    (mat-labels
-			     ps
-			     (!aref vec batch i)
-			     epsilon))))
+		   do (let ((classes (mat-labels
+				      ps
+				      (!aref vec batch i)
+				      epsilon)))
+			(setf (!aref result batch i) classes))))
     result))
 
 (defun mse (p y)
