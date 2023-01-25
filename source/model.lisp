@@ -59,9 +59,9 @@
   (let ((parameters `(T)))
     (labels ((search-param (m)
 	       (cond
-		 ((typep m 'model-list)
+		 ((typep m 'cl-waffe:model-list)
 		  (dolist (p (slot-value m
-					 (car (slot-value m 'parameters))))
+					 (car (slot-value m 'cl-waffe:parameters))))
 		    (search-param p)))
 		 ((is-waffe-model m)
 		  (dolist (p (slot-value m 'parameters))
@@ -99,7 +99,7 @@
          (declaim (ftype (function (,name ,@(map 'list (lambda (x) (declare (ignore x)) `waffetensor) `,args)) (or null waffetensor)) ,f-ident))
 	 (defun ,f-ident (,self-heap ,@args)
 	   ,(if optimize
-		`(declare (optimize (speed 3) (safety 0))
+		`(declare (optimize (speed 3) (space 0) (safety 0))
 			  (type ,name ,self-heap))
 		`(declare (type ,name ,self-heap)))
 	   ,(if hide-from-tree `(declare (type waffetensor ,@args)) nil)

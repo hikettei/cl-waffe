@@ -155,13 +155,13 @@
 (defmacro grad (tensor)
   `(progn
      (unless (typep ,tensor 'WaffeTensor)
-       (error "The tensor is not waffetensor"))
+       (error "The tensor is not a waffetensor"))
      
      (unless (waffetensor-grad ,tensor)
        (error "The tensor is not a parameter. Constants doesn't have a grad"))
 
      (if (typep (waffetensor-grad ,tensor) 'cons)
-	 (error "A grad is nil. Please remain you need to call (backward out) before using a grad"))
+	 (error "A grad is nil. Please remain you need to call (backward out) before using a grad. When using ~%~a" ,tensor))
 
      (waffetensor-grad ,tensor)))
 
@@ -254,7 +254,9 @@
 			      (setf (waffetensor-grad tensor) (data (!reshape new-grad (!shape tensor))))) ; is it due to bugs of reshape?
 			  (setf (waffetensor-grad tensor) (data new-grad))))
 		    (setf (waffetensor-grad tensor)
-			  (data (!add (waffetensor-grad tensor) (grad-tmp-value (waffetensor-grad-tmp tensor))))))))))
+			  (data (!add (waffetensor-grad tensor)
+				      (grad-tmp-value
+				       (waffetensor-grad-tmp tensor))))))))))
   nil)
 
 
