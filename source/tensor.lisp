@@ -222,6 +222,8 @@
 (defun backward1 (tensor)
   (declare (optimize (speed 3) (space 0) (safety 1))
 	   (type waffetensor tensor))
+  (print tensor)
+  (print (waffetensor-state tensor))
   (if (waffetensor-backward tensor) ;Backward exists?
       (let* ((grad-tmp-before (waffetensor-grad-tmp tensor))
 	     (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top
