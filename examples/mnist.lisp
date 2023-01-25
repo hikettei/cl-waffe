@@ -14,7 +14,7 @@
 	       (layer3   (linearlayer 256 10 T)))
   :forward ((x)
 	    (with-calling-layers x
-	      (layer1 x)
+	      (layer1 x) 
  	      (layer2 x)
 	      (layer3 x))))
 
@@ -85,5 +85,5 @@
   (setq train (MnistData mnist-dataset mnist-target 100))
   (setq test (MnistData mnist-dataset-test mnist-target-test 100))
 
-  (time (train trainer train :max-iterate 600 :epoch 10 :batch-size 100 :valid-dataset test :verbose t :random t :print-each 100)))
+  (time (train trainer train :max-iterate 600 :epoch 1 :batch-size 100 :valid-dataset test :verbose t :random t :print-each 100)))
 

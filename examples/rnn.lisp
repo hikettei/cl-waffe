@@ -9,7 +9,7 @@
 
 (defmodel Encoder (vocab-size embedding-dim hidden-size)
   :parameters ((embedding (Embedding vocab-size embedding-dim :pad-idx 0))
-               (layer     (RNN embedding-dim hidden-size :num-layers 2)))
+               (layer     (RNN embedding-dim hidden-size :num-layers 1)))
   :forward ((x)
 	    (with-calling-layers x
 	      (embedding x)
@@ -17,7 +17,7 @@
 
 (defmodel Decoder (vocab-size embedding-dim hidden-size)
   :parameters ((embedding (Embedding vocab-size embedding-dim :pad-idx 0))
-               (layer     (RNN embedding-dim hidden-size :num-layers 2))
+               (layer     (RNN embedding-dim hidden-size :num-layers 1))
 	       (h2l       (linearlayer hidden-size vocab-size)))
   
   :forward ((encoder-state y)
@@ -53,10 +53,10 @@
 (defun demo (&key
 	       (lang1 :ja)
 	       (lang2 :en)
-	       (maxlen 10)
+	       (maxlen 30)
 	       (batch-size 1)
-	       (embedding-dim 256)
-	       (hidden-dim 512))
+	       (embedding-dim 64)
+	       (hidden-dim 128))
 
   ; Loadig Dataset
 
@@ -109,8 +109,9 @@
 
   (train model
 	 dataset-train
-	 :epoch 1
+	 :epoch 10
 	 :batch-size batch-size
-	 :valid-dataset dataset-valid
+;	 :valid-dataset dataset-valid
+	 :print-each 100
 	 :verbose t
 	 :random t))

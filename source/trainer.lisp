@@ -208,7 +208,8 @@
       (cl-cram:update status-bar 1 :desc (format nil "loss:~a" (/ (apply #'+ losses) (length losses)))))
 
     (print "")
-    (valid trainer valid-dataset batch-size)))
+    (if valid-dataset
+	(valid trainer valid-dataset batch-size))))
 
 (defdataset WaffeDataset (train valid &key (batch-size 1))
   :parameters ((train train) (valid valid) (batch-size batch-size))
