@@ -14,9 +14,9 @@
   (let ((parameters `(T)))
     (labels ((search-param (m)
 	       (cond
-		 ((typep m 'model-list)
+		 ((typep m 'cl-waffe:model-list)
 		  (dolist (p (slot-value m
-					 (car (slot-value m 'parameters))))
+					 (car (slot-value m 'cl-waffe:parameters))))
 		    (search-param p)))
 		 ((is-waffe-model m)
 		   (dolist (p (slot-value m 'parameters))

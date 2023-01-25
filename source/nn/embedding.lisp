@@ -1,12 +1,31 @@
 
 (in-package :cl-waffe.nn)
 
-(defnode Embedding (vocab-size
-		    embedding-dim
-		    &key
-		    (pad-idx nil))
+(defnode EmbeddingTensor (padding-idx)
   :parameters ((xi T)
-	       (vocab-size vocab-size :type fixnum)
+	       (weights T)
+	       (padding-idx padding-idx))
+  :forward ((x weights)
+	    (save-for-backward xi x)
+	    (save-for-backward weights weights)
+	    (with-searching-calc-node :embedding-forward
+	      x
+	      weights
+	      (self padding-idx)))
+  :backward ((dy)
+	     (let ((dx (with-searching-calc-node :embedding-backward
+			 (self xi)
+			 dy
+			 (self weights)
+			 (self padding-idx))))
+	       (list dx ; x is supposed to be const
+		     dx))))
+
+(defmodel Embedding (vocab-size
+		     embedding-dim
+		     &key
+		     (pad-idx nil))
+  :parameters ((vocab-size vocab-size :type fixnum)
 	       (embedding-dim embedding-dim :type fixnum)
 	       (padding-idx (if pad-idx
 				(const pad-idx)
@@ -16,16 +35,6 @@
 
   :forward ((x)
 	    "Embedding(x) where x is the shape of (batch-size length)"
-	    (save-for-backward xi x)
-	    (with-searching-calc-node :embedding-forward
-	      x
-	      (self weights)
-	      (self padding-idx)))
-
-  :backward ((dy)
-	     (list
-	      (with-searching-calc-node :embedding-backward
-		(self xi)
-		dy
-		(self weights)
-		(self pad-idx)))))
+	    (call (EmbeddingTensor (self padding-idx))
+		  x
+		  (self weights))))

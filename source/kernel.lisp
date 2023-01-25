@@ -19,26 +19,12 @@
 
 (declaim (ftype (function (keyword cons) waffetensor) invoke-mgl-kernel invoke-cpu-kenel))
 (defun invoke-mgl-kernel (kernel-function variables)
-  (let ((result-tensor (sysconst (cl-waffe.backends.mgl:dispatch-kernel
+  (sysconst (cl-waffe.backends.mgl:dispatch-kernel
 				  kernel-function
 				  *destructive-operation*
 				  (car variables)
 				  (second variables)
-				  variables))))
-    (if (or *no-grad* *destructive-operation*)
-	; is result-tensor a copied mat?
-	(if (and (not (waffetensor-is-data-destructed? (car variables)))
-		 (if (second variables)
-		     (not (waffetensor-is-data-destructed? (second variables)))
-		     t))
-	    (progn
-	      ;(setf (waffetensor-is-data-destructed? result-tensor) t)
-	      ;(!allow-destruct result-tensor)
-	      result-tensor)
-	    (progn ; destructed
-	      (setf (waffetensor-is-next-destruct? result-tensor) nil)
-	      result-tensor))
-	result-tensor)))
+				  variables)))
 
 (defun invoke-cpu-kernel (kernel-function variables)
   (sysconst (cl-waffe.backends.cpu:dispatch-kernel kernel-function variables)))

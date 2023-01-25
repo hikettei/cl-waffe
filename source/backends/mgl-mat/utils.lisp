@@ -2,6 +2,7 @@
 (in-package :cl-waffe.backends.mgl)
 
 (define-lisp-kernel (write-to-nth-dim-with-range-lisp)
+    ; INDEX=(!shape tensor 0) * (x1) + (!shape tensor 1) * (x2) + ...
     ((out :mat :io)
      (copy-from-mat :mat)
      (target-axis fixnum)
@@ -64,12 +65,12 @@
 
 (defun write-to-nth-dim-with-range1 (out
 				     copy-from-mat
-				     start)
+				     bias)
   (if t;(use-cuda-p out)
       (write-to-nth-dim-with-range-lisp1
        out
        copy-from-mat
        (mgl-mat:mat-size copy-from-mat)
-       start)))
+       bias)))
 
 

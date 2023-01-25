@@ -81,8 +81,10 @@
 		 (setf (gethash i (self m)) (data (!zeros (!shape (gethash i (self params))))))
 		 (setf (gethash i (self v)) (data (!zeros (!shape (gethash i (self params))))))))
 	   (incf (self n) 1)
-	   (let ((lr-t (* (self lr) (/ (sqrt (- 1.0 (expt (self beta2) (self n))))
-					     (- 1.0 (expt (self beta1) (self n)))))))
+	   (let ((lr-t (* (self lr) (/ (sqrt (- 1.0 (expt (self beta2)
+						          (self n))))
+				       (- 1.0 (expt (self beta1)
+						    (self n)))))))
 	     (dotimes (i (hash-table-count (self params)))
 	       (cl-waffe.backends.mgl:adam-update
 		            (gethash i (self m))

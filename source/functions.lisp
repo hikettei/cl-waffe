@@ -142,8 +142,22 @@
 		    (nth dim dims-displacements)
 		    total-bias)))
 		 (if (not (eql T (nth dim dims)))
-		     (incf total-bias bias)))))
+		     (incf total-bias (* (nth dim dims) bias))))))
     result))
+
+(defun nth-bias (tensor aref-dims n)
+  (let ((bias 0))
+    (dotimes (i (1+ n))
+      (incf bias (if (eql (nth i aref-dims) T)
+		     0
+		     (progn
+		       ;(unless (< (!shape tensor i) (nth i aref-dims))
+			; (error "(setf !aref): ~a is out of range for ~a. shape:~a" (nth i aref-dims) (!shape tensor i) (!shape tensor)))
+		       (* (cl-waffe.backends.mgl:get-difference
+			 (data tensor)
+			 i)
+			(nth i aref-dims))))))
+    bias))
 
 (defun !write-faref (target tensor &rest dims)
   "Example: (!aref vector 1 t t) (!aref vector '(1 3) t t)
@@ -158,33 +172,12 @@
 		 dims)
 		(T
 		 (error "!aref: dim ~a beyonds tensor's dim" dims))))
-	 (dims-result (mapcar (lambda (x y) (if (typep x 'fixnum)
-						1
-						(if (typep x 'list)
-						    (progn
-						      (unless (= (length x) 2)
-							(error "!aref: an argument is following: index, t, '(from start). ~a is invaild." x))
-						      (- (second x) (car x)))
-						    y)))
-			      dims (!shape tensor)))
-	 (dims-displacements (map 'list (lambda (x)
-					  (typecase x
-					    (fixnum x)
-					    (list (car x))
-					    (T 0)))
-				  dims))
-	 (result target)
-	 (first-dim (the fixnum (find 'fixnum dims :test
-				      (lambda (x y) (typep y x)))))
-	 (total-bias (* first-dim (apply #'* (!shape
-					      (apply #'!aref target dims))))))
-    (declare (ignore dims-result))
-
+	 (result target))
+    
     (unless (= (apply #'* (!shape (apply #'!aref target dims)))
 	       (apply #'* (!shape tensor)))
       (error "(setf aref): Mismatch dims...(due to the waffe's bug)")) ; Todo: Cut tensor by args
 
-    
     (map 'list (lambda (x y)
 		 (etypecase y
 		   (boolean nil)
@@ -194,9 +187,14 @@
 			     (error "!aref: the number ~a must be < ~a" y x)))
 		   (T nil)))			     
 	 (!shape target) dims)
-    (cl-waffe.backends.mgl:write-to-nth-dim-with-range1
-     (data result)
-     (data tensor)
-     total-bias)
-result))
+
+    (loop for dim upfrom 0 below (length dims)
+	  do (if (not (eql T (nth dim dims)))
+		 (progn
+		   (setf bias (nth-bias target dims dim))
+		   (cl-waffe.backends.mgl:write-to-nth-dim-with-range1
+		    (data result)
+		    (data tensor)
+		    (nth-bias target dims dim)))))
+    result))
 

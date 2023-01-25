@@ -5,6 +5,8 @@
 
 (in-package :rnn-example)
 
+; Todo: BatchNorm/Dropout
+
 (defmodel Encoder (vocab-size embedding-dim hidden-size)
   :parameters ((embedding (Embedding vocab-size embedding-dim :pad-idx 0))
                (layer     (RNN embedding-dim hidden-size :num-layers 1)))
@@ -16,7 +18,7 @@
 (defmodel Decoder (vocab-size embedding-dim hidden-size)
   :parameters ((embedding (Embedding vocab-size embedding-dim :pad-idx 0))
                (layer     (RNN embedding-dim hidden-size :num-layers 1))
-	       (h2l       (linearlayer hidden-size embedding-dim)))
+	       (h2l       (linearlayer hidden-size vocab-size)))
   
   :forward ((encoder-state y)
 	    (let* ((ye (call (self embedding) y))
@@ -27,8 +29,7 @@
 
 (defmodel Seq2Seq (vocab-size embedding-dim input-size)
   :parameters ((encoder (Encoder vocab-size embedding-dim input-size))
-	       (decoder (Decoder vocab-size embedding-dim input-size)))
-  
+	       (decoder (Decoder vocab-size embedding-dim input-size)))  
   :forward ((x y)
 	    (let ((x-state (call (self encoder) x)))
 	      (call (self decoder) x-state y))))
@@ -47,12 +48,15 @@
   :predict ((x) (call (model) x)))
 
 
-(defun demo (&key (lang1 :ja)
+; Todo 3d operations, for matmul and sum without using !aref
+
+(defun demo (&key
+	       (lang1 :ja)
 	       (lang2 :en)
-	       (maxlen 100)
-	       (batch-size 32)
+	       (maxlen 30)
+	       (batch-size 1)
 	       (embedding-dim 64)
-	       (hidden-dim 32))
+	       (hidden-dim 128))
 
   ; Loadig Dataset
 
@@ -69,7 +73,7 @@
     (setq i2w lang2-i2w))
   
 
-  (format t "==The dictionary size is ~a~%" lang1 (hash-table-size w2i))
+  (format t "==The dictionary size is ~a~%" (hash-table-count w2i))
 
   (format t "==The total size of training dataset is ~a~%" (calc-data-size :tok :train lang1))
 
@@ -100,13 +104,14 @@
   (defparameter dataset-valid (WaffeDataset lang1-test lang2-test
 					    :batch-size batch-size))
 
-  (defparameter vocab-size (hash-table-size w2i))
-  (setq model (Seq2SeqTrainer vocab-size embedding-dim hidden-dim))
+  (defparameter vocab-size (hash-table-count w2i))
+  (defparameter model (Seq2SeqTrainer vocab-size embedding-dim hidden-dim))
 
   (train model
 	 dataset-train
 	 :epoch 10
 	 :batch-size batch-size
-	 :valid-dataset dataset-valid
+;	 :valid-dataset dataset-valid
+	 :print-each 100
 	 :verbose t
 	 :random t))

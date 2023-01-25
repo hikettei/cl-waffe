@@ -286,10 +286,11 @@
 	    (x (assure-tensor x))
 	    (y (assure-tensor y)))
        (dotimes (i (!shape x 0))
-	 (setq result (setf (!aref result i) (call node (!squeeze (!aref x i) 0) y))))
+	 (setq result (setf (!aref result i)
+			    (call node (!squeeze (!aref x i) 0) y))))
        result))
     ((and (= (!dims x) 2) (= (!dims y) 3))
-     (error "todo: matmul")
+     (error "todo: matmul 3 * 2")
      (!matmul y x))
     (T (error "!matmul: support shapes are following: (a) * (b), (a b) * (c d), (a b c) * (d e), (a b) * (c d e). more will be added..."))))
 

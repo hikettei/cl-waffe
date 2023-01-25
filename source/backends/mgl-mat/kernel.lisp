@@ -315,7 +315,7 @@
 		 (0 `(1 ,@(cdr dims)))
 		 (T (error "Sum only supports a 2d matrix")))))
     (let ((o (mgl-mat:make-mat dims :initial-element 0)))
-      (mgl-mat:sum!     x1 o :axis (data y) :beta 1)
+      (mgl-mat:sum! x1 o :axis (data y) :beta 1)
       (mgl-mat:reshape! o dims)
       (if (equal dims `(1 1))
 	  (mgl-mat:mref o 0 0)

@@ -155,13 +155,13 @@
 (defmacro grad (tensor)
   `(progn
      (unless (typep ,tensor 'WaffeTensor)
-       (error "The tensor is not waffetensor"))
+       (error "The tensor is not a waffetensor"))
      
      (unless (waffetensor-grad ,tensor)
        (error "The tensor is not a parameter. Constants doesn't have a grad"))
 
      (if (typep (waffetensor-grad ,tensor) 'cons)
-	 (error "A grad is nil. Please remain you need to call (backward out) before using a grad"))
+	 (error "A grad is nil. Please remain you need to call (backward out) before using a grad. When using ~%~a" ,tensor))
 
      (waffetensor-grad ,tensor)))
 
@@ -222,12 +222,12 @@
 (defun backward1 (tensor)
   (declare (optimize (speed 3) (space 0) (safety 1))
 	   (type waffetensor tensor))
-  (if (waffetensor-backward tensor) ;Backward exists?
+  (cond
+    ((waffetensor-backward tensor) ;Backward exists?
       (let* ((grad-tmp-before (waffetensor-grad-tmp tensor))
 	     (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top
 			      (grad-tmp-value grad-tmp-before)
 			      (const 1))))
-	;ただし,最後に constから生成されてたやつは使わないので上書きする
 	(setf (waffetensor-is-next-destruct? grad-before) nil) ; assure grad-before won't be changed
 	; calculating backward(state, dy) -> x.grad, y.grad...
         (progn
@@ -242,8 +242,8 @@
 
 	    (dotimes (n (length grads))
 	      (step-next-node tensor n)))
-	  nil))
-      (progn
+	  nil)))
+    (T
 	(if (waffetensor-grad tensor) ; the tensor is the end of node.
 	    (if (grad-tmp-value (waffetensor-grad-tmp tensor)) ; is grad-tmp already created?
 		(if (typep (waffetensor-grad tensor) 'cons) ; is it first value? or not?
@@ -254,7 +254,9 @@
 			      (setf (waffetensor-grad tensor) (data (!reshape new-grad (!shape tensor))))) ; is it due to bugs of reshape?
 			  (setf (waffetensor-grad tensor) (data new-grad))))
 		    (setf (waffetensor-grad tensor)
-			  (data (!add (waffetensor-grad tensor) (grad-tmp-value (waffetensor-grad-tmp tensor))))))))))
+			  (data (!add (waffetensor-grad tensor)
+				      (grad-tmp-value
+				       (waffetensor-grad-tmp tensor))))))))))
   nil)
 
 
@@ -373,9 +375,10 @@
       (error "Fixnum/Double/Float doesn't have a shape")))
     
   (if nth
-      (let ((n (if (typep nth 'waffetensor)
-		   (data nth)
-		   nth)))
+      (let* ((n (if (typep nth 'waffetensor)
+	 	    (data nth)
+		    nth))
+	     (n (if (< n 0) (+ (!dims tensor) n) n)))
 	(if (typep (data tensor) 'function)
 	    (nth n (funcall (data tensor) t nil))
 	    (mgl-mat:mat-dimension (data tensor) n)))
