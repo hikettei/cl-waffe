@@ -35,16 +35,24 @@
   ; x...
   ; y ... (batch-size n-classes)
 
+  ; Todo: Implement it on mgl kernel
+
   (if (> (!dims x) (!dims y))
       ; When Given y is not a onehot.
-      (!div (!mul -1 (!sum (!mul (to-onehot x y epsilon) (!log (!add x delta))))) (!shape y 0))
+      (!div (!mul -1
+		  (!sum (!mul (to-onehot x y epsilon)
+			      (!log (!add x delta)))))
+	    (!div (!size x) (!shape x 2)))
       ; When Given y is a onehot.
-      (!div (!mul -1 (!sum (!mul y (!log (!add x delta))))) (!shape y 0))))
+      (!div (!mul -1
+		  (!sum (!mul y (!log (!add x delta)))))
+	    (!div (!size x) (!shape x 2)))))
 
 
 (defnode SoftMaxCrossEntropy (&key (delta 1e-7) (avoid-overflow t))
   :parameters ((delta delta) (avoid-overflow avoid-overflow) (batch-size T) (out T) (target T))
   :forward ((x y)
+	    "x: weights (batch len classes) y: (batch len classes)"
 	    (setf (self batch-size) (!shape y 0))
 	    (save-for-backward target y)
 	    (let ((z (!softmax x :avoid-overflow (self avoid-overflow))))
@@ -55,7 +63,11 @@
 		    (dx (!mul dy (!div z (self batch-size)))))
 	       (list dx dx))))
 
-(defun softmax-cross-entropy (x y &key (avoid-overflow t) (delta 1e-7))
-  ; Todo For Batched.
-  (call (SoftMaxCrossEntropy :avoid-overflow avoid-overflow :delta delta) x y))
+(defun softmax-cross-entropy (x y &key (avoid-overflow t) (delta 1e-7) (epsilon 0.0))
+  (if (> (!dims x) (!dims y))
+      (call
+       (SoftMaxCrossEntropy :avoid-overflow avoid-overflow :delta delta)
+       x
+       (to-onehot x y epsilon))
+      (call (SoftMaxCrossEntropy :avoid-overflow avoid-overflow :delta delta) x y)))
 

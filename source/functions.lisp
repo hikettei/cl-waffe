@@ -141,8 +141,7 @@
 		    nth-axis
 		    (nth dim dims-displacements)
 		    total-bias)))
-		 (if (or (= dim 0)
-			 (not (eql T (nth dim dims))))
+		 (if (not (eql T (nth dim dims)))
 		     (incf total-bias (* (nth dim dims) bias))))))
     result))
 

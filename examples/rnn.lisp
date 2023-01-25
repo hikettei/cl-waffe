@@ -16,7 +16,7 @@
 (defmodel Decoder (vocab-size embedding-dim hidden-size)
   :parameters ((embedding (Embedding vocab-size embedding-dim :pad-idx 0))
                (layer     (RNN embedding-dim hidden-size :num-layers 1))
-	       (h2l       (linearlayer hidden-size embedding-dim)))
+	       (h2l       (linearlayer hidden-size vocab-size)))
   
   :forward ((encoder-state y)
 	    (let* ((ye (call (self embedding) y))
@@ -27,8 +27,7 @@
 
 (defmodel Seq2Seq (vocab-size embedding-dim input-size)
   :parameters ((encoder (Encoder vocab-size embedding-dim input-size))
-	       (decoder (Decoder vocab-size embedding-dim input-size)))
-  
+	       (decoder (Decoder vocab-size embedding-dim input-size)))  
   :forward ((x y)
 	    (let ((x-state (call (self encoder) x)))
 	      (call (self decoder) x-state y))))
