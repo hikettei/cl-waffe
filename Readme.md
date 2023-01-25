@@ -113,7 +113,9 @@ $ ./run-test-model.ros mnist
 
 ・Make full documentations and quickstart guide for JP and EN.
 
-・Speed up whole codes, especially when forward
+・Optimize whole codes, in term of speed and memory space.
+
+・**Use mgl-mat's facet in cl-waffe's node too. automatically allot :direction**
 
 ・Implement a convenient data loader package and avoid users having to implement it themselves.
 
@@ -121,11 +123,9 @@ $ ./run-test-model.ros mnist
 
 ・Implement the features for NLP, (e.g. Embedding, LSTM...)
 
-・~~Current definition of adam is too slow to use, so i need to optimize~~ (Done)
-
 ・More functions for mathmatics.
 
-・3d mat operations
+・3d mat operations (!sum, !matmul when 3d is too slow that cannot use.)
 
 ・save and restore models
 
