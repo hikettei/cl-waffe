@@ -37,7 +37,6 @@
 		  (!set-batch (self valid) index (self batch-size))))
   :length (() (car (!shape (self train)))))
 
-
 (defmacro do-index-value-list ((index value list) &body body)
   (let ((iter (gensym))
         (inner-list (gensym)))
@@ -86,5 +85,5 @@
   (setq train (MnistData mnist-dataset mnist-target 100))
   (setq test (MnistData mnist-dataset-test mnist-target-test 100))
 
-  (time (train trainer train :max-iterate 600 :epoch 10 :batch-size 100 :valid-dataset test :verbose t :random t)))
+  (time (train trainer train :max-iterate 600 :epoch 10 :batch-size 100 :valid-dataset test :verbose t :random t :print-each 100)))
 

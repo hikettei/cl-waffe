@@ -181,7 +181,7 @@
 				(width 45)
 				(random nil)
 				(height 10)
-				(display-each 10)) ; stream指定してtxtファイルにログを残せるようにしたい
+				(print-each 10)) ; stream指定してtxtファイルにログを残せるようにしたい
   (let ((losses nil) ; cl-termgraph assumes that loss >= 0
 	(status-bar nil)
 	(total-len (get-dataset-length dataset)))
@@ -200,8 +200,7 @@
 		      (args (get-dataset dataset i))
 		      (loss (data (step-model1 trainer args))))
 		 (push loss losses)
-		 (print loss)
-		 (if (= (mod index display-each) 0)
+		 (if (= (mod index print-each) 0)
 		     (cl-cram:update status-bar 0 :desc (format nil "~a/~a, loss:~a" index (/ total-len batch-size) (/ (apply #'+ losses) (length losses)))))))
       
       (format stream "~C" #\newline)
