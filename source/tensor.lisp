@@ -222,8 +222,6 @@
 (defun backward1 (tensor)
   (declare (optimize (speed 3) (space 0) (safety 1))
 	   (type waffetensor tensor))
-  (print tensor)
-  (print (waffetensor-state tensor))
   (if (waffetensor-backward tensor) ;Backward exists?
       (let* ((grad-tmp-before (waffetensor-grad-tmp tensor))
 	     (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top
@@ -375,9 +373,10 @@
       (error "Fixnum/Double/Float doesn't have a shape")))
     
   (if nth
-      (let ((n (if (typep nth 'waffetensor)
-		   (data nth)
-		   nth)))
+      (let* ((n (if (typep nth 'waffetensor)
+	 	    (data nth)
+		    nth))
+	     (n (if (< n 0) (+ (!dims tensor) n) n)))
 	(if (typep (data tensor) 'function)
 	    (nth n (funcall (data tensor) t nil))
 	    (mgl-mat:mat-dimension (data tensor) n)))

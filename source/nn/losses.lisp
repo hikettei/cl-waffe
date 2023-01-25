@@ -42,11 +42,11 @@
       (!div (!mul -1
 		  (!sum (!mul (to-onehot x y epsilon)
 			      (!log (!add x delta)))))
-	    (!div (!size x) (!shape x 2)))
+	    (!div (!size x) (!shape x -1)))
       ; When Given y is a onehot.
       (!div (!mul -1
 		  (!sum (!mul y (!log (!add x delta)))))
-	    (!div (!size x) (!shape x 2)))))
+	    (!div (!size x) (!shape x -1)))))
 
 
 (defnode SoftMaxCrossEntropy (&key (delta 1e-7) (avoid-overflow t))
