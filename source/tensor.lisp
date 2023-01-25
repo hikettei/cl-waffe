@@ -222,12 +222,12 @@
 (defun backward1 (tensor)
   (declare (optimize (speed 3) (space 0) (safety 1))
 	   (type waffetensor tensor))
-  (if (waffetensor-backward tensor) ;Backward exists?
+  (cond
+    ((waffetensor-backward tensor) ;Backward exists?
       (let* ((grad-tmp-before (waffetensor-grad-tmp tensor))
 	     (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top
 			      (grad-tmp-value grad-tmp-before)
 			      (const 1))))
-	;ただし,最後に constから生成されてたやつは使わないので上書きする
 	(setf (waffetensor-is-next-destruct? grad-before) nil) ; assure grad-before won't be changed
 	; calculating backward(state, dy) -> x.grad, y.grad...
         (progn
@@ -242,8 +242,8 @@
 
 	    (dotimes (n (length grads))
 	      (step-next-node tensor n)))
-	  nil))
-      (progn
+	  nil)))
+    (T
 	(if (waffetensor-grad tensor) ; the tensor is the end of node.
 	    (if (grad-tmp-value (waffetensor-grad-tmp tensor)) ; is grad-tmp already created?
 		(if (typep (waffetensor-grad tensor) 'cons) ; is it first value? or not?
