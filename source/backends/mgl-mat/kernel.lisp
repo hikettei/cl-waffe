@@ -240,7 +240,7 @@
 (defun dot-tensor (enable-optimize? out x y)
   (declare (ignore enable-optimize? out))
   (mgl-mat:dot (data x) (data y)))
-
+				   
 (declaim (ftype (function (boolean waffetensor waffetensor waffetensor) mgl-mat:mat)
 		matmul-tensor
 		pow-tensor
@@ -260,7 +260,13 @@
       (error "cl-waffe.backends.mgl:matmul-tensor Matmul only supports following: 2d * 2d, 2d * 3d, 3d * 2d, 3d * 3d."))
 
     (let ((x-dims (the list (mat-dimensions x1)))
-	  (y-dims (the list (mat-dimensions y1))))
+	  (y-dims (the list (mat-dimensions y1)))
+	  (cache-id (cond
+		      ((waffetensor-cache-id x)
+		       (waffetensor-cache-id x))
+		      ((waffetensor-cache-id y)
+		       (waffetensor-cache-id y))
+		      (T :scratch))))
 
       (cond
 	((and (= (length x-dims) 2)
@@ -271,14 +277,15 @@
 			  ,(if (second transpose-map)
 			       (second (reverse (mat-dimensions y1)))
 			       (second (mat-dimensions y1))))))
-	   (with-thread-cached-mat (out out-dim :place (gensym)) ; change place name in tensor
-	      (matmul-tensor-2d ; do i have to copy?
+
+	   (with-thread-cached-mat (out out-dim :place cache-id)
+	     (reshape (matmul-tensor-2d
 	       out
 	       x1
 	       y1
 	       (car transpose-map)
-	       (second transpose-map)))))
-	
+	       (second transpose-map))
+		      out-dim))))
 	((and (= (length x-dims) 3)
 	      (= (length y-dims) 2))
 	 (let ((out-dim `(,(car x-dims)
@@ -292,7 +299,7 @@
 	       (shape-first    (mat-dimensions x1)))
 	   (with-thread-cached-mat (out out-dim
 					:displacement 0
-					:place (gensym))
+					:place cache-id)
 	     (dotimes (i (the fixnum (car x-dims)))
 	       (reshape-and-displace! out
 				      (cdr out-dim)
@@ -323,7 +330,7 @@
 	       (shape-first    (mat-dimensions y1)))
 	   (with-thread-cached-mat (out out-dim
 					:displacement 0
-					:place (gensym))
+					:place cache-id)
 	     (dotimes (i (the fixnum (car y-dims)))
 	       (reshape-and-displace! out
 				      (cdr out-dim)
@@ -602,7 +609,7 @@
     (:<       (compare-tensor is-first-time-call? destructable-tensor (car args) (second args)))
     (:repeat  (mgl-repeat (data (car args)) (data (third args)) :axis (data (second args))))
     (:bernoulli (bernoulli-tensor is-first-time-call? destructable-tensor (car args) (second args)))
-    (:transpose (deliv-delay (data (car args)) #'mgl-mat:transpose))
+    (:transpose (deliv-delay (data (car args)) #'transpose))
     (:embedding-forward (embedding-forward nil (car args)
 					   (second args)
 					   (third args)))

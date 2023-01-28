@@ -22,7 +22,8 @@
 			     (:file "kernel")))
 	       (:module "backends/mgl-mat"
 		:depends-on ("package" "tensor")
-		:components ((:file "package")
+		:components ((:file "cache")
+			     (:file "package")
 			     (:file "utils")
 			     (:file "optimizers")
 			     (:file "kernel")))
