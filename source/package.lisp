@@ -13,7 +13,8 @@
 
 	   #:waffedatatype
 	   #:waffe-array
-	   #:waffetensor-is-node-tensor
+
+	   #:waffetensor-thread-data
 
 	   #:with-no-grad
 	   #:*no-grad*

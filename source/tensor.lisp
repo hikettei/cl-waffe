@@ -41,6 +41,16 @@
     (value nil :type (or null waffetensor))
     (grad-called nil :type boolean)))
 
+; thread-idx=0 is for saving grads, thread-idx=1 is for forwards thread-idx=2 is for backwards, and thread-idx>2 is for multi threads.
+(defstruct (WaffeNodeThread
+	    (:constructor
+		thread
+		(thread-idx
+		 &aux
+		   (thread-idx thread-idx))))
+  (thread-idx 0 :type fixnum)
+  (cache-n 0 :type fixnum))
+
 (defstruct (WaffeTensor (:print-function
 			 (lambda (tensor stream depth)
 			   (declare (ignore depth))
@@ -49,23 +59,19 @@
 			    sysconst
 			    (value &key (backend *default-backend*)
 				     (extend nil)
-				     (is-node-tensor nil)
+				     (thread-data nil)
 			     &aux (data (init-waffe-tensor-data value))
 			       (backend (check-backend backend extend))
-			       (calln 0)
-			       (destructively-calln 0)
 			       (grad nil)
-			       (is-node-tensor is-node-tensor)
-			       (is-mat (typep value 'mgl-mat:mat))
+			       (thread-data thread-data)
 			       (destructive? t)
+			       (is-mat (typep value 'mgl-mat:mat))
 			       (grad-tmp (make-grad-tmp))))
 	                (:constructor
 			    tensor
 			    (value &key (backend *default-backend*) (extend nil)
 			     &aux (data (init-waffe-tensor-data value))
 			       (is-ancestor-param t)
-			       (calln 0)
-			       (destructively-calln 0)
 			       (is-mat (typep value 'mgl-mat:mat))
 			       (is-param? t)
 			       (backend (check-backend backend extend))
@@ -75,7 +81,6 @@
 			    (value &key (backend *default-backend*) (extend nil)
 			     &aux (data (init-waffe-tensor-data value))
 			       (backend (check-backend backend extend))
-			       (calln 0)
 			       (is-mat (typep value 'mgl-mat:mat))
 			       (destructively-calln 0)
 			       (grad nil)
@@ -93,8 +98,8 @@
   (destructively-calln 0 :type fixnum) ; unnecessary
   (is-ancestor-param nil :type boolean)
   (is-next-destruct? nil :type boolean)
-  (is-node-tensor nil :type boolean)
   (destructive? nil :type boolean) ; unnecessary
+  (thread-data nil :type (or waffenodethread null))
   (is-data-destructed? nil :type boolean))
 
 (declaim (inline data))
@@ -120,7 +125,7 @@
 	      (cos (* 2.0 pi (double-random)))
 	      var)))))
 
-(eval-when (:compile-toplevel)
+(eval-when (:compile-toplevel :load-toplevel :execute)
   (declaim (ftype (function (waffetensorcontenttype) (or waffetensorcontenttype)) init-waffe-tensor-data))
   ; Todo rewrite to macro, 処理系によってはエラー？
   (defun init-waffe-tensor-data (content)
@@ -231,7 +236,6 @@
 	     (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top
 			      (grad-tmp-value grad-tmp-before)
 			      (const 1))))
-	(setf (waffetensor-is-node-tensor grad-before) t) ; assure grad-before won't be changed
 	; calculating backward(state, dy) -> x.grad, y.grad...
         (progn
 	  (let ((grads (funcall (the function (call-backward (waffetensor-state tensor))) grad-before)))

@@ -17,9 +17,6 @@
        (setf *destructive-operation* nil)
        result)))
 
-(defmacro t? (val)
-  `(not (null ,val)))
-
 (declaim (ftype (function (keyword cons) waffetensor) invoke-mgl-kernel invoke-cpu-kenel))
 (defun invoke-mgl-kernel (kernel-function variables)
   (sysconst (cl-waffe.backends.mgl:dispatch-kernel
@@ -28,13 +25,23 @@
 				  (car variables)
 				  (second variables)
 				  variables)
-	    :is-node-tensor (t? (find t variables
-				  :test #'(lambda (x y)
-					    (declare (ignore x))
-					    (waffetensor-is-node-tensor y))))))
+	    :thread-data (let ((r (find t variables
+					:test (lambda (x y)
+						(declare (ignore x))
+						(waffetensor-thread-data y)))))
+			   (if r
+			       (waffetensor-thread-data r)
+			       nil))))
 
 (defun invoke-cpu-kernel (kernel-function variables)
-  (sysconst (cl-waffe.backends.cpu:dispatch-kernel kernel-function variables)))
+  (sysconst (cl-waffe.backends.cpu:dispatch-kernel kernel-function variables)
+	    :thread-data (let ((r (find t variables
+					:test (lambda (x y)
+						(declare (ignore x))
+						(waffetensor-thread-data y)))))
+			   (if r
+			       (waffetensor-thread-data r)
+			       nil))))
 
 (defgeneric invoke-kernel (kernel-function variables first-argument i))
 (defmethod invoke-kernel (kernel-function

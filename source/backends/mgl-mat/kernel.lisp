@@ -3,27 +3,15 @@
 
 ; Todo Rewrite with define-lisp-kernel
 
-(defmacro duplicate-tensor (mat)
-  ;`(let ((out (copy-mat ,mat)))
-     ; matをgcしたい
-   ;  (mgl-cube:destroy-cube ,mat)
-    ; out))
-
-  mat)
-
-(defmacro apply-destruct (out)
-  `(progn ; tensor=out
-     (setf (waffetensor-is-data-destructed? ,out) t))
-  nil)
-
-(defmacro assure-destructed? (out) ;for automatic !modify
-  `(progn
-     (if (waffetensor-is-data-destructed? ,out)
-       (error "Kernel Error: Modifying tensor that is not allowed to destruct"))
-     (the mgl-mat:mat (data ,out))))
-
 (defmacro will-be-destructed (tensor)
-  `(waffetensor-is-node-tensor ,tensor))
+  `(waffetensor-thread-data ,tensor))
+
+(defun create-thread-idx (thread-info)
+  "Thread format: <Thread_IDx>+<Count_N>"
+  (intern (format nil "~a+~a"
+		  (cl-waffe::waffenodethread-thread-idx thread-info)
+		  (cl-waffe::waffenodethread-cache-n thread-info))
+	  :keyword))
 
 (defgeneric decide-out-buffer (out args enable-optim))
 
@@ -32,18 +20,28 @@
   (decide-out-buffer out (data args) enable-optim))
 
 (defmethod decide-out-buffer ((out waffetensor) (args mgl-mat:mat) enable-optim)
-  (if (waffetensor-is-node-tensor out)
-      args
-      (duplicate-tensor args)))
-
+  (declare (optimize (speed 3)))
+  (if (waffetensor-thread-data out)
+      (let* ((thread-info (waffetensor-thread-data out))
+	     (idx (create-thread-idx thread-info)))
+	(with-cache (result (mat-dimensions args) :place idx)
+	  (incf (cl-waffe::waffenodethread-cache-n thread-info) 1)
+	  result))
+      (decide-out-buffer nil args enable-optim)))
+      
 (defmethod decide-out-buffer ((out null) (args waffetensor) enable-optim)
   (declare (optimize (speed 3) (space 0) (safety 0)))
   (decide-out-buffer out (data args) enable-optim))
 
 (defmethod decide-out-buffer ((out null) (args mgl-mat:mat) enable-optim)
-  (declare (ignore enable-optim))
-  (with-ones (o (mat-dimensions args))
-    (copy! args (reshape o (mat-dimensions args)))))
+  (declare (optimize (speed 3) (space 0) (safety 0)))
+  ;(with-cache (o (mat-dimensions args)
+	;	:place :out-of-node-caches)
+    ;(copy! args (reshape o (mat-dimensions args)))))
+  ; Todo do something
+  (if enable-optim
+      args
+      (copy-mat args)))
 
 (declaim (ftype (function (mgl-mat:mat fixnum &key (:axis fixnum)) mgl-mat:mat) mgl-repeat))
 (defun mgl-repeat (tensor n &key axis)
@@ -78,12 +76,14 @@
 (defun mgl-full-like (tensor value)
   (declare (optimize (speed 3) (safety 0) (debug 0))
 	   (type mat tensor))
+  (format t "Warning: making new tensor~%")
   (make-mat (mat-dimensions tensor)
 	    :initial-element value))
 
 (defun transposed-mgl-full-like (tensor value)
   (declare (optimize (speed 3) (safety 0) (debug 0))
 	   (type mat tensor))
+  (format t "Warning: making new tensor~%")
   (let ((dims (mat-dimensions tensor)))
     (declare (type cons dims))
     (make-mat (reverse dims) :initial-element value)))
@@ -262,11 +262,23 @@
     (let ((x-dims (the list (mat-dimensions x1)))
 	  (y-dims (the list (mat-dimensions y1)))
 	  (cache-id (cond
-		      ((waffetensor-cache-id x)
-		       (waffetensor-cache-id x))
-		      ((waffetensor-cache-id y)
-		       (waffetensor-cache-id y))
-		      (T :scratch))))
+		      ((waffetensor-thread-data x)
+		       (let ((idx (create-thread-idx
+				   (waffetensor-thread-data x))))
+			 (incf (cl-waffe::waffenodethread-cache-n
+				(waffetensor-thread-data x))
+			       1)
+			 idx))
+		      ((waffetensor-thread-data y)
+		       (let ((idx (create-thread-idx
+				   (waffetensor-thread-data y))))
+			 (incf (cl-waffe::waffenodethread-cache-n
+				(waffetensor-thread-data y))
+			       1)
+			 idx))
+		      (T (format t "Waning: making unreachable caches~%")
+			 (intern (symbol-name (gensym "Matmul"))
+				 :keyword)))))
 
       (cond
 	((and (= (length x-dims) 2)
@@ -278,7 +290,7 @@
 			       (second (reverse (mat-dimensions y1)))
 			       (second (mat-dimensions y1))))))
 
-	   (with-thread-cached-mat (out out-dim :place cache-id)
+	   (with-cache (out out-dim :place cache-id)
 	     (reshape (matmul-tensor-2d
 	       out
 	       x1
@@ -297,9 +309,7 @@
 			       (nth 1 y-dims))))
 	       (displace-first (mat-displacement x1))
 	       (shape-first    (mat-dimensions x1)))
-	   (with-thread-cached-mat (out out-dim
-					:displacement 0
-					:place cache-id)
+	   (with-cache (out out-dim :place cache-id)
 	     (dotimes (i (the fixnum (car x-dims)))
 	       (reshape-and-displace! out
 				      (cdr out-dim)
@@ -329,7 +339,6 @@
 	       (displace-first (mat-displacement y1))
 	       (shape-first    (mat-dimensions y1)))
 	   (with-thread-cached-mat (out out-dim
-					:displacement 0
 					:place cache-id)
 	     (dotimes (i (the fixnum (car y-dims)))
 	       (reshape-and-displace! out

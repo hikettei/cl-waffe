@@ -31,21 +31,10 @@
 (declaim (ftype (function (t &rest waffetensor) waffetensor) call))
 (defun call (model &rest args)
   ; calculating op(x,y) -> result(x, y), state
-
-  (if (slot-value model 'hide-from-tree) ;when node;
-      (progn
-	(map 'list #'(lambda (x)
-		       (setf (waffetensor-is-node-tensor x) t))
-	     args)))
   
   (let* ((result (apply (call-forward model) args)))
     (declare (type (or null waffetensor list) result))
-    
-    (etypecase result
-      (list (dolist (v result)
-	      (setf (waffetensor-is-node-tensor v) nil)))
-      (waffetensor (setf (waffetensor-is-node-tensor result) nil)))
-    
+        
     (unless *no-grad*
       (if (slot-value model 'hide-from-tree) ;is model defined by defmodel?
 	  (progn
@@ -100,12 +89,13 @@
 				(setf (waffetensor-grad p) `(nil nil)))
 			    (setf (waffetensor-grad-tmp p) (make-grad-tmp)))
 		nil)
-     :hide-from-tree nil)))
+       :hide-from-tree nil
+       :regard-as-node t)))
 
 (defmacro defnode (name args &key parameters forward backward optimize)
   `(defmodel ,name ,args :parameters ,parameters :forward ,forward :backward ,backward :hide-from-tree T :optimize ,optimize))
 
-(defmacro define-node-method (fname name args body hide-from-tree optimize)
+(defmacro define-node-method (fname name args body hide-from-tree optimize &optional (is-node nil) &aux (thread (gensym)))
   (let ((f-ident   (gensym (symbol-name name)))
 	(self-heap (gensym (symbol-name name))))
     `(progn
@@ -120,14 +110,37 @@
 		      (save-for-backward (name value)
 			`(let ((smaller-value (detach ,value)))
 			   (!allow-destruct smaller-value)
-			   (setf (waffetensor-is-node-tensor smaller-value)
-				 t)
+			   ;(setf (waffetensor-is-node-tensor smaller-value)
+				; t)
 			   (setf (self ,name) smaller-value))))
-	     ,@body))
+	     ,(if is-node
+		  `(let ((,thread (thread 1)))
+		     ,(map 'list #'(lambda (_)
+				   `(setf (waffetensor-thread-data ,_) ,thread))
+			   args)
+		     (let ((result (progn ,@body)))
+		       (declare (type waffetensor &optional result))
+		       (typecase result
+			 (list (map 'list
+				    (lambda (x)
+				      (setf (waffetensor-thread-data x) nil)
+				      x)
+				    result))
+			 (T (setf (waffeetenssor-thread-data result) nil)
+			  result))))
+		  `(progn ,@body))))
 	 (defmethod ,fname ((self ,name))
 	   (lambda (&rest node-inputs) (apply #',f-ident self node-inputs))))))
 
-(defmacro defmodel (name args &key parameters forward backward hide-from-tree optimize)
+(defmacro defmodel (name
+		    args
+		    &key
+		      parameters
+		      (forward `((&rest args) (error ":forward isn't defined.")))
+		      (backward `((&rest args) (error ":backward isn't defined.:"))) ; displaying name is todo
+		      hide-from-tree
+		      optimize
+		      (regard-as-node nil))
   #|
   Define an node.
   Args: hide-from-tree ... if true, this node is detached from autograd. (that is, when backward, use backward defined in itself)
@@ -159,8 +172,21 @@
 	     (backward ,(if backward t nil) :type boolean)
 	     (parameters ',(map 'list (lambda (x) (assure-args (car x))) parameters))
 	     ,@(map 'list (lambda (x) `(,(assure-args (car x)) ,(second x) ,@(cddr x))) parameters))
-	   (define-node-method call-forward  ,name ,(car forward)  ,(cdr forward) ,hide-from-tree ,optimize)
-	   (define-node-method call-backward ,name ,(car backward) ,(cdr backward) ,hide-from-tree ,optimize)))))
+	 (define-node-method
+	     call-forward
+	     ,name
+	     ,(car forward)
+	     ,(cdr forward)
+	     ,hide-from-tree
+	     ,optimize
+	     ,regard-as-node)
+	 (define-node-method
+	     call-backward
+	     ,name
+	     ,(car backward)
+	     ,(cdr backward)
+	     ,hide-from-tree
+	     ,optimize)))))
 
 (defun render-simple-model-structure (stream model) ; Todo: More Details
   (format stream "[~a: ~a]" (if (slot-value model 'hide-from-tree)
