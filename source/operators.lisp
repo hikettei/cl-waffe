@@ -159,6 +159,7 @@
 	     (list (!matmul dy (!transpose (self yi)))
 		   (!matmul (!transpose (self xi)) dy))))
 
+; Todo: Fix Undefined variable :G0
 (defmacro defope (name node-object tensor args &body body &aux (common-node (gensym)))
   `(prog1
      (defparameter ,common-node ,node-object)
@@ -271,29 +272,8 @@
   (call (TransposeTensor (assure-tensor result)) (assure-tensor x)))
 
 (defope !matmul (MatmulTensor) node (x y)
-  (cond
-    ((and (= (!dims x) (!dims y))
-	  (= (!dims x) 2))
-     (call node (assure-tensor x) (assure-tensor y)))
-    ((and (= (!dims x) 1) (= (!dims y) 2))
-     (call node (!unsqueeze (assure-tensor x) -1) (assure-tensor y)))
-    ((and (= (!dims x) 2) (= (!dims y) 1))
-     (call node (assure-tensor x) (!unsqueeze (assure-tensor y) -1)))
-    ((and (= (!dims x) 3) (= (!dims y) 2)) ; Doesn't support batch...
-     (let* ((result (!zeros `(,(!shape x 0)
-			      ,(!shape x 1)
-			      ,(!shape y 1))))
-	    (x (assure-tensor x))
-	    (y (assure-tensor y)))
-       (dotimes (i (!shape x 0))
-	 (setq result (setf (!aref result i)
-			    (call node (!squeeze (!aref x i) 0) y))))
-       result))
-    ((and (= (!dims x) 2) (= (!dims y) 3))
-     (error "todo: matmul 3 * 2")
-     (!matmul y x))
-    (T (error "!matmul: support shapes are following: (a) * (b), (a b) * (c d), (a b c) * (d e), (a b) * (c d e). more will be added..."))))
-
+  (call node (assure-tensor x) (assure-tensor y)))
+	
 (defun !unsqueeze (x &optional (dim 0))
   ; display error when (!dims x) >= dim
   (let ((s (!shape x)))

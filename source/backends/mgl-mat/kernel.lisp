@@ -4,9 +4,12 @@
 ; Todo Rewrite with define-lisp-kernel
 
 (defmacro duplicate-tensor (mat)
-  `(let ((o (mgl-mat:make-mat (mgl-mat:mat-dimensions ,mat))))
-     (mgl-mat:copy! ,mat o)
-     (the mgl-mat:mat o)))
+  ;`(let ((out (copy-mat ,mat)))
+     ; matをgcしたい
+   ;  (mgl-cube:destroy-cube ,mat)
+    ; out))
+
+  mat)
 
 (defmacro apply-destruct (out)
   `(progn ; tensor=out
@@ -48,27 +51,42 @@
 	   (type mgl-mat:mat tensor)
 	   (type fixnum n axis))
   (if (>= axis 0)
-      (if (>= (length (the cons (mgl-mat:mat-dimensions tensor))) 2)
-          (mgl-mat:stack axis (loop for i below n collect tensor))
-	  (mgl-repeat (mgl-mat:reshape tensor `(,@(mgl-mat:mat-dimensions tensor) 1)) n :axis axis))
+      (if (>= (length (the list
+			   (mat-dimensions tensor)))
+	      2)
+          (with-ones (o (loop for i
+			      upfrom 0
+			      below (the fixnum (length
+						 (the list (mat-dimensions tensor))))
+			      collect (cond
+					((= i axis)
+					 (the fixnum (* n (the fixnum
+						      (mat-dimension tensor i)))))
+					(T (mat-dimension tensor i)))))
+	    (mgl-mat:stack!
+	     axis
+	     (loop for i below n collect tensor)
+	     o))
+	  ; when dims=1
+	  (mgl-repeat (mgl-mat:reshape!
+		       tensor
+		       `(,@(mgl-mat:mat-dimensions tensor) 1))
+ 		       n :axis axis))
       (error "axis=-1")))
 
-(declaim (ftype (function (mgl-mat:mat waffesupporteddatatype) mgl-mat:mat) trasposedmgl-full-like mgl-full-like))
+;(declaim (ftype (function (mgl-mat:mat waffesupporteddatatype) mgl-mat:mat) trasposedmgl-full-like mgl-full-like))
 (defun mgl-full-like (tensor value)
   (declare (optimize (speed 3) (safety 0) (debug 0))
-	   (type mgl-mat:mat tensor)
-	   (type waffesupporteddatatype value))
-  (mgl-mat:make-mat (mgl-mat:mat-dimensions tensor)
-		    :initial-element value))
+	   (type mat tensor))
+  (make-mat (mat-dimensions tensor)
+	    :initial-element value))
 
 (defun transposed-mgl-full-like (tensor value)
   (declare (optimize (speed 3) (safety 0) (debug 0))
-	   (type mgl-mat:mat tensor)
-	   (type waffesupporteddatatype value))
-  (let ((dims (mgl-mat:mat-dimensions tensor)))
+	   (type mat tensor))
+  (let ((dims (mat-dimensions tensor)))
     (declare (type cons dims))
-    (mgl-mat:make-mat (reverse dims)
-		      :initial-element value)))
+    (make-mat (reverse dims) :initial-element value)))
 
 (defparameter *v2v-operations* `(:add :sub :mul :div :dot :matmul))
 (defparameter *abort-delay-instruction* :matmul)
@@ -95,13 +113,13 @@
 (defun ensure-shape (ope x)
   (declare (type keyword ope))
   (if (find ope *v2v-operations*)
-      (if (or (typep x 'mgl-mat:mat) (typep x 'function))
+      (if (or (typep x 'mat) (typep x 'function))
 	  (if (eq ope *abort-delay-instruction*)
 	      (abort-delay x)
 	      (receive-delay x))
 	  (if (eq ope :matmul)
-	      (transposed-mgl-full-like m x)
-	      (mgl-full-like m x)))))
+	      (transposed-mgl-full-like x 0)
+	      (mgl-full-like x 0)))))
 
 (defun infomation ())
 
@@ -228,27 +246,118 @@
 		pow-tensor
 		compare-tensor
 		sum-tensor))
-(defun matmul-tensor (enable-optimize? o x y)
+(defun matmul-tensor (enable-optimize? o x y) ; 3D
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (ignore enable-optimize? o)
 	   (type boolean enable-optimize?)
 	   (type waffetensor o))
-
+  
   (let* ((x1 (ensure-shape :matmul (data x)))
 	 (y1 (ensure-shape :matmul (data y)))
-	 (transpose-map `(,(typep (data x) 'function) ,(typep (data y) 'function)))
-	 (out (mgl-mat:make-mat `(,(if (car transpose-map)
-	 			       (car  (reverse (mgl-mat:mat-dimensions x1)))
-	   			       (car  (mgl-mat:mat-dimensions x1)))
-				  ,(if (second transpose-map)
-				       (second (reverse (mgl-mat:mat-dimensions y1)))
-				       (second (mgl-mat:mat-dimensions y1)))))))
-    (unless (and (<= (length (the list (mgl-mat:mat-dimensions x1))) 2)
-		 (<= (length (the list (mgl-mat:mat-dimensions y1))) 2))
-      (error "cl-waffe.backends.mgl: :matmul failed due to unsatisfied with (!dims a) <= 2 and (!dims b) <= 2"))
-    
-    (mgl-mat:gemm! 1 x1 y1 0 out :transpose-a? (car transpose-map) :transpose-b? (second transpose-map))
-    out))
+	 (transpose-map `(,(typep (data x) 'function) ,(typep (data y) 'function))))
+    (unless (or (<= (length (the list (mat-dimensions x1))) 3)
+		(<= (length (the list (mat-dimensions y1))) 3))
+      (error "cl-waffe.backends.mgl:matmul-tensor Matmul only supports following: 2d * 2d, 2d * 3d, 3d * 2d, 3d * 3d."))
+
+    (let ((x-dims (the list (mat-dimensions x1)))
+	  (y-dims (the list (mat-dimensions y1))))
+
+      (cond
+	((and (= (length x-dims) 2)
+	      (= (length y-dims) 2))
+	 (let ((out-dim `(,(if (car transpose-map)
+			       (car  (reverse (mat-dimensions x1)))
+			       (car  (mat-dimensions x1)))
+			  ,(if (second transpose-map)
+			       (second (reverse (mat-dimensions y1)))
+			       (second (mat-dimensions y1))))))
+	   (with-thread-cached-mat (out out-dim :place (gensym)) ; change place name in tensor
+	      (matmul-tensor-2d ; do i have to copy?
+	       out
+	       x1
+	       y1
+	       (car transpose-map)
+	       (second transpose-map)))))
+	
+	((and (= (length x-dims) 3)
+	      (= (length y-dims) 2))
+	 (let ((out-dim `(,(car x-dims)
+			  ,(if (car transpose-map)
+			       (nth 2 x-dims)
+			       (nth 1 x-dims))
+			  ,(if (second transpose-map)
+			       (nth 0 y-dims)
+			       (nth 1 y-dims))))
+	       (displace-first (mat-displacement x1))
+	       (shape-first    (mat-dimensions x1)))
+	   (with-thread-cached-mat (out out-dim
+					:displacement 0
+					:place (gensym))
+	     (dotimes (i (the fixnum (car x-dims)))
+	       (reshape-and-displace! out
+				      (cdr out-dim)
+				      (the fixnum (* i
+						     (the fixnum (nth 1 out-dim))
+						     (the fixnum (nth 2 out-dim)))))
+	      
+	       (reshape-and-displace!
+		x1
+		(cdr shape-first)
+		(the fixnum (* i
+			       (the fixnum (nth 1 shape-first))
+			       (the fixnum (nth 2 shape-first)))))
+	       (matmul-tensor-2d out x1 y1 (car transpose-map) (second transpose-map)))
+	     (reshape-and-displace! out out-dim 0)
+	     (reshape-and-displace! x1 shape-first displace-first)
+	     out)))
+	((and (= (length x-dims) 2)
+	      (= (length y-dims) 3))
+	 (let ((out-dim `(,(car y-dims)
+			  ,(if (car transpose-map)
+			       (nth 1 x-dims)
+			       (nth 0 x-dims))
+			  ,(if (second transpose-map)
+			       (nth 1 y-dims)
+			       (nth 2 y-dims))))
+	       (displace-first (mat-displacement y1))
+	       (shape-first    (mat-dimensions y1)))
+	   (with-thread-cached-mat (out out-dim
+					:displacement 0
+					:place (gensym))
+	     (dotimes (i (the fixnum (car y-dims)))
+	       (reshape-and-displace! out
+				      (cdr out-dim)
+				      (the fixnum
+					   (* i
+					      (the fixnum
+						   (nth 1 out-dim))
+					      (the fixnum
+						   (nth 2 out-dim)))))
+	       (reshape-and-displace! y1
+				      (cdr shape-first)
+				      (the fixnum
+					   (* i
+					      (the fixnum
+						   (nth 1 shape-first))
+					      (the fixnum
+						   (nth 2 shape-first)))))
+	       (matmul-tensor-2d out x1 y1
+				 (car transpose-map)
+				 (second transpose-map)))
+	     (reshape-and-displace! out out-dim 0)
+	     (reshape-and-displace! y1 shape-first displace-first)
+	     out)))
+	(T (error "cl-waffe.backends.mgl:matmul-tensor: unimplemented combinations."))))))
+
+(declaim (ftype
+	  (function
+	   (mat mat mat boolean boolean)
+	   mat)
+	  matmul-tensor-2d))
+(defun matmul-tensor-2d (out x y ta? tb?)
+  (declare (optimize (speed 3) (space 0) (safety 0)))
+  (gemm! 1.0 x y 0 out :transpose-a? ta? :transpose-b? tb?)
+  out)
 
 (defun log-tensor (enable-optim out x)
   (declare (optimize (speed 3) (space 0) (safety 0))

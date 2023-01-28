@@ -32,7 +32,6 @@
 (defun call (model &rest args)
   ; calculating op(x,y) -> result(x, y), state
 
-
   (if (slot-value model 'hide-from-tree) ;when node;
       (progn
 	(map 'list #'(lambda (x)
@@ -41,6 +40,12 @@
   
   (let* ((result (apply (call-forward model) args)))
     (declare (type (or null waffetensor list) result))
+    
+    (etypecase result
+      (list (dolist (v result)
+	      (setf (waffetensor-is-node-tensor v) nil)))
+      (waffetensor (setf (waffetensor-is-node-tensor result) nil)))
+    
     (unless *no-grad*
       (if (slot-value model 'hide-from-tree) ;is model defined by defmodel?
 	  (progn
@@ -115,6 +120,8 @@
 		      (save-for-backward (name value)
 			`(let ((smaller-value (detach ,value)))
 			   (!allow-destruct smaller-value)
+			   (setf (waffetensor-is-node-tensor smaller-value)
+				 t)
 			   (setf (self ,name) smaller-value))))
 	     ,@body))
 	 (defmethod ,fname ((self ,name))

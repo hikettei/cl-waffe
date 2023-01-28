@@ -47,12 +47,15 @@
 			   (format stream (render-tensor tensor))))
 			(:constructor
 			    sysconst
-			    (value &key (backend *default-backend*) (extend nil)
+			    (value &key (backend *default-backend*)
+				     (extend nil)
+				     (is-node-tensor nil)
 			     &aux (data (init-waffe-tensor-data value))
 			       (backend (check-backend backend extend))
 			       (calln 0)
 			       (destructively-calln 0)
 			       (grad nil)
+			       (is-node-tensor is-node-tensor)
 			       (is-mat (typep value 'mgl-mat:mat))
 			       (destructive? t)
 			       (grad-tmp (make-grad-tmp))))
@@ -119,6 +122,7 @@
 
 (eval-when (:compile-toplevel)
   (declaim (ftype (function (waffetensorcontenttype) (or waffetensorcontenttype)) init-waffe-tensor-data))
+  ; Todo rewrite to macro, 処理系によってはエラー？
   (defun init-waffe-tensor-data (content)
   ; todo: coerce: simple-array -> mgl-mat
     (declare (type content waffedatatype))
@@ -227,7 +231,7 @@
 	     (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top
 			      (grad-tmp-value grad-tmp-before)
 			      (const 1))))
-	(setf (waffetensor-is-next-destruct? grad-before) nil) ; assure grad-before won't be changed
+	(setf (waffetensor-is-node-tensor grad-before) t) ; assure grad-before won't be changed
 	; calculating backward(state, dy) -> x.grad, y.grad...
         (progn
 	  (let ((grads (funcall (the function (call-backward (waffetensor-state tensor))) grad-before)))
@@ -403,9 +407,8 @@
 (defun !full-like ())
 
 (defmacro detach (tensor)
-  `(typecase (data ,tensor)
-     (mgl-mat:mat (const (the mgl-mat:mat (mgl-mat:copy-mat (data ,tensor)))))
-     (T (const (data ,tensor)))))
+  "Note: this macro doesn't clone data itself"
+  `(const (data ,tensor)))
 
 (defun write-description (res backward backend)
   ; Parameter { ... <= here }
