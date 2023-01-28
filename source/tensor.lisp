@@ -12,7 +12,6 @@
 
 (defparameter mgl-mat:*DEFAULT-MAT-CTYPE* :float) ;double/float
 
-
 (deftype WaffeSupportedDataType ()
   `(or fixnum float null cons function ratio)) ;cons?
 
@@ -42,7 +41,6 @@
     (value nil :type (or null waffetensor))
     (grad-called nil :type boolean)))
 
-; utils
 (defstruct (WaffeTensor (:print-function
 			 (lambda (tensor stream depth)
 			   (declare (ignore depth))
@@ -87,11 +85,12 @@
   (variables nil :type list)
   state
   (is-mat nil :type boolean)
-  (calln 0 :type fixnum) ; unnecessary
+  (calln 0 :type fixnum) ; for debug, maybe unnecessary
   (is-param? nil :type boolean)
   (destructively-calln 0 :type fixnum) ; unnecessary
   (is-ancestor-param nil :type boolean)
-  (is-next-destruct? nil :type boolean) ; when t, the next node's operation can be done destructively
+  (is-next-destruct? nil :type boolean)
+  (is-node-tensor nil :type boolean)
   (destructive? nil :type boolean) ; unnecessary
   (is-data-destructed? nil :type boolean))
 

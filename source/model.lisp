@@ -28,9 +28,17 @@
      ,input))
 
 (declaim (inline call))
-;(declaim (ftype (function (t &rest waffetensor) waffetensor) call))
+(declaim (ftype (function (t &rest waffetensor) waffetensor) call))
 (defun call (model &rest args)
   ; calculating op(x,y) -> result(x, y), state
+
+
+  (if (slot-value model 'hide-from-tree) ;when node;
+      (progn
+	(map 'list #'(lambda (x)
+		       (setf (waffetensor-is-node-tensor x) t))
+	     args)))
+  
   (let* ((result (apply (call-forward model) args)))
     (declare (type (or null waffetensor list) result))
     (unless *no-grad*
@@ -132,7 +140,7 @@
     (if (and hide-from-tree backward)
 	(print "Warning: backward with hide-from-tree=nil never called in backward processes"))
     
-    (let ((constructor-name (gensym)))
+    (prog1
       `(prog1
 	   (defstruct (,name
 		       (:print-function (lambda (m stream k)

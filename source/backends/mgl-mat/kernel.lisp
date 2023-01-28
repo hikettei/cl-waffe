@@ -20,31 +20,27 @@
      (the mgl-mat:mat (data ,out))))
 
 (defmacro will-be-destructed (tensor)
-  `(waffetensor-is-next-destruct? ,tensor))
+  `(waffetensor-is-node-tensor ,tensor))
 
 (defgeneric decide-out-buffer (out args enable-optim))
 
 (defmethod decide-out-buffer ((out waffetensor) (args waffetensor) enable-optim)
-  (if (or enable-optim (waffetensor-is-next-destruct? out)) ; when =t, 4x times faster.
-      (let ((result (assure-destructed? out)))
-	(apply-destruct out)
-	result)
-      (duplicate-tensor (data args))))
+  (declare (optimize (speed 3) (space 0) (safety 0)))
+  (decide-out-buffer out (data args) enable-optim))
 
 (defmethod decide-out-buffer ((out waffetensor) (args mgl-mat:mat) enable-optim)
-  (if (or enable-optim (waffetensor-is-next-destruct? out))
-      (let ((result (assure-destructed? out)))
-	(apply-destruct out)
-	result)
+  (if (waffetensor-is-node-tensor out)
+      args
       (duplicate-tensor args)))
 
 (defmethod decide-out-buffer ((out null) (args waffetensor) enable-optim)
-  (declare (ignore out enable-optim))
-  (duplicate-tensor (data args)))
+  (declare (optimize (speed 3) (space 0) (safety 0)))
+  (decide-out-buffer out (data args) enable-optim))
 
 (defmethod decide-out-buffer ((out null) (args mgl-mat:mat) enable-optim)
-  (declare (ignore out enable-optim))
-  (duplicate-tensor args))
+  (declare (ignore enable-optim))
+  (with-ones (o (mat-dimensions args))
+    (copy! args (reshape o (mat-dimensions args)))))
 
 (declaim (ftype (function (mgl-mat:mat fixnum &key (:axis fixnum)) mgl-mat:mat) mgl-repeat))
 (defun mgl-repeat (tensor n &key axis)
@@ -119,8 +115,7 @@
 (defgeneric add-tensor (enable-optimize? out out1 x y))
 
 (defmethod add-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) (y mgl-mat:mat))
-  (declare (optimize (speed 3) (space 0) (safety 0))
-	   (ignore out1))
+  (declare (optimize (speed 3) (space 0) (safety 0)))
   (cond
     ((will-be-destructed out)
      (let ((o (decide-out-buffer out x enable-optimize?)))
@@ -146,8 +141,7 @@
 
 (defgeneric sub-tensor (enable-optimize? out out1 x y))
 (defmethod sub-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) (y mgl-mat:mat))
-  (declare (optimize (speed 3) (space 0) (safety 0))
-	   (ignore out1))
+  (declare (optimize (speed 3) (space 0) (safety 0)))
   (cond
     ((will-be-destructed out)
      (let ((o (decide-out-buffer out x enable-optimize?)))
@@ -163,13 +157,13 @@
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (ignore out1))
   (let ((o (decide-out-buffer out x enable-optimize?)))
-    (the mgl-mat:mat (mgl-mat:.+! (* -1.0 y) o))))
+    (the mgl-mat:mat (mgl-mat:.+! (* -1.0 (the single-float y)) o))))
 
 (defmethod sub-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) x (y mgl-mat:mat))
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (ignore out))
   (let ((o (decide-out-buffer out1 y enable-optimize?)))
-    (the mgl-mat:mat (mgl-mat:.+! (* -1.0 x) o))))
+    (the mgl-mat:mat (mgl-mat:.+! (* -1.0 (the single-float x)) o))))
 
 (defgeneric mul-tensor (enable-optimize? out out1 x y))
 (defmethod mul-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) (y mgl-mat:mat))
@@ -201,7 +195,7 @@
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type boolean enable-optim)
            (type waffetensor out)
-	   (type mgl-mat:mat x))
+	   (type waffetensor x))
   (let ((o (decide-out-buffer out x enable-optim)))
     (mgl-mat:.inv! o)
     (the mgl-mat:mat o)))
@@ -221,7 +215,7 @@
 	   (type waffedatatype x)
 	   (type waffetensor out1)
 	   (ignore out))
-  (unless (= x 1)
+  (unless (= (the fixnum x) 1)
     (error "cl-waffe.backends.mgl-mat: In (!modify a :/= b), a must be tensor or 1."))
   (the mgl-mat:mat (inv-tensor enable-optimize? out1 y)))
 
@@ -406,11 +400,12 @@
 	     (T
 	      (loop for ei of-type fixnum upfrom 0 below embedding-dim
 		    do (setf (aref out (+ (the fixnum
-					       (* embedding-dim xi))
+					       (* (the fixnum embedding-dim) xi))
 					  ei))
 			     (aref weights
 				     (+ ei
-				      (the fixnum (* (round (aref x xi)) embedding-dim))))))))))
+					(the fixnum (* (round (aref x xi))
+						       (the fixnum embedding-dim)))))))))))
 
 (defun embedding-forward (enable-optimize x weights pad-idx)
   "(with-searching-calc-node :embedding-forward x weights pad-idx) -> embeddings"
