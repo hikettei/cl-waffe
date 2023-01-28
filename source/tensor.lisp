@@ -41,7 +41,6 @@
     (value nil :type (or null waffetensor))
     (grad-called nil :type boolean)))
 
-; thread-idx=0 is for saving grads, thread-idx=1 is for forwards thread-idx=2 is for backwards, and thread-idx>2 is for multi threads.
 (defstruct (WaffeNodeThread
 	    (:constructor
 		thread

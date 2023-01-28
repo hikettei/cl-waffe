@@ -68,6 +68,7 @@
 	    (apply #'call (nth (data index) (self mlist)) args)))
 
 (defnode ArefTensor (shape)
+  :regard-as-node nil
   :parameters ((shape shape)
 	       (base-shape T))
 
@@ -80,6 +81,7 @@
 
 (defnode SetfArefTensor (shape)
   :parameters ((shape shape))
+  :regard-as-node nil
   :forward ((x y)
 	    (const (data (apply #'!write-faref x y (self shape)))))
   :backward ((dy)
@@ -197,4 +199,3 @@
 		    (data tensor)
 		    (nth-bias target dims dim)))))
     result))
-

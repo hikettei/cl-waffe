@@ -19,6 +19,8 @@
 
 (declaim (ftype (function (keyword cons) waffetensor) invoke-mgl-kernel invoke-cpu-kenel))
 (defun invoke-mgl-kernel (kernel-function variables)
+  (dolist (v variables)
+    (print (waffetensor-thread-data v)))
   (sysconst (cl-waffe.backends.mgl:dispatch-kernel
 				  kernel-function
 				  *destructive-operation*

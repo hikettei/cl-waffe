@@ -90,10 +90,22 @@
 			    (setf (waffetensor-grad-tmp p) (make-grad-tmp)))
 		nil)
        :hide-from-tree nil
-       :regard-as-node t)))
+       :regard-as-node nil)))
 
-(defmacro defnode (name args &key parameters forward backward optimize)
-  `(defmodel ,name ,args :parameters ,parameters :forward ,forward :backward ,backward :hide-from-tree T :optimize ,optimize))
+(defmacro defnode (name args &key parameters forward backward optimize (regard-as-node t))
+  `(defmodel ,name ,args :parameters ,parameters :forward ,forward :backward ,backward :hide-from-tree T :optimize ,optimize :regard-as-node ,regard-as-node))
+
+(defun decide-thread-idx (&rest args)
+  (let ((nm (find t args :test (lambda (_ x)
+				 (declare (ignore _))
+				 (waffetensor-thread-data x)))))
+    (if nm
+	(1+ (waffenodethread-thread-idx (waffetensor-thread-data nm)))
+	0)))
+
+(defun set-thread-data (th &rest args)
+  (dolist (v args)
+    (setf (waffetensor-thread-data v) th)))
 
 (defmacro define-node-method (fname name args body hide-from-tree optimize &optional (is-node nil) &aux (thread (gensym)))
   (let ((f-ident   (gensym (symbol-name name)))
@@ -102,7 +114,7 @@
          (declaim (ftype (function (,name ,@(map 'list (lambda (x) (declare (ignore x)) `waffetensor) `,args)) (or null waffetensor)) ,f-ident))
 	 (defun ,f-ident (,self-heap ,@args)
 	   ,(if optimize
-		`(declare (optimize (speed 3) (space 0) (safety 0))
+		`(declare (optimize (speed 3) (space 0) (safety 3))
 			  (type ,name ,self-heap))
 		`(declare (type ,name ,self-heap)))
 	   ,(if hide-from-tree `(declare (type waffetensor ,@args)) nil)
@@ -113,11 +125,10 @@
 			   ;(setf (waffetensor-is-node-tensor smaller-value)
 				; t)
 			   (setf (self ,name) smaller-value))))
+	     
 	     ,(if is-node
-		  `(let ((,thread (thread 1)))
-		     ,(map 'list #'(lambda (_)
-				   `(setf (waffetensor-thread-data ,_) ,thread))
-			   args)
+		  `(let ((,thread (thread (decide-thread-idx ,@args))))
+		     (set-thread-data ,thread ,@args)
 		     (let ((result (progn ,@body)))
 		       (declare (type waffetensor &optional result))
 		       (typecase result
@@ -126,7 +137,7 @@
 				      (setf (waffetensor-thread-data x) nil)
 				      x)
 				    result))
-			 (T (setf (waffeetenssor-thread-data result) nil)
+			 (T (setf (waffetensor-thread-data result) nil)
 			  result))))
 		  `(progn ,@body))))
 	 (defmethod ,fname ((self ,name))
@@ -157,7 +168,7 @@
     (unless forward
       (error ":forward slot is need to be fulfilled. When defining Model [~a]" name))
 
-    (if (and hide-from-tree backward)
+    (if (and (not hide-from-tree) backward)
 	(print "Warning: backward with hide-from-tree=nil never called in backward processes"))
     
     (prog1
