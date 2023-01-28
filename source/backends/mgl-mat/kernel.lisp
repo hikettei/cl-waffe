@@ -26,6 +26,7 @@
 	     (idx (create-thread-idx thread-info)))
 	(with-cache (result (mat-dimensions args) :place idx)
 	  (incf (cl-waffe::waffenodethread-cache-n thread-info) 1)
+	  (copy! args result)
 	  result))
       (decide-out-buffer nil args enable-optim)))
       
@@ -52,7 +53,7 @@
       (if (>= (length (the list
 			   (mat-dimensions tensor)))
 	      2)
-          (with-ones (o (loop for i
+          (with-cache (o (loop for i
 			      upfrom 0
 			      below (the fixnum (length
 						 (the list (mat-dimensions tensor))))
@@ -60,7 +61,8 @@
 					((= i axis)
 					 (the fixnum (* n (the fixnum
 						      (mat-dimension tensor i)))))
-					(T (mat-dimension tensor i)))))
+					(T (mat-dimension tensor i))))
+		       :place :repeat) ; todo
 	    (mgl-mat:stack!
 	     axis
 	     (loop for i below n collect tensor)
@@ -273,13 +275,12 @@
 		       (let ((idx (create-thread-idx
 				   (waffetensor-thread-data y))))
 			 (incf (cl-waffe::waffenodethread-cache-n
-				(waffetensor-thread-data y))
+				(waffetensor-thread-data x))
 			       1)
 			 idx))
 		      (T (format t "Waning: making unreachable caches~%")
 			 (intern (symbol-name (gensym "Matmul"))
 				 :keyword)))))
-
       (cond
 	((and (= (length x-dims) 2)
 	      (= (length y-dims) 2))
@@ -291,13 +292,12 @@
 			       (second (mat-dimensions y1))))))
 
 	   (with-cache (out out-dim :place cache-id)
-	     (reshape (matmul-tensor-2d
+	     (matmul-tensor-2d
 	       out
 	       x1
 	       y1
 	       (car transpose-map)
-	       (second transpose-map))
-		      out-dim))))
+	       (second transpose-map)))))
 	((and (= (length x-dims) 3)
 	      (= (length y-dims) 2))
 	 (let ((out-dim `(,(car x-dims)

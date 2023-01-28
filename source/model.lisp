@@ -131,6 +131,7 @@
 		     (set-thread-data ,thread ,@args)
 		     (let ((result (progn ,@body)))
 		       (declare (type waffetensor &optional result))
+		       (set-thread-data nil ,@args)
 		       (typecase result
 			 (list (map 'list
 				    (lambda (x)
