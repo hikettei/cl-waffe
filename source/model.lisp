@@ -135,9 +135,14 @@
 			 (list (map 'list
 				    (lambda (x)
 				      (setf (waffetensor-thread-data x) nil)
+				      (if (typep (data x) 'mgl-mat:mat)
+					  (setf (data x) (mgl-mat:copy-mat (data x)))) ;rewrite with caches
 				      x)
 				    result))
 			 (T (setf (waffetensor-thread-data result) nil)
+			  (if (typep (data result) 'mgl-mat:mat)
+			      (setf (data result)
+				    (mgl-mat:copy-mat (data result))))
 			  result))))
 		  `(progn ,@body))))
 	 (defmethod ,fname ((self ,name))
