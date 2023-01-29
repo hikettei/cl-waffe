@@ -62,7 +62,7 @@
 					 (the fixnum (* n (the fixnum
 						      (mat-dimension tensor i)))))
 					(T (mat-dimension tensor i))))
-		       :place :repeat) ; todo
+		       :place (gensym "Repeat")) ; todo
 	    (mgl-mat:stack!
 	     axis
 	     (loop for i below n collect tensor)

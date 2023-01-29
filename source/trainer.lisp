@@ -21,8 +21,10 @@
 		      (model () `(self model))
 		      (update (&rest args1) `(unless *no-grad*
 				                 (with-no-grad (funcall (call-forward (self optimizer)) ,@args1))))
-		      (zero-grad () `(unless *no-grad*
-				          (funcall (call-backward (self optimizer)) (self model)))))
+		      (zero-grad ()
+			`(progn
+			   `(unless *no-grad*
+			      (funcall (call-backward (self optimizer)) (self model))))))
 	     ,@body))
 	 (defmethod ,fname ((self ,name))
 	   (lambda (&rest node-inputs) (apply #',f-ident self node-inputs))))))
@@ -207,7 +209,7 @@
       (format stream "~C" #\newline)
       (cl-cram:update status-bar 1 :desc (format nil "loss:~a" (/ (apply #'+ losses) (length losses)))))
 
-    (print "")
+    (fresh-line)
     (if valid-dataset
 	(valid trainer valid-dataset batch-size))))
 

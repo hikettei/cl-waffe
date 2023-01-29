@@ -5,6 +5,7 @@
 	   #:adam-update
 	   #:write-to-nth-dim-with-range
 	   #:write-to-nth-dim-with-range1
+	   #:create-thread-idx
 	   #:get-difference
 	   #:receive-delay
 	   #:abort-delay))

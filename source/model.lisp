@@ -107,6 +107,20 @@
   (dolist (v args)
     (setf (waffetensor-thread-data v) th)))
 
+(defmacro allocate-grad-id (slot-name)
+  :grad)
+
+(defun free-caches (thread &optional (evacuate-num 0))
+  (let ((caches-n (waffenodethread-cache-n thread)))
+    (dotimes (i (- caches-n evacuate-num))
+      (setf (waffenodethread-cache-n thread) i)
+      (let ((cache-id (cl-waffe.backends.mgl:create-thread-idx thread)))
+	(cl-waffe.caches:free-cache cache-id))))
+  nil)
+
+(defun cache-tensor (tensor)
+  (mgl-mat:copy-mat (data tensor)))
+
 (defmacro define-node-method (fname name args body hide-from-tree optimize &optional (is-node nil) &aux (thread (gensym)))
   (let ((f-ident   (gensym (symbol-name name)))
 	(self-heap (gensym (symbol-name name))))
@@ -121,10 +135,20 @@
 	   (macrolet ((self (name) `(slot-value ,',self-heap ',name))
 		      (save-for-backward (name value)
 			`(let ((smaller-value (detach ,value)))
-			   (!allow-destruct smaller-value)
-			   ;(setf (waffetensor-is-node-tensor smaller-value)
-				; t)
-			   (setf (self ,name) smaller-value))))
+			   (typecase (data smaller-value)
+			     (mat
+			      (cl-waffe.caches:with-cache
+				  (tmp			  
+				   (mgl-mat:mat-dimensions
+				     (data smaller-value))
+				   :place
+				   (allocate-grad-id ,name))
+				(!allow-destruct smaller-value)
+				(mgl-mat:copy! (data smaller-value) tmp)
+				(setf (data smaller-value) tmp)
+				(setf (self ,name) smaller-value)))
+			     (T (!allow-destruct smaller-value)
+			      (setf (self ,name) smaller-value))))))
 	     
 	     ,(if is-node
 		  `(let ((,thread (thread (decide-thread-idx ,@args))))
@@ -133,17 +157,21 @@
 		       (declare (type waffetensor &optional result))
 		       (set-thread-data nil ,@args)
 		       (typecase result
-			 (list (map 'list
+			 (list (prog1
+				   (map 'list
 				    (lambda (x)
 				      (setf (waffetensor-thread-data x) nil)
 				      (if (typep (data x) 'mgl-mat:mat)
-					  (setf (data x) (mgl-mat:copy-mat (data x)))) ;rewrite with caches
+					  (setf (data x) (cache-tensor x)))
 				      x)
-				    result))
+				    result)
+				 (free-caches ,thread)))
 			 (T (setf (waffetensor-thread-data result) nil)
 			  (if (typep (data result) 'mgl-mat:mat)
-			      (setf (data result)
-				    (mgl-mat:copy-mat (data result))))
+			      (prog1
+				  (setf (data result)
+					(cache-tensor result))
+				(free-caches ,thread)))
 			  result))))
 		  `(progn ,@body))))
 	 (defmethod ,fname ((self ,name))

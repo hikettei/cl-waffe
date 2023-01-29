@@ -151,9 +151,7 @@
   `(setf (waffetensor-is-next-destruct? ,tensor) t))
 
 (defun (setf data) (val &optional tensor)
-  (if tensor
-      (setf (waffetensor-data tensor) val)
-      tensor))
+  (setf (waffetensor-data tensor) val))
 
 ; is-tensor
 (defun waffe-tensor-p (tensor)

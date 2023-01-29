@@ -2,9 +2,41 @@
 (defpackage :cl-waffe.caches
   (:use :cl :mgl-mat)
   (:export
-   #:with-cache))
+   #:with-cache
+   #:return-caches
+   #:free-cache
+   #:caches-gc))
 
 (in-package :cl-waffe.caches)
+
+; todo depends on tg, bordeaux-threads
+(defvar *thread-caches* (tg:make-weak-hash-table :weakness :key))
+(defvar *thread-cache-lock* (bordeaux-threads:make-lock "thread cache lock"))
+
+(defun borrow-thread-cached-object (place-key key)
+  (let ((thread-cache
+          (bordeaux-threads:with-lock-held (*thread-cache-lock*)
+            (gethash (bordeaux-threads:current-thread) *thread-caches*))))
+    (when thread-cache
+      (let ((place-cache (gethash place-key thread-cache)))
+        (when place-cache
+          (prog1 (gethash key place-cache)
+            (remhash key place-cache)))))))
+
+(defun return-thread-cached-object (place-key key value)
+  (let* ((thread-cache
+           (bordeaux-threads:with-lock-held (*thread-cache-lock*)
+             (or (gethash (bordeaux-threads:current-thread) *thread-caches*)
+                 (setf (gethash (bordeaux-threads:current-thread)
+                                *thread-caches*)
+                       (tg:make-weak-hash-table :weakness :key)))))
+         (place-cache
+           (or (gethash place-key thread-cache)
+               (setf (gethash place-key thread-cache)
+                     (make-hash-table :test #'equal)))))
+    ;; Overwrite it. Keeping the larger, keeping all may be reasonable
+    ;; strategies too.
+    (setf (gethash key place-cache) value)))
 
 (defmacro with-thread-cached-mat1 ((var dimensions &rest args
                                    &key (place :scratch)
@@ -39,7 +71,25 @@
                                     ,@args)
                 :place ,place)
              (setq ,var (adjust! ,var ,dimensions ,displacement))
+	     ; may create new mat
              (locally ,@body)))))))
+
+(defun return-caches ()
+  *thread-caches*)
+
+(defun caches-gc ()
+  (tg:gc :full t))
+
+(defun free-cache (idx)
+  (let ((res (or (borrow-thread-cached-object idx mgl-mat:*default-mat-ctype*)
+		 nil))
+	(caches (bordeaux-threads:with-lock-held (*thread-cache-lock*)
+		  (gethash (bordeaux-threads:current-thread) *thread-caches*))))
+    (when res
+      (mgl-cube:destroy-cube res)
+      (when caches
+	(remhash idx caches)))
+    nil))	  
 
 (defmacro with-cache ((var dimensions &key (ctype '*default-mat-ctype*)
                       (place :ones))
@@ -51,9 +101,13 @@
 
 (defmacro with-thread-cached-object1 ((var key initform &key place) &body body)
   (let ((place (or place (gensym (symbol-name 'place)))))
-    (alexandria:once-only (key)
-      `(let ((,var (or (mgl-mat::borrow-thread-cached-object ,place ,key)
+    (progn;alexandria:once-only (key)
+      `(let ((,var (or (borrow-thread-cached-object ,place ,key)
                        ,initform)))
+	 ;(print (borrow-thread-cached-object ,place ,key))
+	 ;(print (gethash
+	;	 (bordeaux-threads:current-thread)
+	;	 *thread-caches*))
          (unwind-protect
               (locally ,@body)
-           (mgl-mat::return-thread-cached-object ,place ,key ,var))))))
+           (return-thread-cached-object ,place ,key ,var))))))

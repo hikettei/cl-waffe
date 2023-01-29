@@ -13,7 +13,7 @@
   ; doing all operations with destructive
   `(progn
      (setf *destructive-operation* t)
-     (let ((result (prog1 ,@body)))
+     (let ((result (progn ,@body)))
        (setf *destructive-operation* nil)
        result)))
 
