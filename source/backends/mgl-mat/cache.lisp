@@ -86,8 +86,7 @@
     (when caches
       (let ((caches-for-idx (gethash idx caches)))
 	(when caches-for-idx
-	  (remhash idx caches))
-	))
+	  (remhash idx caches))))
     nil))
 
 (defmacro with-cache ((var dimensions &key (ctype '*default-mat-ctype*)
@@ -101,8 +100,11 @@
 (defmacro with-thread-cached-object1 ((var key initform &key place) &body body)
   (let ((place (or place (gensym (symbol-name 'place)))))
     (progn
-      `(let ((,var (or (borrow-thread-cached-object ,place ,key)
+      `(let ((,var (or ;nil(borrow-thread-cached-object ,place ,key)
                        ,initform)))
-         (unwind-protect
-              (locally ,@body)
-           (return-thread-cached-object ,place ,key ,var))))))
+        ; (unwind-protect
+        ;      (locally ,@body)
+           ;(return-thread-cached-object ,place ,key ,var)
+	 ;  )))))
+
+	 ,@body))))

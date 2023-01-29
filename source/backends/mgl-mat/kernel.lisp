@@ -22,7 +22,7 @@
 
 (defmethod decide-out-buffer ((out waffetensor) (args mgl-mat:mat) enable-optim)
   (declare (optimize (speed 3) (space 0)))
-  (if (waffetensor-thread-data out)
+  (if (not (null (waffetensor-thread-data out)))
       (let* ((thread-info (waffetensor-thread-data out))
 	     (idx (create-thread-idx thread-info)))
 	(with-cache (result (mat-dimensions args) :place idx)
@@ -264,7 +264,7 @@
 				(waffetensor-thread-data x))
 			       1)
 			 idx))
-		      (T (format t "Waning: making unreachable caches~%")
+		      (T ;(format t "Waning: making unreachable caches~%")
 			 (intern (symbol-name (gensym "Matmul"))
 				 :keyword)))))
       (cond
@@ -282,7 +282,8 @@
 	       x1
 	       y1
 	       (car transpose-map)
-	       (second transpose-map)))))
+	       (second transpose-map))
+	     (copy-mat out))))
 	((and (= (length x-dims) 3)
 	      (= (length y-dims) 2))
 	 (let ((out-dim `(,(car x-dims)
@@ -311,7 +312,7 @@
 	       (matmul-tensor-2d out x1 y1 (car transpose-map) (second transpose-map)))
 	     (reshape-and-displace! out out-dim 0)
 	     (reshape-and-displace! x1 shape-first displace-first)
-	     out)))
+	     (copy-mat out))))
 	((and (= (length x-dims) 2)
 	      (= (length y-dims) 3))
 	 (let ((out-dim `(,(car y-dims)
@@ -323,8 +324,8 @@
 			       (nth 2 y-dims))))
 	       (displace-first (mat-displacement y1))
 	       (shape-first    (mat-dimensions y1)))
-	   (with-thread-cached-mat (out out-dim
-					:place cache-id)
+	   (with-cache (out out-dim
+			:place cache-id)
 	     (dotimes (i (the fixnum (car y-dims)))
 	       (reshape-and-displace! out
 				      (cdr out-dim)
@@ -347,7 +348,7 @@
 				 (second transpose-map)))
 	     (reshape-and-displace! out out-dim 0)
 	     (reshape-and-displace! y1 shape-first displace-first)
-	     out)))
+	     (copy-mat out))))
 	(T (error "cl-waffe.backends.mgl:matmul-tensor: unimplemented combinations."))))))
 
 (declaim (ftype
@@ -357,7 +358,7 @@
 	  matmul-tensor-2d))
 (defun matmul-tensor-2d (out x y ta? tb?)
   (declare (optimize (speed 3) (space 0) (safety 0)))
-  (gemm! 1.0 x y 0 out :transpose-a? ta? :transpose-b? tb?)
+  (gemm! 1.0 x y 0.0 out :transpose-a? ta? :transpose-b? tb?)
   out)
 
 (defun log-tensor (enable-optim out x)

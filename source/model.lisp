@@ -161,14 +161,14 @@
 				   (allocate-grad-id ,name ,value))
 				(!allow-destruct smaller-value)
 				(copy! (data smaller-value) tmp)
-				(setf (data smaller-value) tmp)
+				(setf (data smaller-value) tmp)			
 				(setf (self ,name) smaller-value)))
 			     (T (!allow-destruct smaller-value)
 			      (setf (self ,name) smaller-value)))))))
 	     ,(if is-node
 		  `(let ((,thread (thread (decide-thread-idx ,@args))))
 		     (set-thread-data ,thread ,@args)
-		     (let ((result (progn ,@body)))
+		     (let ((result (locally ,@body)))
 		       ;(declare (type waffetensor &optional result))
 		       (set-thread-data nil ,@args)
 		       (typecase result
@@ -180,15 +180,18 @@
 					  (setf (data x) (cache-tensor x ,thread)))
 				      x)
 				    result)
-				 (free-caches ,thread (length result))))
-			 (T (setf (waffetensor-thread-data result) nil)
+				 ;(free-caches ,thread (length result))
+				 ))
+			 (T
+			  (setf (waffetensor-thread-data result) nil)
 			  (if (typep (data result) 'mgl-mat:mat)
 			      (prog1
 				  (setf (data result)
 					(cache-tensor result ,thread))
-				(free-caches ,thread 1)))
+				;(free-caches ,thread 1)
+				))
 			  result))))
-		  `(progn ,@body))))
+		  `(locally ,@body))))
 	 (defmethod ,fname ((self ,name))
 	   (lambda (&rest node-inputs) (apply #',f-ident self node-inputs))))))
 
@@ -239,7 +242,7 @@
 	     ,(cdr forward)
 	     ,hide-from-tree
 	     ,optimize
-	     ,regard-as-node)
+	     nil)
 	 (define-node-method
 	     call-backward
 	     ,name
@@ -247,7 +250,7 @@
 	     ,(cdr backward)
 	     ,hide-from-tree
 	     ,optimize
-	     ,regard-as-node)))))
+	     nil)))))
 
 (defun render-simple-model-structure (stream model) ; Todo: More Details
   (format stream "[~a: ~a]" (if (slot-value model 'hide-from-tree)

@@ -209,7 +209,7 @@
 	      (typep (data ,value)  'mgl-mat:mat))
 	 (if (equal (!shape ,tensor) (!shape ,value))
 	     (setf (grad-tmp-value (waffetensor-grad-tmp ,tensor)) ,value)
-	     (setf (grad-tmp-value (waffetensor-grad-tmp ,tensor)) ,value))
+	     (setf (grad-tmp-value (waffetensor-grad-tmp ,tensor)) (!reshape ,value (!shape ,tensor))))
 	 (setf (grad-tmp-value (waffetensor-grad-tmp ,tensor)) ,value))))
 
 (defun backward (tensor)
@@ -239,10 +239,8 @@
       (let* ((grad-tmp-before (waffetensor-grad-tmp tensor))
 	     (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top
 			      (grad-tmp-value grad-tmp-before)
-			      (sysconst 1))))
+			      (const 1))))
 
-	(setf (waffetensor-thread-data grad-before)
-	      (waffetensor-thread-data tensor))
 	; calculating backward(state, dy) -> x.grad, y.grad...
         (progn
 	  (let ((grads (funcall
@@ -273,9 +271,7 @@
 		    (setf (waffetensor-grad tensor)
 			  (data (!add (waffetensor-grad tensor)
 		   		      (grad-tmp-value
-		   		       (waffetensor-grad-tmp tensor)))))
-
-		    )))))
+		   		       (waffetensor-grad-tmp tensor))))))))))
   nil)
 
 

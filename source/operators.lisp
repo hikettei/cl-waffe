@@ -53,6 +53,7 @@
   :optimize t
   :parameters ((xi T) (yi T))
   :forward ((x y)
+	    (unless (= (data x) 1) (error "!div-old: x must be 1"))
             (save-for-backward xi x)
 	    (save-for-backward yi y)
 	    (with-searching-calc-node :div x y))
@@ -162,13 +163,12 @@
 		   (!matmul (!transpose (self xi)) dy))))
 
 ; Todo: Fix Undefined variable :G0
-(defmacro defope (name node-object tensor args &body body &aux (common-node (gensym)))
-  `(prog1
-     (defparameter ,common-node ,node-object)
-     (defun ,name ,args
-       (let* ((,tensor (if *no-grad* ,common-node ,node-object)))
-	 ,@body))))
-		   
+(defmacro defope (name node-object tensor args &body body)
+  (let ((place node-object))
+    `(defun ,name ,args
+       (let* ((,tensor (if *no-grad* ,place ,node-object)))
+	,@body))))
+
 (defope !add (AddTensor) node (x y)
   (call node (assure-tensor x) (assure-tensor y)))
     
@@ -179,7 +179,7 @@
   (call node (assure-tensor x) (assure-tensor y)))
 
 (defope !div-old (DivTensor) node (x y)
-  (unless (= x 1) (error "!div-old: x must be 1"))
+  ; (unless (= x 1) (error "!div-old: x must be 1"))
   ; x must be 1, cl-waffe.backends.mgl:div has some problems?...
   (call node (assure-tensor x) (assure-tensor y)))
 

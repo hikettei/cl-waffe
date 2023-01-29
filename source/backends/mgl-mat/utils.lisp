@@ -1,16 +1,6 @@
 
 (in-package :cl-waffe.backends.mgl)
 
-(define-lisp-kernel (lisp-copy)
-    ((base :mat :input)
-     (out :mat :output)
-     (size fixnum))
-  (loop for i fixnum upfrom 0 below size
-	do (setf (aref out i) (aref base i))))
-
-(defun copy1! (base out)
-  (lisp-copy base out (mat-size base)))
-
 (define-lisp-kernel (write-to-nth-dim-with-range-lisp)
     ; INDEX=(!shape tensor 0) * (x1) + (!shape tensor 1) * (x2) + ...
     ((out :mat :io)
