@@ -10,10 +10,10 @@
 
 ; TODO: Rename -> with-predict-mode
 (defmacro with-no-grad (&body body)
-  `(progn
+  `(let ((no-grad-first *no-grad*))
      (setq *no-grad* t)
      ,@body
-     (setq *no-grad* nil)
+     (setq *no-grad* no-grad-first)
      nil))
 
 (defmacro with-calling-layers (input &rest layers)
@@ -30,9 +30,10 @@
 (declaim (inline call))
 (declaim (ftype (function (t &rest waffetensor) waffetensor) call))
 (defun call (model &rest args)
+  (declare (optimize (speed 3) (safety 0) (space 0)))
   ; calculating op(x,y) -> result(x, y), state
-  
-  (let* ((result (apply (call-forward model) args)))
+  (let* ((result (apply
+		  (the function (call-forward model)) args)))
     (declare (type (or null waffetensor list) result))
         
     (unless *no-grad*
@@ -107,8 +108,10 @@
   (dolist (v args)
     (setf (waffetensor-thread-data v) th)))
 
-(defmacro allocate-grad-id (slot-name)
-  :grad)
+(defmacro allocate-grad-id (slot-name tensor)
+  `(let* ((thread (waffetensor-thread-data ,tensor)))
+     (cl-waffe.backends.mgl:create-thread-idx thread
+					      (gensym (symbol-name ',slot-name)))))
 
 (defun free-caches (thread &optional (evacuate-num 0))
   (let ((caches-n (waffenodethread-cache-n thread)))
@@ -118,8 +121,20 @@
 	(cl-waffe.caches:free-cache cache-id))))
   nil)
 
-(defun cache-tensor (tensor)
-  (mgl-mat:copy-mat (data tensor)))
+(defun cache-tensor (tensor thread)
+  (typecase (data tensor)
+    (mat 
+     (cl-waffe.caches:with-cache
+	 (tmp
+	  (!shape tensor)
+	  :place
+	  (let ((place nil))
+	    (incf (waffenodethread-cache-n thread) 2)
+	    (setq place (cl-waffe.backends.mgl:create-thread-idx thread))
+	      place))
+       (copy! (data tensor) tmp)
+       tmp))
+    (T (data tensor))))
 
 (defmacro define-node-method (fname name args body hide-from-tree optimize &optional (is-node nil) &aux (thread (gensym)))
   (let ((f-ident   (gensym (symbol-name name)))
@@ -128,33 +143,33 @@
          (declaim (ftype (function (,name ,@(map 'list (lambda (x) (declare (ignore x)) `waffetensor) `,args)) (or null waffetensor)) ,f-ident))
 	 (defun ,f-ident (,self-heap ,@args)
 	   ,(if optimize
-		`(declare (optimize (speed 3) (space 0) (safety 3))
+		`(declare (optimize (speed 3) (space 0) (safety 0))
 			  (type ,name ,self-heap))
 		`(declare (type ,name ,self-heap)))
 	   ,(if hide-from-tree `(declare (type waffetensor ,@args)) nil)
 	   (macrolet ((self (name) `(slot-value ,',self-heap ',name))
 		      (save-for-backward (name value)
 			`(let ((smaller-value (detach ,value)))
+			   (unless *no-grad*
 			   (typecase (data smaller-value)
 			     (mat
 			      (cl-waffe.caches:with-cache
-				  (tmp			  
+				  (tmp
 				   (mgl-mat:mat-dimensions
 				     (data smaller-value))
 				   :place
-				   (allocate-grad-id ,name))
+				   (allocate-grad-id ,name ,value))
 				(!allow-destruct smaller-value)
-				(mgl-mat:copy! (data smaller-value) tmp)
+				(copy! (data smaller-value) tmp)
 				(setf (data smaller-value) tmp)
 				(setf (self ,name) smaller-value)))
 			     (T (!allow-destruct smaller-value)
-			      (setf (self ,name) smaller-value))))))
-	     
+			      (setf (self ,name) smaller-value)))))))
 	     ,(if is-node
 		  `(let ((,thread (thread (decide-thread-idx ,@args))))
 		     (set-thread-data ,thread ,@args)
 		     (let ((result (progn ,@body)))
-		       (declare (type waffetensor &optional result))
+		       ;(declare (type waffetensor &optional result))
 		       (set-thread-data nil ,@args)
 		       (typecase result
 			 (list (prog1
@@ -162,16 +177,16 @@
 				    (lambda (x)
 				      (setf (waffetensor-thread-data x) nil)
 				      (if (typep (data x) 'mgl-mat:mat)
-					  (setf (data x) (cache-tensor x)))
+					  (setf (data x) (cache-tensor x ,thread)))
 				      x)
 				    result)
-				 (free-caches ,thread)))
+				 (free-caches ,thread (length result))))
 			 (T (setf (waffetensor-thread-data result) nil)
 			  (if (typep (data result) 'mgl-mat:mat)
 			      (prog1
 				  (setf (data result)
-					(cache-tensor result))
-				(free-caches ,thread)))
+					(cache-tensor result ,thread))
+				(free-caches ,thread 1)))
 			  result))))
 		  `(progn ,@body))))
 	 (defmethod ,fname ((self ,name))
@@ -203,7 +218,7 @@
       (error ":forward slot is need to be fulfilled. When defining Model [~a]" name))
 
     (if (and (not hide-from-tree) backward)
-	(print "Warning: backward with hide-from-tree=nil never called in backward processes"))
+	(format t "Warning: backward with hide-from-tree=nil never called in backward processes~%"))
     
     (prog1
       `(prog1
@@ -231,7 +246,8 @@
 	     ,(car backward)
 	     ,(cdr backward)
 	     ,hide-from-tree
-	     ,optimize)))))
+	     ,optimize
+	     ,regard-as-node)))))
 
 (defun render-simple-model-structure (stream model) ; Todo: More Details
   (format stream "[~a: ~a]" (if (slot-value model 'hide-from-tree)

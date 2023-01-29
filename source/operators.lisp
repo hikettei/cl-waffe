@@ -68,7 +68,7 @@
 	    (save-for-backward yi y1)
 	    (with-searching-calc-node :pow x1 y1))
   :backward ((dy)
-	     (list (!modify (!mul dy (self yi)) :*= (!pow (self xi) (- (data (self yi)) 1)))
+	     (list (!modify (!mul dy (self yi)) :*= (!pow (self xi) (- (the single-float (data (self yi))) 1)))
 		   (!modify (!modify
 			     (!log (self xi)) :*=
 			     (!modify (self xi) :^= (self yi)))
@@ -95,6 +95,7 @@
   :forward ((x) (setf (self prev-shape) (!shape x))
 		(with-searching-calc-node :reshape x (self shape)))
   :backward ((dy)
+	     (print dy)
 	     (list (!reshape dy (self prev-shape)))))
 
 (defnode DotProductTensor nil
@@ -138,7 +139,8 @@
 (defnode RepeatTensor (axis repeats)
   :optimize t
   :parameters ((axis axis) (repeats repeats))
-  :forward ((x) (with-searching-calc-node :repeat x (self axis) (self repeats)))
+  :forward ((x)
+	    (with-searching-calc-node :repeat x (self axis) (self repeats)))
   :backward ((dy) (list (!sum dy (self axis)))))
 
 (defnode ExpTensor ()

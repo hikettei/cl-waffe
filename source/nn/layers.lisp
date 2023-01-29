@@ -4,17 +4,20 @@
 
 (defmodel LinearLayer (in-features out-features &optional (bias T))
   :optimize t
-  :regard-as-node t
-  :parameters ((weight (parameter (!mul 0.01 (!randn `(,in-features ,out-features)))))
+  :regard-as-node nil
+  :parameters ((weight
+		(parameter (!mul 0.01 (!randn `(,in-features ,out-features))))
+		:type waffetensor)
 	      (bias (if bias
 			(parameter (!zeros `(,out-features 1)))
 			nil)))
-  :forward ((x) (cl-waffe.nn:linear x (cl-waffe:self weight) (cl-waffe:self bias))))
+  :forward ((x)
+	    (cl-waffe.nn:linear x (self weight) (self bias))))
 
 
 (defmodel DenseLayer (in-features out-features &optional (bias T) (activation :relu))
   :optimize t
-  :regard-as-node t
+  :regard-as-node nil
   :parameters ((layer (linearlayer in-features out-features bias)) (activation activation))
   :forward ((x)
 	    (case (cl-waffe:self activation)
@@ -27,5 +30,5 @@
 	      (:softmax
 	       (!softmax (call (cl-waffe:self layer) x)))
 	      (T
-	       (funcall (cl-waffe:self activation)
+	       (funcall (the function (cl-waffe:self activation))
 			(call (cl-waffe:self layer) x))))))

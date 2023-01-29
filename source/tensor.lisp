@@ -31,15 +31,18 @@
        (every (lambda (e) (typep e 'waffesupporteddatatype)) c)))
 
 (deftype WaffeTensorContentType ()
+  "An type of data that allowed to make tensors with (const ~) or (tensor ~)
+  cl-waffe automatically coerce them to arbitary types"
   `(or mgl-mat:mat
        simple-array
        waffesupporteddatatype))
-					; (satisfies waffe-array)))
 
-(eval-when (:compile-toplevel)
-  (defstruct grad-tmp
-    (value nil :type (or null waffetensor))
-    (grad-called nil :type boolean)))
+(deftype WaffeTensorTypes ()
+  `(or mgl-mat:mat waffesupporteddatatype))
+
+(defstruct grad-tmp
+  (value nil)
+  (grad-called nil :type boolean))
 
 (defstruct (WaffeNodeThread
 	    (:constructor
@@ -84,11 +87,11 @@
 			       (destructively-calln 0)
 			       (grad nil)
 			       (destructive? t))))
-  (data nil :type waffetensorcontenttype)
+  (data nil :type WaffeTensorTypes)
   (grad-tmp (make-grad-tmp) :type grad-tmp)
   (backward nil :type boolean)
   (backend :mgl :type keyword)
-  (grad nil :type waffetensorcontenttype)
+  (grad nil :type WaffeTensorTypes)
   (variables nil :type list)
   state
   (is-mat nil :type boolean)
@@ -124,19 +127,22 @@
 	      (cos (* 2.0 pi (double-random)))
 	      var)))))
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (declaim (ftype (function (waffetensorcontenttype) (or waffetensorcontenttype)) init-waffe-tensor-data))
-  ; Todo rewrite to macro, 処理系によってはエラー？
-  (defun init-waffe-tensor-data (content)
+
+(declaim (ftype
+	  (function
+	   (waffetensorcontenttype)
+	   WaffeTensorTypes)
+	  init-waffe-tensor-data))
+(defun init-waffe-tensor-data (content)
   ; todo: coerce: simple-array -> mgl-mat
-    (declare (type content waffedatatype))
-    (etypecase content
-      (ratio
-	(if (eq mgl-mat:*default-mat-ctype* :double) ;...
-	    (coerce content 'double-float)
-	    (coerce content 'float)))
-      (simple-array (mgl-mat:array-to-mat content))
-      (T content))))
+  (declare (type waffetensorcontenttype content))
+  (typecase content
+    (ratio
+     (if (eq mgl-mat:*default-mat-ctype* :double) ;...
+	 (coerce content 'double-float)
+	 (coerce content 'float)))
+    (simple-array (mgl-mat:array-to-mat content))
+    (T content)))
 
 (defun check-backend (backend tensor)
   (if (null tensor)
@@ -203,7 +209,7 @@
 	      (typep (data ,value)  'mgl-mat:mat))
 	 (if (equal (!shape ,tensor) (!shape ,value))
 	     (setf (grad-tmp-value (waffetensor-grad-tmp ,tensor)) ,value)
-	     (setf (grad-tmp-value (waffetensor-grad-tmp ,tensor)) (!reshape ,value (!shape ,tensor))))
+	     (setf (grad-tmp-value (waffetensor-grad-tmp ,tensor)) ,value))
 	 (setf (grad-tmp-value (waffetensor-grad-tmp ,tensor)) ,value))))
 
 (defun backward (tensor)
@@ -213,6 +219,7 @@
 	(error "grad can be implicitly created only for scalar outputs")))
 
   (setq *no-grad* t)
+  (setf (waffetensor-thread-data tensor) (thread 0))
   (backward1 tensor)
   (setq *no-grad* nil)
   nil)
@@ -232,15 +239,21 @@
       (let* ((grad-tmp-before (waffetensor-grad-tmp tensor))
 	     (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top
 			      (grad-tmp-value grad-tmp-before)
-			      (const 1))))
+			      (sysconst 1))))
+
+	(setf (waffetensor-thread-data grad-before)
+	      (waffetensor-thread-data tensor))
 	; calculating backward(state, dy) -> x.grad, y.grad...
         (progn
-	  (let ((grads (funcall (the function (call-backward (waffetensor-state tensor))) grad-before)))
-	    (declare (type list grads)) ; Print Error
+	  (let ((grads (funcall
+			(the function
+			     (call-backward (waffetensor-state tensor)))
+			grad-before)))
+	    (declare (type list grads)) ; Todo: Print Error
 	    (unless (= (length (waffetensor-variables tensor))
 		       (length grads))
 	      (error "backward error: The number of :forward args doesnt correspond with of :backward"))
-
+	    
 	    (dotimes (n (length grads))
 	      (setfgradtmp (nth-var tensor n) (nth n grads)))
 
@@ -259,8 +272,10 @@
 			  (setf (waffetensor-grad tensor) (data new-grad))))
 		    (setf (waffetensor-grad tensor)
 			  (data (!add (waffetensor-grad tensor)
-				      (grad-tmp-value
-				       (waffetensor-grad-tmp tensor))))))))))
+		   		      (grad-tmp-value
+		   		       (waffetensor-grad-tmp tensor)))))
+
+		    )))))
   nil)
 
 
@@ -287,10 +302,10 @@
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type waffetensor dataset)
 	   (type fixnum start-row-index batch-size))
-  (let ((dim (mgl-mat:mat-dimension (data dataset) 1)))
+  (let ((dim (the fixnum (mgl-mat:mat-dimension (data dataset) 1))))
     (mgl-mat:reshape-and-displace! (data dataset)
                            (list batch-size dim)
-                           (* start-row-index dim))
+                           (the fixnum (* start-row-index dim)))
     dataset))
 
 (defun !reset-batch (dataset)
@@ -336,14 +351,13 @@
                    (+ (random tmp-limit) lower-limit)))
     res))
 
-(declaim (ftype (function (cons function) waffetensor) !random-with))
+(declaim (ftype (function ((or cons fixnum) function) waffetensor) !random-with))
 (defun !random-with (dims f)
   (declare (optimize (speed 3) (safety 0) (space 0))
-	   (type cons dims)
 	   (type function f))
   (let* ((res (make-array dims :initial-element 0))
-         (len (if (listp dims) (reduce #'* dims) dims)))
-    (loop for n from 0 to (1- len)
+         (len (the fixnum (if (listp dims) (reduce #'* dims) dims))))
+    (loop for n fixnum from 0 to (1- len)
           do (setf (row-major-aref res n)
                    (funcall f)))
     (const res)))
@@ -367,10 +381,7 @@
 (defun !chisquare (dims df)
   (declare (ignore dims df)))
 
-(declaim (ftype (function (cons single-float) waffetensor) !bernoulli))
 (defun !bernoulli (dims rate)
-  (declare (type cons dims)
-	   (type single-float rate))
   (!modify (!zeros dims) :bernoulli (const rate)))
 
 (defun !shape (tensor &optional (nth nil))

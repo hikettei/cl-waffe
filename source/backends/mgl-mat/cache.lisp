@@ -21,7 +21,7 @@
       (let ((place-cache (gethash place-key thread-cache)))
         (when place-cache
           (prog1 (gethash key place-cache)
-            (remhash key place-cache)))))))
+	    (remhash key place-cache)))))))
 
 (defun return-thread-cached-object (place-key key value)
   (let* ((thread-cache
@@ -81,15 +81,14 @@
   (tg:gc :full t))
 
 (defun free-cache (idx)
-  (let ((res (or (borrow-thread-cached-object idx mgl-mat:*default-mat-ctype*)
-		 nil))
-	(caches (bordeaux-threads:with-lock-held (*thread-cache-lock*)
-		  (gethash (bordeaux-threads:current-thread) *thread-caches*))))
-    (when res
-      (mgl-cube:destroy-cube res)
-      (when caches
-	(remhash idx caches)))
-    nil))	  
+  (let* ((caches (bordeaux-threads:with-lock-held (*thread-cache-lock*)
+		   (gethash (bordeaux-threads:current-thread) *thread-caches*))))
+    (when caches
+      (let ((caches-for-idx (gethash idx caches)))
+	(when caches-for-idx
+	  (remhash idx caches))
+	))
+    nil))
 
 (defmacro with-cache ((var dimensions &key (ctype '*default-mat-ctype*)
                       (place :ones))
@@ -101,13 +100,9 @@
 
 (defmacro with-thread-cached-object1 ((var key initform &key place) &body body)
   (let ((place (or place (gensym (symbol-name 'place)))))
-    (progn;alexandria:once-only (key)
+    (progn
       `(let ((,var (or (borrow-thread-cached-object ,place ,key)
                        ,initform)))
-	 ;(print (borrow-thread-cached-object ,place ,key))
-	 ;(print (gethash
-	;	 (bordeaux-threads:current-thread)
-	;	 *thread-caches*))
          (unwind-protect
               (locally ,@body)
            (return-thread-cached-object ,place ,key ,var))))))

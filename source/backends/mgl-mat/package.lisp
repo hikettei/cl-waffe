@@ -6,6 +6,7 @@
 	   #:write-to-nth-dim-with-range
 	   #:write-to-nth-dim-with-range1
 	   #:create-thread-idx
+	   #:copy1!
 	   #:get-difference
 	   #:receive-delay
 	   #:abort-delay))
