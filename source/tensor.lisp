@@ -214,13 +214,7 @@
 (defmacro setfgradtmp (tensor value)
   `(progn
      (setf (grad-tmp-grad-called (waffetensor-grad-tmp ,tensor)) t)
-     (if (and (typep (data ,tensor) 'mgl-mat:mat)
-	      (typep (data ,value)  'mgl-mat:mat))
-	 (if (equal (!shape ,tensor) (!shape ,value))
-	     (setf (grad-tmp-value (waffetensor-grad-tmp ,tensor)) ,value)
-	     (setf (grad-tmp-value (waffetensor-grad-tmp ,tensor))
-		   (!reshape ,value (!shape ,tensor))))
-	 (setf (grad-tmp-value (waffetensor-grad-tmp ,tensor)) ,value))))
+     (setf (grad-tmp-value (waffetensor-grad-tmp ,tensor)) ,value)))
 
 (defun backward (tensor)
   (declare (type waffetensor tensor))
@@ -275,21 +269,19 @@
 	 (if (typep (waffetensor-grad tensor) 'cons)
 	     ; is it first value? or not?
 	     (let ((new-grad (grad-tmp-value (waffetensor-grad-tmp tensor))))
-	       (if (typep (data new-grad) 'mgl-mat:mat)
-		   ; is the parameter mat?
-		   (if (equal (!shape new-grad) (!shape tensor))
-		       ; is it ok to call !add directly
-		       (setf (waffetensor-grad tensor) (data new-grad))
-		       (setf (waffetensor-grad tensor) ;perhaps reshape is not needed.
-			     (data (!reshape new-grad (!shape tensor)))))
-		   ; when the parameter is not mat.
-		   (setf (waffetensor-grad tensor) (data new-grad))))
+	       (setf (waffetensor-grad tensor) (data new-grad)))
 	     
 	     ;Otherwise (grad-tmp is created), Sum up grads for multiple variables
-	     (setf (waffetensor-grad tensor)
-		   (data (!add (waffetensor-grad tensor)
-			       (grad-tmp-value
-				(waffetensor-grad-tmp tensor))))))))))
+	     (if (typep (waffetensor-grad tensor) 'mat)
+		 (axpy! 1.0
+			(data (grad-tmp-value
+			       (waffetensor-grad-tmp tensor)))
+			(waffetensor-grad tensor))
+		 (setf (waffetensor-grad tensor)
+		       (+ (the single-float (waffetensor-grad tensor))
+			  (the single-float
+			       (data (grad-tmp-value
+				 (waffetensor-grad-tmp tensor))))))))))))
   nil)
 
 

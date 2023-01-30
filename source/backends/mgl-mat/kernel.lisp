@@ -236,7 +236,7 @@
 		compare-tensor
 		sum-tensor))
 (defun matmul-tensor (enable-optimize? o x y)
-  (declare (optimize (speed 1) (space 0) (safety 0))
+  (declare (optimize (speed 3) (space 0) (safety 0))
 	   (ignore enable-optimize? o)
 	   (type boolean enable-optimize?)
 	   (type waffetensor o))
@@ -249,25 +249,7 @@
       (error "cl-waffe.backends.mgl:matmul-tensor Matmul only supports following: 2d * 2d, 2d * 3d, 3d * 2d, 3d * 3d."))
 
     (let ((x-dims (the list (mat-dimensions x1)))
-	  (y-dims (the list (mat-dimensions y1)))
-	  (cache-id (cond
-		      ((waffetensor-thread-data x)
-		       (let ((idx (create-thread-idx
-				   (waffetensor-thread-data x))))
-			 (incf (cl-waffe::waffenodethread-cache-n
-				(waffetensor-thread-data x))
-			       1)
-			 idx))
-		      ((waffetensor-thread-data y)
-		       (let ((idx (create-thread-idx
-				   (waffetensor-thread-data y))))
-			 (incf (cl-waffe::waffenodethread-cache-n
-				(waffetensor-thread-data x))
-			       1)
-			 idx))
-		      (T ;(format t "Waning: making unreachable caches~%")
-			 (intern (symbol-name (gensym "Matmul"))
-				 :keyword)))))
+	  (y-dims (the list (mat-dimensions y1))))
       (cond
 	((and (= (length x-dims) 2)
 	      (= (length y-dims) 2))

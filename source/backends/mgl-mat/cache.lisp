@@ -127,8 +127,9 @@
     (when caches
       (when (gethash idx caches)
 	(if (is-locked? idx)
-	    (remhash idx caches)
-	    (lock-calln idx))))
+	    nil;(remhash idx caches)
+	    (lock-calln idx)
+	    )))
     nil))
 
 (defmacro with-cache ((var tensor &key (ctype '*default-mat-ctype*)
