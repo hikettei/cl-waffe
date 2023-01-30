@@ -1,6 +1,6 @@
 
 (defpackage :cl-waffe.caches
-  (:use :cl :mgl-mat)
+  (:use :cl :cl-waffe :mgl-mat)
   (:export
    #:with-cache
    #:return-caches
@@ -9,9 +9,11 @@
 
 (in-package :cl-waffe.caches)
 
-; todo depends on tg, bordeaux-threads
-(defvar *thread-caches* (tg:make-weak-hash-table :weakness :key))
-(defvar *thread-cache-lock* (bordeaux-threads:make-lock "thread cache lock"))
+; todo: add depends on tg, bordeaux-threads
+(defvar *thread-caches*
+  (tg:make-weak-hash-table :weakness :key))
+(defvar *thread-cache-lock*
+  (bordeaux-threads:make-lock "thread cache lock"))
 
 (defun borrow-thread-cached-object (place-key key)
   (let ((thread-cache
@@ -22,6 +24,15 @@
         (when place-cache
           (prog1 (gethash key place-cache)
 	    (remhash key place-cache)))))))
+
+(defun read-thread-cached-object (place-key key)
+  (let ((thread-cache
+          (bordeaux-threads:with-lock-held (*thread-cache-lock*)
+            (gethash (bordeaux-threads:current-thread) *thread-caches*))))
+    (when thread-cache
+      (let ((place-cache (gethash place-key thread-cache)))
+        (when place-cache
+          (gethash key place-cache))))))
 
 (defun return-thread-cached-object (place-key key value)
   (let* ((thread-cache
@@ -38,7 +49,7 @@
     ;; strategies too.
     (setf (gethash key place-cache) value)))
 
-(defmacro with-thread-cached-mat1 ((var dimensions &rest args
+(defmacro with-thread-cached-mat1 ((var tensor &rest args
                                    &key (place :scratch)
                                    (ctype '*default-mat-ctype*)
                                    (displacement 0)
@@ -61,16 +72,16 @@
     (remf args :displacement)
     (remf args :initial-element)
     (alexandria:with-unique-names (key)
-      (alexandria:once-only (dimensions displacement ctype initial-element)
+      (alexandria:once-only (tensor displacement ctype initial-element)
         `(let ((,key (list ,ctype ,initial-element)))
            (with-thread-cached-object1
-               (,var ,key (make-mat ,dimensions
+               (,var ,tensor ,key (make-mat (!shape ,tensor)
                                     :ctype ,ctype
                                     :displacement ,displacement
                                     :initial-element ,initial-element
                                     ,@args)
                 :place ,place)
-             (setq ,var (adjust! ,var ,dimensions ,displacement))
+             (setq ,var (adjust! ,var (!shape ,tensor) ,displacement))
 	     ; may create new mat
              (locally ,@body)))))))
 
@@ -86,25 +97,43 @@
     (when caches
       (let ((caches-for-idx (gethash idx caches)))
 	(when caches-for-idx
-	  (remhash idx caches))))
+	  (remhash idx caches)
+	  (print "DELETE")
+	  (print idx)
+	  ;(print caches-for-idx)
+	  ;(print caches)
+	  )))
     nil))
 
-(defmacro with-cache ((var dimensions &key (ctype '*default-mat-ctype*)
+(defmacro with-cache ((var tensor &key (ctype '*default-mat-ctype*)
                       (place :ones))
                      &body body)
-  `(with-thread-cached-mat1 (,var ,dimensions :place ,place
+  `(with-thread-cached-mat1 (,var ,tensor :place ,place
                                  :ctype ,ctype :initial-element 0.0)
      (let ((,var ,var))
        ,@body)))
 
-(defmacro with-thread-cached-object1 ((var key initform &key place) &body body)
+(defmacro with-thread-cached-object1 ((var tensor key initform &key place)
+				      &body body)
   (let ((place (or place (gensym (symbol-name 'place)))))
-    (progn
-      `(let ((,var (or ;nil(borrow-thread-cached-object ,place ,key)
-                       ,initform)))
-        ; (unwind-protect
-        ;      (locally ,@body)
-           ;(return-thread-cached-object ,place ,key ,var)
-	 ;  )))))
-
-	 ,@body))))
+    `(labels ((cached-data (tensor shape? _)
+	      (declare (ignore _))
+	       (let ((obj (read-thread-cached-object
+			   (cl-waffe::waffetensor-idx tensor)
+			   (cl-waffe::waffetensor-key tensor))))
+		 (print "READ")
+		 (print (cl-waffe::waffetensor-idx tensor))
+		 (if (null obj)
+		     (error "cl-waffe.caches:cached-data: The tensor that attempted to read has already cached and cleaned.~%Please remain that calculations must be done in the scope that the tensor has created, including defnode."))
+		 (if shape?
+		     (mat-dimensions obj)
+		     obj))))
+      (let ((,var ,initform))
+	 (when (cl-waffe::waffetensor-is-sysconst? ,tensor)
+	   (return-thread-cached-object ,place
+					,key
+					(copy-mat (data ,tensor)))
+	   (setf (data ,tensor) #'cached-data)
+	   (setf (cl-waffe::waffetensor-key ,tensor) ,key)
+	   (setf (cl-waffe::waffetensor-idx ,tensor) ,place))
+	 (locally ,@body)))))

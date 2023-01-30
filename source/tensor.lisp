@@ -67,6 +67,7 @@
 			       (grad nil)
 			       (thread-data thread-data)
 			       (destructive? t)
+			       (is-sysconst? t)
 			       (is-mat (typep value 'mgl-mat:mat))
 			       (grad-tmp (make-grad-tmp))))
 	                (:constructor
@@ -102,12 +103,23 @@
   (is-next-destruct? nil :type boolean)
   (destructive? nil :type boolean) ; unnecessary
   (thread-data nil :type (or waffenodethread null))
+  (is-sysconst? nil :type boolean)
+  (key nil :type (or null cons))
+  (idx nil :type (or null symbol))
   (is-data-destructed? nil :type boolean))
 
-(declaim (inline data))
+(declaim (inline data
+		 (setf data)))
 (defun data (tensor)
   (declare (type waffetensor tensor))
-  (waffetensor-data tensor))
+  (typecase (waffetensor-data tensor)
+    (function
+     (the (values mgl-mat:mat &optional)
+	  (funcall (the function (waffetensor-data tensor)) tensor nil t)))
+    (T (waffetensor-data tensor))))
+
+(defun (setf data) (val &optional tensor)
+  (setf (waffetensor-data tensor) val))
 
 (defun double-random ()
   (let ((i (random 1.0)))
@@ -155,9 +167,6 @@
 
 (defmacro !allow-destruct (tensor)
   `(setf (waffetensor-is-next-destruct? ,tensor) t))
-
-(defun (setf data) (val &optional tensor)
-  (setf (waffetensor-data tensor) val))
 
 ; is-tensor
 (defun waffe-tensor-p (tensor)
@@ -382,21 +391,27 @@
   (!modify (!zeros dims) :bernoulli (const rate)))
 
 (defun !shape (tensor &optional (nth nil))
-  (unless (typep (data tensor) 'waffe-array)
-    (unless (typep (data tensor) 'function)
+  (declare (type waffetensor tensor))
+  (unless (typep (waffetensor-data tensor) 'waffe-array)
+    (unless (or (typep (waffetensor-data tensor) 'function)
+		(typep (waffetensor-data tensor) 'compiled-function))
       (error "Fixnum/Double/Float doesn't have a shape")))
     
-  (if nth
+  (if (not (null nth))
       (let* ((n (if (typep nth 'waffetensor)
-	 	    (data nth)
+	 	    (waffetensor-data nth)
 		    nth))
 	     (n (if (< n 0) (+ (!dims tensor) n) n)))
-	(if (typep (data tensor) 'function)
-	    (nth n (funcall (data tensor) t nil))
-	    (mgl-mat:mat-dimension (data tensor) n)))
-      (if (typep (data tensor) 'function)
-	  (funcall (data tensor) t nil)
-	  (mgl-mat:mat-dimensions (data tensor)))))
+	(typecase (waffetensor-data tensor)
+	  (function
+	   (nth n (funcall (waffetensor-data tensor) tensor t nil)))
+	  (T
+	   (mat-dimension (waffetensor-data tensor) n))))
+      (typecase (waffetensor-data tensor)
+	(function
+	 (funcall (waffetensor-data tensor) tensor t nil))
+	(T
+	 (mat-dimensions (waffetensor-data tensor))))))
 
 (defun !dims (tensor)
   (length (!shape tensor)))

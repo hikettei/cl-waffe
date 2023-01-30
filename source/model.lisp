@@ -126,7 +126,7 @@
     (mat 
      (cl-waffe.caches:with-cache
 	 (tmp
-	  (!shape tensor)
+	  tensor
 	  :place
 	  (let ((place nil))
 	    (incf (waffenodethread-cache-n thread) 2)
@@ -136,7 +136,16 @@
        tmp))
     (T (data tensor))))
 
-(defmacro define-node-method (fname name args body hide-from-tree optimize &optional (is-node nil) &aux (thread (gensym)))
+(defmacro define-node-method (fname
+			      name
+			      args
+			      body
+			      hide-from-tree
+			      optimize
+			      &optional (is-node nil)
+			      &aux (thread (gensym)))
+  "The macro for defining node method. (:forward :backward in defmodel, defnode, defoptimizers)
+  Also, the code for managing caches."
   (let ((f-ident   (gensym (symbol-name name)))
 	(self-heap (gensym (symbol-name name))))
     `(progn
@@ -147,6 +156,7 @@
 			  (type ,name ,self-heap))
 		`(declare (type ,name ,self-heap)))
 	   ,(if hide-from-tree `(declare (type waffetensor ,@args)) nil)
+	   ; Utils that can be used in :forward and :backward
 	   (macrolet ((self (name) `(slot-value ,',self-heap ',name))
 		      (save-for-backward (name value)
 			`(let ((smaller-value (detach ,value)))
@@ -155,9 +165,8 @@
 			     (mat
 			      (cl-waffe.caches:with-cache
 				  (tmp
-				   (mgl-mat:mat-dimensions
-				     (data smaller-value))
-				   :place
+				   smaller-value
+				   :place ; todo
 				   (allocate-grad-id ,name ,value))
 				(!allow-destruct smaller-value)
 				(copy! (data smaller-value) tmp)
@@ -165,32 +174,29 @@
 				(setf (self ,name) smaller-value)))
 			     (T (!allow-destruct smaller-value)
 			      (setf (self ,name) smaller-value)))))))
-	     ,(if is-node
+	     ,(if is-node ; when the model is node method and step is ended, cl-waffe will clean caches
 		  `(let ((,thread (thread (decide-thread-idx ,@args))))
 		     (set-thread-data ,thread ,@args)
 		     (let ((result (locally ,@body)))
 		       ;(declare (type waffetensor &optional result))
-		       (set-thread-data nil ,@args)
 		       (typecase result
 			 (list (prog1
 				   (map 'list
-				    (lambda (x)
-				      (setf (waffetensor-thread-data x) nil)
-				      (if (typep (data x) 'mgl-mat:mat)
-					  (setf (data x) (cache-tensor x ,thread)))
-				      x)
+					(lambda (x)
+					  (typecase (waffetensor-data x)
+					    (mat
+					     (setf (data x) (data x))))
+					  x)
 				    result)
-				 ;(free-caches ,thread (length result))
-				 ))
+				 (free-caches ,thread 0)))
 			 (T
-			  (setf (waffetensor-thread-data result) nil)
-			  (if (typep (data result) 'mgl-mat:mat)
-			      (prog1
-				  (setf (data result)
-					(cache-tensor result ,thread))
-				;(free-caches ,thread 1)
-				))
-			  result))))
+			  (prog1
+			      (progn
+				(typecase (waffetensor-data result)
+				  (mat
+				   (setf (data result) (data result))))
+				result)
+			    (free-caches ,thread 0))))))
 		  `(locally ,@body))))
 	 (defmethod ,fname ((self ,name))
 	   (lambda (&rest node-inputs) (apply #',f-ident self node-inputs))))))
@@ -242,7 +248,7 @@
 	     ,(cdr forward)
 	     ,hide-from-tree
 	     ,optimize
-	     nil)
+	     ,regard-as-node)
 	 (define-node-method
 	     call-backward
 	     ,name
@@ -250,7 +256,7 @@
 	     ,(cdr backward)
 	     ,hide-from-tree
 	     ,optimize
-	     nil)))))
+	     ,regard-as-node)))))
 
 (defun render-simple-model-structure (stream model) ; Todo: More Details
   (format stream "[~a: ~a]" (if (slot-value model 'hide-from-tree)

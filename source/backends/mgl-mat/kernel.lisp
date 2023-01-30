@@ -25,7 +25,7 @@
   (if (not (null (waffetensor-thread-data out)))
       (let* ((thread-info (waffetensor-thread-data out))
 	     (idx (create-thread-idx thread-info)))
-	(with-cache (result (mat-dimensions args) :place idx)
+	(with-cache (result out :place idx)
 	  (incf (cl-waffe::waffenodethread-cache-n thread-info) 1)
 	  (copy! args result)
 	  result))
@@ -80,7 +80,8 @@
 (defparameter *abort-delay-instruction* :matmul)
 
 (defmacro deliv-delay (tensor func &rest args)
-  `(lambda (shape? step?)
+  `(lambda (_ shape? step?)
+     (declare (ignore _))
      (if shape?
 	 (reverse (mgl-mat:mat-dimensions ,tensor))
 	 (if step?
@@ -89,7 +90,7 @@
 
 (defun next-delay (delay state)
   (if (typep delay 'function)
-      (funcall delay nil state)
+      (funcall delay nil nil state)
       delay))
 
 (defmacro abort-delay (delay)
@@ -276,7 +277,7 @@
 			  ,(if (second transpose-map)
 			       (second (reverse (mat-dimensions y1)))
 			       (second (mat-dimensions y1))))))
-	   (with-cache (out out-dim :place cache-id)
+	   (let ((out (make-mat out-dim)))
 	     (matmul-tensor-2d
 	       out
 	       x1
@@ -295,7 +296,7 @@
 			       (nth 1 y-dims))))
 	       (displace-first (mat-displacement x1))
 	       (shape-first    (mat-dimensions x1)))
-	   (with-cache (out out-dim :place cache-id)
+	   (let ((out (make-mat out-dim)))
 	     (dotimes (i (the fixnum (car x-dims)))
 	       (reshape-and-displace! out
 				      (cdr out-dim)
@@ -324,8 +325,7 @@
 			       (nth 2 y-dims))))
 	       (displace-first (mat-displacement y1))
 	       (shape-first    (mat-dimensions y1)))
-	   (with-cache (out out-dim
-			:place cache-id)
+	   (let ((out (make-mat out-dim)))
 	     (dotimes (i (the fixnum (car y-dims)))
 	       (reshape-and-displace! out
 				      (cdr out-dim)
