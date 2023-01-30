@@ -153,8 +153,8 @@
 (defmacro with-thread-cached-object1 ((var tensor key initform &key place)
 				      &body body)
   (let ((place (or place (gensym (symbol-name 'place)))))
-    `(labels ((cached-data (tensor shape? _)
-	      (declare (ignore _))
+    `(labels ((cached-data (tensor shape? _ &optional __)
+	      (declare (ignore _ __))
 	       (let ((obj (read-thread-cached-object
 			   (cl-waffe::waffetensor-idx tensor)
 			   (cl-waffe::waffetensor-key tensor))))

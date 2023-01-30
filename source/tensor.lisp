@@ -114,8 +114,19 @@
   (declare (type waffetensor tensor))
   (typecase (waffetensor-data tensor)
     (function
-     (the (values mgl-mat:mat &optional)
-	  (funcall (the function (waffetensor-data tensor)) tensor nil t)))
+     (let ((result
+	     (funcall
+	      (the
+	       function
+	       (waffetensor-data tensor))
+	      tensor
+	      nil
+	      nil
+	      t)))
+       (if (null result)
+	   (the function
+		(waffetensor-data tensor))
+	   (the (values mat &optional) result))))
     (T (waffetensor-data tensor))))
 
 (defun (setf data) (val &optional tensor)

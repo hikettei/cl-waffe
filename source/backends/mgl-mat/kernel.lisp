@@ -80,13 +80,15 @@
 (defparameter *abort-delay-instruction* :matmul)
 
 (defmacro deliv-delay (tensor func &rest args)
-  `(lambda (_ shape? step?)
+  `(lambda (_ shape? step? &optional ignore?)
      (declare (ignore _))
      (if shape?
 	 (reverse (mgl-mat:mat-dimensions ,tensor))
 	 (if step?
 	     (funcall ,func ,tensor ,@args) ; receive before node
-	     ,tensor)))) ; abort before node
+	     (if ignore?
+		 nil
+		 ,tensor))))) ; abort before node
 
 (defun next-delay (delay state)
   (if (typep delay 'function)
