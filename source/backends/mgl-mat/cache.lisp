@@ -7,6 +7,9 @@
    #:free-cache
    #:caches-gc))
 
+; This package exports features for making caches (sysconst)
+; Tracking sysconst's usage every step, cl-waffe optimizes the number of cl-waffe's making copy.
+
 (in-package :cl-waffe.caches)
 
 ; todo: add depends on tg, bordeaux-threads
@@ -15,15 +18,39 @@
 (defvar *thread-cache-lock*
   (bordeaux-threads:make-lock "thread cache lock"))
 
-(defun borrow-thread-cached-object (place-key key)
-  (let ((thread-cache
-          (bordeaux-threads:with-lock-held (*thread-cache-lock*)
-            (gethash (bordeaux-threads:current-thread) *thread-caches*))))
-    (when thread-cache
-      (let ((place-cache (gethash place-key thread-cache)))
-        (when place-cache
-          (prog1 (gethash key place-cache)
-	    (remhash key place-cache)))))))
+; Todo multi thread safe
+(defvar *thread-callns*
+  (tg:make-weak-hash-table :weakness :key))
+
+(defstruct CacheData
+  (calln 0 :type fixnum)
+  (calln-per-step 0 :type fixnum)
+  (lock nil :type boolean))
+
+(defun update-calln (idx)
+  (let ((calln (or (gethash idx *thread-callns*)
+		   (make-cachedata :calln -1 :calln-per-step -1))))
+    (unless (cachedata-lock calln)
+      (incf (cachedata-calln-per-step calln) 1))
+    
+    (incf (cachedata-calln calln) 1)
+
+    (when (cachedata-lock calln)
+      (setf (cachedata-calln calln)
+	    (case (cachedata-calln-per-step calln)
+	      (0 0)
+	      (T (mod (cachedata-calln calln)
+		      (cachedata-calln-per-step calln))))))
+    
+    (setf (gethash idx *thread-callns*) calln)))
+
+(defun lock-calln (idx)
+  (let ((calln (gethash idx *thread-callns*)))
+    (when calln
+      (setf (cachedata-lock
+	     (gethash idx *thread-callns*))
+	    t))))
+
 
 (defun read-thread-cached-object (place-key key)
   (let ((thread-cache
@@ -34,7 +61,7 @@
         (when place-cache
           (gethash key place-cache))))))
 
-(defun return-thread-cached-object (place-key key value)
+(defun return-thread-cached-object (place-key key value thread)
   (let* ((thread-cache
            (bordeaux-threads:with-lock-held (*thread-cache-lock*)
              (or (gethash (bordeaux-threads:current-thread) *thread-caches*)
@@ -95,14 +122,9 @@
   (let* ((caches (bordeaux-threads:with-lock-held (*thread-cache-lock*)
 		   (gethash (bordeaux-threads:current-thread) *thread-caches*))))
     (when caches
-      (let ((caches-for-idx (gethash idx caches)))
-	(when caches-for-idx
-	  (remhash idx caches)
-	  (print "DELETE")
-	  (print idx)
-	  ;(print caches-for-idx)
-	  ;(print caches)
-	  )))
+      (when (gethash idx caches)
+	(lock-calln idx)
+	(remhash idx caches)))
     nil))
 
 (defmacro with-cache ((var tensor &key (ctype '*default-mat-ctype*)
@@ -113,6 +135,16 @@
      (let ((,var ,var))
        ,@body)))
 
+;(declaim (inline copy-by-idx))
+(defun copy-by-idx (idx mat)
+  "When mats are allowed to fail to copy, return mat itself"
+  (let ((calln (gethash idx *thread-callns*)))
+    (cond
+      ((null calln) (copy-mat mat)) ; calln hasn't created yet
+      ((null (cachedata-lock calln)) (copy-mat mat)) ; calln's record hasn't finished yet
+      ((= 0 (cachedata-calln calln)) mat)
+      (T (copy-mat mat)))))
+
 (defmacro with-thread-cached-object1 ((var tensor key initform &key place)
 				      &body body)
   (let ((place (or place (gensym (symbol-name 'place)))))
@@ -121,10 +153,9 @@
 	       (let ((obj (read-thread-cached-object
 			   (cl-waffe::waffetensor-idx tensor)
 			   (cl-waffe::waffetensor-key tensor))))
-		 (print "READ")
-		 (print (cl-waffe::waffetensor-idx tensor))
 		 (if (null obj)
 		     (error "cl-waffe.caches:cached-data: The tensor that attempted to read has already cached and cleaned.~%Please remain that calculations must be done in the scope that the tensor has created, including defnode."))
+		 (update-calln (cl-waffe::waffetensor-idx tensor))
 		 (if shape?
 		     (mat-dimensions obj)
 		     obj))))
@@ -132,7 +163,10 @@
 	 (when (cl-waffe::waffetensor-is-sysconst? ,tensor)
 	   (return-thread-cached-object ,place
 					,key
-					(copy-mat (data ,tensor)))
+					(copy-by-idx
+					 ,place
+					 (data ,tensor))
+					(cl-waffe::waffetensor-thread-data ,tensor))
 	   (setf (data ,tensor) #'cached-data)
 	   (setf (cl-waffe::waffetensor-key ,tensor) ,key)
 	   (setf (cl-waffe::waffetensor-idx ,tensor) ,place))

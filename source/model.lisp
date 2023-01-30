@@ -91,7 +91,7 @@
 			    (setf (waffetensor-grad-tmp p) (make-grad-tmp)))
 		nil)
        :hide-from-tree nil
-       :regard-as-node nil)))
+       :regard-as-node t)))
 
 (defmacro defnode (name args &key parameters forward backward optimize (regard-as-node t))
   `(defmodel ,name ,args :parameters ,parameters :forward ,forward :backward ,backward :hide-from-tree T :optimize ,optimize :regard-as-node ,regard-as-node))
@@ -113,12 +113,13 @@
      (cl-waffe.backends.mgl:create-thread-idx thread
 					      (gensym (symbol-name ',slot-name)))))
 
-(defun free-caches (thread &optional (evacuate-num 0))
+(defun free-caches (thread &optional (args-size 0) (evacuate-num 0))
   (let ((caches-n (waffenodethread-cache-n thread)))
-    (dotimes (i (- caches-n evacuate-num))
-      (setf (waffenodethread-cache-n thread) i)
-      (let ((cache-id (cl-waffe.backends.mgl:create-thread-idx thread)))
-	(cl-waffe.caches:free-cache cache-id))))
+    (loop for i fixnum upfrom args-size below (1+ (- caches-n evacuate-num))
+	  do (progn (setf (waffenodethread-cache-n thread) i)
+		    (let ((cache-id
+			    (cl-waffe.backends.mgl:create-thread-idx thread)))
+		      (cl-waffe.caches:free-cache cache-id)))))
   nil)
 
 (defun cache-tensor (tensor thread)
@@ -152,7 +153,7 @@
          (declaim (ftype (function (,name ,@(map 'list (lambda (x) (declare (ignore x)) `waffetensor) `,args)) (or null waffetensor)) ,f-ident))
 	 (defun ,f-ident (,self-heap ,@args)
 	   ,(if optimize
-		`(declare (optimize (speed 3) (space 0) (safety 0))
+		`(declare (optimize (speed 3) (space 0) (safety 1))
 			  (type ,name ,self-heap))
 		`(declare (type ,name ,self-heap)))
 	   ,(if hide-from-tree `(declare (type waffetensor ,@args)) nil)
@@ -175,7 +176,8 @@
 			     (T (!allow-destruct smaller-value)
 			      (setf (self ,name) smaller-value)))))))
 	     ,(if is-node ; when the model is node method and step is ended, cl-waffe will clean caches
-		  `(let ((,thread (thread (decide-thread-idx ,@args))))
+		  `(let* ((,thread (thread (decide-thread-idx ,@args)))
+			  (is-top (= (waffenodethread-thread-idx ,thread) 0)))
 		     (set-thread-data ,thread ,@args)
 		     (let ((result (locally ,@body)))
 		       ;(declare (type waffetensor &optional result))
@@ -187,8 +189,10 @@
 					    (mat
 					     (setf (data x) (data x))))
 					  x)
-				    result)
-				 (free-caches ,thread 0)))
+					result)
+				 (free-caches ,thread)
+				 (when is-top
+				   (set-thread-data nil ,@args))))
 			 (T
 			  (prog1
 			      (progn
@@ -196,7 +200,9 @@
 				  (mat
 				   (setf (data result) (data result))))
 				result)
-			    (free-caches ,thread 0))))))
+			    (free-caches ,thread)
+			    (when is-top
+			      (set-thread-data nil ,@args)))))))
 		  `(locally ,@body))))
 	 (defmethod ,fname ((self ,name))
 	   (lambda (&rest node-inputs) (apply #',f-ident self node-inputs))))))
@@ -248,7 +254,7 @@
 	     ,(cdr forward)
 	     ,hide-from-tree
 	     ,optimize
-	     ,regard-as-node)
+	     ,(not regard-as-node))
 	 (define-node-method
 	     call-backward
 	     ,name
@@ -256,7 +262,7 @@
 	     ,(cdr backward)
 	     ,hide-from-tree
 	     ,optimize
-	     ,regard-as-node)))))
+	     ,(not regard-as-node))))))
 
 (defun render-simple-model-structure (stream model) ; Todo: More Details
   (format stream "[~a: ~a]" (if (slot-value model 'hide-from-tree)
