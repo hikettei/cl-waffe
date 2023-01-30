@@ -229,7 +229,6 @@
 	(error "grad can be implicitly created only for scalar outputs")))
 
   (setq *no-grad* t)
-  (setf (waffetensor-thread-data tensor) (thread 0))
   (backward1 tensor)
   (setq *no-grad* nil)
   nil)
@@ -242,7 +241,7 @@
 
 (declaim (ftype (function (waffetensor) null) backward1))
 (defun backward1 (tensor)
-  (declare (optimize (speed 3) (space 0) (safety 1))
+  (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type waffetensor tensor))
   (cond
     ((waffetensor-backward tensor) ;Backward exists?
@@ -250,7 +249,6 @@
 	     (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top
 			      (grad-tmp-value grad-tmp-before)
 			      (const 1))))
-
 	; calculating backward(state, dy) -> x.grad, y.grad...
         (progn
 	  (let ((grads (funcall

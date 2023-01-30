@@ -104,14 +104,9 @@
 	(1+ (waffenodethread-thread-idx (waffetensor-thread-data nm)))
 	0)))
 
-(defun set-thread-data (th &rest args)
-  (dolist (v args)
-    (setf (waffetensor-thread-data v) th)))
-
-(defmacro allocate-grad-id (slot-name tensor)
-  `(let* ((thread (waffetensor-thread-data ,tensor)))
-     (cl-waffe.backends.mgl:create-thread-idx thread
-					      (gensym (symbol-name ',slot-name)))))
+(defun set-thread-data (&rest args)
+  (dolist (v (cdr args))
+    (setf (waffetensor-thread-data v) (car args))))
 
 (defun free-caches (thread &optional (args-size 0) (evacuate-num 0))
   (let ((caches-n (waffenodethread-cache-n thread)))
@@ -121,21 +116,6 @@
 			    (cl-waffe.backends.mgl:create-thread-idx thread)))
 		      (cl-waffe.caches:free-cache cache-id)))))
   nil)
-
-(defun cache-tensor (tensor thread)
-  (typecase (data tensor)
-    (mat 
-     (cl-waffe.caches:with-cache
-	 (tmp
-	  tensor
-	  :place
-	  (let ((place nil))
-	    (incf (waffenodethread-cache-n thread) 2)
-	    (setq place (cl-waffe.backends.mgl:create-thread-idx thread))
-	      place))
-       (copy! (data tensor) tmp)
-       tmp))
-    (T (data tensor))))
 
 (defmacro define-node-method (fname
 			      name
@@ -160,19 +140,20 @@
 	   ; Utils that can be used in :forward and :backward
 	   (macrolet ((self (name) `(slot-value ,',self-heap ',name))
 		      (save-for-backward (name value)
-			`(let ((smaller-value (detach ,value)))
+			`(let ((thread-info (waffetensor-thread-data ,value))
+			       (smaller-value (detach ,value)))
 			   (unless *no-grad*
-			   (typecase (data smaller-value)
-			     (mat
+			   (cond
+			     ((and (typep ,value 'mat)
+				   (not (null thread-info)))
 			      (cl-waffe.caches:with-cache
 				  (tmp
 				   smaller-value
-				   :place ; todo
-				   (allocate-grad-id ,name ,value))
-				(!allow-destruct smaller-value)
-				(copy! (data smaller-value) tmp)
-				(setf (data smaller-value) tmp)			
-				(setf (self ,name) smaller-value)))
+				   :place
+				   (cl-waffe.backends.mgl:create-thread-idx
+				    thread-info))
+				(incf (waffenodethread-cache-n thread-info) 1)
+				(setf (self ,name) (const tmp))))
 			     (T (!allow-destruct smaller-value)
 			      (setf (self ,name) smaller-value)))))))
 	     ,(if is-node ; when the model is node method and step is ended, cl-waffe will clean caches

@@ -118,13 +118,17 @@
 (defun caches-gc ()
   (tg:gc :full t))
 
+(defun is-locked? (idx)
+  (cachedata-lock (gethash idx *thread-callns*)))
+
 (defun free-cache (idx)
   (let* ((caches (bordeaux-threads:with-lock-held (*thread-cache-lock*)
 		   (gethash (bordeaux-threads:current-thread) *thread-caches*))))
     (when caches
       (when (gethash idx caches)
-	(lock-calln idx)
-	(remhash idx caches)))
+	(if (is-locked? idx)
+	    (remhash idx caches)
+	    (lock-calln idx))))
     nil))
 
 (defmacro with-cache ((var tensor &key (ctype '*default-mat-ctype*)
