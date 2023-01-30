@@ -267,19 +267,29 @@
 	      (step-next-node tensor n)))
 	  nil)))
     (T
-	(when (waffetensor-grad tensor) ; the tensor is the end of node.
-	    (when (grad-tmp-value (waffetensor-grad-tmp tensor)) ; is grad-tmp already created?
-		(if (typep (waffetensor-grad tensor) 'cons) ; is it first value? or not?
-		    (let ((new-grad (grad-tmp-value (waffetensor-grad-tmp tensor))))
-		      (if (typep (data new-grad) 'mgl-mat:mat)
-			  (if (equal (!shape new-grad) (!shape tensor))
-			      (setf (waffetensor-grad tensor) (data new-grad))
-			      (setf (waffetensor-grad tensor) (data (!reshape new-grad (!shape tensor))))) ; is it due to bugs of reshape?
-			  (setf (waffetensor-grad tensor) (data new-grad))))
-		    (setf (waffetensor-grad tensor)
-			  (data (!add (waffetensor-grad tensor)
-		   		      (grad-tmp-value
-		   		       (waffetensor-grad-tmp tensor))))))))))
+     ; Collecting :grad-tmp and copying them to: grad
+     (when (waffetensor-grad tensor)
+	   ; the tensor is the end of node.
+       (when (grad-tmp-value (waffetensor-grad-tmp tensor))
+	   ; is grad-tmp already created?
+	 (if (typep (waffetensor-grad tensor) 'cons)
+	     ; is it first value? or not?
+	     (let ((new-grad (grad-tmp-value (waffetensor-grad-tmp tensor))))
+	       (if (typep (data new-grad) 'mgl-mat:mat)
+		   ; is the parameter mat?
+		   (if (equal (!shape new-grad) (!shape tensor))
+		       ; is it ok to call !add directly
+		       (setf (waffetensor-grad tensor) (data new-grad))
+		       (setf (waffetensor-grad tensor) ;perhaps reshape is not needed.
+			     (data (!reshape new-grad (!shape tensor)))))
+		   ; when the parameter is not mat.
+		   (setf (waffetensor-grad tensor) (data new-grad))))
+	     
+	     ;Otherwise (grad-tmp is created), Sum up grads for multiple variables
+	     (setf (waffetensor-grad tensor)
+		   (data (!add (waffetensor-grad tensor)
+			       (grad-tmp-value
+				(waffetensor-grad-tmp tensor))))))))))
   nil)
 
 
