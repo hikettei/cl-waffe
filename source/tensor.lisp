@@ -209,7 +209,8 @@
 	      (typep (data ,value)  'mgl-mat:mat))
 	 (if (equal (!shape ,tensor) (!shape ,value))
 	     (setf (grad-tmp-value (waffetensor-grad-tmp ,tensor)) ,value)
-	     (setf (grad-tmp-value (waffetensor-grad-tmp ,tensor)) (!reshape ,value (!shape ,tensor))))
+	     (setf (grad-tmp-value (waffetensor-grad-tmp ,tensor))
+		   (!reshape ,value (!shape ,tensor))))
 	 (setf (grad-tmp-value (waffetensor-grad-tmp ,tensor)) ,value))))
 
 (defun backward (tensor)
@@ -259,8 +260,8 @@
 	      (step-next-node tensor n)))
 	  nil)))
     (T
-	(if (waffetensor-grad tensor) ; the tensor is the end of node.
-	    (if (grad-tmp-value (waffetensor-grad-tmp tensor)) ; is grad-tmp already created?
+	(when (waffetensor-grad tensor) ; the tensor is the end of node.
+	    (when (grad-tmp-value (waffetensor-grad-tmp tensor)) ; is grad-tmp already created?
 		(if (typep (waffetensor-grad tensor) 'cons) ; is it first value? or not?
 		    (let ((new-grad (grad-tmp-value (waffetensor-grad-tmp tensor))))
 		      (if (typep (data new-grad) 'mgl-mat:mat)

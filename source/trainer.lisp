@@ -22,9 +22,8 @@
 		      (update (&rest args1) `(unless *no-grad*
 				                 (with-no-grad (funcall (call-forward (self optimizer)) ,@args1))))
 		      (zero-grad ()
-			`(progn
-			   `(unless *no-grad*
-			      (funcall (call-backward (self optimizer)) (self model))))))
+			`(unless *no-grad*
+			   (funcall (call-backward (self optimizer)) (self model)))))
 	     ,@body))
 	 (defmethod ,fname ((self ,name))
 	   (lambda (&rest node-inputs) (apply #',f-ident self node-inputs))))))

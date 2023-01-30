@@ -283,7 +283,7 @@
 	       y1
 	       (car transpose-map)
 	       (second transpose-map))
-	     (copy-mat out))))
+	     out)))
 	((and (= (length x-dims) 3)
 	      (= (length y-dims) 2))
 	 (let ((out-dim `(,(car x-dims)
@@ -312,7 +312,7 @@
 	       (matmul-tensor-2d out x1 y1 (car transpose-map) (second transpose-map)))
 	     (reshape-and-displace! out out-dim 0)
 	     (reshape-and-displace! x1 shape-first displace-first)
-	     (copy-mat out))))
+	     out)))
 	((and (= (length x-dims) 2)
 	      (= (length y-dims) 3))
 	 (let ((out-dim `(,(car y-dims)
@@ -348,7 +348,7 @@
 				 (second transpose-map)))
 	     (reshape-and-displace! out out-dim 0)
 	     (reshape-and-displace! y1 shape-first displace-first)
-	     (copy-mat out))))
+	     out)))
 	(T (error "cl-waffe.backends.mgl:matmul-tensor: unimplemented combinations."))))))
 
 (declaim (ftype
@@ -404,6 +404,7 @@
            (mgl-mat:.<! (data y) o)))
 
 (defun sum-tensor (is-first-time-call? out x y)
+  ; Todo: OPtimize
   (declare (optimize (speed 3) (space 0) (safety 0))
            (type boolean is-first-time-call?)
            (type waffetensor out x y)
@@ -457,7 +458,7 @@
 	   (type boolean enable-optimize)
 	   (type waffetensor out x y)
 	   (ignore enable-optimize out))
-  (let ((x1 (mgl-mat:copy-mat (data x))))
+  (let ((x1 (mgl-mat:copy-mat (data x)))) ; cache
     (mgl-mat:reshape! x1 (data y))
     x1))
 
@@ -498,7 +499,7 @@
 
 ;optimize is failed.
 (define-lisp-kernel (embedding-forward-lisp)
-    ((out :mat :out)
+    ((out :mat :output)
      (x :mat :input)
      (weights :mat :input)
      (n fixnum)
