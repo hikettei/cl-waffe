@@ -3,13 +3,17 @@
 
 (declaim (inline call))
 
-(defparameter *no-grad* nil)
+(defparameter *no-grad* nil
+  "When t, some node will be ignored. see references below for details. default: nil")
 
 (defgeneric call-forward  (self))
 (defgeneric call-backward (self))
 
-; TODO: Rename -> with-predict-mode
 (defmacro with-no-grad (&body body)
+  "This macro is like with-predict-mode
+   When you predicting your models, copying values for backward is waste.
+   In this macro, *no-grad* become t, and won't make computation nodes.
+   And in some operations, they will be faster."
   `(let ((no-grad-first *no-grad*))
      (setq *no-grad* t)
      ,@body
@@ -17,7 +21,31 @@
      nil))
 
 (defmacro with-calling-layers (input &rest layers)
-  ; todo rewrite, cuz this definition is temporary
+  "This macro allows to sequentially call layers.
+   Example:
+   (defmodel MLP (activation)
+       :parameters ((layer1   (denselayer (* 28 28) 512 T activation))
+   	            (layer2   (denselayer 512 256 T activation))
+	            (layer3   (linearlayer 256 10 T)))
+       :forward ((x)
+	         (with-calling-layers x
+	           (layer1 x)
+ 	           (layer2 x)
+	           (layer3 x))))
+
+   the argument input is a tensor.
+   Refering each layers from (self) macro, destructively modifying x with the returned value.
+
+  For the different arguments, this is ok.
+
+  (with-calling-layers x
+       (layer1 x 1 1)
+       (layer2 1 x 2)
+       (layer3 x y))
+
+  Input: input, an tensor. layers an cons.
+  Output: An tensor made by calling layers"
+  
   `(let ((,input ,input))
        ,@(map 'list (lambda (layer)
 		      (declare (type cons layer))
@@ -30,6 +58,11 @@
 (declaim (inline call))
 (declaim (ftype (function (t &rest waffetensor) waffetensor) call))
 (defun call (model &rest args)
+  "Calling Forward Step defined by defmodel, defnode, defoptimizer and recording each argument's variable slot (i.e. building computation node).
+   When *no-grad* is t, nodes won't created.
+   Input: model ... an structure object
+          args ... tensors
+   Output: An Tensor (where the tensor is defined by sysconst)"
   (declare (optimize (speed 3) (safety 0) (space 0)))
   ; calculating op(x,y) -> result(x, y), state
   (let* ((result (apply
@@ -50,6 +83,11 @@
     result))
 
 (defmacro with-model-list (&rest models)
+  "Applying model-list.
+   Input: models an list of models
+   Output: [Model:Model-List]
+   The model defined by model-list can be used like:
+   (call (Model List Structure you defined) i args...) where i is the index for models"
   `(model-list ,models))
 
 (defmacro is-waffe-model (model)
@@ -76,12 +114,61 @@
 	  (error "Could not find any parameter")
 	  (butlast parameters)))))
 
-(defmacro defoptimizer (name args &key parameters update optimize)
+(defmacro defoptimizer (name
+			args
+			&key
+			  parameters
+			  update
+			  optimize
+			  (document "An optimizer, defined by cl-waffe."))
+  "Defining optimizers. Internally, This is paraphase of defmodel, which slot names are different.
+
+Note: by calling :backward slot of this, that behaves as (zero-grad).
+
+
+Input:
+
+name ... The optimizer's structure and constructor will be defined based on name
+
+args ... Initializer of the optimizer. **The first value of initializer is the hash-table that collected model's parameter where the key is fixnum from 0 to n. You have to save it.
+
+&keys
+
+parameters ... An parameters that it has. (the same as structure's slot)
+
+Example: :parameters ((count 0)
+                      (humans 0 :type fixnum)
+                      (inited? nil))
+
+update: when training and (update) is called, this slot is called and you optimizer your parameters.
+
+optimize: when t, the :update slot is defined with (optimize (speed 3) (space 0) (debug 0)) Default: nil
+
+
+document: docstring for optimizers
+
+You can use your optimized by using deftrainer, see the references of that.
+
+(The way you call optimizer without using deftrainer is coming soon...)
+
+Example:
+
+```lisp
+(defoptimizer SGD (params &key (lr 1e-3))
+  :optimize t
+  :parameters ((params params :type hash-table)
+               (lr lr :type single-float))
+  :update (()
+       (dotimes (i (hash-table-count (self params)))
+         ; W(n+1) = W(n) - n * grad
+         (!modify (gethash i (self params))) :+=
+               (!mul (self lr) (grad (gethash i (self params))))```"
   `(progn
      (defmodel ,name ,args
        :parameters ,parameters
        :optimize ,optimize
-       :forward ,update ;zero-grad
+       :forward ,update
+       ;zero-grad
        :backward ((model) (dolist (p (find-variables model))
 			    (setf (waffetensor-state p) nil)
 			    (setf (waffetensor-backward p) nil)
@@ -91,10 +178,53 @@
 			    (setf (waffetensor-grad-tmp p) (make-grad-tmp)))
 		nil)
        :hide-from-tree nil
+       :document ,document
        :regard-as-node t)))
 
-(defmacro defnode (name args &key parameters forward backward optimize (regard-as-node t))
-  `(defmodel ,name ,args :parameters ,parameters :forward ,forward :backward ,backward :hide-from-tree T :optimize ,optimize :regard-as-node ,regard-as-node))
+(defmacro defnode (name
+		   args
+		   &key
+		     parameters
+		     forward
+		     backward
+		     optimize
+		     (regard-as-node t)
+		     (document "An node, defined by cl-waffe."))
+  "Defining computation nodes. Internally, This is just paraphase of defmodel, which slot names are different.
+
+The argument is almost the same as defoptimizer, defmodel. So I will omit.
+
+the slot :forward is called by (call Node-Object args...)
+
+the slot :backward is called by (backward out) where out is scalar outputs.
+
+When the slot :regard-as-node is nil, an optimizer in cl-waffe.caches regards this as model (i.e. argument could be destructed.) Default is t.
+
+Note that :backward must return list, where that length corresponds with the length of input's argument, otherwise an error occurs when backward.
+
+Note: cl-waffe do not modify parameters tensor in :parameters slot, so do not define this. If you want to use parameter, use defmodel instead.
+
+In forward and backward, computation node isn't needed to be continuous.
+
+But the last values must posses :thread-data. (do not think it deeply about it)
+
+The node will be created with (name args), where name is the given name, args is the same.
+
+And this can be called with call.
+
+Example:
+
+```lisp
+(defnode AddTensor nil
+  :optimize t
+  :parameters nil
+  :forward  ((x y)
+	     (with-searching-calc-node :add x y))
+  :backward ((dy) (list dy dy)))
+
+(call (AddTensor) tensor1 tensor2)```"
+  
+  `(defmodel ,name ,args :parameters ,parameters :forward ,forward :backward ,backward :hide-from-tree T :optimize ,optimize :regard-as-node ,regard-as-node :document ,document))
 
 (defun decide-thread-idx (&rest args)
   (let ((nm (find t args :test (lambda (_ x)
@@ -194,14 +324,25 @@
 		    &key
 		      parameters
 		      (forward `((&rest args) (error ":forward isn't defined.")))
-		      (backward `((&rest args) (error ":backward isn't defined.:"))) ; displaying name is todo
+		      (backward `((&rest args) (error ":backward isn't defined.:"))) ; Todo: displaying model name
 		      hide-from-tree
 		      optimize
-		      (regard-as-node nil))
-  #|
-  Define an node.
-  Args: hide-from-tree ... if true, this node is detached from autograd. (that is, when backward, use backward defined in itself)
-  |#
+		      (regard-as-node nil)
+		      (document "An model, defined by cl-waffe"))
+  "Defining model.
+The arguments are the same as defnode, defoptimizer. So I will omit.
+
+:backward will never called because cl-waffe follows computation node created in :forward step when backward.
+
+However, when hide-from-tree is t, cl-waffe calls :backward.
+
+The parameter tensor defined in :parameters will be updated by calling (update) and (backward out) in deftrainer's :step slot.
+
+If you just would like to use cl-waffe's default features, you would mostly use this.
+
+See the examples in the cl-waffe's repository.
+
+The model you defined is printable."
   (labels ((assure-args (x)
 	     (declare (type symbol x))
 	     (if (or (equal (symbol-name x) "forward")
@@ -224,6 +365,7 @@
 					  (declare (ignore k))
 					  (render-simple-model-structure stream m)))
 		       (:constructor ,name (,@args &aux ,@(map 'list (lambda (x) `(,(car x) ,(second x))) parameters))))
+	     ,document
 	     (hide-from-tree ,hide-from-tree :type boolean)
 	     (forward t :type boolean)
 	     (backward ,(if backward t nil) :type boolean)
