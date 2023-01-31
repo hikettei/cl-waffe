@@ -7,7 +7,8 @@
            #:tensor
 	   #:const
 	   #:sysconst
-	   
+
+	   #:warranty
 	   #:data
 	   #:grad
 

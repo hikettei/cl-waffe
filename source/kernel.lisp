@@ -17,12 +17,16 @@
        (setf *destructive-operation* nil)
        result)))
 
+(declaim (ftype (function (waffetensor) waffetensor) warranty))
 (defun warranty (tensor)
+  "Notice waffe's optimizer that do not delete tensor given until warranty called
+   in the calc node"
+  (declare (optimize (speed 3) (safety 0) (space 0))
+	   (type waffetensor tensor))
   (prog1
       tensor
-    (incf (waffenodethread-cache-n
-	   (waffetensor-thread-data tensor))
-	  1)))
+    (let ((thread (waffetensor-thread-data tensor)))
+      (if thread (incf (waffenodethread-cache-n thread) 1)))))
 
 (declaim (ftype (function (keyword cons) waffetensor) invoke-mgl-kernel invoke-cpu-kenel))
 (defun invoke-mgl-kernel (kernel-function variables)

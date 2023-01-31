@@ -271,7 +271,9 @@
 		(<= (length (the list (mat-dimensions y1))) 3))
       (error "cl-waffe.backends.mgl:matmul-tensor Matmul only supports following: 2d * 2d, 2d * 3d, 3d * 2d, 3d * 3d."))
 
-    ; warranty x and y
+    (warranty x)
+    (warranty y)
+    
     (let ((x-dims (the list (mat-dimensions x1)))
 	  (y-dims (the list (mat-dimensions y1))))
       (cond
@@ -410,12 +412,16 @@
            (mgl-mat:.<! (data y) o)))
 
 (defun sum-tensor (is-first-time-call? out x y)
-  ; Todo: Optimize and warranty
   (declare (optimize (speed 3) (space 0) (safety 0))
            (type boolean is-first-time-call?)
            (type waffetensor out x y)
 	   (ignore is-first-time-call? out))
 
+  ; Todo Optimize 
+
+  (warranty x)
+  (warranty y)
+  
   (let* ((dims (mgl-mat:mat-dimensions (data x)))
 	 (dims (if (and (= 1 (the fixnum (car (last dims))))
 			(= 3 (length dims)))
@@ -438,6 +444,9 @@
            (type boolean is-first-time-call?)
            (type waffetensor out x y)
 	   (ignore is-first-time-call? out))
+
+  (warranty x)
+  (warranty y)
 
   (let* ((dims (mgl-mat:mat-dimensions (data x)))
 	 (dims (if (and (= 1 (the fixnum (car (last dims))))
