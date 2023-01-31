@@ -98,6 +98,8 @@
 (defmacro with-kernel-case (target var &key (mgl nil) (mgl-cuda nil))
   "Reading the target's device, this macro invokes property codes described in :mgl, :mgl-cuda etc...
 
+   Dynamically defining and caching cpu and cuda kernel.
+
    Every time reaches this macro, cl-waffe caches the target (i.e. the target is allowed to be destructed).
 
    This macro won't create computation nodes.
