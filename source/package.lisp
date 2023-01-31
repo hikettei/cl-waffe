@@ -3,11 +3,19 @@
 
 (defpackage cl-waffe
   (:use :cl :mgl-mat :alexandria)
-  (:export #:waffetensor
+  (:export
+           ; Functions and structures for tensor
+           #:waffetensor
            #:tensor
 	   #:const
 	   #:sysconst
 
+	   ; An parameters for displaying tensor.
+	   #:*print-char-max-len*
+	   #:*print-arr-max-size*
+	   #:*print-mat-max-size*
+
+	   ; Functions for using tensor's data
 	   #:warranty
 	   #:data
 	   #:grad
