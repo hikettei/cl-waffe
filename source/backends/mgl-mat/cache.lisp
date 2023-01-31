@@ -1,5 +1,7 @@
 
 (defpackage :cl-waffe.caches
+  (:documentation "This package exports features for making caches (sysconst)
+This package exports features for making caches (sysconst)")
   (:use :cl :cl-waffe :mgl-mat)
   (:export
    #:with-cache
@@ -7,9 +9,6 @@
    #:free-cache
    #:*static-node-mode*
    #:caches-gc))
-
-; This package exports features for making caches (sysconst)
-; Tracking sysconst's usage every step, cl-waffe optimizes the number of cl-waffe's making copy.
 
 (in-package :cl-waffe.caches)
 

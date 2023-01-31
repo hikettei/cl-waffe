@@ -2,6 +2,7 @@
 (in-package :cl-user)
 
 (defpackage cl-waffe
+  (:documentation "An package for defining node, initializing and computing with tensor, and backprops.")
   (:use :cl :mgl-mat :alexandria)
   (:export
            ; Functions and structures for tensor
@@ -79,10 +80,6 @@
 	   #:*ignore-optimizer*
 
 	   #:self
-
-	   #:relu
-	   #:sigmoid
-	   #:wf-tanh
 
 	   #:print-model
 

@@ -3,6 +3,7 @@
 
 (defpackage cl-waffe.nn
   (:use :cl :cl-waffe)
+  (:documentation "An packages for nn utils.")
   (:export :linear
            :linearlayer
 	   :denselayer
