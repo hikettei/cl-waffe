@@ -5,12 +5,15 @@
    #:with-cache
    #:return-caches
    #:free-cache
+   #:*static-node-mode*
    #:caches-gc))
 
 ; This package exports features for making caches (sysconst)
 ; Tracking sysconst's usage every step, cl-waffe optimizes the number of cl-waffe's making copy.
 
 (in-package :cl-waffe.caches)
+
+(defparameter *static-node-mode* t)
 
 ; todo: add depends on tg, bordeaux-threads
 (defvar *thread-caches*
@@ -127,9 +130,8 @@
     (when caches
       (when (gethash idx caches)
 	(if (is-locked? idx)
-	    nil;(remhash idx caches)
-	    (lock-calln idx)
-	    )))
+	    (remhash idx caches)
+	    (lock-calln idx))))
     nil))
 
 (defmacro with-cache ((var tensor &key (ctype '*default-mat-ctype*)
@@ -145,9 +147,14 @@
   "When mats are allowed to fail to copy, return mat itself"
   (let ((calln (gethash idx *thread-callns*)))
     (cond
-      ((null calln) (copy-mat mat)) ; calln hasn't created yet
-      ((null (cachedata-lock calln)) (copy-mat mat)) ; calln's record hasn't finished yet
-      ((= 0 (cachedata-calln calln)) mat)
+      ((null calln)
+       (copy-mat mat)) ; calln hasn't created yet
+      ((null (cachedata-lock calln))
+       (copy-mat mat)) ; calln's record hasn't finished yet
+      ((= 0 (cachedata-calln calln))
+       (if *static-node-mode*
+	   mat
+	   (copy-mat mat)))
       (T (copy-mat mat)))))
 
 (defmacro with-thread-cached-object1 ((var tensor key initform &key place)

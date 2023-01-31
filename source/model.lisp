@@ -144,7 +144,7 @@
 			       (smaller-value (detach ,value)))
 			   (unless *no-grad*
 			   (cond
-			     ((and (typep ,value 'mat)
+			     ((and (typep (data ,value) 'mat)
 				   (not (null thread-info)))
 			      (cl-waffe.caches:with-cache
 				  (tmp
@@ -152,6 +152,7 @@
 				   :place
 				   (cl-waffe.backends.mgl:create-thread-idx
 				    thread-info))
+				(copy! (data smaller-value) tmp)
 				(incf (waffenodethread-cache-n thread-info) 1)
 				(setf (self ,name) (const tmp))))
 			     (T (!allow-destruct smaller-value)

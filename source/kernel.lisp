@@ -17,6 +17,13 @@
        (setf *destructive-operation* nil)
        result)))
 
+(defun warranty (tensor)
+  (prog1
+      tensor
+    (incf (waffenodethread-cache-n
+	   (waffetensor-thread-data tensor))
+	  1)))
+
 (declaim (ftype (function (keyword cons) waffetensor) invoke-mgl-kernel invoke-cpu-kenel))
 (defun invoke-mgl-kernel (kernel-function variables)
   (sysconst (cl-waffe.backends.mgl:dispatch-kernel
