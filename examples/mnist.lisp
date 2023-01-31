@@ -1,6 +1,6 @@
 
 (defpackage :mnist-example
-  (:use :cl :cl-waffe :cl-waffe.nn :cl-libsvm-format)
+  (:use :cl :cl-waffe :cl-waffe.nn :cl-libsvm-format :mgl-mat)
   (:export demo))
 
 (in-package :mnist-example)
@@ -14,7 +14,7 @@
 	       (layer3   (linearlayer 256 10 T)))
   :forward ((x)
 	    (with-calling-layers x
-	      (layer1 x) 
+	      (layer1 x)
  	      (layer2 x)
 	      (layer3 x))))
 
@@ -28,7 +28,7 @@
 		 (backward out)
 		 (update)
 		 out))
-  :predict ((x) (call (model) x)))
+ :predict ((x) (call (model) x)))
 
 (defdataset Mnistdata (train valid batch-size)
   :parameters ((train train) (valid valid) (batch-size batch-size))
@@ -66,6 +66,8 @@
 		   (const (mgl-mat:array-to-mat target)))))
 
 (defun demo ()
+
+  
   (multiple-value-bind (datamat target)
       (read-data "examples/tmp/mnist.scale" 784 10 :most-min-class 0)
     (defparameter mnist-dataset datamat)
@@ -75,6 +77,14 @@
       (read-data "examples/tmp/mnist.scale.t" 784 10 :most-min-class 0)
     (defparameter mnist-dataset-test datamat)
     (defparameter mnist-target-test target))
+  
+  #|
+  (defparameter mnist-dataset (!ones `(200 784)))
+  (defparameter mnist-target  (!randn `(200 10)))
+
+  (defparameter mnist-dataset-test (!zeros `(100 784)))
+  (defparameter mnist-target-test (!zeros `(100 10)))
+  |#
 
   (format t "Training: ~a" (!shape mnist-dataset))
   (format t "Valid   : ~a" (!shape mnist-target))
@@ -85,5 +95,13 @@
   (setq train (MnistData mnist-dataset mnist-target 100))
   (setq test (MnistData mnist-dataset-test mnist-target-test 100))
 
-  (time (train trainer train :max-iterate 600 :epoch 1 :batch-size 100 :valid-dataset test :verbose t :random t :print-each 100)))
+  (sb-profile:profile mgl-mat::blas-sgemm
+		      mgl-mat::blas-scopy
+		      cl-waffe::backward1)
+  (mgl-mat:with-mat-counters (:count count :n-bytes n-bytes)
+    (time (train trainer train :max-iterate 600 :epoch 10 :batch-size 100 :valid-dataset test
+			       :verbose t :random t :print-each 100))
+    (format t "Count: ~a~%" count)
+    (format t "Consumed: ~abytes~%" n-bytes)
+    (sb-profile:report)))
 
