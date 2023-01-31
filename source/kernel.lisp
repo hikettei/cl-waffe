@@ -13,9 +13,20 @@
   ; doing all operations with destructive
   `(progn
      (setf *destructive-operation* t)
-     (let ((result (prog1 ,@body)))
+     (let ((result (progn ,@body)))
        (setf *destructive-operation* nil)
        result)))
+
+(declaim (ftype (function (waffetensor) waffetensor) warranty))
+(defun warranty (tensor)
+  "Notice waffe's optimizer that do not delete tensor given until warranty called
+   in the calc node"
+  (declare (optimize (speed 3) (safety 0) (space 0))
+	   (type waffetensor tensor))
+  (prog1
+      tensor
+    (let ((thread (waffetensor-thread-data tensor)))
+      (if thread (incf (waffenodethread-cache-n thread) 1)))))
 
 (declaim (ftype (function (keyword cons) waffetensor) invoke-mgl-kernel invoke-cpu-kenel))
 (defun invoke-mgl-kernel (kernel-function variables)
@@ -24,10 +35,24 @@
 				  *destructive-operation*
 				  (car variables)
 				  (second variables)
-				  variables)))
+				  variables)
+	    :thread-data (let ((r (find t variables
+					:test (lambda (x y)
+						(declare (ignore x))
+						(waffetensor-thread-data y)))))
+			   (if r
+			       (waffetensor-thread-data r)
+			       nil))))
 
 (defun invoke-cpu-kernel (kernel-function variables)
-  (sysconst (cl-waffe.backends.cpu:dispatch-kernel kernel-function variables)))
+  (sysconst (cl-waffe.backends.cpu:dispatch-kernel kernel-function variables)
+	    :thread-data (let ((r (find t variables
+					:test (lambda (x y)
+						(declare (ignore x))
+						(waffetensor-thread-data y)))))
+			   (if r
+			       (waffetensor-thread-data r)
+			       nil))))
 
 (defgeneric invoke-kernel (kernel-function variables first-argument i))
 (defmethod invoke-kernel (kernel-function

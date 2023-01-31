@@ -7,12 +7,15 @@
            #:tensor
 	   #:const
 	   #:sysconst
-	   
+
+	   #:warranty
 	   #:data
 	   #:grad
 
 	   #:waffedatatype
 	   #:waffe-array
+
+	   #:waffetensor-thread-data
 
 	   #:with-no-grad
 	   #:*no-grad*

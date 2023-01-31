@@ -21,8 +21,9 @@
 		      (model () `(self model))
 		      (update (&rest args1) `(unless *no-grad*
 				                 (with-no-grad (funcall (call-forward (self optimizer)) ,@args1))))
-		      (zero-grad () `(unless *no-grad*
-				          (funcall (call-backward (self optimizer)) (self model)))))
+		      (zero-grad ()
+			`(unless *no-grad*
+			   (funcall (call-backward (self optimizer)) (self model)))))
 	     ,@body))
 	 (defmethod ,fname ((self ,name))
 	   (lambda (&rest node-inputs) (apply #',f-ident self node-inputs))))))
@@ -36,6 +37,13 @@
 	     ,@body))
 	 (defmethod ,fname ((self ,name))
 	   (lambda (&rest node-inputs) (apply #',f-ident self node-inputs))))))
+
+; This model used for just only making thread.
+(defmodel TrainerInputLayer (caller)
+  :optimize t
+  :parameters ((caller caller :type function))
+  :forward (()
+	    (funcall (self caller))))
 
 (defmacro deftrainer (name args &key model optimizer optimizer-args step-model predict (forward NIL) &aux (out-id (gensym)))
   (if forward (error ":forward is unavailable in deftrainer macro. use instead: :step-model"))
@@ -74,20 +82,22 @@
 	     (apply #',constructor-name init-args))))))
 
 (defun step-model (trainer &rest args)
-  (uncheck-destructive args)
-  (apply (trainer-step-model trainer) args))
+  (step-model1 trainer args))
 
 (defun step-model1 (trainer args)
   (uncheck-destructive args)
-  (apply (trainer-step-model trainer) args))
+  (labels ((forward ()
+	     (apply (trainer-step-model trainer) args)))
+    (call (TrainerInputLayer #'forward))))
 
 (defun predict (trainer &rest args)
-  (uncheck-destructive args)
   (predict1 trainer args))
 
 (defun predict1 (trainer args)
   (uncheck-destructive args)
-  (apply (trainer-predict trainer) args))
+  (labels ((predict-lambda ()
+	     (apply (trainer-predict trainer) args)))
+    (call (TrainerInputLayer #'predict-lambda))))
 
 (defmacro defdataset (name args &key parameters next length)
   (labels ((assure-args (x)
@@ -207,7 +217,7 @@
       (format stream "~C" #\newline)
       (cl-cram:update status-bar 1 :desc (format nil "loss:~a" (/ (apply #'+ losses) (length losses)))))
 
-    (print "")
+    (fresh-line)
     (if valid-dataset
 	(valid trainer valid-dataset batch-size))))
 

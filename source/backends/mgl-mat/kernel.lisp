@@ -3,91 +3,111 @@
 
 ; Todo Rewrite with define-lisp-kernel
 
-(defmacro duplicate-tensor (mat)
-  `(let ((o (mgl-mat:make-mat (mgl-mat:mat-dimensions ,mat))))
-     (mgl-mat:copy! ,mat o)
-     (the mgl-mat:mat o)))
-
-(defmacro apply-destruct (out)
-  `(progn ; tensor=out
-     (setf (waffetensor-is-data-destructed? ,out) t))
-  nil)
-
-(defmacro assure-destructed? (out) ;for automatic !modify
-  `(progn
-     (if (waffetensor-is-data-destructed? ,out)
-       (error "Kernel Error: Modifying tensor that is not allowed to destruct"))
-     (the mgl-mat:mat (data ,out))))
-
 (defmacro will-be-destructed (tensor)
-  `(waffetensor-is-next-destruct? ,tensor))
+  `(waffetensor-thread-data ,tensor))
 
-(defgeneric decide-out-buffer (out args enable-optim))
+(defun create-thread-idx (thread-info &optional (ident ""))
+  "Thread format: <Thread_IDx>+<Count_N>"
+  (intern (format nil "~a+~a~a"
+		  ident
+		  (cl-waffe::waffenodethread-thread-idx thread-info)
+		  (cl-waffe::waffenodethread-cache-n thread-info))
+	  :keyword))
 
-(defmethod decide-out-buffer ((out waffetensor) (args waffetensor) enable-optim)
-  (if (or enable-optim (waffetensor-is-next-destruct? out)) ; when =t, 4x times faster.
-      (let ((result (assure-destructed? out)))
-	(apply-destruct out)
-	result)
-      (duplicate-tensor (data args))))
+(defgeneric decide-out-buffer (out args enable-optim copy?))
 
-(defmethod decide-out-buffer ((out waffetensor) (args mgl-mat:mat) enable-optim)
-  (if (or enable-optim (waffetensor-is-next-destruct? out))
-      (let ((result (assure-destructed? out)))
-	(apply-destruct out)
-	result)
-      (duplicate-tensor args)))
+(defmethod decide-out-buffer ((out waffetensor)
+			      (args waffetensor)
+			      enable-optim
+			      copy?)
+  (declare (optimize (speed 3) (space 0) (safety 0)))
+  (decide-out-buffer out (data args) enable-optim copy?))
 
-(defmethod decide-out-buffer ((out null) (args waffetensor) enable-optim)
-  (declare (ignore out enable-optim))
-  (duplicate-tensor (data args)))
+(defmethod decide-out-buffer ((out waffetensor)
+			      (args mgl-mat:mat)
+			      enable-optim
+			      copy?)
+  (declare (optimize (speed 3) (space 0)))
+  (if (not (null (waffetensor-thread-data out)))
+      (let* ((thread-info (waffetensor-thread-data out))
+	     (idx (create-thread-idx thread-info)))
+	(with-cache (result out :place idx)
+	  (incf (cl-waffe::waffenodethread-cache-n thread-info) 1)
+	  (if copy?
+	      (copy! args result))
+	  result))
+      (decide-out-buffer nil args enable-optim copy?)))
+      
+(defmethod decide-out-buffer ((out null)
+			      (args waffetensor)
+			      enable-optim
+			      copy?)
+  (declare (optimize (speed 3) (space 0) (safety 0)))
+  (decide-out-buffer out (data args) enable-optim copy?))
 
-(defmethod decide-out-buffer ((out null) (args mgl-mat:mat) enable-optim)
-  (declare (ignore out enable-optim))
-  (duplicate-tensor args))
+(defmethod decide-out-buffer ((out null)
+			      (args mgl-mat:mat)
+			      enable-optim
+			      copy?)
+  (declare (optimize (speed 3) (space 0) (safety 0)))
+  (if enable-optim
+      args
+      (if copy?
+	  (copy-mat args)
+	  (make-mat (mat-dimensions args)))))
 
 (declaim (ftype (function (mgl-mat:mat fixnum &key (:axis fixnum)) mgl-mat:mat) mgl-repeat))
 (defun mgl-repeat (tensor n &key axis)
-  (declare (optimize (speed 3) (safety 0) (debug 0))
+  (declare (optimize (speed 3) (space 0) (safety 0) (debug 0))
 	   (type mgl-mat:mat tensor)
 	   (type fixnum n axis))
   (if (>= axis 0)
-      (if (>= (length (the cons (mgl-mat:mat-dimensions tensor))) 2)
-          (mgl-mat:stack axis (loop for i below n collect tensor))
-	  (mgl-repeat (mgl-mat:reshape tensor `(,@(mgl-mat:mat-dimensions tensor) 1)) n :axis axis))
+      (if (>= (length (the list
+			   (mat-dimensions tensor)))
+	      2)
+	     (mgl-mat:stack
+	      axis
+	      (loop for i below n collect tensor))
+	  ; when dims=1
+	  (mgl-repeat (mgl-mat:reshape
+		       tensor
+		       `(,@(mgl-mat:mat-dimensions tensor) 1))
+ 		       n :axis axis))
       (error "axis=-1")))
 
-(declaim (ftype (function (mgl-mat:mat waffesupporteddatatype) mgl-mat:mat) trasposedmgl-full-like mgl-full-like))
+;(declaim (ftype (function (mgl-mat:mat waffesupporteddatatype) mgl-mat:mat) trasposedmgl-full-like mgl-full-like))
 (defun mgl-full-like (tensor value)
   (declare (optimize (speed 3) (safety 0) (debug 0))
-	   (type mgl-mat:mat tensor)
-	   (type waffesupporteddatatype value))
-  (mgl-mat:make-mat (mgl-mat:mat-dimensions tensor)
-		    :initial-element value))
+	   (type mat tensor))
+  (format t "Warning: making new tensor~%")
+  (make-mat (mat-dimensions tensor)
+	    :initial-element value))
 
 (defun transposed-mgl-full-like (tensor value)
   (declare (optimize (speed 3) (safety 0) (debug 0))
-	   (type mgl-mat:mat tensor)
-	   (type waffesupporteddatatype value))
-  (let ((dims (mgl-mat:mat-dimensions tensor)))
+	   (type mat tensor))
+  (format t "Warning: making new tensor~%")
+  (let ((dims (mat-dimensions tensor)))
     (declare (type cons dims))
-    (mgl-mat:make-mat (reverse dims)
-		      :initial-element value)))
+    (make-mat (reverse dims) :initial-element value)))
 
 (defparameter *v2v-operations* `(:add :sub :mul :div :dot :matmul))
 (defparameter *abort-delay-instruction* :matmul)
 
 (defmacro deliv-delay (tensor func &rest args)
-  `(lambda (shape? step?)
+  `(lambda (_ shape? step? &optional ignore?)
+     (declare (ignore _))
      (if shape?
 	 (reverse (mgl-mat:mat-dimensions ,tensor))
 	 (if step?
 	     (funcall ,func ,tensor ,@args) ; receive before node
-	     ,tensor)))) ; abort before node
+	     (if ignore?
+		 nil
+		 ,tensor))))) ; abort before node
 
 (defun next-delay (delay state)
   (if (typep delay 'function)
-      (funcall delay nil state)
+      (funcall delay nil nil state)
       delay))
 
 (defmacro abort-delay (delay)
@@ -99,13 +119,13 @@
 (defun ensure-shape (ope x)
   (declare (type keyword ope))
   (if (find ope *v2v-operations*)
-      (if (or (typep x 'mgl-mat:mat) (typep x 'function))
+      (if (or (typep x 'mat) (typep x 'function))
 	  (if (eq ope *abort-delay-instruction*)
 	      (abort-delay x)
 	      (receive-delay x))
 	  (if (eq ope :matmul)
-	      (transposed-mgl-full-like m x)
-	      (mgl-full-like m x)))))
+	      (transposed-mgl-full-like x 0)
+	      (mgl-full-like x 0)))))
 
 (defun infomation ())
 
@@ -119,116 +139,120 @@
 (defgeneric add-tensor (enable-optimize? out out1 x y))
 
 (defmethod add-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) (y mgl-mat:mat))
-  (declare (optimize (speed 3) (space 0) (safety 0))
-	   (ignore out1))
+  (declare (optimize (speed 3) (space 1) (safety 0)))
   (cond
     ((will-be-destructed out)
-     (let ((o (decide-out-buffer out x enable-optimize?)))
+     (let ((o (decide-out-buffer out x enable-optimize? t)))
        (mgl-mat:axpy! 1.0 y o)
        o))
     ((will-be-destructed out1)
      (add-tensor enable-optimize? out1 out y x))
-    (T (let ((o (decide-out-buffer out x enable-optimize?)))
+    (T (let ((o (decide-out-buffer out x enable-optimize? t)))
 	 (mgl-mat:axpy! 1.0 y o)
 	 o))))
 
 (defmethod add-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) y)
-  (declare (optimize (speed 3) (space 0) (safety 0))
+  (declare (optimize (speed 3) (space 1) (safety 0))
 	   (ignore out1))
-  (let ((o (decide-out-buffer out x enable-optimize?)))
+  (let ((o (decide-out-buffer out x enable-optimize? t)))
     (the mgl-mat:mat (mgl-mat:.+! y o))))
 
 (defmethod add-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) x (y mgl-mat:mat))
-  (declare (optimize (speed 3) (space 0) (safety 0))
+  (declare (optimize (speed 3) (space 1) (safety 0))
 	   (ignore out))
-  (let ((o (decide-out-buffer out1 y enable-optimize?)))
+  (let ((o (decide-out-buffer out1 y enable-optimize? t)))
     (the mgl-mat:mat (mgl-mat:.+! x o))))
 
 (defgeneric sub-tensor (enable-optimize? out out1 x y))
 (defmethod sub-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) (y mgl-mat:mat))
-  (declare (optimize (speed 3) (space 0) (safety 0))
-	   (ignore out1))
+  (declare (optimize (speed 3) (space 1) (safety 0)))
   (cond
     ((will-be-destructed out)
-     (let ((o (decide-out-buffer out x enable-optimize?)))
+     (let ((o (decide-out-buffer out x enable-optimize? t)))
        (mgl-mat:axpy! -1.0 y o)
        o))
     ((will-be-destructed out1) ;x-y, -(y-x) = x-y
      (mgl-mat:scal! -1.0 (sub-tensor enable-optimize? out1 out y x)))
-    (T (let ((o (decide-out-buffer out x enable-optimize?)))
+    (T (let ((o (decide-out-buffer out x enable-optimize? t)))
 	 (mgl-mat:axpy! -1.0 y o)
 	 o))))
 
 (defmethod sub-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) y)
-  (declare (optimize (speed 3) (space 0) (safety 0))
+  (declare (optimize (speed 3) (space 1) (safety 0))
 	   (ignore out1))
-  (let ((o (decide-out-buffer out x enable-optimize?)))
-    (the mgl-mat:mat (mgl-mat:.+! (* -1.0 y) o))))
+  (let ((o (decide-out-buffer out x enable-optimize? t)))
+    (the mgl-mat:mat (mgl-mat:.+! (* -1.0 (the single-float y)) o))))
 
 (defmethod sub-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) x (y mgl-mat:mat))
-  (declare (optimize (speed 3) (space 0) (safety 0))
+  (declare (optimize (speed 3) (space 1) (safety 0))
 	   (ignore out))
-  (let ((o (decide-out-buffer out1 y enable-optimize?)))
-    (the mgl-mat:mat (mgl-mat:.+! (* -1.0 x) o))))
+  (let ((o (decide-out-buffer out1 y enable-optimize? t)))
+    (the mgl-mat:mat (mgl-mat:.+! (* -1.0 (the single-float x)) o))))
 
 (defgeneric mul-tensor (enable-optimize? out out1 x y))
 (defmethod mul-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) (y mgl-mat:mat))
-  (declare (optimize (speed 3) (space 0) (safety 0)))
+  (declare (optimize (speed 3) (space 1) (safety 0)))
 
   (cond
     ((will-be-destructed out)
-     (let ((o (decide-out-buffer out x enable-optimize?)))
+     (let ((o (decide-out-buffer out x enable-optimize? nil)))
        (mgl-mat:geem! 1 x y 0 o)))
     ((will-be-destructed out1)
      (mul-tensor enable-optimize? out1 out y x))
     (T
-     (let ((o (mgl-mat:make-mat (mgl-mat:mat-dimensions x))))
+     (let ((o (decide-out-buffer out x enable-optimize? nil)))
        (mgl-mat:geem! 1 x y 0 o)))))
 
 (defmethod mul-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) x (y mgl-mat:mat))
-  (declare (optimize (speed 3) (space 0) (safety 0))
+  (declare (optimize (speed 3) (space 1) (safety 0))
 	   (ignore out))
-  (let ((o (decide-out-buffer out1 y enable-optimize?)))
+  (let ((o (decide-out-buffer out1 y enable-optimize? t)))
 	(mgl-mat:scal! x o)))
 
 (defmethod mul-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) y)
-  (declare (optimize (speed 3) (space 0) (safety 0))
+  (declare (optimize (speed 3) (space 1) (safety 0))
 	   (ignore out1))
-  (let ((o (decide-out-buffer out x enable-optimize?)))
+  (let ((o (decide-out-buffer out x enable-optimize? t)))
 	(mgl-mat:scal! y o)))
 
 (defun inv-tensor (enable-optim out x)
-  (declare (optimize (speed 3) (space 0) (safety 0))
+  (declare (optimize (speed 3) (space 1) (safety 0))
 	   (type boolean enable-optim)
            (type waffetensor out)
-	   (type mgl-mat:mat x))
-  (let ((o (decide-out-buffer out x enable-optim)))
+	   (type waffetensor x))
+  (let ((o (decide-out-buffer out x enable-optim t)))
     (mgl-mat:.inv! o)
     (the mgl-mat:mat o)))
 
 (defgeneric div-tensor (enable-optimize? out out1 x y))
 
 (defmethod div-tensor (enable-optimize? out out1 (x mgl-mat:mat) (y mgl-mat:mat))
-  (declare (optimize (speed 3) (space 0) (safety 0))
+  (declare (optimize (speed 3) (space 1) (safety 0))
 	   (type boolean enable-optimize?)
 	   (type waffetensor out out1))
-  (let ((o (decide-out-buffer out x enable-optimize?)))
-    (the mgl-mat:mat (mgl-mat:geem! 1.0 x (inv-tensor enable-optimize? out1 y) 0.0 o))))
+  (let ((o (decide-out-buffer out x enable-optimize? nil)))
+    (the mgl-mat:mat
+	 (mgl-mat:geem!
+	  1.0
+	  x
+	  (inv-tensor enable-optimize? out1 y)
+	  0.0
+	  o))))
 
 (defmethod div-tensor (enable-optimize? out out1 x (y mgl-mat:mat))
-  (declare (optimize (speed 3) (space 0) (safety 0))
+  (declare (optimize (speed 3) (space 1) (safety 0))
 	   (type boolean enable-optimize?)
 	   (type waffedatatype x)
 	   (type waffetensor out1)
 	   (ignore out))
-  (unless (= x 1)
+  (unless (= (the fixnum x) 1)
     (error "cl-waffe.backends.mgl-mat: In (!modify a :/= b), a must be tensor or 1."))
   (the mgl-mat:mat (inv-tensor enable-optimize? out1 y)))
 
 (defun dot-tensor (enable-optimize? out x y)
   (declare (ignore enable-optimize? out))
   (mgl-mat:dot (data x) (data y)))
-
+				   
 (declaim (ftype (function (boolean waffetensor waffetensor waffetensor) mgl-mat:mat)
 		matmul-tensor
 		pow-tensor
@@ -239,63 +263,152 @@
 	   (ignore enable-optimize? o)
 	   (type boolean enable-optimize?)
 	   (type waffetensor o))
-
+  
   (let* ((x1 (ensure-shape :matmul (data x)))
 	 (y1 (ensure-shape :matmul (data y)))
-	 (transpose-map `(,(typep (data x) 'function) ,(typep (data y) 'function)))
-	 (out (mgl-mat:make-mat `(,(if (car transpose-map)
-	 			       (car  (reverse (mgl-mat:mat-dimensions x1)))
-	   			       (car  (mgl-mat:mat-dimensions x1)))
-				  ,(if (second transpose-map)
-				       (second (reverse (mgl-mat:mat-dimensions y1)))
-				       (second (mgl-mat:mat-dimensions y1)))))))
-    (unless (and (<= (length (the list (mgl-mat:mat-dimensions x1))) 2)
-		 (<= (length (the list (mgl-mat:mat-dimensions y1))) 2))
-      (error "cl-waffe.backends.mgl: :matmul failed due to unsatisfied with (!dims a) <= 2 and (!dims b) <= 2"))
+	 (transpose-map `(,(typep (data x) 'function) ,(typep (data y) 'function))))
+    (unless (or (<= (length (the list (mat-dimensions x1))) 3)
+		(<= (length (the list (mat-dimensions y1))) 3))
+      (error "cl-waffe.backends.mgl:matmul-tensor Matmul only supports following: 2d * 2d, 2d * 3d, 3d * 2d, 3d * 3d."))
+
+    (warranty x)
+    (warranty y)
     
-    (mgl-mat:gemm! 1 x1 y1 0 out :transpose-a? (car transpose-map) :transpose-b? (second transpose-map))
-    out))
+    (let ((x-dims (the list (mat-dimensions x1)))
+	  (y-dims (the list (mat-dimensions y1))))
+      (cond
+	((and (= (length x-dims) 2)
+	      (= (length y-dims) 2))
+	 (let ((out-dim `(,(if (car transpose-map)
+			       (car (reverse (mat-dimensions x1)))
+			       (car (mat-dimensions x1)))
+			  ,(if (second transpose-map)
+			       (second (reverse (mat-dimensions y1)))
+			       (second (mat-dimensions y1))))))
+	   (let ((out (make-mat out-dim)))
+	     (matmul-tensor-2d
+	       out
+	       x1
+	       y1
+	       (car transpose-map)
+	       (second transpose-map))
+	     out)))
+	((and (= (length x-dims) 3)
+	      (= (length y-dims) 2))
+	 (let ((out-dim `(,(car x-dims)
+			  ,(if (car transpose-map)
+			       (nth 2 x-dims)
+			       (nth 1 x-dims))
+			  ,(if (second transpose-map)
+			       (nth 0 y-dims)
+			       (nth 1 y-dims))))
+	       (displace-first (mat-displacement x1))
+	       (shape-first    (mat-dimensions x1)))
+	   (let ((out (make-mat out-dim)))
+	     (dotimes (i (the fixnum (car x-dims)))
+	       (reshape-and-displace! out
+				      (cdr out-dim)
+				      (the fixnum (* i
+						     (the fixnum (nth 1 out-dim))
+						     (the fixnum (nth 2 out-dim)))))
+	      
+	       (reshape-and-displace!
+		x1
+		(cdr shape-first)
+		(the fixnum (* i
+			       (the fixnum (nth 1 shape-first))
+			       (the fixnum (nth 2 shape-first)))))
+	       (matmul-tensor-2d out x1 y1 (car transpose-map) (second transpose-map)))
+	     (reshape-and-displace! out out-dim 0)
+	     (reshape-and-displace! x1 shape-first displace-first)
+	     out)))
+	((and (= (length x-dims) 2)
+	      (= (length y-dims) 3))
+	 (let ((out-dim `(,(car y-dims)
+			  ,(if (car transpose-map)
+			       (nth 1 x-dims)
+			       (nth 0 x-dims))
+			  ,(if (second transpose-map)
+			       (nth 1 y-dims)
+			       (nth 2 y-dims))))
+	       (displace-first (mat-displacement y1))
+	       (shape-first    (mat-dimensions y1)))
+	   (let ((out (make-mat out-dim)))
+	     (dotimes (i (the fixnum (car y-dims)))
+	       (reshape-and-displace! out
+				      (cdr out-dim)
+				      (the fixnum
+					   (* i
+					      (the fixnum
+						   (nth 1 out-dim))
+					      (the fixnum
+						   (nth 2 out-dim)))))
+	       (reshape-and-displace! y1
+				      (cdr shape-first)
+				      (the fixnum
+					   (* i
+					      (the fixnum
+						   (nth 1 shape-first))
+					      (the fixnum
+						   (nth 2 shape-first)))))
+	       (matmul-tensor-2d out x1 y1
+				 (car transpose-map)
+				 (second transpose-map)))
+	     (reshape-and-displace! out out-dim 0)
+	     (reshape-and-displace! y1 shape-first displace-first)
+	     out)))
+	(T (error "cl-waffe.backends.mgl:matmul-tensor: unimplemented combinations."))))))
+
+(declaim (ftype
+	  (function
+	   (mat mat mat boolean boolean)
+	   mat)
+	  matmul-tensor-2d))
+(defun matmul-tensor-2d (out x y ta? tb?)
+  (declare (optimize (speed 3) (space 0) (safety 0)))
+  (gemm! 1.0 x y 0.0 out :transpose-a? ta? :transpose-b? tb?)
+  out)
 
 (defun log-tensor (enable-optim out x)
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type boolean enable-optim)
            (type waffetensor out x))
-  (let ((o (decide-out-buffer out x enable-optim)))
+  (let ((o (decide-out-buffer out x enable-optim t)))
            (mgl-mat:.log! o)))
 
 (defun exp-tensor (enable-optim out x)
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type boolean enable-optim)
            (type waffetensor out x))
-  (let ((o (decide-out-buffer out x enable-optim)))
+  (let ((o (decide-out-buffer out x enable-optim t)))
     (mgl-mat:.exp! o)))
 
 (defun sqrt-tensor (enable-optim out x)
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type boolean enable-optim)
            (type waffetensor out x))
-  (let ((o (decide-out-buffer out x enable-optim)))
+  (let ((o (decide-out-buffer out x enable-optim t)))
            (mgl-mat:.sqrt! o)))
 
 (defun pow-tensor (enable-optim out x y)
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type boolean enable-optim)
            (type waffetensor out x y))
-  (let ((o (decide-out-buffer out x enable-optim)))
+  (let ((o (decide-out-buffer out x enable-optim t)))
     (mgl-mat:.expt! o (data y))))
 
 (defun tanh-tensor (enable-optim out x)
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type boolean enable-optim)
            (type waffetensor out x))
-  (let ((o (decide-out-buffer out x enable-optim)))
+  (let ((o (decide-out-buffer out x enable-optim t)))
        (mgl-mat:.tanh! o)))
 
 (defun compare-tensor (enable-optim out x y)
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type boolean enable-optim)
            (type waffetensor out x y))
-  (let ((o (decide-out-buffer out x enable-optim)))
+  (let ((o (decide-out-buffer out x enable-optim t)))
            (mgl-mat:.<! (data y) o)))
 
 (defun sum-tensor (is-first-time-call? out x y)
@@ -304,6 +417,11 @@
            (type waffetensor out x y)
 	   (ignore is-first-time-call? out))
 
+  ; Todo Optimize 
+
+  (warranty x)
+  (warranty y)
+  
   (let* ((dims (mgl-mat:mat-dimensions (data x)))
 	 (dims (if (and (= 1 (the fixnum (car (last dims))))
 			(= 3 (length dims)))
@@ -326,6 +444,9 @@
            (type boolean is-first-time-call?)
            (type waffetensor out x y)
 	   (ignore is-first-time-call? out))
+
+  (warranty x)
+  (warranty y)
 
   (let* ((dims (mgl-mat:mat-dimensions (data x)))
 	 (dims (if (and (= 1 (the fixnum (car (last dims))))
@@ -350,9 +471,8 @@
 (defun reshape-tensor (enable-optimize out x y)
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type boolean enable-optimize)
-	   (type waffetensor out x y)
-	   (ignore enable-optimize out))
-  (let ((x1 (mgl-mat:copy-mat (data x))))
+	   (type waffetensor out x y))
+  (let ((x1 (decide-out-buffer out (data x) enable-optimize t))) ; cache
     (mgl-mat:reshape! x1 (data y))
     x1))
 
@@ -362,7 +482,7 @@
      (start-mask fixnum)
      (n fixnum)
      (p single-float))
-  (loop for mi upfrom start-mask below (the fixnum (+ start-mask n))
+  (loop for mi fixnum upfrom start-mask below (the fixnum (+ start-mask n))
 	do (cond ((< (aref mask mi) p)
 		  (setf (aref mask mi) 0.0))
 		 (t
@@ -380,7 +500,7 @@
 (defun bernoulli-tensor (enable-optimize out return-tensor rate)
   (declare (type boolean enable-optimize)
 	   (type waffetensor return-tensor x rate))
-  (let ((o (decide-out-buffer out return-tensor enable-optimize)))
+  (let ((o (decide-out-buffer out return-tensor enable-optimize nil)))
     (mgl-mat:uniform-random! o)
     (if (use-cuda-p (data return-tensor))
 	(progn
@@ -393,24 +513,30 @@
 
 ;optimize is failed.
 (define-lisp-kernel (embedding-forward-lisp)
-    ((out :mat :io)
-     (x :mat)
-     (weights :mat)
+    ((out :mat :output)
+     (x :mat :input)
+     (weights :mat :input)
      (n fixnum)
      (pad-idx fixnum)
      (embedding-dim fixnum))
-  (loop for xi of-type fixnum upfrom 0 below n
+  (loop for xi fixnum upfrom 0 below n
 	do (cond
 	     ((= pad-idx (round (aref x xi)))
 	      nil)
 	     (T
-	      (loop for ei of-type fixnum upfrom 0 below embedding-dim
-		    do (setf (aref out (+ (the fixnum
-					       (* embedding-dim xi))
-					  ei))
+	      (loop for ei fixnum upfrom 0 below embedding-dim
+		    do (setf (aref out (the fixnum
+					    (+
+					     (the fixnum
+						  (* embedding-dim xi))
+					     ei)))
 			     (aref weights
-				     (+ ei
-				      (the fixnum (* (round (aref x xi)) embedding-dim))))))))))
+				   (the fixnum
+					(+ ei
+				      (the fixnum
+					   (* (the fixnum
+						   (round (aref x xi)))
+					      embedding-dim)))))))))))
 
 (defun embedding-forward (enable-optimize x weights pad-idx)
   "(with-searching-calc-node :embedding-forward x weights pad-idx) -> embeddings"
@@ -498,7 +624,7 @@
     (:<       (compare-tensor is-first-time-call? destructable-tensor (car args) (second args)))
     (:repeat  (mgl-repeat (data (car args)) (data (third args)) :axis (data (second args))))
     (:bernoulli (bernoulli-tensor is-first-time-call? destructable-tensor (car args) (second args)))
-    (:transpose (deliv-delay (data (car args)) #'mgl-mat:transpose))
+    (:transpose (deliv-delay (data (car args)) #'transpose))
     (:embedding-forward (embedding-forward nil (car args)
 					   (second args)
 					   (third args)))

@@ -10,10 +10,10 @@
 
 ; TODO: Rename -> with-predict-mode
 (defmacro with-no-grad (&body body)
-  `(progn
+  `(let ((no-grad-first *no-grad*))
      (setq *no-grad* t)
      ,@body
-     (setq *no-grad* nil)
+     (setq *no-grad* no-grad-first)
      nil))
 
 (defmacro with-calling-layers (input &rest layers)
@@ -28,11 +28,14 @@
      ,input))
 
 (declaim (inline call))
-;(declaim (ftype (function (t &rest waffetensor) waffetensor) call))
+(declaim (ftype (function (t &rest waffetensor) waffetensor) call))
 (defun call (model &rest args)
+  (declare (optimize (speed 3) (safety 0) (space 0)))
   ; calculating op(x,y) -> result(x, y), state
-  (let* ((result (apply (call-forward model) args)))
+  (let* ((result (apply
+		  (the function (call-forward model)) args)))
     (declare (type (or null waffetensor list) result))
+        
     (unless *no-grad*
       (if (slot-value model 'hide-from-tree) ;is model defined by defmodel?
 	  (progn
@@ -87,33 +90,114 @@
 				(setf (waffetensor-grad p) `(nil nil)))
 			    (setf (waffetensor-grad-tmp p) (make-grad-tmp)))
 		nil)
-     :hide-from-tree nil)))
+       :hide-from-tree nil
+       :regard-as-node t)))
 
-(defmacro defnode (name args &key parameters forward backward optimize)
-  `(defmodel ,name ,args :parameters ,parameters :forward ,forward :backward ,backward :hide-from-tree T :optimize ,optimize))
+(defmacro defnode (name args &key parameters forward backward optimize (regard-as-node t))
+  `(defmodel ,name ,args :parameters ,parameters :forward ,forward :backward ,backward :hide-from-tree T :optimize ,optimize :regard-as-node ,regard-as-node))
 
-(defmacro define-node-method (fname name args body hide-from-tree optimize)
+(defun decide-thread-idx (&rest args)
+  (let ((nm (find t args :test (lambda (_ x)
+				 (declare (ignore _))
+				 (waffetensor-thread-data x)))))
+    (if nm
+	(1+ (waffenodethread-thread-idx (waffetensor-thread-data nm)))
+	0)))
+
+(defun set-thread-data (&rest args)
+  (dolist (v (cdr args))
+    (setf (waffetensor-thread-data v) (car args))))
+
+(defun free-caches (thread &optional (args-size 0) (evacuate-num 0))
+  (let ((caches-n (waffenodethread-cache-n thread)))
+    (loop for i fixnum upfrom args-size below (1+ (- caches-n evacuate-num))
+	  do (progn (setf (waffenodethread-cache-n thread) i)
+		    (let ((cache-id
+			    (cl-waffe.backends.mgl:create-thread-idx thread)))
+		      (cl-waffe.caches:free-cache cache-id)))))
+  nil)
+
+(defmacro define-node-method (fname
+			      name
+			      args
+			      body
+			      hide-from-tree
+			      optimize
+			      &optional (is-node nil)
+			      &aux (thread (gensym)))
+  "The macro for defining node method. (:forward :backward in defmodel, defnode, defoptimizers)
+  Also, the code for managing caches."
   (let ((f-ident   (gensym (symbol-name name)))
 	(self-heap (gensym (symbol-name name))))
     `(progn
          (declaim (ftype (function (,name ,@(map 'list (lambda (x) (declare (ignore x)) `waffetensor) `,args)) (or null waffetensor)) ,f-ident))
 	 (defun ,f-ident (,self-heap ,@args)
 	   ,(if optimize
-		`(declare (optimize (speed 3) (space 0) (safety 0))
+		`(declare (optimize (speed 3) (space 0) (safety 1))
 			  (type ,name ,self-heap))
 		`(declare (type ,name ,self-heap)))
 	   ,(if hide-from-tree `(declare (type waffetensor ,@args)) nil)
+	   ; Utils that can be used in :forward and :backward
 	   (macrolet ((self (name) `(slot-value ,',self-heap ',name))
 		      (save-for-backward (name value)
-			`(let ((smaller-value (detach ,value)))
-			   (!allow-destruct smaller-value)
-			   (setf (self ,name) smaller-value))))
-	     ,@body))
-	 (declaim (ftype (function (,name) function) ,fname))
+			`(let ((thread-info (waffetensor-thread-data ,value))
+			       (smaller-value (detach ,value)))
+			   (unless *no-grad*
+			   (cond
+			     ((and (typep (data ,value) 'mat)
+				   (not (null thread-info)))
+			      (cl-waffe.caches:with-cache
+				  (tmp
+				   smaller-value
+				   :place
+				   (cl-waffe.backends.mgl:create-thread-idx
+				    thread-info))
+				(copy! (data smaller-value) tmp)
+				(incf (waffenodethread-cache-n thread-info) 1)
+				(setf (self ,name) (const tmp))))
+			     (T (!allow-destruct smaller-value)
+			      (setf (self ,name) smaller-value)))))))
+	     ,(if is-node ; when the model is node method and step is ended, cl-waffe will clean caches
+		  `(let* ((,thread (thread (decide-thread-idx ,@args)))
+			  (is-top (= (waffenodethread-thread-idx ,thread) 0)))
+		     (set-thread-data ,thread ,@args)
+		     (let ((result (locally ,@body)))
+		       ;(declare (type waffetensor &optional result))
+		       (typecase result
+			 (list (prog1
+				   (map 'list
+					(lambda (x)
+					  (typecase (waffetensor-data x)
+					    (mat
+					     (setf (data x) (data x))))
+					  x)
+					result)
+				 (free-caches ,thread)
+				 (when is-top
+				   (set-thread-data nil ,@args))))
+			 (T
+			  (prog1
+			      (progn
+				(typecase (waffetensor-data result)
+				  (mat
+				   (setf (data result) (data result))))
+				result)
+			    (free-caches ,thread)
+			    (when is-top
+			      (set-thread-data nil ,@args)))))))
+		  `(locally ,@body))))
 	 (defmethod ,fname ((self ,name))
 	   (lambda (&rest node-inputs) (apply #',f-ident self node-inputs))))))
 
-(defmacro defmodel (name args &key parameters forward backward hide-from-tree optimize)
+(defmacro defmodel (name
+		    args
+		    &key
+		      parameters
+		      (forward `((&rest args) (error ":forward isn't defined.")))
+		      (backward `((&rest args) (error ":backward isn't defined.:"))) ; displaying name is todo
+		      hide-from-tree
+		      optimize
+		      (regard-as-node nil))
   #|
   Define an node.
   Args: hide-from-tree ... if true, this node is detached from autograd. (that is, when backward, use backward defined in itself)
@@ -130,26 +214,37 @@
     (unless forward
       (error ":forward slot is need to be fulfilled. When defining Model [~a]" name))
 
-    (if (and hide-from-tree backward)
-	(print "Warning: backward with hide-from-tree=nil never called in backward processes"))
+    (if (and (not hide-from-tree) backward)
+	(format t "Warning: backward with hide-from-tree=nil never called in backward processes~%"))
     
-    (let ((constructor-name (gensym)))
+    (prog1
       `(prog1
 	   (defstruct (,name
 		       (:print-function (lambda (m stream k)
 					  (declare (ignore k))
 					  (render-simple-model-structure stream m)))
-		       (:constructor ,constructor-name (,@args &aux ,@(map 'list (lambda (x) `(,(car x) ,(second x))) parameters))))
+		       (:constructor ,name (,@args &aux ,@(map 'list (lambda (x) `(,(car x) ,(second x))) parameters))))
 	     (hide-from-tree ,hide-from-tree :type boolean)
 	     (forward t :type boolean)
 	     (backward ,(if backward t nil) :type boolean)
 	     (parameters ',(map 'list (lambda (x) (assure-args (car x))) parameters))
 	     ,@(map 'list (lambda (x) `(,(assure-args (car x)) ,(second x) ,@(cddr x))) parameters))
-	   (define-node-method call-forward  ,name ,(car forward)  ,(cdr forward) ,hide-from-tree ,optimize)
-	   (define-node-method call-backward ,name ,(car backward) ,(cdr backward) ,hide-from-tree ,optimize)
-	   (defun ,name (&rest init-args)
-	     ; cant displayed args in emacs, slime
-	     (apply #',constructor-name init-args))))))
+	 (define-node-method
+	     call-forward
+	     ,name
+	     ,(car forward)
+	     ,(cdr forward)
+	     ,hide-from-tree
+	     ,optimize
+	     ,(not regard-as-node))
+	 (define-node-method
+	     call-backward
+	     ,name
+	     ,(car backward)
+	     ,(cdr backward)
+	     ,hide-from-tree
+	     ,optimize
+	     ,(not regard-as-node))))))
 
 (defun render-simple-model-structure (stream model) ; Todo: More Details
   (format stream "[~a: ~a]" (if (slot-value model 'hide-from-tree)

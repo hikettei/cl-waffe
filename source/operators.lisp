@@ -53,6 +53,7 @@
   :optimize t
   :parameters ((xi T) (yi T))
   :forward ((x y)
+	    (unless (= (data x) 1) (error "!div-old: x must be 1"))
             (save-for-backward xi x)
 	    (save-for-backward yi y)
 	    (with-searching-calc-node :div x y))
@@ -68,7 +69,7 @@
 	    (save-for-backward yi y1)
 	    (with-searching-calc-node :pow x1 y1))
   :backward ((dy)
-	     (list (!modify (!mul dy (self yi)) :*= (!pow (self xi) (- (data (self yi)) 1)))
+	     (list (!modify (!mul dy (self yi)) :*= (!pow (self xi) (- (the single-float (data (self yi))) 1)))
 		   (!modify (!modify
 			     (!log (self xi)) :*=
 			     (!modify (self xi) :^= (self yi)))
@@ -95,6 +96,7 @@
   :forward ((x) (setf (self prev-shape) (!shape x))
 		(with-searching-calc-node :reshape x (self shape)))
   :backward ((dy)
+	     (print dy)
 	     (list (!reshape dy (self prev-shape)))))
 
 (defnode DotProductTensor nil
@@ -138,7 +140,8 @@
 (defnode RepeatTensor (axis repeats)
   :optimize t
   :parameters ((axis axis) (repeats repeats))
-  :forward ((x) (with-searching-calc-node :repeat x (self axis) (self repeats)))
+  :forward ((x)
+	    (with-searching-calc-node :repeat x (self axis) (self repeats)))
   :backward ((dy) (list (!sum dy (self axis)))))
 
 (defnode ExpTensor ()
@@ -159,13 +162,13 @@
 	     (list (!matmul dy (!transpose (self yi)))
 		   (!matmul (!transpose (self xi)) dy))))
 
-(defmacro defope (name node-object tensor args &body body &aux (common-node (gensym)))
-  `(prog1
-     (defparameter ,common-node ,node-object)
-     (defun ,name ,args
-       (let* ((,tensor (if *no-grad* ,common-node ,node-object)))
-	 ,@body))))
-		   
+; Todo: Fix Undefined variable :G0
+(defmacro defope (name node-object tensor args &body body)
+  (let ((place node-object))
+    `(defun ,name ,args
+       (let* ((,tensor (if *no-grad* ,place ,node-object)))
+	,@body))))
+
 (defope !add (AddTensor) node (x y)
   (call node (assure-tensor x) (assure-tensor y)))
     
@@ -176,7 +179,7 @@
   (call node (assure-tensor x) (assure-tensor y)))
 
 (defope !div-old (DivTensor) node (x y)
-  (unless (= x 1) (error "!div-old: x must be 1"))
+  ; (unless (= x 1) (error "!div-old: x must be 1"))
   ; x must be 1, cl-waffe.backends.mgl:div has some problems?...
   (call node (assure-tensor x) (assure-tensor y)))
 
@@ -271,29 +274,8 @@
   (call (TransposeTensor (assure-tensor result)) (assure-tensor x)))
 
 (defope !matmul (MatmulTensor) node (x y)
-  (cond
-    ((and (= (!dims x) (!dims y))
-	  (= (!dims x) 2))
-     (call node (assure-tensor x) (assure-tensor y)))
-    ((and (= (!dims x) 1) (= (!dims y) 2))
-     (call node (!unsqueeze (assure-tensor x) -1) (assure-tensor y)))
-    ((and (= (!dims x) 2) (= (!dims y) 1))
-     (call node (assure-tensor x) (!unsqueeze (assure-tensor y) -1)))
-    ((and (= (!dims x) 3) (= (!dims y) 2)) ; Doesn't support batch...
-     (let* ((result (!zeros `(,(!shape x 0)
-			      ,(!shape x 1)
-			      ,(!shape y 1))))
-	    (x (assure-tensor x))
-	    (y (assure-tensor y)))
-       (dotimes (i (!shape x 0))
-	 (setq result (setf (!aref result i)
-			    (call node (!squeeze (!aref x i) 0) y))))
-       result))
-    ((and (= (!dims x) 2) (= (!dims y) 3))
-     (error "todo: matmul 3 * 2")
-     (!matmul y x))
-    (T (error "!matmul: support shapes are following: (a) * (b), (a b) * (c d), (a b c) * (d e), (a b) * (c d e). more will be added..."))))
-
+  (call node (assure-tensor x) (assure-tensor y)))
+	
 (defun !unsqueeze (x &optional (dim 0))
   ; display error when (!dims x) >= dim
   (let ((s (!shape x)))

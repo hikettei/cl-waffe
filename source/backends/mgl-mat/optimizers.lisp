@@ -4,10 +4,10 @@
 
 (mgl-mat:define-lisp-kernel (adam-stepm-lisp)
     ((m :mat :io)
-     (mgrads :mat :io)
+     (mgrads :mat :input)
      (beta single-float)
      (size fixnum))
-  (loop for i upfrom 0 below size
+  (loop for i fixnum upfrom 0 below size
 	do (setf (aref m i) (+ (aref m i)
 			       (* (- (aref mgrads i)
 				     (aref m i))
@@ -15,26 +15,26 @@
 
 (mgl-mat:define-lisp-kernel (adam-stepv-lisp)
     ((v :mat :io)
-     (vgrads :mat :io)
+     (vgrads :mat :input)
      (beta single-float)
      (size fixnum))
-  (loop for i upfrom 0 below size
+  (loop for i fixnum upfrom 0 below size
 	do (setf (aref v i) (+ (aref v i)
 			       (* (- 1 beta)
 				  (- (expt (aref vgrads i) 2) (aref v i)))))))
 
 (mgl-mat:define-lisp-kernel (adam-step-grads)
     ((params :mat :io)
-     (m :mat :io)
-     (v :mat :io)
+     (m :mat :input)
+     (v :mat :input)
      (eps single-float)
      (lr-t single-float)
      (size fixnum))
-  (loop for i upfrom 0 below size
-	do (setf (the single-float (aref params i))
-		 (- (the single-float (aref params i))
-		    (/ (* lr-t (the single-float (aref m i)))
-		       (+ eps (the single-float (sqrt (the single-float (aref v i))))))))))
+  (loop for i fixnum upfrom 0 below size
+	do (setf (aref params i)
+		 (- (aref params i)
+		    (/ (* lr-t (aref m i))
+		       (+ eps (sqrt (the (single-float 0e0) (aref v i)))))))))
 
 (defun adam-update (m
 		    v
