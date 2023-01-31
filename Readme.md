@@ -115,7 +115,7 @@ $ ./run-test-model.ros mnist
 
 ・Optimize whole codes, in term of speed and memory space.
 
-・**Use mgl-mat's facet in cl-waffe's node too. automatically allot :direction**
+・The usage rate of CPU is too low...
 
 ・Implement a convenient data loader package and avoid users having to implement it themselves.
 
