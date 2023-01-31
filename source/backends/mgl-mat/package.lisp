@@ -1,5 +1,6 @@
 
 (defpackage :cl-waffe.backends.mgl
+  (:documentation "An package for mgl-mat")
   (:use :cl :cl-waffe :mgl-mat :cl-cuda :cl-waffe.caches)
   (:export #:dispatch-kernel
 	   #:adam-update

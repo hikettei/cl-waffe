@@ -2,6 +2,7 @@
 (in-package :cl-user)
 
 (defpackage cl-waffe.optimizers
+  (:documentation "An package for optimizers")
   (:use :cl :cl-waffe)
   (:export
    :is-waffe-model
