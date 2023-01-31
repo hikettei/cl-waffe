@@ -98,11 +98,26 @@ Default: 6")
 			       (grad nil)
 			       (destructive? t))))
   "An structure of Waffe's Tensor.
-   This structure have: data (type of WaffeTensorContentType)
-                        the computation node for backprops, and grads.
-                        backend informations and parameters for optimizing.
+This structure have: 1. data (type of WaffeTensorContentType)
+                     2. the computation node for backprops, and grads.
+                     3. backend informations and parameters for optimizing.
 
-   a"
+Constructors:
+   (const value) ... Constant tensor, grad won't be created.
+   (tensor value) ... Parameter tensor, grad will be created.
+   (sysconst value) ... Constant tensor where tensor sometime cached. Users don't have to use this.
+
+Value is following:
+   simple-array
+   mgl-mat:mat (recommended)
+   fixnum
+   float
+   null
+   cons
+   function (for lazy evaluation)
+   ratio (coerced to float)
+
+This structure is printable and printed nicely."
   (data nil :type WaffeTensorTypes)
   (grad-tmp (make-grad-tmp) :type grad-tmp)
   (backward nil :type boolean)
