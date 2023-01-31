@@ -4,7 +4,7 @@
 
 (defnode ReLUTensor nil
   :optimize t
-  :parameters ((path-through T) (zero-buff T))
+  :parameters ((path-through nil) (zero-buff T))
   :forward ((x)
 	    (if (equal (self zero-buff) T)
 		(setf (self zero-buff) (!zeros (!shape x))))
@@ -15,6 +15,10 @@
 	     (list (!mul (self path-through) dy))))
 
 (defun !relu (x)
+  "Calling relu with making node.
+   Example: x' = { 0 (x < 0), x (x > 0)
+   Input: x where x is waffe supported data type.
+   Output: Tensor"
   (call (ReLUTensor) (assure-tensor x)))
 
 (defnode SigmoidTensor nil
@@ -27,6 +31,9 @@
 		    (list (!mul p (!mul dy (!sub 1 p)))))))
 
 (defun !sigmoid (x)
+  "Calling sigmoid with making node.
+   Input: x where x is waffe supported data type.
+   Output: Tensor"
   (call (SigmoidTensor) (assure-tensor x)))
 
 (defnode TanhTensor nil
@@ -61,6 +68,7 @@
 	 result))
     (T (error "!softmax: softmax only supports where (!dims tensor) <= 3."))))
 
+; Todo :docstring
 (defmodel model-list (model-args)
   ;Define model sequentially, (e.g. x = (sequence `((layer1) (layer2))), (call x 1 tensor) => layer1's output)
   :parameters ((mlist model-args))

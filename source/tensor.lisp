@@ -2,13 +2,22 @@
 (in-package :cl-waffe)
 
 
-(defparameter *print-char-max-len* 5)
-; todo comment...
-(defparameter *print-arr-max-size* 6)
-;
-(defparameter *print-mat-max-size* 3)
-;
-(defparameter *default-backend* :mgl)
+(defparameter *print-char-max-len* 5
+  "When printing tensor, the character displayed following this param.
+(e.g. When 5, in your terminal, 1.12345d0 => 1.1234...)
+Default: 5")
+
+(defparameter *print-arr-max-size* 6
+  "When printing tensor, the tensor displayed following this param.
+(e.g. When 5, in your terminal, (1 2 3 4 5 6 7 8 9 10) => (1 2 3 ... 4 5 6))
+Default: 6")
+
+(defparameter *print-mat-max-size* 3
+  "When printing tensor, the tensor displayed following this param.
+(e.g. When 3, in your terminal, ((1) (2) (3) (4)) => ((1) (2) ... (4)))")
+
+(defparameter *default-backend* :mgl
+  "Default backend cl-waffe uses. Default: :mgl")
 
 (defparameter mgl-mat:*DEFAULT-MAT-CTYPE* :float) ;double/float
 
@@ -23,7 +32,7 @@
        function
        ratio))
 
-(deftype waffe-array ()
+(deftype waffe-array () ;  an list of waffe supported array data structures.
   `(or mgl-mat:mat))
 
 (defun waffe-array (c)
@@ -88,6 +97,27 @@
 			       (destructively-calln 0)
 			       (grad nil)
 			       (destructive? t))))
+  "An structure of Waffe's Tensor.
+This structure have: 1. data (type of WaffeTensorContentType)
+                     2. the computation node for backprops, and grads.
+                     3. backend informations and parameters for optimizing.
+
+Constructors:
+   (const value) ... Constant tensor, grad won't be created.
+   (tensor value) ... Parameter tensor, grad will be created.
+   (sysconst value) ... Constant tensor where tensor sometime cached. Users don't have to use this.
+
+Value is following:
+   simple-array
+   mgl-mat:mat (recommended)
+   fixnum
+   float
+   null
+   cons
+   function (for lazy evaluation)
+   ratio (coerced to float)
+
+This structure is printable and printed nicely."
   (data nil :type WaffeTensorTypes)
   (grad-tmp (make-grad-tmp) :type grad-tmp)
   (backward nil :type boolean)
@@ -111,6 +141,14 @@
 (declaim (inline data
 		 (setf data)))
 (defun data (tensor)
+  "Access tensor's data. This won't be copied.
+   When tensor's data is lazy evaluted, this function behave following:
+     When tensor is transposed and lazy evaluted, directly returns function object for speed.
+     When tensor is cached and lazy evaluted, returns mat object.
+  Input: tensor (WaffeTensor)
+  Output: mostly mgl-mat:mat, or waffetensorcontentdata
+
+  Note: this function is setfable"
   (declare (type waffetensor tensor))
   (typecase (waffetensor-data tensor)
     (function
@@ -130,7 +168,11 @@
     (T (waffetensor-data tensor))))
 
 (defun (setf data) (val &optional tensor)
-  (setf (waffetensor-data tensor) val))
+  "Modifying tensor'data.
+   When argument that you want to insert is a tensor, this function automatically reads tensor's data and modify with it"
+  (if (typep val 'waffetensor)
+      (setf (waffetensor-data tensor) (data val))
+      (setf (waffetensor-data tensor) val)))
 
 (defun double-random ()
   (let ((i (random 1.0)))
@@ -184,20 +226,30 @@
   (typep tensor 'waffetensor))
 
 (defmacro grad (tensor)
+  "Accessing tensor's grad.
+   When tensor's grad is nil, an error occurs
+  Input: tensor
+  Output: mostly, mgl-mat:mat or waffetensorcontenttype"
   `(progn
      (unless (typep ,tensor 'WaffeTensor)
-       (error "The tensor is not a waffetensor"))
+       (error "The tensor is not a waffetensor."))
      
      (unless (waffetensor-grad ,tensor)
-       (error "The tensor is not a parameter. Constants doesn't have a grad"))
+       (error "The tensor is not a parameter. Constants doesn't have a grad. If you need grad, please define it with (parameter (const ~~~))"))
 
      (if (typep (waffetensor-grad ,tensor) 'cons)
-	 (error "A grad is nil. Please remain you need to call (backward out) before using a grad. When using ~%~a" ,tensor))
+	 (error "A grad is nil. Please remain you need to call (backward out) before using a grad. Or, If you need grad, please define it with (parameter (const ~~~)). When using ~%~a" ,tensor))
 
      (waffetensor-grad ,tensor)))
 
 (defmacro parameter (tensor)
-  ; make constants parameter
+  "Redefining tensor where tensor is const or parameter.
+   The tensor can be made grad.
+   So, use this like: (setq my-param (parameter (!mul 0.01 (!randn `(10 10)))))
+   Note that tensor's computation node will be lost.
+   Only tensor's data and backend will be extended
+   Input: Tensor (that is defined by (const) (sysconst) (tensor))
+   Output: Tensor (that is defined by (tensor))"
   `(with-slots ((data data) (backend backend)) ,tensor
      (tensor data :backend backend)))
 
@@ -228,6 +280,9 @@
      (setf (grad-tmp-value (waffetensor-grad-tmp ,tensor)) ,value)))
 
 (defun backward (tensor)
+  "Backward tensor, and making grads.
+   Note that tensor must be shape of `(1) or single value. Otherwise an error occurs.
+   In the process calculating backward, backwards won't be created."
   (declare (type waffetensor tensor))
   (if (typep (data tensor) 'mgl-mat:mat)
       (unless (eq (!shape tensor) `(1))
@@ -297,17 +352,27 @@
 
 
 (defun !zeros (shape)
+  "Initializing constant tensor with given shape, where initial element is zero
+   Input: shape (cons)
+   Output: Tensor (where is constant)
+   Example: (!zeros `(10 10)) => #Const(((0.0 0.0 ~ 0.0 0.0)        
+                 ...
+        (0.0 0.0 ~ 0.0 0.0)) :mgl t :shape (10 10))"
   (const (mgl-mat:make-mat shape :initial-element 0)))
 
 (defun !ones (shape)
+  "The same as !zeros but initial element is one"
   (const (mgl-mat:make-mat shape :initial-element 1)))
 
 (defun !fill (shape element)
+  "The same as !zeros, !ones but initial element is given element
+   Input: element ... fixnum or single-float"
   (const (mgl-mat:make-mat shape :initial-element element)))
 
 (defmacro !arange (&rest args)
   `(const (mgl-mat:make-mat (numcl:shape (numcl:arange ,@args))
 			    :initial-contents (numcl:arange ,@args))))
+
 ;backendsの引き継ぎは？
 (defmacro !copy (tensor &aux (new-tensor (gensym)))
   `(let ((,new-tensor (!zeros-like ,tensor)))
