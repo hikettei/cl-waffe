@@ -13,7 +13,9 @@
 
 (in-package :cl-waffe.caches)
 
-(defparameter *static-node-mode* t)
+(defparameter *static-node-mode* t
+  "When every time you call your model and their computations node is static,
+   enable this. By doing so, cl-waffe can optimize ram usage and computation speed.")
 
 ; todo: add depends on tg, bordeaux-threads
 (defvar *thread-caches*
