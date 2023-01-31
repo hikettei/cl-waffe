@@ -304,7 +304,7 @@ Example:
 					result)
 				 (free-caches ,thread)
 				 (when is-top
-				   (set-thread-data ,@args))))
+				   (set-thread-data nil ,@args))))
 			 (T
 			  (prog1
 			      (progn
@@ -314,7 +314,7 @@ Example:
 				result)
 			    (free-caches ,thread)
 			    (when is-top
-			      (set-thread-data ,@args)))))))
+			      (set-thread-data nil ,@args)))))))
 		  `(locally ,@body))))
 	 (defmethod ,fname ((self ,name))
 	   (lambda (&rest node-inputs) (apply #',f-ident self node-inputs))))))
