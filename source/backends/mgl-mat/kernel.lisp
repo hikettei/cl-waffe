@@ -31,10 +31,8 @@
   (if (not (null (waffetensor-thread-data out)))
       (let* ((thread-info (waffetensor-thread-data out))
 	     (idx (create-thread-idx thread-info)))
-	(with-cache (result out :place idx)
+	(with-cache (result out :place idx :copy copy?)
 	  (incf (cl-waffe::waffenodethread-cache-n thread-info) 1)
-	  (if copy?
-	      (copy! args result))
 	  result))
       (decide-out-buffer nil args enable-optim copy?)))
       

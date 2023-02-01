@@ -67,7 +67,6 @@
 
 (defun demo ()
 
-  
   (multiple-value-bind (datamat target)
       (read-data "examples/tmp/mnist.scale" 784 10 :most-min-class 0)
     (defparameter mnist-dataset datamat)
@@ -77,7 +76,7 @@
       (read-data "examples/tmp/mnist.scale.t" 784 10 :most-min-class 0)
     (defparameter mnist-dataset-test datamat)
     (defparameter mnist-target-test target))
-  
+
   #|
   (defparameter mnist-dataset (!ones `(200 784)))
   (defparameter mnist-target  (!randn `(200 10)))
@@ -95,13 +94,24 @@
   (setq train (MnistData mnist-dataset mnist-target 100))
   (setq test (MnistData mnist-dataset-test mnist-target-test 100))
 
+  
   (sb-profile:profile mgl-mat::blas-sgemm
 		      mgl-mat::blas-scopy
-		      cl-waffe::backward1)
+		      cl-waffe::backward1
+		      cl-waffe.nn::softmax-cross-entropy
+		      cl-waffe::!sum
+		      cl-waffe::!mul
+		      cl-waffe::!div
+		      cl-waffe::!add
+		      cl-waffe::!matmul
+		      cl-waffe::!relu
+		      cl-waffe::!exp
+		      cl-waffe::!softmax) 
   (mgl-mat:with-mat-counters (:count count :n-bytes n-bytes)
     (time (train trainer train :max-iterate 600 :epoch 10 :batch-size 100 :valid-dataset test
 			       :verbose t :random t :print-each 100))
     (format t "Count: ~a~%" count)
     (format t "Consumed: ~abytes~%" n-bytes)
-    (sb-profile:report)))
+    (sb-profile:report)
+    ))
 

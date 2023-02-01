@@ -315,8 +315,8 @@ Example:
 				       smaller-value
 				       :place
 				       (cl-waffe.backends.mgl:create-thread-idx
-					thread-info))
-				    (copy! (data smaller-value) tmp)
+					thread-info)
+				       :copy t)
 				    (incf (waffenodethread-cache-n thread-info) 1)
 				    (setf (self ,name) (const tmp))))
 				 (T (!allow-destruct smaller-value)

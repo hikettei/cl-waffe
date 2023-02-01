@@ -308,7 +308,7 @@ This structure is printable and printed nicely."
       (let* ((grad-tmp-before (waffetensor-grad-tmp tensor))
 	     (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top
 			      (grad-tmp-value grad-tmp-before)
-			      (const 1))))
+			      (sysconst 1))))
 	; calculating backward(state, dy) -> x.grad, y.grad...
         (progn
 	  (let ((grads (funcall
