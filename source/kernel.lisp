@@ -44,7 +44,10 @@
 						(waffetensor-thread-data y)))))
 			   (if r
 			       (waffetensor-thread-data r)
-			       nil))))
+			       nil))
+	    :path-through-node? (find t (map 'list
+					     #'waffetensor-path-through-node?
+					     variables))))
 
 (defun invoke-cpu-kernel (kernel-function variables)
   (sysconst (cl-waffe.backends.cpu:dispatch-kernel kernel-function variables)
@@ -54,7 +57,10 @@
 						(waffetensor-thread-data y)))))
 			   (if r
 			       (waffetensor-thread-data r)
-			       nil))))
+			       nil))
+	    :path-through-node? (find t (map 'list
+					     #'waffetensor-path-through-node?
+					     variables))))
 
 (defgeneric invoke-kernel (kernel-function variables first-argument i))
 (defmethod invoke-kernel (kernel-function
@@ -97,6 +103,8 @@
 
 (defmacro with-kernel-case (target var &key (mgl nil) (mgl-cuda nil))
   "Reading the target's device, this macro invokes property codes described in :mgl, :mgl-cuda etc...
+
+   Dynamically defining and caching cpu and cuda kernel.
 
    Every time reaches this macro, cl-waffe caches the target (i.e. the target is allowed to be destructed).
 

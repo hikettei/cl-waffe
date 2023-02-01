@@ -66,6 +66,7 @@ This package exports features for making caches (sysconst)")
           (gethash key place-cache))))))
 
 (defun return-thread-cached-object (place-key key value thread)
+  (declare (ignore thread))
   (let* ((thread-cache
            (bordeaux-threads:with-lock-held (*thread-cache-lock*)
              (or (gethash (bordeaux-threads:current-thread) *thread-caches*)
@@ -80,12 +81,14 @@ This package exports features for making caches (sysconst)")
     ;; strategies too.
     (setf (gethash key place-cache) value)))
 
-(defmacro with-thread-cached-mat1 ((var tensor &rest args
-                                   &key (place :scratch)
-                                   (ctype '*default-mat-ctype*)
-                                   (displacement 0)
-                                   max-size
-                                   (initial-element 0) initial-contents)
+(defmacro with-thread-cached-mat1 ((var tensor
+                                    &key
+				      (place :scratch)
+				      (copy nil)
+				      (ctype '*default-mat-ctype*)
+				      (displacement 0)
+				      max-size
+				      (initial-element 0) initial-contents)
                                   &body body)
   "Bind VAR to a matrix of DIMENSIONS, CTYPE, etc. Cache this matrix,
   and possibly reuse it later by reshaping it. When BODY exits the
@@ -97,11 +100,7 @@ This package exports features for making caches (sysconst)")
   convention, these places are called `:SCRATCH-1`, `:SCRATCH-2`,
   etc."
   (declare (ignore max-size initial-contents))
-  (let ((args (copy-list args)))
-    (remf args :place)
-    (remf args :ctype)
-    (remf args :displacement)
-    (remf args :initial-element)
+  (progn
     (alexandria:with-unique-names (key)
       (alexandria:once-only (tensor displacement ctype initial-element)
         `(let ((,key (list ,ctype ,initial-element)))
@@ -109,9 +108,9 @@ This package exports features for making caches (sysconst)")
                (,var ,tensor ,key (make-mat (!shape ,tensor)
                                     :ctype ,ctype
                                     :displacement ,displacement
-                                    :initial-element ,initial-element
-                                    ,@args)
-                :place ,place)
+                                    :initial-element ,initial-element)
+                :place ,place
+		:copy ,copy)
              (setq ,var (adjust! ,var (!shape ,tensor) ,displacement))
 	     ; may create new mat
              (locally ,@body)))))))
@@ -135,31 +134,33 @@ This package exports features for making caches (sysconst)")
 	    (lock-calln idx))))
     nil))
 
-(defmacro with-cache ((var tensor &key (ctype '*default-mat-ctype*)
+(defmacro with-cache ((var tensor &key (ctype '*default-mat-ctype*) (copy nil)
                       (place :ones))
                      &body body)
-  `(with-thread-cached-mat1 (,var ,tensor :place ,place
-                                 :ctype ,ctype :initial-element 0.0)
+  `(with-thread-cached-mat1 (,var ,tensor :copy ,copy
+				          :place ,place
+					  :ctype ,ctype
+					  :initial-element 0.0)
      (let ((,var ,var))
        ,@body)))
 
-;(declaim (inline copy-by-idx))
-(defun copy-by-idx (idx mat)
-  "When mats are allowed to fail to copy, return mat itself"
+(defun check-abandon (idx)
   (let ((calln (gethash idx *thread-callns*)))
     (cond
       ((null calln)
-       (copy-mat mat)) ; calln hasn't created yet
+       nil) ; calln hasn't created yet
       ((null (cachedata-lock calln))
-       (copy-mat mat)) ; calln's record hasn't finished yet
+       nil) ; calln's record hasn't finished yet
       ((= 0 (cachedata-calln calln))
        (if *static-node-mode*
-	   mat
-	   (copy-mat mat)))
-      (T (copy-mat mat)))))
+	   t
+	   nil))
+      (T nil))))
 
-(defmacro with-thread-cached-object1 ((var tensor key initform &key place)
-				      &body body)
+; copy wo koko de suru.
+(defmacro with-thread-cached-object1 ((var tensor key initform &key place (copy nil))
+				      &body body
+				      &aux (state (gensym)))
   (let ((place (or place (gensym (symbol-name 'place)))))
     `(labels ((cached-data (tensor shape? _ &optional __)
 	      (declare (ignore _ __))
@@ -172,13 +173,24 @@ This package exports features for making caches (sysconst)")
 		 (if shape?
 		     (mat-dimensions obj)
 		     obj))))
-      (let ((,var ,initform))
+       (let* ((,state (check-abandon ,place))
+	      (,var (if (and
+			 ,state
+			 (cl-waffe::waffetensor-is-sysconst? ,tensor))
+			; tensor is allowed to be abandoned.
+			(copy-mat (data ,tensor))
+			,initform)))
+	 (if ,copy
+	     (unless ,state ; when ,var is filled with 0.0
+	       (copy! (data ,tensor) ,var)))
+	 
 	 (when (cl-waffe::waffetensor-is-sysconst? ,tensor)
+	   ; when args is sysconst, cache.
 	   (return-thread-cached-object ,place
 					,key
-					(copy-by-idx
-					 ,place
-					 (data ,tensor))
+					(if ,state
+					    (data ,tensor)
+					    (data ,tensor))
 					(cl-waffe::waffetensor-thread-data ,tensor))
 	   (setf (data ,tensor) #'cached-data)
 	   (setf (cl-waffe::waffetensor-key ,tensor) ,key)
