@@ -321,6 +321,8 @@ This structure is printable and printed nicely."
 	      (error "backward error: The number of :forward args doesnt correspond with of :backward"))
 	    
 	    (dotimes (n (length grads))
+	      (setf (waffetensor-thread-data (nth n grads))
+		    (waffetensor-thread-data tensor))
 	      (setfgradtmp (nth-var tensor n) (nth n grads)))
 
 	    (dotimes (n (length grads))
@@ -408,7 +410,7 @@ This structure is printable and printed nicely."
 (defun (setf !areflist) (value tensor dims)
   ; For backward, you need to call it like (setq z (setf (!aref x ~) ~))
   ; To solve this problem, i guess i need more macros.
-  (setf tensor (call (SetfArefTensor dims) tensor value)))
+  (setf tensor (call (SetfArefTensor dims) tensor (assure-tensor value))))
 	 
 (defmacro !where ()) ; todo
 (defmacro !index ()) ; todo
@@ -471,7 +473,7 @@ This structure is printable and printed nicely."
   (unless (typep (waffetensor-data tensor) 'waffe-array)
     (unless (or (typep (waffetensor-data tensor) 'function)
 		(typep (waffetensor-data tensor) 'compiled-function))
-      (error "Fixnum/Double/Float doesn't have a shape")))
+      (return-from !shape `(0))))
     
   (if (not (null nth))
       (let* ((n (if (typep nth 'waffetensor)

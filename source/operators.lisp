@@ -137,6 +137,19 @@
 	     (list (!div (!repeats dy (self axis) (self repeats))
 			 (self repeats)))))
 
+(defnode SumUpTensor ()
+  :parameters ((total-len) (shape))
+  :forward ((x)
+	    (setf (self total-len) (/ (!size x)))
+	    (setf (self shape) (!shape x))
+	    (with-kernel-case x out
+	      :mgl ((* -1 (asum out))) ; asum >= 0
+	      :mgl-cuda nil))
+  :backward ((dy)
+	     (list (sysconst (scal! (self total-len)
+				    (make-mat (self shape)
+					      :initial-element (data dy)))))))
+
 (defnode RepeatTensor (axis repeats)
   :optimize t
   :parameters ((axis axis) (repeats repeats))
@@ -162,7 +175,6 @@
 	     (list (!matmul dy (!transpose (self yi)))
 		   (!matmul (!transpose (self xi)) dy))))
 
-; Todo: Fix Undefined variable :G0
 (defmacro defope (name node-object tensor args &body body)
   (let ((place node-object))
     `(defun ,name ,args
@@ -193,11 +205,7 @@
 
 (defun !sum-2d (x &optional (axis nil) (keepdims nil))
   (if (null axis)
-      (let ((axis-size (!dims x))
-	    (result x))
-	(dotimes (i axis-size)
-	  (setq result (!sum result (1- (- axis-size i)))))
-	result)
+      (call (SumUpTensor) (assure-tensor x))
       (let ((nrepeat (!shape x axis))
 	    (result (call (SumTensor (assure-tensor axis)) (assure-tensor x))))
 	(if keepdims

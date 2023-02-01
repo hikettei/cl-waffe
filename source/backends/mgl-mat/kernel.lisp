@@ -8,11 +8,13 @@
 
 (defun create-thread-idx (thread-info &optional (ident ""))
   "Thread format: <Thread_IDx>+<Count_N>"
-  (intern (format nil "~a+~a~a"
-		  ident
-		  (cl-waffe::waffenodethread-thread-idx thread-info)
-		  (cl-waffe::waffenodethread-cache-n thread-info))
-	  :keyword))
+  (if thread-info
+      (intern (format nil "~a+~a~a"
+		      ident
+		      (cl-waffe::waffenodethread-thread-idx thread-info)
+		      (cl-waffe::waffenodethread-cache-n thread-info))
+	      :keyword)
+      (gensym)))
 
 (defgeneric decide-out-buffer (out args enable-optim copy?))
 

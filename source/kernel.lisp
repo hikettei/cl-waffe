@@ -101,7 +101,7 @@
   (setf (data target-tensor) (data (invoke-kernel kernel-function `(,target-tensor ,@args) target-data 0)))
   target-tensor)
 
-(defmacro with-kernel-case (target var &key (mgl nil) (mgl-cuda nil))
+(defmacro with-kernel-case (target var &key (mgl nil) (mgl-cuda nil) (copy t) &aux (out (gensym)))
   "Reading the target's device, this macro invokes property codes described in :mgl, :mgl-cuda etc...
 
    Dynamically defining and caching cpu and cuda kernel.
@@ -145,27 +145,30 @@
        (error "cl-waffe.with-kernel-case: target must be waffetensor. Encounted type of ~a, when using ~a" (type-of ,target) ,target))
      (cl-waffe.caches:with-cache
 	 (,var ,target :place (cl-waffe.backends.mgl:create-thread-idx
-			       (waffetensor-thread-data ,target)))
+			       (waffetensor-thread-data ,target))
+	  :copy ,copy)
        (warranty ,target)
-       (labels ((mgl-cpu-step  (,var) ,@mgl)
-		(mgl-cuda-step (,var)
-		  (if (null `,mgl-cuda)
-		      (progn ,@mgl)
-		      (progn ,@mgl-cuda))))
-	 (let ((out (case (waffetensor-backend ,target)
+       (labels ((mgl-cpu-step  () ,@mgl)
+		(mgl-cuda-step ()
+		  (if (null ',mgl-cuda)
+		      (mgl-cpu-step)
+		      ,@mgl-cuda)))
+	 (let ((,out (case (waffetensor-backend ,target)
 		      (:mgl (if (use-cuda-p (data ,target))
-					    (mgl-cuda-step ,var)
-					    (mgl-cpu-step ,var)))
+					    (mgl-cuda-step)
+					    (mgl-cpu-step)))
 		      (T (error "cl-waffe.with-kernel-case: Encounted unsupported kernel ~a, cl-waffe supports kernel following: ~a"
-				(waffetensor-kernel ,target)
+				(waffetensor-backend ,target)
 				*kernels*)))))
-	   (typecase out
+	   (typecase ,out
 	     (list
 	      (map 'list (lambda (x)
-			   (sysconst x :thread-data ,target))
-		   out))
+			   (sysconst x :thread-data ,target
+		  		       :path-through-node? (waffetensor-path-through-node? ,target)))
+		   ,out))
 	     (T
 	      (sysconst
-	       out
+	       ,out
 	       :thread-data
-	       (waffetensor-thread-data ,target)))))))))
+	       (waffetensor-thread-data ,target)
+	       :path-through-node? (waffetensor-path-through-node? ,target)))))))))

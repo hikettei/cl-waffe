@@ -48,6 +48,7 @@
                        (,iter (cddr ,inner-list)))))
        (,iter ,list))))
 
+
 (defun read-data (data-path data-dimension n-class &key (most-min-class 1))
   (let* ((data-list (svmformat:parse-file data-path))
          (len (length data-list))
@@ -63,14 +64,37 @@
              (do-index-value-list (j v (cdr datum))
                (setf (aref datamatrix i (- j most-min-class)) v)))
     (values (const (mgl-mat:array-to-mat datamatrix))
-		   (const (mgl-mat:array-to-mat target)))))
+	    (const (mgl-mat:array-to-mat target)))))
 
-(defun demo ()
+(defun demo () (time (demo1)))
+(defun demo1 ()
+  
+  (sb-profile:profile mgl-mat::blas-sgemm
+		      mgl-mat::blas-scopy
+		      mgl-mat::array-to-mat
+		      cl-waffe::backward1
+		      cl-waffe.nn::softmax-cross-entropy
+		      cl-waffe::!sum
+		      cl-waffe::!mul
+		      cl-waffe::!div
+		      cl-waffe::!add
+		      cl-waffe::!matmul
+		      cl-waffe::!relu
+		      cl-waffe::!exp
+		      cl-waffe::!softmax
+		      cl-waffe::!faref
+		      cl-waffe::!write-faref
+		      svmformat:parse-file
+		      read-data)
 
+  (format t "Loading examples/tmp/mnist.scale ...~%")
+  
   (multiple-value-bind (datamat target)
       (read-data "examples/tmp/mnist.scale" 784 10 :most-min-class 0)
     (defparameter mnist-dataset datamat)
     (defparameter mnist-target target))
+
+  (format t "Loading examples/tmp/mnist.scale.t~%")
 
   (multiple-value-bind (datamat target)
       (read-data "examples/tmp/mnist.scale.t" 784 10 :most-min-class 0)
@@ -95,23 +119,12 @@
   (setq test (MnistData mnist-dataset-test mnist-target-test 100))
 
   
-  (sb-profile:profile mgl-mat::blas-sgemm
-		      mgl-mat::blas-scopy
-		      cl-waffe::backward1
-		      cl-waffe.nn::softmax-cross-entropy
-		      cl-waffe::!sum
-		      cl-waffe::!mul
-		      cl-waffe::!div
-		      cl-waffe::!add
-		      cl-waffe::!matmul
-		      cl-waffe::!relu
-		      cl-waffe::!exp
-		      cl-waffe::!softmax) 
   (mgl-mat:with-mat-counters (:count count :n-bytes n-bytes)
     (time (train trainer train :max-iterate 600 :epoch 10 :batch-size 100 :valid-dataset test
 			       :verbose t :random t :print-each 100))
     (format t "Count: ~a~%" count)
-    (format t "Consumed: ~abytes~%" n-bytes)
-    (sb-profile:report)
-    ))
+    (format t "Consumed: ~abytes~%" n-bytes))
+
+  (sb-profile:report)
+  )
 

@@ -45,7 +45,7 @@
   :forward (()
 	    (funcall (self caller))))
 
-(defmacro deftrainer (name args &key model optimizer optimizer-args step-model predict (forward NIL) &aux (out-id (gensym)))
+(defmacro deftrainer (name args &key model optimizer optimizer-args step-model predict (forward NIL))
   (if forward (error ":forward is unavailable in deftrainer macro. use instead: :step-model"))
   (labels ((assure-args (x)
 	     (if (or (eq (symbol-name x) "model")
@@ -60,13 +60,13 @@
     (unless predict
        (error "deftrainer: the slot :predict is nil. Please fill here"))
     
-     (let ((constructor-name (gensym)))
+     (progn
 	`(prog1
 	  (defstruct (,name
 		      (:print-function (lambda (trainer stream _)
 					 (declare (ignore trainer _))
 					 (format stream "[Trainer of ___]")))
-		      (:constructor ,constructor-name (,@(map 'list (lambda (x) (assure-args x)) args)
+		      (:constructor ,name (,@(map 'list (lambda (x) (assure-args x)) args)
 						       &aux (model ,model)
 							    (optimizer (cl-waffe.optimizers:init-optimizer ,optimizer
 							   		              			    model
@@ -77,9 +77,7 @@
 		     (predict    ,(if predict t nil))
 		     (step-model ,(if step-model t nil)))
 	   (define-trainer-method trainer-step-model ,name ,(car step-model) ,(cdr step-model))
-	   (define-trainer-method trainer-predict    ,name ,(car predict)    ,(cdr predict))
-	   (defun ,name (&rest init-args)
-	     (apply #',constructor-name init-args))))))
+	   (define-trainer-method trainer-predict    ,name ,(car predict)    ,(cdr predict))))))
 
 (defun step-model (trainer &rest args)
   (step-model1 trainer args))
@@ -111,20 +109,18 @@
     (unless length
       (error "defdataset: the slot :length is nil. Please fill here the code returning the total size of a training data."))
     
-     (let ((constructor-name (gensym)))
+     (progn
        `(prog1
 	    (defstruct (,name
 			(:print-function (lambda (trainer stream _)
 					   (declare (ignore trainer _))
 					   (format stream "[Dataset of ___]")))
-			(:constructor ,constructor-name (,@args &aux ,@parameters)))
+			(:constructor ,name (,@args &aux ,@parameters)))
 	    ,@(map 'list (lambda (x) (assure-args (car x))) parameters)  
 	    (length       t :type boolean)
 	    (dataset-next t :type boolean))
 	  (define-dataset-method dataset-next   ,name ,(car next)   ,(cdr next))
-	  (define-dataset-method dataset-length ,name ,(car length) ,(cdr length))
-	  (defun ,name (&rest init-args)
-	    (apply #',constructor-name init-args))))))
+	  (define-dataset-method dataset-length ,name ,(car length) ,(cdr length))))))
 
 (defun get-dataset (dataset index)
   (funcall (dataset-next dataset) index))
