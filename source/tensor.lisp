@@ -71,12 +71,14 @@ Default: 6")
 			    (value &key (backend *default-backend*)
 				     (extend nil)
 				     (thread-data nil)
+				     (path-through-node? nil)
 			     &aux (data (init-waffe-tensor-data value))
 			       (backend (check-backend backend extend))
 			       (grad nil)
 			       (thread-data thread-data)
 			       (destructive? t)
 			       (is-sysconst? t)
+			       (path-through-node? path-through-node?)
 			       (is-mat (typep value 'mgl-mat:mat))
 			       (grad-tmp (make-grad-tmp))))
 	                (:constructor
@@ -94,7 +96,6 @@ Default: 6")
 			     &aux (data (init-waffe-tensor-data value))
 			       (backend (check-backend backend extend))
 			       (is-mat (typep value 'mgl-mat:mat))
-			       (destructively-calln 0)
 			       (grad nil)
 			       (destructive? t))))
   "An structure of Waffe's Tensor.
@@ -126,14 +127,13 @@ This structure is printable and printed nicely."
   (variables nil :type list)
   state
   (is-mat nil :type boolean)
-  (calln 0 :type fixnum) ; for debug, maybe unnecessary
   (is-param? nil :type boolean)
-  (destructively-calln 0 :type fixnum) ; unnecessary
   (is-ancestor-param nil :type boolean)
   (is-next-destruct? nil :type boolean)
   (destructive? nil :type boolean) ; unnecessary
   (thread-data nil :type (or waffenodethread null))
   (is-sysconst? nil :type boolean)
+  (path-through-node? nil :type boolean)
   (key nil :type (or null cons))
   (idx nil :type (or null symbol))
   (is-data-destructed? nil :type boolean))

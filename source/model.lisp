@@ -6,19 +6,26 @@
 (defparameter *no-grad* nil
   "When t, some node will be ignored. see references below for details. default: nil")
 
+(defparameter *in-node-method* nil)
+
 (defgeneric call-forward  (self))
 (defgeneric call-backward (self))
 
-(defmacro with-no-grad (&body body)
+(defmacro with-no-grad (&body body &aux (no-grad-first (gensym)))
   "This macro is like with-predict-mode
    When you predicting your models, copying values for backward is waste.
    In this macro, *no-grad* become t, and won't make computation nodes.
    And in some operations, they will be faster."
-  `(let ((no-grad-first *no-grad*))
+  `(let ((,no-grad-first *no-grad*))
      (setq *no-grad* t)
-     ,@body
-     (setq *no-grad* no-grad-first)
-     nil))
+     (prog1 (progn ,@body)
+       (setq *no-grad* ,no-grad-first))))
+
+(defmacro with-node-method-mode (&body body &aux (state-first (gensym)))
+  `(let ((,state-first *in-node-method*))
+     (setq *in-node-method* t)
+     (prog1 (progn ,@body)
+       (setq *in-node-method* ,state-first))))
 
 (defmacro with-calling-layers (input &rest layers)
   "This macro allows to sequentially call layers.
@@ -247,6 +254,26 @@ Example:
 		      (cl-waffe.caches:free-cache cache-id)))))
   nil)
 
+(defun enable-node-tensor (&rest args)
+  (map 'list #'(lambda (x)
+		 (prog1
+		     (if (typep x 'waffetensor)
+			 (waffetensor-path-through-node? x)
+			 nil)
+		   (when (and
+			  (typep x 'waffetensor)
+			  *in-node-method*)
+		     (setf (waffetensor-path-through-node? x) t))))
+       args))
+
+(defun uncheck-node-tensor (first-states &rest args)
+  (map 'list #'(lambda (x y)
+		 (when (typep x 'waffetensor)
+		   (setf (waffetensor-path-through-node? x) y))
+		 nil)
+       args first-states)
+  nil)
+
 (defmacro define-node-method (fname
 			      name
 			      args
@@ -254,7 +281,9 @@ Example:
 			      hide-from-tree
 			      optimize
 			      &optional (is-node nil)
-			      &aux (thread (gensym)))
+			      &aux (thread (gensym))
+				   (is-top (gensym))
+				   (state  (gensym)))
   "The macro for defining node method. (:forward :backward in defmodel, defnode, defoptimizers)
   Also, the code for managing caches."
   (let ((f-ident   (gensym (symbol-name name)))
@@ -272,24 +301,30 @@ Example:
 		      (save-for-backward (name value)
 			`(let ((thread-info (waffetensor-thread-data ,value))
 			       (smaller-value (detach ,value)))
-			   (unless *no-grad*
-			   (cond
-			     ((and (typep (data ,value) 'mat)
-				   (not (null thread-info)))
-			      (cl-waffe.caches:with-cache
-				  (tmp
-				   smaller-value
-				   :place
-				   (cl-waffe.backends.mgl:create-thread-idx
-				    thread-info))
-				(copy! (data smaller-value) tmp)
-				(incf (waffenodethread-cache-n thread-info) 1)
-				(setf (self ,name) (const tmp))))
-			     (T (!allow-destruct smaller-value)
-			      (setf (self ,name) smaller-value)))))))
-	     ,(if is-node ; when the model is node method and step is ended, cl-waffe will clean caches
+			   (unless *no-grad* ; is no-grad disabled?
+			     (when (if *in-node-method*
+				       (not
+					(waffetensor-path-through-node? ,value))
+				       t)
+			       ; save-for-backward is ignored when 1. in with-no-grad macro. 2. Nodes connected like (Node) -> (Node) ; (in nodes, :forward :backward doesn't create grads.)
+			       (cond
+				 ((and (typep (data ,value) 'mat)
+				       (not (null thread-info)))
+				  (cl-waffe.caches:with-cache
+				      (tmp
+				       smaller-value
+				       :place
+				       (cl-waffe.backends.mgl:create-thread-idx
+					thread-info))
+				    (copy! (data smaller-value) tmp)
+				    (incf (waffenodethread-cache-n thread-info) 1)
+				    (setf (self ,name) (const tmp))))
+				 (T (!allow-destruct smaller-value)
+				    (setf (self ,name) smaller-value))))))))
+	     ,(if is-node
+		  ; when method is for models, copy tensors, and caches.
 		  `(let* ((,thread (thread (decide-thread-idx ,@args)))
-			  (is-top (= (waffenodethread-thread-idx ,thread) 0)))
+			  (,is-top (= (waffenodethread-thread-idx ,thread) 0)))
 		     (set-thread-data ,thread ,@args)
 		     (let ((result (locally ,@body)))
 		       ;(declare (type waffetensor &optional result))
@@ -303,7 +338,7 @@ Example:
 					  x)
 					result)
 				 (free-caches ,thread)
-				 (when is-top
+				 (when ,is-top
 				   (set-thread-data nil ,@args))))
 			 (T
 			  (prog1
@@ -313,9 +348,25 @@ Example:
 				   (setf (data result) (data result))))
 				result)
 			    (free-caches ,thread)
-			    (when is-top
+			    (when ,is-top
 			      (set-thread-data nil ,@args)))))))
-		  `(locally ,@body))))
+		  ; when method is for nodes, or optimizers
+		  
+		  `(let ((,state (enable-node-tensor ,@args)))
+		     (declare (type list ,state))
+		     (with-node-method-mode
+		       (let ((result (progn ,@body))
+			     (result-next-state (find t ,state)))
+			 (uncheck-node-tensor ,state ,@args)
+			 (typecase result
+			   (list
+			    (map 'list #'(lambda (x)
+					   (setf (waffetensor-path-through-node? x) result-next-state)
+					   x)
+				 result))
+			   (T
+			    (setf (waffetensor-path-through-node? result) result-next-state)
+			    result))))))))
 	 (defmethod ,fname ((self ,name))
 	   (lambda (&rest node-inputs) (apply #',f-ident self node-inputs))))))
 
