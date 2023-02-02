@@ -20,7 +20,8 @@ When you define object (defmodel defnode etc...) all of them will be used for do
   (step-model "" :type string)
   (predict "" :type string)
   (next "" :type string)
-  (length "" :type string))
+  (length "" :type string)
+  (note "" :type string))
   
 
 (declaim (ftype (function (waffeobjectusage symbol) string) build-docstring))
@@ -37,6 +38,9 @@ When you define object (defmodel defnode etc...) all of them will be used for do
 	    (waffeobjectusage-args usage)
 	    object-type
 	    (waffeobjectusage-name usage))
+
+    (unless (equal (waffeobjectusage-note usage) "")
+      (format doc "Note: ~a~%~%" (waffeobjectusage-note usage)))
 
     (case object-type
       (:node
@@ -97,7 +101,8 @@ When you define object (defmodel defnode etc...) all of them will be used for do
 			(step-model "Nothing")
 			(predict "Nothing")
 			(next "Nothing")
-			(length "Nothing"))
+			(length "Nothing")
+			(note ""))
   "In :document slot, (for `defmodel, defnode, defoptimizer deftrainer defdataset`) this macro will be useful.
 
 Keyword:
@@ -115,6 +120,7 @@ cl-waffe automatically generate docstrings."
    :step-model step-model
    :predict predict
    :next next
+   :note note
    :length length))
   
 

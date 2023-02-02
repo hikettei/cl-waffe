@@ -141,6 +141,8 @@
 	   #:!sigmoid
 	   #:!tanh
 	   #:!softmax
+
+	   #:with-usage
 	   ))
 
 (defparameter *cl-waffe-object-types* `(:model

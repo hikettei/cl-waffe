@@ -2,12 +2,10 @@
 (in-package :cl-waffe.optimizers)
 
 (defoptimizer SGD (params &key (lr 1e-3))
-  :document (with-usage
-	      :name "SGD"
-	      :overview "Simple SGD"
+  :document (with-usage "SGD"
+	      :overview "Simple SGD."
 	      :args "&key (lr 1e-3)"
 	      :update "Following defnition.")
-	      
   :optimize t
   :parameters ((params params :type hash-table)
 	       (lr lr :type single-float))
@@ -19,6 +17,11 @@
 
 ; not optimized
 (defoptimizer Momentum (params &key (momentum 0.9) (lr 1e-3))
+  :document (with-usage "Momentum"
+	      :overview "Simple Momentum"
+	      :note "This code isn't optimized and slow"
+	      :args "&key (momentum 0.9) (lr 1e-3)"
+	      :update "Following definition.")
   :parameters ((params params) (lr lr) (momentum momentum) (velocities (make-hash-table)))
   :update (()
 	   (if (= (hash-table-count (self velocities)) 0)
@@ -72,6 +75,10 @@
 
 
 (defoptimizer Adam (params &key (lr 1e-3) (epsilon 1e-7) (beta1 0.9) (beta2 0.999))
+  :document (with-usage "Adam"
+	      :overview "Simple Adam. It invokes kernel directly."
+	      :args "&key (lr 1e-3) (epsilon 1e-7) (beta1 0.9) (beta2 0.999)"
+	      :update "Following definition.")
   :optimize t
   :parameters ((params params  :type hash-table)
 	       (lr lr          :type single-float)

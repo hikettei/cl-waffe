@@ -170,24 +170,24 @@ Example:
          ; W(n+1) = W(n) - n * grad
          (!modify (gethash i (self params))) :+=
                (!mul (self lr) (grad (gethash i (self params))))```"
-  `(progn
-     (defmodel ,name ,args
-       :parameters ,parameters
-       :optimize ,optimize
-       :forward ,update
-       ;zero-grad
-       :backward ((model) (dolist (p (find-variables model))
-			    (setf (waffetensor-state p) nil)
-			    (setf (waffetensor-backward p) nil)
-			    (setf (waffetensor-variables p) nil)
-			    (if (waffetensor-grad p) ; only params have grad
-				(setf (waffetensor-grad p) `(nil nil)))
-			    (setf (waffetensor-grad-tmp p) (make-grad-tmp)))
-		nil)
-       :hide-from-tree nil
-       :document ,document
-       :regard-as-node t
-       :object-type :optimizer)))
+
+  `(defmodel ,name ,args
+    :parameters ,parameters
+    :optimize ,optimize
+    :forward ,update
+    ;zero-grad
+    :backward ((model) (dolist (p (find-variables model))
+			 (setf (waffetensor-state p) nil)
+			 (setf (waffetensor-backward p) nil)
+			 (setf (waffetensor-variables p) nil)
+			 (if (waffetensor-grad p) ; only params have grad
+			     (setf (waffetensor-grad p) `(nil nil)))
+			 (setf (waffetensor-grad-tmp p) (make-grad-tmp)))
+	       nil)
+    :hide-from-tree nil
+    :document ,document
+    :regard-as-node t
+    :object-type :optimizer))
 
 (defmacro defnode (name
 		   args
@@ -232,7 +232,15 @@ Example:
 
 (call (AddTensor) tensor1 tensor2)```"
   
-  `(defmodel ,name ,args :parameters ,parameters :forward ,forward :backward ,backward :hide-from-tree T :optimize ,optimize :regard-as-node ,regard-as-node :document ,document :object-type :node))
+  `(defmodel ,name ,args
+     :parameters ,parameters
+     :forward ,forward
+     :backward ,backward
+     :hide-from-tree T
+     :optimize ,optimize
+     :regard-as-node ,regard-as-node
+     :document ,document
+     :object-type :node))
 
 (defun decide-thread-idx (&rest args)
   (let ((nm (find t args :test (lambda (_ x)
@@ -410,10 +418,12 @@ The model you defined is printable."
     (unless forward
       (error ":forward slot is need to be fulfilled. When defining Model [~a]" name))
 
-    (if (and (not hide-from-tree) backward)
+    (if (and (not hide-from-tree) backward
+	     (not (eq object-type :optimizer)))
 	(format t "Warning: backward with hide-from-tree=nil never called in backward processes~%"))
     
-    (let ((doc-output (typecase document
+    (let* ((document (eval document))
+	   (doc-output (typecase document
 			(string document)
 			(waffeobjectusage
 			 (build-docstring document object-type))
