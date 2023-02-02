@@ -3,10 +3,10 @@
 
 
 (asdf:defsystem :cl-waffe
-  :author "hikettei twitter -> @ichndm"
-  :licence nil
+  :author "hikettei (Twitter:@icnhdm)"
+  :licence "MIT"
   :version nil
-  :description "an opencl-based deeplearning library"
+  :description "An deep learning framework for Common Lisp"
   :pathname "source"
   :depends-on (#:numcl
 	       #:cl-ansi-text
