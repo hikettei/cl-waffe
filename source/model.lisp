@@ -170,23 +170,24 @@ Example:
          ; W(n+1) = W(n) - n * grad
          (!modify (gethash i (self params))) :+=
                (!mul (self lr) (grad (gethash i (self params))))```"
-  `(progn
-     (defmodel ,name ,args
-       :parameters ,parameters
-       :optimize ,optimize
-       :forward ,update
-       ;zero-grad
-       :backward ((model) (dolist (p (find-variables model))
-			    (setf (waffetensor-state p) nil)
-			    (setf (waffetensor-backward p) nil)
-			    (setf (waffetensor-variables p) nil)
-			    (if (waffetensor-grad p) ; only params have grad
-				(setf (waffetensor-grad p) `(nil nil)))
-			    (setf (waffetensor-grad-tmp p) (make-grad-tmp)))
-		nil)
-       :hide-from-tree nil
-       :document ,document
-       :regard-as-node t)))
+
+  `(defmodel ,name ,args
+    :parameters ,parameters
+    :optimize ,optimize
+    :forward ,update
+    ;zero-grad
+    :backward ((model) (dolist (p (find-variables model))
+			 (setf (waffetensor-state p) nil)
+			 (setf (waffetensor-backward p) nil)
+			 (setf (waffetensor-variables p) nil)
+			 (if (waffetensor-grad p) ; only params have grad
+			     (setf (waffetensor-grad p) `(nil nil)))
+			 (setf (waffetensor-grad-tmp p) (make-grad-tmp)))
+	       nil)
+    :hide-from-tree nil
+    :document ,document
+    :regard-as-node t
+    :object-type :optimizer))
 
 (defmacro defnode (name
 		   args
@@ -231,7 +232,15 @@ Example:
 
 (call (AddTensor) tensor1 tensor2)```"
   
-  `(defmodel ,name ,args :parameters ,parameters :forward ,forward :backward ,backward :hide-from-tree T :optimize ,optimize :regard-as-node ,regard-as-node :document ,document))
+  `(defmodel ,name ,args
+     :parameters ,parameters
+     :forward ,forward
+     :backward ,backward
+     :hide-from-tree T
+     :optimize ,optimize
+     :regard-as-node ,regard-as-node
+     :document ,document
+     :object-type :node))
 
 (defun decide-thread-idx (&rest args)
   (let ((nm (find t args :test (lambda (_ x)
@@ -379,7 +388,8 @@ Example:
 		      hide-from-tree
 		      optimize
 		      (regard-as-node nil)
-		      (document "An model, defined by cl-waffe"))
+		      (document "An model, defined by cl-waffe")
+		      (object-type :model))
   "Defining model.
 The arguments are the same as defnode, defoptimizer. So I will omit.
 
@@ -392,6 +402,8 @@ The parameter tensor defined in :parameters will be updated by calling (update) 
 If you just would like to use cl-waffe's default features, you would mostly use this.
 
 See the examples in the cl-waffe's repository.
+
+In the :forward :backward slot, an macro `(self name)` defined by macrolet is supplied, this macro allows you access parameters in the model of current state. (Parameters aren't static.)
 
 The model you defined is printable."
   (labels ((assure-args (x)
@@ -406,17 +418,23 @@ The model you defined is printable."
     (unless forward
       (error ":forward slot is need to be fulfilled. When defining Model [~a]" name))
 
-    (if (and (not hide-from-tree) backward)
+    (if (and (not hide-from-tree) backward
+	     (not (eq object-type :optimizer)))
 	(format t "Warning: backward with hide-from-tree=nil never called in backward processes~%"))
     
-    (prog1
+    (let* ((document (eval document))
+	   (doc-output (typecase document
+			(string document)
+			(waffeobjectusage
+			 (build-docstring document object-type))
+			(T "None"))))
       `(prog1
 	   (defstruct (,name
 		       (:print-function (lambda (m stream k)
 					  (declare (ignore k))
 					  (render-simple-model-structure stream m)))
 		       (:constructor ,name (,@args &aux ,@(map 'list (lambda (x) `(,(car x) ,(second x))) parameters))))
-	     ,document
+	     ,doc-output
 	     (hide-from-tree ,hide-from-tree :type boolean)
 	     (forward t :type boolean)
 	     (backward ,(if backward t nil) :type boolean)

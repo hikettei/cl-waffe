@@ -141,4 +141,13 @@
 	   #:!sigmoid
 	   #:!tanh
 	   #:!softmax
+
+	   #:with-usage
 	   ))
+
+(defparameter *cl-waffe-object-types* `(:model
+					:node
+					:trainer
+					:optimizer
+					:dataset)
+  "An identifiers of cl-waffe's objects.")

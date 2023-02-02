@@ -19,7 +19,7 @@ Default: 6")
 (defparameter *default-backend* :mgl
   "Default backend cl-waffe uses. Default: :mgl")
 
-(defparameter mgl-mat:*DEFAULT-MAT-CTYPE* :float) ;double/float
+(defparameter mgl-mat:*DEFAULT-MAT-CTYPE* :float) ; in default, float
 
 (deftype WaffeSupportedDataType ()
   `(or fixnum float null cons function ratio)) ;cons?
@@ -281,7 +281,7 @@ This structure is printable and printed nicely."
 
 (defun backward (tensor)
   "Backward tensor, and making grads.
-   Note that tensor must be shape of `(1) or single value. Otherwise an error occurs.
+   Note that tensor must be the shape of `(1) or single value. Otherwise an error occurs.
    In the process calculating backward, backwards won't be created."
   (declare (type waffetensor tensor))
   (if (typep (data tensor) 'mgl-mat:mat)
@@ -595,7 +595,6 @@ This structure is printable and printed nicely."
 	     (render-v (!aref-array data (1- (car (array-dimensions data)))) NIL)
 	     (write-string ")" stream)))))))
 
-; ridiculously slow
 (defun render-tensor (tensor &optional (newline T) (indent-size 0))
   (with-slots ((contents data) (backward backward) (backend backend) (grad grad)) tensor
     (with-output-to-string (res)
