@@ -9,9 +9,9 @@
   :description "An deep learning framework for Common Lisp"
   :pathname "source"
   :depends-on (#:numcl
+	       #:lake
 	       #:cl-ansi-text
 	       #:mgl-mat
-	       #:cl-libsvm-format
 	       #:alexandria
 	       #:cl-cuda
 	       #:trivial-garbage
