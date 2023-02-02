@@ -1,12 +1,14 @@
 
 (in-package :cl-user)
 
+(ql:quickload :lparallel :silent t)
 
 (asdf:defsystem :cl-waffe
   :author "hikettei (Twitter:@icnhdm)"
   :licence "MIT"
   :version nil
   :description "An deep learning framework for Common Lisp"
+  :source-control (:git "https://github.com/hikettei/cl-waffe.git")
   :pathname "source"
   :depends-on (#:numcl
 	       #:lake
