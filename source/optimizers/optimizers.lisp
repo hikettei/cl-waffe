@@ -8,7 +8,7 @@
 	      :update "Following defnition.")
   :optimize t
   :parameters ((params params :type hash-table)
-	       (lr lr :type single-float))
+	       (lr lr :type float))
   :update (()
 	   (dotimes (i (hash-table-count (self params)))
 	     ; W(n+1) = W(n) - n * grad
@@ -80,14 +80,14 @@
 	      :args "&key (lr 1e-3) (epsilon 1e-7) (beta1 0.9) (beta2 0.999)"
 	      :update "Following definition.")
   :optimize t
-  :parameters ((params params  :type hash-table)
-	       (lr lr          :type single-float)
+  :parameters ((params params :type hash-table)
+	       (lr lr :type float)
 	       (m (make-hash-table) :type hash-table)
 	       (v (make-hash-table) :type hash-table)
-	       (n 0             :type fixnum)
-	       (epsilon epsilon :type single-float)
-	       (beta1 beta1 :type single-float)
-	       (beta2 beta2 :type single-float))
+	       (n 0 :type fixnum)
+	       (epsilon epsilon :type float)
+	       (beta1 beta1 :type float)
+	       (beta2 beta2 :type float))
   :update (()
 	   (if (= (hash-table-count (self m)) 0)
 	       (dotimes (i (hash-table-count (self params)))
