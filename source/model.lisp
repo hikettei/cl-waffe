@@ -186,7 +186,8 @@ Example:
 		nil)
        :hide-from-tree nil
        :document ,document
-       :regard-as-node t)))
+       :regard-as-node t
+       :object-type :optimizer)))
 
 (defmacro defnode (name
 		   args
@@ -231,7 +232,7 @@ Example:
 
 (call (AddTensor) tensor1 tensor2)```"
   
-  `(defmodel ,name ,args :parameters ,parameters :forward ,forward :backward ,backward :hide-from-tree T :optimize ,optimize :regard-as-node ,regard-as-node :document ,document))
+  `(defmodel ,name ,args :parameters ,parameters :forward ,forward :backward ,backward :hide-from-tree T :optimize ,optimize :regard-as-node ,regard-as-node :document ,document :object-type :node))
 
 (defun decide-thread-idx (&rest args)
   (let ((nm (find t args :test (lambda (_ x)
@@ -379,7 +380,8 @@ Example:
 		      hide-from-tree
 		      optimize
 		      (regard-as-node nil)
-		      (document "An model, defined by cl-waffe"))
+		      (document "An model, defined by cl-waffe")
+		      (object-type :model))
   "Defining model.
 The arguments are the same as defnode, defoptimizer. So I will omit.
 
@@ -411,14 +413,18 @@ The model you defined is printable."
     (if (and (not hide-from-tree) backward)
 	(format t "Warning: backward with hide-from-tree=nil never called in backward processes~%"))
     
-    (prog1
+    (let ((doc-output (typecase document
+			(string document)
+			(waffeobjectusage
+			 (build-docstring document object-type))
+			(T "None"))))
       `(prog1
 	   (defstruct (,name
 		       (:print-function (lambda (m stream k)
 					  (declare (ignore k))
 					  (render-simple-model-structure stream m)))
 		       (:constructor ,name (,@args &aux ,@(map 'list (lambda (x) `(,(car x) ,(second x))) parameters))))
-	     ,document
+	     ,doc-output
 	     (hide-from-tree ,hide-from-tree :type boolean)
 	     (forward t :type boolean)
 	     (backward ,(if backward t nil) :type boolean)

@@ -35,6 +35,7 @@
 			     (:file "optimizers")
 			     (:file "kernel")))
 	       (:file "package")
+	       (:file "utils")
 	       (:file "model" :depends-on ("tensor"))
 	       (:file "tensor")
                (:file "kernel" :depends-on ("tensor"))

@@ -19,7 +19,7 @@ Default: 6")
 (defparameter *default-backend* :mgl
   "Default backend cl-waffe uses. Default: :mgl")
 
-(defparameter mgl-mat:*DEFAULT-MAT-CTYPE* :float) ;double/float
+(defparameter mgl-mat:*DEFAULT-MAT-CTYPE* :float) ; in default, float
 
 (deftype WaffeSupportedDataType ()
   `(or fixnum float null cons function ratio)) ;cons?

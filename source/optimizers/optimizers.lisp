@@ -2,6 +2,12 @@
 (in-package :cl-waffe.optimizers)
 
 (defoptimizer SGD (params &key (lr 1e-3))
+  :document (with-usage
+	      :name "SGD"
+	      :overview "Simple SGD"
+	      :args "&key (lr 1e-3)"
+	      :update "Following defnition.")
+	      
   :optimize t
   :parameters ((params params :type hash-table)
 	       (lr lr :type single-float))
@@ -13,7 +19,7 @@
 
 ; not optimized
 (defoptimizer Momentum (params &key (momentum 0.9) (lr 1e-3))
-  :parameters ((params params) (lr 1e-2) (momentum momentum) (velocities (make-hash-table)))
+  :parameters ((params params) (lr lr) (momentum momentum) (velocities (make-hash-table)))
   :update (()
 	   (if (= (hash-table-count (self velocities)) 0)
 	       (progn
