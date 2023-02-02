@@ -45,8 +45,56 @@
   :forward (()
 	    (funcall (self caller))))
 
-(defmacro deftrainer (name args &key model optimizer optimizer-args step-model predict (forward NIL))
-  (if forward (error ":forward is unavailable in deftrainer macro. use instead: :step-model"))
+(defmacro deftrainer (name args
+		      &key
+			model
+			optimizer
+			optimizer-args
+			step-model
+			predict
+			(document "An trainer structure defined by cl-waffe."))
+  "Defining trainer, which is made in order to call `(train)` function.
+
+The slots you defined can be invoked by using `(step-model model &rest args) (predict model &rest args)`. See below.
+
+Keywords:
+  model ... An model defined by `(defmodel)` which you want to train.
+  optimizer ... An optimizer defined by `(defoptimizer)`
+  optimizer-args ... An arguments for optimizer
+  step-model ... For each batch step, :step-model is called in `(train)` function.
+  Describe here forward step, backward, zero-grad, update for training.
+  predict ... An code for predicting.
+
+Macros:
+ These macros are defined by macrolet.
+
+ (self name) ... access trainer's parameters.
+ (model)     ... access trainer's model, defined by :model keyword.
+ (zero-grad) ... Find model's all parameters and constants, and initialize their grads. (i.e. call optimizer's backward)
+ (update)    ... Find model's all parameters, and call optimizer and change parameter's data. (i.e. call optimizer's forward)
+
+This trainer macro is defined in order to integrate following works:
+  calling models
+  calling criterions
+  backprop
+  calling optimizer
+  calling zero-grad
+
+  defining predict
+
+Here's example
+  
+(deftrainer MLPTrainer (activation lr)
+  :model          (MLP activation)
+  :optimizer      cl-waffe.optimizers:Adam ; Please remain that optimizer slot erquires single variable.
+  :optimizer-args (:lr lr) ; this arguments directly expanded to optimizer's args.
+  :step-model ((x y)
+	       (zero-grad) ; call zero-grad
+	       (let ((out (cl-waffe.nn:softmax-cross-entropy (call (model) x) y))) ; get criterion
+		 (backward out) ; backward
+		 (update) ; call optimizer
+		 out)) ; return loss
+ :predict ((x) (call (model) x))) ;for predict"
   (labels ((assure-args (x)
 	     (if (or (eq (symbol-name x) "model")
 		     (eq (symbol-name x) "predict")
@@ -71,6 +119,7 @@
 							    (optimizer (cl-waffe.optimizers:init-optimizer ,optimizer
 							   		              			    model
 										         		    ,@optimizer-args)))))
+	             ,document
 		     (model NIL)
 		     (optimizer NIL)
 		     (optimizer-report t)
@@ -80,24 +129,52 @@
 	   (define-trainer-method trainer-predict    ,name ,(car predict)    ,(cdr predict))))))
 
 (defun step-model (trainer &rest args)
+  "An function for calling trainer object defined by deftrainer
+By using this function, trainer's step-model will be invoked.
+
+Input: Trainer, Args"
   (step-model1 trainer args))
 
 (defun step-model1 (trainer args)
+  "The same as step-model but args must be cons"
   (uncheck-destructive args)
   (labels ((forward ()
 	     (apply (trainer-step-model trainer) args)))
     (call (TrainerInputLayer #'forward))))
 
 (defun predict (trainer &rest args)
+  "An function for calling trainer's predict slot"
   (predict1 trainer args))
 
 (defun predict1 (trainer args)
+  "The same as predict1 byt args must be cons"
   (uncheck-destructive args)
   (labels ((predict-lambda ()
 	     (apply (trainer-predict trainer) args)))
     (call (TrainerInputLayer #'predict-lambda))))
 
-(defmacro defdataset (name args &key parameters next length)
+(defmacro defdataset (name args &key parameters next length (document "An dataset structure defined by cl-waffe."))
+  "Defining dataset. (This is kinda pytorch's dataloader)
+
+The slots you defined can be invoked by using (get-dataset dataset index) (get-length dataset).
+
+Keywords:
+   parameters ... parameters datasets have.
+   next ... when function (get-dataset dataset index) is called, this slot invokes. Return waffetensor for the next batch in response to your task.
+   length ... return fixnum, the total length of your datasets. (Not a batch, and not a current index.)
+
+Example:
+
+(defdataset Mnistdata (train valid batch-size)
+  :parameters ((train train) (valid valid) (batch-size batch-size))
+  :next    ((index)
+	    (list (!set-batch (self train) index (self batch-size))
+		  (!set-batch (self valid) index (self batch-size))))
+  :length (() (car (!shape (self train)))))
+
+cl-waffe excepts index must be 1, 2, 3, ... (dataset-maxlen)
+
+So, please manage batch-sizes in args and :next slots."
   (labels ((assure-args (x)
 		     (if (or (eq (symbol-name x) "parameters")
 			     (eq (symbol-name x) "next")
@@ -116,6 +193,7 @@
 					   (declare (ignore trainer _))
 					   (format stream "[Dataset of ___]")))
 			(:constructor ,name (,@args &aux ,@parameters)))
+	      ,document
 	    ,@(map 'list (lambda (x) (assure-args (car x))) parameters)  
 	    (length       t :type boolean)
 	    (dataset-next t :type boolean))
@@ -123,9 +201,13 @@
 	  (define-dataset-method dataset-length ,name ,(car length) ,(cdr length))))))
 
 (defun get-dataset (dataset index)
+  "Get datum of the index from dataset.
+Input: dataset ... dataset defined by defdataset.
+       index ... fixnum"
   (funcall (dataset-next dataset) index))
 
 (defun get-dataset-length (dataset)
+  "Get total size of your dataset."
   (funcall (dataset-length dataset)))
 
 (defun eq-ntimes (width &optional (word "="))
@@ -218,6 +300,12 @@
 	(valid trainer valid-dataset batch-size))))
 
 (defdataset WaffeDataset (train valid &key (batch-size 1))
+  :document "This is simple dataset for 2d tensors.
+Args:
+  train & valid ... which must be the shape of (training-size n-classes)
+  batch-size ... batch-size
+
+index excepts for 1, 2, 3, ... (maxlen)"
   :parameters ((train train) (valid valid) (batch-size batch-size))
   :next    ((index)
 	    (list (!set-batch (self train) index (self batch-size))

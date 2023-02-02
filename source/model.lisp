@@ -393,6 +393,8 @@ If you just would like to use cl-waffe's default features, you would mostly use 
 
 See the examples in the cl-waffe's repository.
 
+In the :forward :backward slot, an macro `(self name)` defined by macrolet is supplied, this macro allows you access parameters in the model of current state. (Parameters aren't static.)
+
 The model you defined is printable."
   (labels ((assure-args (x)
 	     (declare (type symbol x))

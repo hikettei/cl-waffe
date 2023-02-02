@@ -22,7 +22,12 @@
 (declaim (ftype (function (waffetensor) waffetensor) warranty))
 (defun warranty (tensor)
   "Notice waffe's optimizer that do not delete tensor given until warranty called
-   in the calc node"
+   in the calc node
+
+   When you encountered error in the forward step that the tensor that attempted to read has already cached ~, try this like:
+
+  (warranty your-tensor)
+  (print your-tensor)"
   (declare (optimize (speed 3) (safety 0) (space 0))
 	   (type waffetensor tensor))
   (prog1
