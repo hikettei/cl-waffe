@@ -153,17 +153,28 @@ Input: Trainer, Args"
 	     (apply (trainer-predict trainer) args)))
     (call (TrainerInputLayer #'predict-lambda))))
 
+(defun print-dataset (trainer stream _)
+  (declare (ignore trainer _))
+  (format stream "[Dataset of ___]"))
+
 (defmacro defdataset (name args &key parameters next length (document "An dataset structure defined by cl-waffe."))
   "Defining dataset. (This is kinda pytorch's dataloader)
 
 The slots you defined can be invoked by using (get-dataset dataset index) (get-length dataset).
 
-Keywords:
-   parameters ... parameters datasets have.
-   next ... when function (get-dataset dataset index) is called, this slot invokes. Return waffetensor for the next batch in response to your task.
-   length ... return fixnum, the total length of your datasets. (Not a batch, and not a current index.)
+@begin(deflist)
+@term(parameters)
+@def(parameters datasets have.)
 
-Example:
+@term(next)
+@def(when function (get-dataset dataset index) is called, this slot invokes. Return waffetensor for the next batch in response to your task.)
+
+@term(length)
+@def(In this form, the function must return the total length of your datasets where the value is fixnum. (Not a batch, and not a current index.))
+
+@end(deflist)
+
+@begin[lang=lisp](code)
 
 (defdataset Mnistdata (train valid batch-size)
   :parameters ((train train) (valid valid) (batch-size batch-size))
@@ -172,7 +183,9 @@ Example:
 		  (!set-batch (self valid) index (self batch-size))))
   :length (() (car (!shape (self train)))))
 
-cl-waffe excepts index must be 1, 2, 3, ... (dataset-maxlen)
+@end[lang=lisp](code)
+
+cl-waffe excepts index to be 1, 2, 3, ... (dataset-maxlen)
 
 So, please manage batch-sizes in args and :next slots."
   (labels ((assure-args (x)
@@ -189,9 +202,7 @@ So, please manage batch-sizes in args and :next slots."
      (progn
        `(prog1
 	    (defstruct (,name
-			(:print-function (lambda (trainer stream _)
-					   (declare (ignore trainer _))
-					   (format stream "[Dataset of ___]")))
+			(:print-function print-dataset)
 			(:constructor ,name (,@args &aux ,@parameters)))
 	      ,document
 	    ,@(map 'list (lambda (x) (assure-args (car x))) parameters)  
