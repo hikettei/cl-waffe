@@ -301,7 +301,7 @@ Input: dataset ... dataset defined by defdataset.
 			  (if (= (aref out-labels i) (aref y-labels i))
 			      (incf correct 1)
 			      (incf correct 0))))))
-    (format t "Accuracy:~a%~C" (coerce (/ correct count) 'float) #\newline)))
+    (format t "Accuracy:~a~C" (coerce (/ correct count) 'float) #\newline)))
 			
 (defun train (trainer dataset &key (valid-dataset nil)
 				(valid-each 100)
