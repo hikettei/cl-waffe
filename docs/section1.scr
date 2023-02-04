@@ -38,18 +38,15 @@ Let's check a example and define 3 layers MLP.
 
 @end[lang=lisp](code)
 
-See :parameters, @cl:param(cl-waffe.nn) exports denselayer and linearlayer which constructor is `(in-features out-features &optional (bias T) (activation :relu))`.
+See :parameters, @cl:param(cl-waffe.nn) exports denselayer and linearlayer where constructors are `(in-features out-features &optional (bias T) (activation :relu))`.
 
 And, when @cl:param(MLP) are inited, layer1~layer3 are initied.
 
+In :forward, define your forward propagations.
 
-In :forward, this defined the forward props.
+You can access your model's parameter through macro (self name), and this is just @cl:spec(slot-value), so it's setfable.
 
-You can access your model's parameter through macro (self name).
-
-This is just @cl:spec(slot-value), so it's setfable.
-
-You can call :forward step by using the function (call).
+You can call :forward step by using the function @cl:param(call).
 
 @cl:with-package[name="cl-waffe"](
 @cl:doc(function call)
@@ -57,11 +54,11 @@ You can call :forward step by using the function (call).
 
 Whether you are lisper or not, It is natural that you think MLP's :forward is too rebundant.
 
-So, the macro `(with-calling-layers)` is exported and you can rewrite it.
+So, the macro `(with-calling-layers)` is exported and you can rewrite it concisely.
 
 @cl:doc(macro with-calling-layers)
 
-@cl:param(MLP) requires @cl:param(activation) which indicates the type of activation where @cl:param(activation) is symbol.
+You can see @cl:param(MLP) requires @cl:param(activation) which indicates the type of activation where @cl:param(activation) is symbol.
 
 Finally, this is how MLP is defined.
 
