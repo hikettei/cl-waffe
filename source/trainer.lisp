@@ -53,48 +53,79 @@
 			step-model
 			predict
 			(document "An trainer structure defined by cl-waffe."))
-  "Defining trainer, which is made in order to call `(train)` function.
+  "Defining trainer, which is made in order to call @cl:param(train) function.
 
-The slots you defined can be invoked by using `(step-model model &rest args) (predict model &rest args)`. See below.
+The slots you defined can be invoked by using @c((step-model model &rest args)), @c((predict model &rest args)). See below.
 
-Keywords:
-  model ... An model defined by `(defmodel)` which you want to train.
-  optimizer ... An optimizer defined by `(defoptimizer)`
-  optimizer-args ... An arguments for optimizer
-  step-model ... For each batch step, :step-model is called in `(train)` function.
-  Describe here forward step, backward, zero-grad, update for training.
-  predict ... An code for predicting.
 
-Macros:
- These macros are defined by macrolet.
+@begin(deflist)
 
- (self name) ... access trainer's parameters.
- (model)     ... access trainer's model, defined by :model keyword.
- (zero-grad) ... Find model's all parameters and constants, and initialize their grads. (i.e. call optimizer's backward)
- (update)    ... Find model's all parameters, and call optimizer and change parameter's data. (i.e. call optimizer's forward)
+@term(model)
+@def(An model defined by @c((defmodel)) which you want to train.)
+
+@term(optimizer)
+@def(An optimizer defined by @c((defoptimizer)))
+
+@term(optimizer-args)
+@def(An arguments for optimizer)
+
+@term(step-model)
+@def(For each batch step, :step-model is called in @c((train)) function. Describe here forward step, backward, zero-grad, update for training.)
+
+@term(predict)
+@def(an code for predicting)
+
+@end(deflist)
+
+
+These macro below are defined by @cl:spec(macrolet) and you can use them in :step-model, :predict
+
+@begin(deflist)
+@term((self name))
+@def(access trainer's parameters.)
+
+@term((model))
+@def(access trainer's model, defined by :model keyword.)
+
+@term((zero-grad))
+@def(Find model's all parameters and constants, and initialize their grads. (i.e. call optimizer's backward))
+
+@term((update))
+@def(Find model's all parameters, and call optimizer and change parameter's data. (i.e. call optimizer's forward))
+@end(deflist)
 
 This trainer macro is defined in order to integrate following works:
-  calling models
-  calling criterions
-  backprop
-  calling optimizer
-  calling zero-grad
 
-  defining predict
+@begin(enum)
+  @item(calling models)
+  @item(calling criterions)
+  @item(calling backward)
+  @item(calling optimizer)
+  @item(calling zero-grad)
+  @item(defining predict)
+@end(enum)
 
-Here's example
-  
+Example:
+
+@begin[lang=lisp](code)
 (deftrainer MLPTrainer (activation lr)
   :model          (MLP activation)
-  :optimizer      cl-waffe.optimizers:Adam ; Please remain that optimizer slot erquires single variable.
-  :optimizer-args (:lr lr) ; this arguments directly expanded to optimizer's args.
+  :optimizer      cl-waffe.optimizers:Adam ; Note: :optimizer requires a single variable.
+  :optimizer-args (:lr lr) ; these arguments directly expanded to optimizer's args.
   :step-model ((x y)
 	       (zero-grad) ; call zero-grad
 	       (let ((out (cl-waffe.nn:softmax-cross-entropy (call (model) x) y))) ; get criterion
 		 (backward out) ; backward
 		 (update) ; call optimizer
 		 out)) ; return loss
- :predict ((x) (call (model) x))) ;for predict"
+ :predict ((x) (call (model) x))) ;for predict
+
+(setq trainer (MLPTrainer :relu 1e-4)) ; init your trainer
+
+; Train:   (step-model trainer model-input-x model-input-y)
+; Predict: (predict trainer model-input-x)
+
+@end[lang=lisp](code)"
   (labels ((assure-args (x)
 	     (if (or (eq (symbol-name x) "model")
 		     (eq (symbol-name x) "predict")
@@ -257,7 +288,7 @@ Input: dataset ... dataset defined by defdataset.
 (defun valid (trainer dataset batch-size)
   (let ((count 0)
 	(correct 0))
-    (loop for index below (get-dataset-length dataset) by batch-size
+    (loop for index fixnum upfrom 0 below (get-dataset-length dataset) by batch-size
 	  do (let* ((ds (get-dataset dataset index))
 		    (x (car ds))
 		    (y (second ds))
@@ -285,7 +316,8 @@ Input: dataset ... dataset defined by defdataset.
 				(width 45)
 				(random nil)
 				(height 10)
-				(print-each 10)) ; stream指定してtxtファイルにログを残せるようにしたい
+				(print-each 10)) ; stream指定したい/cl-gnuplot/cl-termgraph使う
+  "Train"
   (let ((losses nil) ; cl-termgraph assumes that loss >= 0
 	(status-bar nil)
 	(total-len (get-dataset-length dataset)))
@@ -299,7 +331,7 @@ Input: dataset ... dataset defined by defdataset.
 	    (format stream "~C~a~C" #\newline (format-title (format nil "|~a Epoch:|" epoch-num) 4 width) #\newline)
 	    (format stream "~C~a~C" #\newline (eq-ntimes width "–") #\newline)))
       
-      (loop for index below (/ total-len  batch-size)
+      (loop for index fixnum below (/ total-len  batch-size)
 	    do (let* ((i (if random (random (- total-len batch-size)) index))
 		      (args (get-dataset dataset i))
 		      (loss (data (step-model1 trainer args))))

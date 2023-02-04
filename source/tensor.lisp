@@ -383,6 +383,8 @@ This structure is printable and printed nicely."
 
 (declaim (ftype (function (waffetensor fixnum fixnum) waffetensor) !set-batch))
 (defun !set-batch (dataset start-row-index batch-size)
+  "Set batch where dataset is a 2d mat
+Note: dataset's shape must be divided by batch-size (Todo Fix)"
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type waffetensor dataset)
 	   (type fixnum start-row-index batch-size))
