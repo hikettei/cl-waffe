@@ -378,8 +378,7 @@ And this function has a lot of todo."
 (defdataset WaffeDataset (train valid &key (batch-size 1))
   :document (with-usage "WaffeDataSet"
 	      :overview "The standard dataset for 2d training data."
-	      :args "train valid &key (batch-size 1)"
-	      :note "HOGE")
+	      :args "train valid &key (batch-size 1)")
   :parameters ((train
 		train
 		:type
