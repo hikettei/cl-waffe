@@ -1,12 +1,17 @@
 @begin(section)
 @title(Basics)
 
+@begin(section)
+@title(First)
 Thank you for having an interest in my framework.
 
-Let's get started with MNIST Example.
+In this section, we define Simple MLP with cl-waffe, and train MNIST.
 
+Let's get started!
+
+@end(section)
 @begin(section)
-@title(Define Model)
+@title(Define Your Model)
 @cl:with-package[name="cl-waffe"](
 @cl:doc(macro defmodel)
 
@@ -50,8 +55,6 @@ So, the macro `(with-calling-layers)` is exported and you can rewrite it.
 
 @cl:doc(macro with-calling-layers)
 
-
-
 @cl:param(MLP) requires @cl:param(activation) which indicates the type of activation where @cl:param(activation) is symbol.
 
 Finally, this is how MLP is defined.
@@ -68,9 +71,25 @@ Finally, this is how MLP is defined.
  	      (layer2 x)
 	      (layer3 x))))
 
-(setq model (MLP :relu)); => [Model: MLP]
+(setq model (MLP :relu)) ; => [Model: MLP]
 
 @end[lang=lisp](code)
 )
+
+@end(section)
+
+@begin(section)
+@title(Define Your Dataset)
+
+@cl:with-package[name="cl-waffe"](
+@cl:doc(macro defdataset)
+)
+
+It is not always necessary to define a Dataset, but it is required to use the trainer described below.
+
+In real, the format of the dataset is similar for different task, so I will use the default dataloader defined in the standard.
+
+@cl:doc(struct WaffeDataset)
+
 @end(section)
 @end(section)

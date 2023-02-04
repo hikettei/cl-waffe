@@ -2,18 +2,55 @@
 @title(Overview)
 
 @begin(section)
-@title(Welcome To cl-waffe)
-  (Display my logo here)
+@title(Welcome To cl-waffe!)
+(Display my logo here)
 
-  @b(This package is under development)
+@b(This package is under development)
 
-  cl-waffe is a deep learning framework, which is aimed to:
-  
-  @begin(enum)
-  @item(Simple and fast.)
-  @item(Integrate environment.)
-  @item(Extensible for users.)
-  @end(enum)
+cl-waffe is a deep learning framework, which is aimed to:
+
+@begin(enum)
+@item(Simple and fast.)
+@item(Integrate environment.)
+@item(Extensible for users.)
+@end(enum)
+
+@end(section)
+
+@begin(section)
+@title(Todo List And Problems)
+@begin(enum)
+@item(Todo)
+@end(enum)
+@end(section)
+
+@begin(section)
+@title(Pull Requests)
+
+Pull requests are welcome at @link[uri="https://github.com/hikettei/cl-waffe"](Original Repository)
+
+
+In paticular, additional nodes are welcome.
+
+Don't worry too much about performance.
+
+To be honest, English is not my cup of tea.
+
+Feel free to point out my mistakes in English.
+
+@end(section)
+@begin(section)
+@title(Contacts)
+
+My Discord: @link[uri="https://discordapp.com/users/350796206449885186"](rulia🌙#5298)
+
+My Twitter: @link[uri="https://twitter.com/ichndm"](@ichndm)
+
+@end(section)
+@begin(section)
+@title(LLA Setting)
+
+In order to use OpenBLAS:
 
 @end(section)
 @end(section)
