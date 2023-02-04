@@ -12,7 +12,7 @@ cl-waffe is a deep learning framework, which is aimed to:
 
 @begin(enum)
 @item(Simple and fast.)
-@item(Integrate environment.)
+@item(Integrate environments.)
 @item(Extensible for users.)
 @end(enum)
 

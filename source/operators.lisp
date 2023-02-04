@@ -27,6 +27,10 @@
 (declaim (inline !div !transpose))
 
 (defnode AddTensor nil
+  :document (with-usage "AddTensor"
+	      :overview "Add given tensor"
+	      :args "x y"
+	      :forward "+")
   :optimize t
   :parameters nil
   :forward  ((x y)
