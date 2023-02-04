@@ -128,39 +128,51 @@
 			  update
 			  optimize
 			  (document "An optimizer, defined by cl-waffe."))
-  "Defining optimizers. Internally, This is paraphase of defmodel, which slot names are different.
+  "Defining optimizers. Internally, This is paraphase of defmodel, which slot names are just different.
 
-Note: by calling :backward slot of this, that behaves as (zero-grad).
+@u(Note: by calling :backward slot, optimizers work as (zero-grad).)
 
+@begin(deflist)
 
-Input:
+@term(Name)
+@def(The optimizer's structure and constructor will be defined based on name)
 
-name ... The optimizer's structure and constructor will be defined based on name
+@term(Args)
+@def(Initializer of the optimizer. The first value of initializer is the hash-table that collected model's parameter where the key is fixnum from 0 to n. You have to save it.)
 
-args ... Initializer of the optimizer. **The first value of initializer is the hash-table that collected model's parameter where the key is fixnum from 0 to n. You have to save it.
-
-&keys
+@term(parameters)
+@begin(def)
 
 parameters ... An parameters that it has. (the same as structure's slot)
 
-Example: :parameters ((count 0)
-                      (humans 0 :type fixnum)
-                      (inited? nil))
+Example:
 
-update: when training and (update) is called, this slot is called and you optimizer your parameters.
+@begin[lang=lisp](code)
+:parameters ((count 0)
+             (humans 0 :type fixnum)
+             (inited? nil))
+@end[lang=lisp](code)
 
-optimize: when t, the :update slot is defined with (optimize (speed 3) (space 0) (debug 0)) Default: nil
+@end(def)
 
+@term(update)
+@def(when training and (update) is called, this slot is called and you optimizer your parameters.)
 
-document: docstring for optimizers
+@term(optimize)
+@def(when t, the :update slot is defined with (optimize (speed 3) (space 0) (debug 0)) Default: nil)
 
-You can use your optimized by using deftrainer, see the references of that.
+@term(document)
+@def(docstring for optimizers. You can use string or (with-usage) macro)
 
-(The way you call optimizer without using deftrainer is coming soon...)
+@end(def)
+
+@end(deflist)
+
+Through (deftrainer) macro, it is the easiest way to use your optimizer.
 
 Example:
 
-```lisp
+@begin[lang=lisp](code)
 (defoptimizer SGD (params &key (lr 1e-3))
   :optimize t
   :parameters ((params params :type hash-table)
@@ -169,9 +181,10 @@ Example:
        (dotimes (i (hash-table-count (self params)))
          ; W(n+1) = W(n) - n * grad
          (!modify (gethash i (self params))) :+=
-               (!mul (self lr) (grad (gethash i (self params))))```"
+               (!mul (self lr) (grad (gethash i (self params)))))))
+@begin[lang=lisp](code)"
 
-  `(defmodel ,name ,args
+  `(defobject ,name ,args
     :parameters ,parameters
     :optimize ,optimize
     :forward ,update
@@ -222,7 +235,7 @@ And this can be called with call.
 
 Example:
 
-```lisp
+@begin[lang=lisp](code)
 (defnode AddTensor nil
   :optimize t
   :parameters nil
@@ -230,9 +243,10 @@ Example:
 	     (with-searching-calc-node :add x y))
   :backward ((dy) (list dy dy)))
 
-(call (AddTensor) tensor1 tensor2)```"
+(call (AddTensor) tensor1 tensor2)
+@end[lang=lisp](code)"
   
-  `(defmodel ,name ,args
+  `(defobject ,name ,args
      :parameters ,parameters
      :forward ,forward
      :backward ,backward
@@ -379,17 +393,31 @@ Example:
 	 (defmethod ,fname ((self ,name))
 	   (lambda (&rest node-inputs) (apply #',f-ident self node-inputs))))))
 
-(defmacro defmodel (name
-		    args
-		    &key
+(defmacro defmodel (name args
+			 &key
+			   (parameters nil)
+			   (forward `((&rest args)
+				      (error ":forward isn't defined.")))
+			   (optimize nil)
+			   (document "An model, defined by cl-waffe"))
+  ""
+  `(defobject ,name ,args
+     :parameters ,parameters
+     :forward ,forward
+     :optimize ,optimize
+     :document ,document))
+			 
+(defmacro defobject (name
+		     args
+		     &key
 		      parameters
 		      (forward `((&rest args) (error ":forward isn't defined.")))
 		      (backward `((&rest args) (error ":backward isn't defined.:"))) ; Todo: displaying model name
 		      hide-from-tree
 		      optimize
 		      (regard-as-node nil)
-		      (document "An model, defined by cl-waffe")
-		      (object-type :model))
+		      (document "An object, defined by cl-waffe")
+		      (object-type :object))
   "Defining model.
 The arguments are the same as defnode, defoptimizer. So I will omit.
 
