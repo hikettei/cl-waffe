@@ -91,5 +91,14 @@ In real, the format of the dataset is similar for different task, so I will use 
 
 @cl:doc(struct WaffeDataset)
 
+Write your own programme to load the study and initialise the Dataloader
+
+(後でcl-waffe.ioについて記述しておく。。。)
+
+@end(section)
+
+@begin(section)
+@title(Train)
+Train your model
 @end(section)
 @end(section)

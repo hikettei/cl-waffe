@@ -199,13 +199,17 @@ So, please manage batch-sizes in args and :next slots."
     (unless length
       (error "defdataset: the slot :length is nil. Please fill here the code returning the total size of a training data."))
     
-     (progn
+    (let* ((document (eval document))
+	   (doc-output (typecase document
+			 (string document)
+			 (waffeobjectusage
+			  (build-docstring document :dataset))
+			 (T "None"))))
        `(prog1
 	    (defstruct (,name
 			(:print-function print-dataset)
 			(:constructor ,name (,@args &aux ,@(map 'list (lambda (x) `(,(car x) ,(second x))) parameters))))
-	      ,document
-
+	      ,doc-output
 	    ,@(map 'list (lambda (x) `(,(assure-args (car x)) ,(second x) ,@(cddr x))) parameters)
 	    (length       t :type boolean)
 	    (dataset-next t :type boolean))
@@ -312,12 +316,10 @@ Input: dataset ... dataset defined by defdataset.
 	(valid trainer valid-dataset batch-size))))
 
 (defdataset WaffeDataset (train valid &key (batch-size 1))
-  :document "This is simple dataset for 2d tensors.
-Args:
-  train & valid ... which must be the shape of (training-size n-classes)
-  batch-size ... batch-size
-
-index excepts for 1, 2, 3, ... (maxlen)"
+  :document (with-usage "WaffeDataSet"
+	      :overview "The standard dataset for 2d training data."
+	      :args "train valid &key (batch-size 1)"
+	      :note "HOGE")
   :parameters ((train
 		train
 		:type

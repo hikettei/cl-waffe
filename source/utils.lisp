@@ -28,19 +28,22 @@ When you define object (defmodel defnode etc...) all of them will be used for do
 (defun build-docstring (usage object-type)
   ; in progess
   (with-output-to-string (doc)
-    (format doc "# [~a]:~a~%~%"
+    ; Todo ArgsDesc
+    (format doc "@begin(section)~%@title(cl-waffe's ~a: ~a)~%"
 	    object-type
 	    (waffeobjectusage-name usage))
-    (format doc "Overview: ~a~%"
+    (format doc "@b(This structure is cl-waffe object) ~%@begin(deflist)~%")
+    (format doc "@term(Overview)~% @def(~a)~%"
 	    (waffeobjectusage-overview usage))
-    (format doc "~%How to make: `(~a ~a)` => [~a: ~a]~%~%"
+    
+    (unless (equal (waffeobjectusage-note usage) "")
+      (format doc "@term(Note)~%@begin(def)~%@u(~a)~%@end(def)~%" (waffeobjectusage-note usage)))
+
+    (format doc "@term(How to Initialize)~% @begin(def)~%@begin[lang=lisp](code)~%(~a ~a) => [~a: ~a]~%@end[lang=lisp](code)~%@end(def)~%"
 	    (waffeobjectusage-name usage)
 	    (waffeobjectusage-args usage)
 	    object-type
 	    (waffeobjectusage-name usage))
-
-    (unless (equal (waffeobjectusage-note usage) "")
-      (format doc "Note: ~a~%~%" (waffeobjectusage-note usage)))
 
     (case object-type
       (:node
@@ -88,7 +91,16 @@ When you define object (defmodel defnode etc...) all of them will be used for do
        (format doc "How to predict: `(predict (~a) &rest args)`~%"
 	       (waffeobjectusage-name usage)))
       (:dataset
-       (format doc "### get-dataset~%")))))
+       (format doc "@term(get-dataset)~%")
+       (format doc "@begin(def)~%@begin[lang=lisp](code)~%(get-dataset ~a index) ; => Next Batch~%@end(code)~%@end(def)~%"
+	       (waffeobjectusage-name usage))
+
+       (format doc "@term(get-dataset-length)~%")
+       (format doc "@begin(def)~%@begin[lang=lisp](code)~%(get-dataset-length ~a) ; => Total length of ~a~%@end(code)~%@end(def)~%"
+	       (waffeobjectusage-name usage)
+	       (waffeobjectusage-name usage))))
+    (format doc "~%@term(Object's slots)@def()~%")
+    (format doc "~%@end(deflist)~%@end(section)")))
       
 (defmacro with-usage (object-name
 		      &key
