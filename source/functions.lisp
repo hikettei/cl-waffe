@@ -95,6 +95,7 @@
   :backward ((dy)
 	     (list dy (apply #'!faref dy (self shape)))))
 
+; Error: dims isn't type of fixnum
 (defun !faref (tensor &rest dims)
   "Example: (!aref vector 1 t t) (!aref vector '(1 3) t t)
   list args: (a b), cut arbitary dims in the range of a<=x<b"
@@ -126,7 +127,7 @@
 	 (result (!zeros dims-result))
 	 (bias 0)
 	 (total-bias 0))
-    
+
     (map 'list (lambda (x y)
 		 (etypecase y
 		   (boolean nil)

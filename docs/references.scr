@@ -1,0 +1,135 @@
+
+@begin(section)
+@title(cl-waffe)
+@begin(section)
+
+@title(Package: cl-waffe)
+This package is under development and APIs can be changed without notice.
+
+There's
+@begin(enum)
+@item(WaffeTensor And APIs for it)
+@item(Macros for defining objects)
+@item(Train Function)
+@item(Basic Tensor Operations)
+@end(enum)
+@end(section)
+
+@begin(section)
+@title(Defining objects)
+
+@cl:with-package[name="cl-waffe"](
+
+@cl:doc(macro defmodel)
+@cl:doc(macro defnode)
+@cl:doc(macro defoptimizer)
+@cl:doc(macro defdataset)
+@cl:doc(macro deftrainer)
+)
+
+@end(section)
+
+@begin(section)
+@title(Tensor)
+
+@begin(section)
+@title(Basic of Tensor and backward)
+
+Struct WaffeTensor
+
+From Const To Tensor
+
+@cl:with-package[name="cl-waffe"](
+@cl:doc(macro parameter)
+@cl:doc(macro detach)
+)
+
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function backward)
+)
+
+@end(section)
+
+@begin(section)
+@title(Exported Parameters)
+
+@cl:with-package[name="cl-waffe"](
+@cl:doc(variable *default-backend*)
+
+Configs when printing tensor.
+
+@cl:doc(variable *print-char-max-len*)
+@cl:doc(variable *print-arr-max-size*)
+@cl:doc(variable *print-mat-max-size*)
+)
+
+@end(section)
+
+@begin(section)
+@title(Types)
+
+@cl:with-package[name="cl-waffe"](
+@cl:doc(type WaffeTensorContentType)
+@cl:doc(type WaffeSupportedDataType)
+)
+@end(section)
+
+@begin(section)
+@title(Accessor)
+
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function data)
+@cl:doc(macro grad)
+)
+
+
+@end(section)
+@end(section)
+
+@begin(section)
+@title(Initialize Constants)
+
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !zeros)
+@cl:doc(function !ones)
+@cl:doc(function !fill)
+@cl:doc(macro !arange)
+@cl:doc(function !random)
+@cl:doc(function !random-with)
+@cl:doc(function !normal)
+@cl:doc(macro !randn)
+@cl:doc(function !beta)
+@cl:doc(function !gamma)
+@cl:doc(function !chisquare)
+@cl:doc(function !bernoulli)
+@cl:doc(function !zeros-like)
+@cl:doc(function !ones-like)
+@cl:doc(function !full-like)
+)
+
+@end(section)
+
+@begin(section)
+@title(Cut and Displace Tensor)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !set-batch)
+@cl:doc(function !reset-batch)
+
+@cl:doc(function !aref)
+)
+@end(section)
+
+@begin(section)
+@title(Shaping)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !shape)
+@cl:doc(function !dims)
+@cl:doc(function !size)
+)
+@end(section)
+
+
+
+
+
+@end(section)

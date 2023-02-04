@@ -238,7 +238,7 @@ So, The whole code looks like this:
 
 @end[lang=lisp](code)
 
-You can either define a package and run this or @c($ ./run-test-model.ros mnist) is available to run this. (It needs roswell)
+You can either define a package and copy this or @c($ ./run-test-model.ros mnist) is available to run this. (It needs roswell)
 
 @end(section)
 @end(section)

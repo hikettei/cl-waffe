@@ -3,7 +3,8 @@
 
 @begin(section)
 @title(Welcome To cl-waffe!)
-(Display my logo here)
+
+@image[src=cl-waffe-logo.png]()
 
 @b(This package is under development)
 
@@ -20,7 +21,8 @@ cl-waffe is a deep learning framework, which is aimed to:
 @begin(section)
 @title(Todo List And Problems)
 @begin(enum)
-@item(Todo)
+@item(Complete this document)
+@item(the other are in Readme.md)
 @end(enum)
 @end(section)
 
@@ -29,14 +31,9 @@ cl-waffe is a deep learning framework, which is aimed to:
 
 Pull requests are welcome at @link[uri="https://github.com/hikettei/cl-waffe"](Original Repository)
 
+In paticular, additional nodes are welcome, don't worry too much about performance.
 
-In paticular, additional nodes are welcome.
-
-Don't worry too much about performance.
-
-To be honest, English is not my cup of tea.
-
-Feel free to point out my mistakes in English.
+To be honest, English is not my cup of tea, so feel free to point out my mistakes in English.
 
 @end(section)
 @begin(section)
@@ -50,7 +47,35 @@ My Twitter: @link[uri="https://twitter.com/ichndm"](@ichndm)
 @begin(section)
 @title(LLA Setting)
 
-In order to use OpenBLAS:
+@b(If BLAS is already set up, skip this.)
+
+cl-waffe depends on @link[uri="https://github.com/tpapp/lla"](LLA) and you have to set up configurations.
+
+Write the following code (path should be changed depending on the environment.) to
+your startup script: (e.g.: @c(~/.sbclrc),  @c(~/.roswell/init.lisp) and so on.)
+
+@begin[lang=lisp](code)
+(defvar *lla-configuration*
+  '(:libraries ("/usr/local/opt/openblas/lib/libblas.dylib")))
+@end[lang=lisp](code)
+
+@end(section)
+@begin(section)
+@title(When Memory Exhausted)
+
+It is better to run this command in advance, since training a model requires a lot of memory.
+
+@begin[lang=shell](code)
+$ ros config set dynamic-space-size 4gb
+@end[lang=shell](code)
+
+In SLIME and SBCL:
+
+Please add:
+
+@begin[lang=lisp](code)
+(setq slime-lisp-implementations '(("sbcl" ("sbcl" "--dynamic-space-size" "4096"))))
+@end[lang=lisp](code)
 
 @end(section)
 @end(section)

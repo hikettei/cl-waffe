@@ -141,30 +141,17 @@ Output: => @cl:param(tensor) produced by :forward"
 			  (document "An optimizer, defined by cl-waffe."))
   "Defining optimizers. Internally, This is paraphase of defmodel, which slot names are just different.
 
-@u(Note: by calling :backward slot, optimizers work as (zero-grad).)
+Note: by calling :backward slot, optimizers work as (zero-grad).
 
 @begin(deflist)
-
 @term(Name)
 @def(The optimizer's structure and constructor will be defined based on name)
 
 @term(Args)
-@def(Initializer of the optimizer. The first value of initializer is the hash-table that collected model's parameter where the key is fixnum from 0 to n. You have to save it.)
+@def(Initializer of the optimizer. The first value of initializer is the hash-table that collected model's parameter where the key is fixnum from 0 to n. You have to store it.)
 
 @term(parameters)
-@begin(def)
-
-parameters ... An parameters that it has. (the same as structure's slot)
-
-Example:
-
-@begin[lang=lisp](code)
-:parameters ((count 0)
-             (humans 0 :type fixnum)
-             (inited? nil))
-@end[lang=lisp](code)
-
-@end(def)
+@def(An parameters that it has.)
 
 @term(update)
 @def(when training and (update) is called, this slot is called and you optimizer your parameters.)
@@ -175,15 +162,14 @@ Example:
 @term(document)
 @def(docstring for optimizers. You can use string or (with-usage) macro)
 
-@end(def)
-
 @end(deflist)
-
-Through (deftrainer) macro, it is the easiest way to use your optimizer.
 
 Example:
 
 @begin[lang=lisp](code)
+
+; defoptimizer's args must start with params (symbol-name doesn't matter) which receives hash-table whose key is 1..n
+
 (defoptimizer SGD (params &key (lr 1e-3))
   :optimize t
   :parameters ((params params :type hash-table)
@@ -193,7 +179,9 @@ Example:
          ; W(n+1) = W(n) - n * grad
          (!modify (gethash i (self params))) :+=
                (!mul (self lr) (grad (gethash i (self params)))))))
-@begin[lang=lisp](code)"
+
+@begin[lang=lisp](code)
+"
 
   `(defobject ,name ,args
     :parameters ,parameters
@@ -222,27 +210,29 @@ Example:
 		     optimize
 		     (regard-as-node t)
 		     (document "An node, defined by cl-waffe."))
-  "Defining computation nodes. Internally, This is just paraphase of defmodel, which slot names are different.
+  "Defining computation nodes.
 
-The argument is almost the same as defoptimizer, defmodel. So I will omit.
+defnode is useful when you want to define the derivative yourself.
 
-the slot :forward is called by (call Node-Object args...)
+@b(Note that parameter tensors in :parameter won't updated by optimizers.)
 
-the slot :backward is called by (backward out) where out is scalar outputs.
+If you want to update params, define additional models.
 
+@begin(deflist)
+
+@term(regard-as-node)
+@begin(def)
 When the slot :regard-as-node is nil, an optimizer in cl-waffe.caches regards this as model (i.e. argument could be destructed.) Default is t.
+@end(def)
+@end(deflist)
 
-Note that :backward must return list, where that length corresponds with the length of input's argument, otherwise an error occurs when backward.
+Note that:
 
-Note: cl-waffe do not modify parameters tensor in :parameters slot, so do not define this. If you want to use parameter, use defmodel instead.
+@begin(enum)
+@item(:backward must return list, where that length corresponds with the length of input's argument, otherwise an error occurs when backward.)
 
-In forward and backward, computation node isn't needed to be continuous.
-
-But the last values must posses :thread-data. (do not think it deeply about it)
-
-The node will be created with (name args), where name is the given name, args is the same.
-
-And this can be called with call.
+@item(In forward and backward, computation node isn't needed to be continuous.However, the last values of :forward and :backward step, must posses :thread-data, which can be obtained by (waffetensor-thread-data tensor))
+@end(enum)
 
 Example:
 
