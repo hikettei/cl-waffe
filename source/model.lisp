@@ -491,10 +491,6 @@ the object-type indicates the type of document format."
     (unless forward
       (error ":forward slot is need to be fulfilled. When defining Model [~a]" name))
 
-    (if (and (not hide-from-tree) backward
-	     (not (eq object-type :optimizer)))
-	(format t "Warning: backward with hide-from-tree=nil never called in backward processes~%"))
-    
     (let* ((document (eval document))
 	   (doc-output (typecase document
 			(string document)
