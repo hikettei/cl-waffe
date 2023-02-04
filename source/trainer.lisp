@@ -203,9 +203,10 @@ So, please manage batch-sizes in args and :next slots."
        `(prog1
 	    (defstruct (,name
 			(:print-function print-dataset)
-			(:constructor ,name (,@args &aux ,@parameters)))
+			(:constructor ,name (,@args &aux ,@(map 'list (lambda (x) `(,(car x) ,(second x))) parameters))))
 	      ,document
-	    ,@(map 'list (lambda (x) (assure-args (car x))) parameters)  
+
+	    ,@(map 'list (lambda (x) `(,(assure-args (car x)) ,(second x) ,@(cddr x))) parameters)
 	    (length       t :type boolean)
 	    (dataset-next t :type boolean))
 	  (define-dataset-method dataset-next   ,name ,(car next)   ,(cdr next))
@@ -317,7 +318,18 @@ Args:
   batch-size ... batch-size
 
 index excepts for 1, 2, 3, ... (maxlen)"
-  :parameters ((train train) (valid valid) (batch-size batch-size))
+  :parameters ((train
+		train
+		:type
+		waffetensor)
+	       (valid
+		valid
+		:type
+		waffetensor)
+	       (batch-size
+		batch-size
+		:type
+		fixnum))
   :next    ((index)
 	    (list (!set-batch (self train) index (self batch-size))
 		  (!set-batch (self valid) index (self batch-size))))
