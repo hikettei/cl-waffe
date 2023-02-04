@@ -16,6 +16,7 @@
 	       #:mgl-mat
 	       #:alexandria
 	       #:cl-cuda
+	       #:cl-libsvm-format
 	       #:trivial-garbage
 	       #:bordeaux-threads)
   :in-order-to ((test-op (test-op cl-waffe-test)))
@@ -58,4 +59,7 @@
 			     (:file "nlp")
 			     (:file "layers")
 			     (:file "embedding")
-			     (:file "cnn")))))
+			     (:file "cnn")))
+	       (:module "io"
+		:components ((:file "package")
+			     (:file "libsvm")))))
