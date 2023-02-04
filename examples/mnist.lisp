@@ -32,7 +32,8 @@
 
 (defun demo () (time (demo1)))
 (defun demo1 ()
-
+  (defparameter batch-size 300)
+  
   (sb-profile:profile mgl-mat::blas-sgemm
 		      mgl-mat::blas-scopy
 		      mgl-mat::array-to-mat
@@ -81,14 +82,13 @@
 
   (setq train (WaffeDataSet mnist-dataset
 			    mnist-target
-			    :batch-size 100))
+			   :batch-size batch-size))
   (setq test (WaffeDataSet mnist-dataset-test
 			   mnist-target-test
-			   :batch-size 100))
-
+			   :batch-size batch-size))
   
   (mgl-mat:with-mat-counters (:count count :n-bytes n-bytes)
-    (time (train trainer train :max-iterate 600 :epoch 100 :batch-size 300 :valid-dataset test
+    (time (train trainer train :max-iterate 600 :epoch 100 :batch-size batch-size :valid-dataset test
 			       :verbose t :random t :print-each 100))
     (format t "Count: ~a~%" count)
     (format t "Consumed: ~abytes~%" n-bytes))
