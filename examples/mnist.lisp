@@ -30,13 +30,6 @@
 		 out))
  :predict ((x) (call (model) x)))
 
-(defdataset Mnistdata (train valid batch-size)
-  :parameters ((train train) (valid valid) (batch-size batch-size))
-  :next    ((index)
-	    (list (!set-batch (self train) index (self batch-size))
-		  (!set-batch (self valid) index (self batch-size))))
-  :length (() (car (!shape (self train)))))
-
 (defun demo () (time (demo1)))
 (defun demo1 ()
 
@@ -86,8 +79,12 @@
   (format t "Valid   : ~a" (!shape mnist-target))
   (print "")
 
-  (setq train (MnistData mnist-dataset mnist-target 100))
-  (setq test (MnistData mnist-dataset-test mnist-target-test 100))
+  (setq train (WaffeDataSet mnist-dataset
+			    mnist-target
+			    :batch-size 100))
+  (setq test (WaffeDataSet mnist-dataset-test
+			   mnist-target-test
+			   :batch-size 100))
 
   
   (mgl-mat:with-mat-counters (:count count :n-bytes n-bytes)
@@ -96,6 +93,5 @@
     (format t "Count: ~a~%" count)
     (format t "Consumed: ~abytes~%" n-bytes))
 
-  (sb-profile:report)
-  )
+  (sb-profile:report))
 
