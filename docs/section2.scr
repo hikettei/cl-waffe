@@ -1,7 +1,7 @@
 @begin(section)
-@title(Define Your Networks)
+@title(Advanced)
 
-In cl-waffe, five macros exported to define your network.
+defnode, defoptimizer etc...
 
 @begin(section)
 @title(Exported)

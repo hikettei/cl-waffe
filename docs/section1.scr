@@ -12,8 +12,12 @@ Let's get started!
 @end(section)
 @begin(section)
 @title(Define Your Model)
+
+@u(Define the structure of the network using cl-waffe)
+
 @cl:with-package[name="cl-waffe"](
 @cl:doc(macro defmodel)
+)
 
 The defmodel macro is the most basic unit when defining your network in cl-waffe.
 
@@ -47,7 +51,9 @@ This is just @cl:spec(slot-value), so it's setfable.
 
 You can call :forward step by using the function (call).
 
+@cl:with-package[name="cl-waffe"](
 @cl:doc(function call)
+)
 
 Whether you are lisper or not, It is natural that you think MLP's :forward is too rebundant.
 
@@ -74,31 +80,168 @@ Finally, this is how MLP is defined.
 (setq model (MLP :relu)) ; => [Model: MLP]
 
 @end[lang=lisp](code)
-)
 
 @end(section)
 
 @begin(section)
 @title(Define Your Dataset)
 
+@u(Define the structure of the datasets available to the cl-waffe API.)
+
 @cl:with-package[name="cl-waffe"](
 @cl:doc(macro defdataset)
-)
 
 It is not always necessary to define a Dataset, but it is required to use the trainer described below.
 
 In real, the format of the dataset is similar for different task, so I will use the default dataloader defined in the standard.
 
 @cl:doc(struct WaffeDataset)
+)
 
-Write your own programme to load the study and initialise the Dataloader
+Write your own programme to load your dataset and initialize the Dataloader
 
-(後でcl-waffe.ioについて記述しておく。。。)
+However, a package called cl-waffe.io, exports functions to read data in libsvm format, since there is no unified library for reading data for different tasks in CommonLisp as far as I know. @b((This package is temporary and APIs will change without notice in the near future.))
+
+Finally, this is How dataset created:
+
+@begin[lang=lisp](code)
+
+; ensure (use-package :cl-waffe.io) (use-package :cl-waffe)
+; In ./examples/install.sh, here's downloader of mnist.
+; Please make change the pathname of MNIST yourself if necessary.
+
+(multiple-value-bind (datamat target)
+    (read-libsvm-data "examples/tmp/mnist.scale" 784 10 :most-min-class 0)
+  (defparameter mnist-dataset datamat)
+  (defparameter mnist-target target))
+
+(multiple-value-bind (datamat target)
+    (read-libsvm-data "examples/tmp/mnist.scale.t" 784 10 :most-min-class 0)
+  (defparameter mnist-dataset-test datamat)
+  (defparameter mnist-target-test target))
+
+(defparameter train (WaffeDataSet mnist-dataset mnist-target :batch-size 100))
+(defparameter valid (WaffeDataSet mnist-dataset-test mnist-target-test :batch-size 100))
+    
+@end[lang=lisp](code)
 
 @end(section)
 
 @begin(section)
-@title(Train)
-Train your model
+@title(Train Your Model)
+@u(The model is automatically trained using the train function and deftrainer macro.)
+
+The function @cl:param(train) can start training automatically, given @cl:param(trainer) object defined by deftrainer.
+
+Of course, an API is provided for manual definition.
+
+@cl:with-package[name="cl-waffe"](
+@cl:doc(macro deftrainer)
+)
+
+Init your trainer like...
+
+@begin[lang=lisp](code)
+
+(deftrainer MLPTrainer (activation lr)
+  :model          (MLP activation)
+  :optimizer      cl-waffe.optimizers:Adam
+  :optimizer-args (:lr lr)
+  :step-model ((x y)
+	       (zero-grad)
+	       (let ((out (cl-waffe.nn:softmax-cross-entropy (call (model) x) y)))
+		 (backward out)
+		 (update)
+		 out))
+ :predict ((x) (call (model) x)))
+ 
+@end[lang=lisp](code)
+
+So, everything is now ready to go.
+
+Now all you have to do is to pass your @cl:param(trainer), @cl:param(dataset) to @cl:param(train)
+
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function train)
+)
+
+So, The whole code looks like this:
+
+@begin[lang=lisp](code)
+
+(defpackage :mnist-example
+  (:use :cl :cl-waffe :cl-waffe.nn :cl-waffe.io))
+
+(in-package :mnist-example)
+
+; set batch as 100
+(defparameter batch-size 100)
+
+; Define Model Using defmodel
+(defmodel MLP (activation)
+  :parameters ((layer1   (denselayer (* 28 28) 512 T activation))
+	       (layer2   (denselayer 512 256 T activation))
+	       (layer3   (linearlayer 256 10 T)))
+  :forward ((x)
+	    (with-calling-layers x
+	      (layer1 x)
+ 	      (layer2 x)
+	      (layer3 x))))
+
+; Define Trainer Using deftrainer
+(deftrainer MLPTrainer (activation lr)
+  :model          (MLP activation)
+  :optimizer      cl-waffe.optimizers:Adam
+  :optimizer-args (:lr lr)
+  :step-model ((x y)
+	       (zero-grad)
+	       (let ((out (cl-waffe.nn:softmax-cross-entropy (call (model) x) y)))
+		 (backward out)
+		 (update)
+		 out))
+ :predict ((x) (call (model) x)))
+
+; Initialize your trainer
+(defparameter trainer (MLPTrainer :relu 1e-4))
+
+; Loading MNIST Dataset Using cl-waffe.io
+(format t "Loading examples/tmp/mnist.scale ...~%")
+  
+(multiple-value-bind (datamat target)
+    (read-libsvm-data "examples/tmp/mnist.scale" 784 10 :most-min-class 0)
+  (defparameter mnist-dataset datamat)
+  (defparameter mnist-target target))
+
+(format t "Loading examples/tmp/mnist.scale.t~%")
+
+(multiple-value-bind (datamat target)
+    (read-libsvm-data "examples/tmp/mnist.scale.t" 784 10 :most-min-class 0)
+  (defparameter mnist-dataset-test datamat)
+  (defparameter mnist-target-test target))
+
+; Initialize Your Dataset
+(defparameter train (WaffeDataSet mnist-dataset
+                                  mnist-target
+			          :batch-size batch-size))
+
+(defparameter test (WaffeDataSet mnist-dataset-test
+			         mnist-target-test
+			         :batch-size 100))
+(time (train
+         trainer
+	 train
+	 :epoch 30
+	 :batch-size batch-size
+	 :valid-dataset test
+         :verbose t
+	 :random t
+	 :print-each 100))
+
+; Accuracy would be approximately about 0.9685294
+
+@end[lang=lisp](code)
+
+You can either define a package and run this or @c($ ./run-test-model.ros mnist) is available to run this. (It needs roswell)
+
 @end(section)
 @end(section)

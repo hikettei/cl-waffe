@@ -317,7 +317,35 @@ Input: dataset ... dataset defined by defdataset.
 				(random nil)
 				(height 10)
 				(print-each 10)) ; stream指定したい/cl-gnuplot/cl-termgraph使う
-  "Train"
+  "Trainining given trainer. If any, valid @cl:param(valid-dataset)
+
+@begin(deflist)
+@term(trainer)
+@def(Trainer you defined by deftrainer)
+
+@term(dataset)
+@def(Dataset you defined by defdataset)
+
+@term(valid-dataset)
+@def(If valid-dataset=your dataset, use this to valid. If nil, ignored)
+
+@term(enable-animation)
+@def(Ignored)
+
+@term(epoch)
+@def(Iterate training by epoch, default=1)
+
+@term(batch-size)
+@def(Do batch training. default=1)
+
+@term(verbose)
+@def(if t, put log to stream)
+
+@end(deflist)
+
+This function is temporary and other arguments are ignored.
+
+And this function has a lot of todo."
   (let ((losses nil) ; cl-termgraph assumes that loss >= 0
 	(status-bar nil)
 	(total-len (get-dataset-length dataset)))
