@@ -1,0 +1,76 @@
+@begin(section)
+@title(Basics)
+
+Thank you for having an interest in my framework.
+
+Let's get started with MNIST Example.
+
+@begin(section)
+@title(Define Model)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(macro defmodel)
+
+The defmodel macro is the most basic unit when defining your network in cl-waffe.
+
+Let's check a example and define 3 layers MLP.
+
+@begin[lang=lisp](code)
+
+; ensure (use-package :cl-waffe) and (use-package :cl-waffe.nn)
+
+(defmodel MLP (activation)
+  :parameters ((layer1   (denselayer (* 28 28) 512 T activation))
+	       (layer2   (denselayer 512 256 T activation))
+	       (layer3   (linearlayer 256 10 T)))
+  :forward ((x)
+            (call (self layer3)
+	          (call (self layer2)
+		        (call (self layer1) x)))))
+
+@end[lang=lisp](code)
+
+See :parameters, @cl:param(cl-waffe.nn) exports denselayer and linearlayer which constructor is `(in-features out-features &optional (bias T) (activation :relu))`.
+
+And, when @cl:param(MLP) are inited, layer1~layer3 are initied.
+
+
+In :forward, this defined the forward props.
+
+You can access your model's parameter through macro (self name).
+
+This is just @cl:spec(slot-value), so it's setfable.
+
+You can call :forward step by using the function (call).
+
+@cl:doc(function call)
+
+Whether you are lisper or not, It is natural that you think MLP's :forward is too rebundant.
+
+So, the macro `(with-calling-layers)` is exported and you can rewrite it.
+
+@cl:doc(macro with-calling-layers)
+
+
+
+@cl:param(MLP) requires @cl:param(activation) which indicates the type of activation where @cl:param(activation) is symbol.
+
+Finally, this is how MLP is defined.
+
+@begin[lang=lisp](code)
+
+(defmodel MLP (activation)
+  :parameters ((layer1   (denselayer (* 28 28) 512 T activation))
+	       (layer2   (denselayer 512 256 T activation))
+	       (layer3   (linearlayer 256 10 T)))
+  :forward ((x)
+	    (with-calling-layers x
+	      (layer1 x)
+ 	      (layer2 x)
+	      (layer3 x))))
+
+(setq model (MLP :relu)); => [Model: MLP]
+
+@end[lang=lisp](code)
+)
+@end(section)
+@end(section)

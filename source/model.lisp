@@ -29,30 +29,34 @@
 
 (defmacro with-calling-layers (input &rest layers)
   "This macro allows to sequentially call layers.
-   Example:
-   (defmodel MLP (activation)
-       :parameters ((layer1   (denselayer (* 28 28) 512 T activation))
-   	            (layer2   (denselayer 512 256 T activation))
-	            (layer3   (linearlayer 256 10 T)))
-       :forward ((x)
-	         (with-calling-layers x
-	           (layer1 x)
- 	           (layer2 x)
-	           (layer3 x))))
 
-   the argument input is a tensor.
-   Refering each layers from (self) macro, destructively modifying x with the returned value.
+the argument @cl:param(input) must be a tensor.
 
-  For the different arguments, this is ok.
+Refering each layers from (self) macro, destructively modifying x with the returned value.
 
-  (with-calling-layers x
-       (layer1 x 1 1)
-       (layer2 1 x 2)
-       (layer3 x y))
+@begin[lang=lisp](code)
 
-  Input: input, an tensor. layers an cons.
-  Output: An tensor made by calling layers"
-  
+(defmodel MLP (activation)
+   :parameters ((layer1   (denselayer (* 28 28) 512 T activation))
+   	        (layer2   (denselayer 512 256 T activation))
+	        (layer3   (linearlayer 256 10 T)))
+   :forward ((x)
+	     (with-calling-layers x
+	       (layer1 x)
+ 	       (layer2 x)
+               (layer3 x))))
+@end[lang=lisp](code)
+
+For the different arguments.
+
+@begin[lang=lisp](code)
+(with-calling-layers x
+     (layer1 x 1 1)
+     (layer2 1 x 2)
+     (layer3 x y))
+@end[lang=lisp](code)
+
+Output: An last value of layers."  
   `(let ((,input ,input))
        ,@(map 'list (lambda (layer)
 		      (declare (type cons layer))
@@ -65,11 +69,18 @@
 (declaim (inline call))
 (declaim (ftype (function (t &rest waffetensor) waffetensor) call))
 (defun call (model &rest args)
-  "Calling Forward Step defined by defmodel, defnode, defoptimizer and recording each argument's variable slot (i.e. building computation node).
-   When *no-grad* is t, nodes won't created.
-   Input: model ... an structure object
-          args ... tensors
-   Output: An Tensor (where the tensor is defined by sysconst)"
+  "Calling Forward Step defined by defmodel, defnode, defoptimizer.
+
+And building computation node as long as *no-grad* is nil.
+
+@begin(deflist)
+@term(model)
+@def(Your initialized model/node/optimizer objects)
+@term(args)
+@def(The args :forward needs)
+@end(deflist)
+
+Output: => @cl:param(tensor) produced by :forward"
   (declare (optimize (speed 3) (safety 0) (space 0)))
   ; calculating op(x,y) -> result(x, y), state
   (let* ((result (apply
@@ -400,11 +411,57 @@ Example:
 				      (error ":forward isn't defined.")))
 			   (optimize nil)
 			   (document "An model, defined by cl-waffe"))
-  ""
+  "This macro defines a cl-waffe model as @cl:param(name).
+
+At the same time, a constructor @cl:param(name) is defined and you can initialize your model like:
+
+@begin[lang=lisp](code)
+(cl-waffe.nn:LinearLayer 100 20) ; => [Model: Linearlayer]
+@end(code)
+
+@title(Args)
+@begin(deflist)
+
+@term(name)
+@def(Your model and constructor name)
+
+@term(args)
+@def(The arguments of a constructor)
+
+@term(parameters)
+@begin(def)
+
+The parameters your model has.
+
+Every time you initialize the model, the parameters are initialized.
+
+Note that @cl:param(defmodel) behaves like class.
+
+The arguments are the same as @cl:spec(defstruct)
+
+Format Example: ((param-name param-initial-value &key (type your-type)))
+
+@end(def)
+
+@term(optimize)
+@def(when t, your forward slot is defined with (declare (optimize (speed 3) (space 0) (debug 0))). It helps faster training after you ensured debugged.)
+
+@term(forward)
+@begin(def)
+
+Define here the forward propagation of your model.
+
+When backward, @b(Automatic differentiation applies).
+
+@end(def)
+
+@end(deflist)
+"
   `(defobject ,name ,args
      :parameters ,parameters
      :forward ,forward
      :optimize ,optimize
+     :object-type :model
      :document ,document))
 			 
 (defmacro defobject (name
@@ -418,22 +475,10 @@ Example:
 		      (regard-as-node nil)
 		      (document "An object, defined by cl-waffe")
 		      (object-type :object))
-  "Defining model.
-The arguments are the same as defnode, defoptimizer. So I will omit.
-
-:backward will never called because cl-waffe follows computation node created in :forward step when backward.
-
-However, when hide-from-tree is t, cl-waffe calls :backward.
-
-The parameter tensor defined in :parameters will be updated by calling (update) and (backward out) in deftrainer's :step slot.
-
-If you just would like to use cl-waffe's default features, you would mostly use this.
-
-See the examples in the cl-waffe's repository.
-
-In the :forward :backward slot, an macro `(self name)` defined by macrolet is supplied, this macro allows you access parameters in the model of current state. (Parameters aren't static.)
-
-The model you defined is printable."
+  "Defining cl-waffe's object
+When hide-from-tree is t, autograds are ignored.
+When regard-as-node is nil, the forward and backward is defined as the node.
+the object-type indicates the type of document format."
   (labels ((assure-args (x)
 	     (declare (type symbol x))
 	     (if (or (equal (symbol-name x) "forward")
