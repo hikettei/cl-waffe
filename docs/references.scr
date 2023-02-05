@@ -8,7 +8,7 @@ This package is under development and APIs can be changed without notice.
 
 There's
 @begin(enum)
-@item(WaffeTensor And APIs for it)
+@item(WaffeTensor and APIs for it)
 @item(Macros for defining objects)
 @item(Train Function)
 @item(Basic Tensor Operations)
@@ -49,13 +49,70 @@ There's
 @begin(section)
 @title(Basic of Tensor and backward)
 
-Struct WaffeTensor
+@begin(section)
+@title(Initialize Tensor)
+Choose your data structure as follows:
 
-From Const To Tensor
+@begin(deflist)
+@term(use grads)
+@def(=> Initialize with (tensor ) or (parameter ))
+@term(don't use grads)
+@def(=> Initialize with (const ))
+@end(deflist)
+
+@begin(section)
+@title(Parameters)
+
+@begin[lang=lisp](code)
+(tensor 0) ; => #Parameter{0 :device :MGL :backward NIL}
+(parameter (!zeros '(10 10)))
+; => #Parameter{((0.0 0.0 ~ 0.0 0.0)            
+;                         ...
+;            (0.0 0.0 ~ 0.0 0.0)) :mgl t :shape (10 10) :device :MGL :backward NIL}
+
+(setq mat (make-mat '(10 10)))
+(tensor mat) ;the save as above
+@end[lang=lisp](code)
+
+@end(section)
+
+@begin(section)
+@title(Constants)
+
+@begin[lang=lisp](code)
+(const 0) ; => #Const(0)
+(!zeros '(10 10)) ; =>
+;#Const(((0.0 0.0 ~ 0.0 0.0)        
+;                 ...
+;        (0.0 0.0 ~ 0.0 0.0)) :mgl t :shape (10 10))
+
+(setq mat (make-mat '(10 10)))
+(const mat) ; the same as above
+@end[lang=lisp](code)
+
+@end(section)
+
+@begin(section)
+@title(Tensor vs Const)
+The differences between Tensor and Const are as follows
+@begin(enum)
+@item(Calling (backward out) function, and (grad tensor) get new grads-value while (grad const) doesn't)
+@item(Calling optimizers will modify the model's parameters where param is a tensor, while const isn't.)
+@end(enum)
+@end(section)
+@end(section)
+
+In order to make constants an parameter, use this:
 
 @cl:with-package[name="cl-waffe"](
 @cl:doc(macro parameter)
 @cl:doc(macro detach)
+)
+
+Here's structure of waffetensor
+
+@cl:with-package[name="cl-waffe"](
+@cl:doc(struct WaffeTensor)
 )
 
 @cl:with-package[name="cl-waffe"](

@@ -107,24 +107,34 @@ cl-waffe automatically coerce them to arbitary types
 			       (grad nil)
 			       (destructive? t))))
   "An structure of Waffe's Tensor.
-This structure have: 1. data (type of WaffeTensorContentType)
-                     2. the computation node for backprops, and grads.
-                     3. backend informations and parameters for optimizing.
+This structure have:
+@begin(enum)
+@item(data (type of WaffeTensorContentType))
+@item(the computation node for backprops, and grads)
+@item(backend informations and parameters for optimizing.)
+@end(enum)
 
-Constructors:
-   (const value) ... Constant tensor, grad won't be created.
-   (tensor value) ... Parameter tensor, grad will be created.
-   (sysconst value) ... Constant tensor where tensor sometime cached. Users don't have to use this.
+There's three ways to make it.
+@begin(deflist)
+@term((const value))
+@def(Constant tensor, grad won't be created.)
+@term((tensor value))
+@def(Parameter tensor, grad will be created.)
+@term((sysconst value))
+@def(Constant tensor where tensor sometime cached. Users don't have to use this.)
+@end(deflist)
 
 Value is following:
-   simple-array
-   mgl-mat:mat (recommended)
-   fixnum
-   float
-   null
-   cons
-   function (for lazy evaluation)
-   ratio (coerced to float)
+@begin(enum)
+@item(simple-array)
+@item(mgl-mat:mat (recommended))
+@item(fixnum)
+@item(float)
+@item(null)
+@item(cons)
+@item(function (for lazy evaluation))
+@item(ratio (when make, coerced to float))
+@end(enum)
 
 This structure is printable and printed nicely."
   (data nil :type WaffeTensorTypes)
@@ -319,7 +329,7 @@ Tensor (as usual, defined by (tensor))
      (setf (grad-tmp-value (waffetensor-grad-tmp ,tensor)) ,value)))
 
 (defun backward (tensor)
-  "Compute back propagation by traversing the Tensor computation node.
+  "Compute back propagation by traversing the Tensor's computation node.
 
 The parameters of the model defined by (tensor) or to which (Parameter tensor) is applied, store the gradient in grad slot.
 

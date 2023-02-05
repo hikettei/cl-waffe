@@ -2,11 +2,11 @@
 @title(Overview)
 
 @begin(section)
-@title(Welcome To cl-waffe!)
+@title(Welcome to cl-waffe!)
 
 @image[src=cl-waffe-logo.png]()
 
-@b(This package is under development)
+@b(This package is in development.)
 
 cl-waffe is a deep learning framework, which is aimed to:
 
