@@ -1,27 +1,15 @@
 
 # cl-waffe
 
-**This package is still under development.**
+![cl-waffe](https://hikettei.github.io/cl-waffe-docs/docs/cl-waffe-logo.png)
 
-cl-waffe is a deeplearning framework for CommonLisp.
+**This package is still under development, and its features are far from practical.**
 
-I'm building this package for my data science studies. So the features might not be sufficient for practical use.
+cl-waffe is a deep learning framework for Common Lisp.
 
-The future goal is ease of use, not speed, as building neural networks in common lisp is rather complicated.
+# Documents
 
-However, cl-waffe is at least faster than PyTorch ~~in the following benchmark~~, using excellent libraries like mgl-mat, and numcl.
-
-# Tutorials
-
-日本語でのチュートリアルは, `./tutorials/tutorial_JP.md`を参照してください
-
-For those who don't speak Japanese, I'm sorry but i've not prepared English ver tutorials yet (even in japanese this is in progress...).
-
-even so, if you want to read it somehow, please use DeepL.
-
-# Benchmark
-
-Coming soon...
+[Documents](https://hikettei.github.io/cl-waffe-docs) is available.
 
 # MNIST Example
 
@@ -95,9 +83,9 @@ Here's examples.
   :parameters ((params params) (lr lr))
   :update (()
 	   (dotimes (i (hash-table-count (self params)))
-	     (mgl-mat:copy! (data (!sub (gethash i (self params))
-					(!mul (self lr) (grad (gethash i (self params))))))
-			    (data (gethash i (self params)))))))
+	     (copy! (data (!sub (gethash i (self params))
+					   (!mul (self lr) (grad (gethash i (self params))))))
+			  (data (gethash i (self params)))))))
 ```
 
 # Run MNIST With Roswell
@@ -133,27 +121,13 @@ $ ./run-test-model.ros mnist
 
 ・run-test-model.rosを使いやすく書き直す
 
-・ReadmeにOpen BLAS使えって書く
-
 ・Data LoaderのPrint関数にもっと詳細な情報を出す、:printみたいなスロット作っとく
 
 ・Documentを書く
 
-# Tutorials
-
-It is better to run this command in advance, since training a model requires a lot of memory.
-
-```
-$ ros config set dynamic-space-size 4gb
-```
-
 # Author
 
 hikettei (Twitter: @ichndm, github:@hikettei)
-
-### memos
-
-; nodeのパラメーターの初期値にnil使えないのを覚えておく
 
 
 ## Environment
