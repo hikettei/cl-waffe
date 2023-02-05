@@ -9,7 +9,7 @@ cl-waffe is a deep learning framework for Common Lisp.
 
 # Documents
 
-[Documents](https://hikettei.github.io/cl-waffe-docs) is available.
+[Documentation](https://hikettei.github.io/cl-waffe-docs) is available.
 
 # MNIST Example
 
