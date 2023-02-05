@@ -171,7 +171,7 @@ Example:
 
 @begin[lang=lisp](code)
 
-; defoptimizer's args must start with params (symbol-name doesn't matter) which receives hash-table whose key is 1..n
+;defoptimizer's args must start with params (symbol-name doesn't matter) which receives hash-table whose key is 1..n
 
 (defoptimizer SGD (params &key (lr 1e-3))
   :optimize t
@@ -183,7 +183,7 @@ Example:
          (!modify (gethash i (self params))) :+=
                (!mul (self lr) (grad (gethash i (self params)))))))
 
-@begin[lang=lisp](code)
+@end[lang=lisp](code)
 "
 
   `(defobject ,name ,args
