@@ -76,28 +76,75 @@
 (define-lisp-kernel (copy-elements-lisp)
     ((result :mat :output)
      (tensor :mat :input)
-     (iter-for fixnum)
-     (result-bias fixnum)
-     (tensor-bias fixnum))
-  (loop for i fixnum upfrom 0 below iter-for
-	do (setf (aref result (+ i result-bias))
-		 (aref tensor (+ i tensor-bias)))))
+     
+     (iter-for-n+1 fixnum) ;1d
+     (iter-for-n fixnum)   ;2d
+     
+     (result-bias fixnum) ; 2d
+     (tensor-bias fixnum) ; 2d
+     
+     (result-n-disp fixnum)
+     (tensor-n-disp fixnum)
 
-(defun copy-elements (result
+     (2d-dif-r fixnum)
+     (2d-dif-t fixnum)
+     
+     (bias fixnum))
+  (loop for m fixnum upfrom 0 below iter-for-n
+	do (loop for i fixnum upfrom 0 below iter-for-n+1
+		 do (setf (aref result (+ (+ result-bias
+					     (the fixnum (* (+ result-n-disp m) 2d-dif-r)))
+					  i))
+			  (aref tensor (+
+					(+ tensor-bias
+					   (the fixnum (* (+ tensor-n-disp m) 2d-dif-t)))
+					i))))))
+
+(defun copy-elements (nth
+		      result
 		      tensor
-		      iter-for
-		      result-bias
-		      tensor-bias
+		      
+		      iter-for-n+1 ; 1d
+		      iter-for-n   ; 2d
+		      
+		      result-bias ; 2d
+		      tensor-bias ; 2d
+		      
 		      result-displacements
-		      tensor-displacements)
+		      tensor-displacements
+		      
+		      result-n-displacements
+		      tensor-n-displacements
+
+		      bias)
   (declare (optimize (speed 3))
 	   (type mat result tensor)
-	   (type fixnum iter-for result-bias tensor-bias result-displacements tensor-displacements))
+	   (type fixnum
+		 nth
+		 iter-for-n+1
+		 iter-for-n
+		 result-bias
+		 tensor-bias
+		 result-displacements
+		 tensor-displacements
+		 result-n-displacements
+		 tensor-n-displacements
+
+		 bias))
+  (let ((r-dif (get-difference result nth))
+	(t-dif (get-difference tensor nth)))
+    (declare (type fixnum r-dif t-dif))
   (copy-elements-lisp
    result
    tensor
-   iter-for
-   (the fixnum (+ result-displacements result-bias)) ; add result-bias to move.
-   (the fixnum (+ tensor-displacements tensor-bias)))
+   (the fixnum (+ bias iter-for-n+1))
+   iter-for-n
+   (the fixnum (+ (the fixnum (* r-dif result-n-displacements)) result-bias)) ; add result-bias to move.
+   (the fixnum (+ (the fixnum (* t-dif tensor-n-displacements)) tensor-bias))
+   result-displacements
+   tensor-displacements
+   r-dif
+   t-dif
+   bias))
   nil)
 		      
