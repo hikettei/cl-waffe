@@ -186,7 +186,7 @@
 		    (nth dim dims-displacements)
 		    total-bias)))
 		 (if (not (eql T (nth dim dims)))
-		     (incf total-bias (* (nth dim dims) bias))))))
+		     (incf total-bias (* (nth dim dims-result) bias))))))
     result))
 
 (defun !faref-2d (tensor output dims)
