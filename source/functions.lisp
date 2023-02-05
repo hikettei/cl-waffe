@@ -219,13 +219,17 @@
 
 (defun !faref1 (tensor &rest dims)
   "Docstring"
+  (declare (optimize (speed 3))
+	   (type waffetensor tensor))
   (let* ((dims (cond ; assure (length dims) == (!dims tensor)
-		((> (!dims tensor) (length dims))
+		 ((> (the fixnum (!dims tensor))
+		     (the fixnum (length dims)))
 		 (concatenate
 		  'list
 		  dims
-		  (repeat-n t (- (!dims tensor) (length dims)))))
-		((= (!dims tensor) (length dims))
+		  (repeat-n t (the fixnum (- (the fixnum (!dims tensor))
+					     (length dims))))))
+		((= (the fixnum (!dims tensor)) (the fixnum (length dims)))
 		 dims)
 		(T
 		 (error "!aref: dim ~a beyonds tensor's dim" dims))))
@@ -236,7 +240,9 @@
 				  (list
 				   (unless (= (length x) 2)
 				     (error "!aref: an argument is following: index, t, '(from start). ~a is invaild." x))
-				   (- (second x) (car x)))
+				   (the fixnum
+					(- (the fixnum (second x))
+					   (the fixnum (car x)))))
 				  (T y))))
 			      dims (!shape tensor)))
 	 (dims-displacements (map 'list (lambda (x)
@@ -249,16 +255,18 @@
 	 (result (sysconst (make-mat dims-result :initial-element 0.0)
 			   :thread-data (waffetensor-thread-data tensor))))
     ; assure if dims are contigous
-    (map 'list (lambda (x y)
-		 (etypecase y
-		   (boolean nil)
-		   (fixnum (if (< x y)
-			       (error "!aref: the number ~A must be< ~a" y x)))
-		   (list (if (and (<= x (second y))
-				  (>= (car y) 0))
-			     (error "!aref: the number ~a must be < ~a" y x)))
-		   (T (error "!faref: ~a is invaild argument" y))))			     
-	 (!shape tensor) dims)
+    (mapcar (lambda (x y)
+	      (declare (type fixnum x))
+	      (etypecase y
+		(boolean nil)
+		(fixnum (if (< x y)
+			    (error "!aref: the number ~A must be< ~a" y x)))
+		(list (if (and (<= x (the fixnum (second y)))
+			       (>= (the fixnum (car y)) 0))
+			  (error "!aref: the number ~a must be < ~a" y x)))
+		(T (error "!faref: ~a is invaild argument" y))))		 
+	    (!shape tensor) dims)
+    
     (labels ((%aref (nth
 		     result-bias
 		     tensor-bias
@@ -266,7 +274,7 @@
 		     tensor-array)
 	       (declare (optimize (speed 3))
 			(type fixnum nth result-bias tensor-bias)
-			(type simple-array result-array tensor-array))
+			(type (simple-array single-float) result-array tensor-array))
 	       (let ((tensor-start-point (cl-waffe.backends.mgl:get-difference
 					 (data tensor)
 					 nth))
@@ -281,18 +289,28 @@
 			        (the fixnum (nth nth dims-result))) ; the num of iter depends on result's dim.
 		       do (if (< (1+ nth) (the fixnum (!dims tensor)))
 			      (%aref (1+ nth)
-				     (+ result-bias
-					(*
-					 (- i (nth nth dims-displacements)) ; result's bias of start index
-					 result-start-point))
+				     (the fixnum
+					  (+ result-bias
+					     (the fixnum
+						  (*
+						   (the fixnum
+							(- i
+							   (the fixnum
+								(nth nth dims-displacements)))) ; result's bias of start index
+					 result-start-point))))
 				     (+ tensor-bias
-					(* i tensor-start-point))
+					(the fixnum (* i tensor-start-point)))
 				     result-array
 				     tensor-array) ; the entry-point of (i-1)th dims
-			      (setf (aref result-array (+
-							(- i (nth nth dims-displacements))
-							result-bias))
-				    (aref tensor-array (+ i tensor-bias))))))
+			      (setf (aref
+				     result-array
+				     (the fixnum
+					  (+
+					   (- i (the fixnum (nth nth dims-displacements)))
+					   result-bias)))
+				    (aref
+				     tensor-array
+				     (+ i tensor-bias))))))
 	       nil))
       (with-facets ((result-array ((data result) 'backing-array :direction :output))
 		    (target-array ((data tensor) 'backing-array :direction :input)))
