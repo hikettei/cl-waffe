@@ -109,13 +109,21 @@ $ ./run-test-model.ros mnist
 
 ・support cuda in some operations
 
-・Implement the features for NLP, (e.g. Embedding, LSTM...)
-
 ・More functions for mathmatics.
 
-・3d mat operations (!sum, !matmul when 3d is too slow that cannot use.)
-
 ・save and restore models
+
+・Rewrite some nodes with (with-kernel-case)
+
+・Expとかを自分で定義
+
+・CCLで試す
+
+・run-test-model.rosを使いやすく書き直す
+
+・Data LoaderのPrint関数にもっと詳細な情報を出す、:printみたいなスロット作っとく
+
+・Documentを書く
 
 # Author
 
