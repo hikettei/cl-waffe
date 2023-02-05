@@ -3,11 +3,13 @@
 
 ![cl-waffe](https://hikettei.github.io/cl-waffe-docs/docs/cl-waffe-logo.png)
 
-**This package is still under development.**
+**This package is still under development, and its features are far from practical.**
 
-# Benchmark
+cl-waffe is a deep learning framework for Common Lisp.
 
-Coming soon...
+# Documents
+
+[Documents](https://hikettei.github.io/cl-waffe-docs) is available.
 
 # MNIST Example
 
