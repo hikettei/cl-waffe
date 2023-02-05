@@ -136,7 +136,8 @@ This package exports features for making caches (sysconst)")
 
 (defmacro with-cache ((var tensor &key (ctype '*default-mat-ctype*) (copy nil)
                       (place :ones))
-                     &body body)
+                      &body body)
+  "Todo: Write Docs"
   `(with-thread-cached-mat1 (,var ,tensor :copy ,copy
 				          :place ,place
 					  :ctype ,ctype

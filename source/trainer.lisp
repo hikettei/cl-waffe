@@ -286,6 +286,7 @@ Input: dataset ... dataset defined by defdataset.
     pos-arr))
 
 (defun valid (trainer dataset batch-size)
+  "Valid trainer"
   (let ((count 0)
 	(correct 0))
     (loop for index fixnum upfrom 0 below (get-dataset-length dataset) by batch-size

@@ -22,12 +22,14 @@
 (declaim (ftype (function (waffetensor) waffetensor) warranty))
 (defun warranty (tensor)
   "Notice waffe's optimizer that do not delete tensor given until warranty called
-   in the calc node
+   in the calc node.
 
-   When you encountered error in the forward step that the tensor that attempted to read has already cached ~, try this like:
+ When you encountered error in the forward step that the tensor that attempted to read has already cached ~, try this like:
 
-  (warranty your-tensor)
-  (print your-tensor)"
+@begin[lang=lisp](code)
+(warranty your-tensor)
+(print your-tensor)
+@end[lang=lisp](code)"
   (declare (optimize (speed 3) (safety 0) (space 0))
 	   (type waffetensor tensor))
   (prog1
@@ -86,8 +88,17 @@
       (invoke-kernel kernel-function variables (data (second variables)) (+ i 1))
       (invoke-cpu-kernel kernel-function variables)))
 
+(defmacro call-and-dispatch-kernel (kernel-function &rest args)
+  "Invoke kernel and run kernel-function. return new sysconst
+
+Todo:More Details"
+  `(invoke-kernel ,kernel-function ,@args))
+
 (declaim (ftype (function (keyword &rest waffetensor) waffetensor)))
 (defun with-searching-calc-node (kernel-function &rest args)
+  "Invoke kernel and run kernel-function. return new sysconst.
+
+Todo:More Details"
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type keyword kernel-function))
   (invoke-kernel kernel-function args (data (car args)) 0))
@@ -126,25 +137,35 @@
    Note: the target's thread-data must be already created. (i.e. By the time tensors reach this macro, at least once they needed to be pathed through Trainer or Model.)
    So, use this macro when you defining :forward and :backward in defnode macro because in defnode, backprop is disabled and computation nodes isn't always required.
 
-   Inputs: target, an target tensor.
-           var, where an copied tensor of target will be assigned.
-           :mgl mgl-mat, when using cpu.
-           :mgl-cuda mgl-mat, when using cuda.
+Inputs
+@begin(deflist)
+@term(target)
+@def(an target tensor.)
+@term(var)
+@def(where an copied tensor of target will be assigned.)
+@term(:mgl)
+@def(mgl-mat, when using cpu.)
+@term(:mgl-mat)
+@def(mgl-mat, when using cuda.)
+@end(deflist)
 
-   Return: An tensor (where tensor is made by sysconst)
+Return: An tensor (where tensor is made by sysconst)
 
-   Example:
-   (with-kernel-case x o
-       :mgl (progn
-              (axpy! 1.0 a o)) ; axpy! = !add
-       :mgl-cuda nil) => #Const(((0.0 1.0 ~ 2.0 3.0)        
+Example:
+
+@begin[lang=lisp](code)
+ (with-kernel-case x o
+     :mgl (progn
+            (axpy! 1.0 a o)) ; axpy! = !add
+     :mgl-cuda nil) => #Const(((0.0 1.0 ~ 2.0 3.0)        
                  ...
-        (0.0 4.0 ~ 5.0 6.0)) :mgl t :shape (10 10))
+      (0.0 4.0 ~ 5.0 6.0)) :mgl t :shape (10 10))
 
-   ; This is useful when defining :backward
-   (with-kernel-case x o
-       :mgl (progn
-              (list 1 1)))"
+ ; This is useful when defining :backward
+ (with-kernel-case x o
+     :mgl (progn
+            (list 1 1)))
+@end[lang=lisp](code)"
   `(progn
      (unless (typep ,target 'waffetensor)
        (error "cl-waffe.with-kernel-case: target must be waffetensor. Encounted type of ~a, when using ~a" (type-of ,target) ,target))

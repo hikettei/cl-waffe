@@ -620,22 +620,33 @@ When nth is not nil, return (nth nth (!shape tensor))"
 	 (mat-dimensions (waffetensor-data tensor))))))
 
 (defun !dims (tensor)
-  "Return total dims of tensor"
+  "Return total length of the given tensor's dims
+
+Example:
+@begin[lang=lisp](code)
+(!dims (!zeros '(10 10 10))) ; => 3
+@end[lang=lisp](code)"
   (length (!shape tensor)))
 
 (defun !size (tensor)
-  "Return total size of tensor"
+  "Return total size of tensor
+
+Example:
+
+@begin[lang=lisp](code)
+(!dims (!zeros '(10 10 10))) ; => 1000
+@end[lang=lisp](code)"
   (apply #'* (!shape tensor)))
 
 (defun !size-1 (tensor)
   (1- (!size tensor)))
 
 (defun !zeros-like (tensor)
-  "Zeros like"
+  "Return a const where the shape is the same as tensor but elements are zero."
   (!zeros (!shape tensor)))
 
 (defun !ones-like (tensor)
-  "ones like"
+  "Return a const where the shape is the same as tensor but elements are one."
   (!ones (!shape tensor)))
 
 (defun !full-like ()

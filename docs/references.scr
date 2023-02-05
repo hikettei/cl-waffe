@@ -23,10 +23,24 @@ There's
 @cl:doc(macro defmodel)
 @cl:doc(macro defnode)
 @cl:doc(macro defoptimizer)
+
 @cl:doc(macro defdataset)
+@cl:doc(function get-dataset)
+@cl:doc(function get-dataset-length)
+
 @cl:doc(macro deftrainer)
+@cl:doc(function step-model)
+@cl:doc(function predict)
 )
 
+@end(section)
+
+@begin(section)
+@title(Documents in cl-waffe's object)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(macro with-usage)
+@cl:doc(function build-docstring)
+)
 @end(section)
 
 @begin(section)
@@ -46,10 +60,18 @@ From Const To Tensor
 
 @cl:with-package[name="cl-waffe"](
 @cl:doc(function backward)
+@cl:doc(variable *no-grad*)
+@cl:doc(macro with-no-grad)
 )
 
 @end(section)
-
+@begin(section)
+@title(Forward Nodes)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function call)
+@cl:doc(macro with-calling-layers)
+)
+@end(section)
 @begin(section)
 @title(Exported Parameters)
 
@@ -130,13 +152,80 @@ Configs when printing tensor.
 
 @begin(section)
 @title(Operations)
+
 @cl:with-package[name="cl-waffe"](
+@cl:doc(function !add)
+@cl:doc(function !sub)
+@cl:doc(function !mul)
+@cl:doc(function !div)
+
+@cl:doc(function !matmul)
+@cl:doc(function !dot)
+
+@cl:doc(function !pow)
+@cl:doc(function !sqrt)
+@cl:doc(function !log)
+@cl:doc(function !exp)
+
+@cl:doc(function !sum)
+@cl:doc(function !mean)
+
+@cl:doc(function !modify)
+
+
+@cl:doc(function !squeeze)
+@cl:doc(function !unsqueeze)
+@cl:doc(function !repeats)
+@cl:doc(function !reshape)
+@cl:doc(function !transpose)
+@cl:doc(function !aref)
+
+@cl:doc(function !modify)
 )
 
 @end(section)
 
+@begin(section)
+@title(Math Functions)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !tanh)
+)
+@end(section)
 
+@begin(section)
+@title(Activations)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !relu)
+@cl:doc(function !sigmoid)
+@cl:doc(function !tanh)
+@cl:doc(function !softmax)
+)
+@end(section)
 
+@begin(section)
+@title(Utils for defnode)
+These features for advanced.
 
+@cl:with-package[name="cl-waffe"](
+@cl:doc(macro warranty)
+@cl:doc(macro with-kernel-case)
+@cl:doc(macro call-and-dispatch-kernel)
+)
+@end(section)
+
+@begin(section)
+@title(Train And Valid)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function train)
+@cl:doc(function valid)
+)
+@end(section)
+
+@begin(section)
+@title(Datasets)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(struct Waffedataset)
+)
+@end(section)
 
 @end(section)

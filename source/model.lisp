@@ -13,9 +13,12 @@
 
 (defmacro with-no-grad (&body body &aux (no-grad-first (gensym)))
   "This macro is like with-predict-mode
-   When you predicting your models, copying values for backward is waste.
-   In this macro, *no-grad* become t, and won't make computation nodes.
-   And in some operations, they will be faster."
+
+When you predicting your models, copying values for backward is waste.
+
+In this macro, *no-grad* become t, and won't make computation nodes.
+
+macro (save-for-backward) is ignored and they will be faster."
   `(let ((,no-grad-first *no-grad*))
      (setq *no-grad* t)
      (prog1 (progn ,@body)

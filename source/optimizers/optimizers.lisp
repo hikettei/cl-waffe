@@ -39,6 +39,9 @@
 
 ; not optimized
 (defoptimizer AdaGrad (params &key (lr 1e-3) (epsilon 1e-7))
+  :document (with-usage "AdaGrad"
+	      :overview "Simple AdaGrad"
+	      :note "The codes aren't optimized and slow. Todo: Write docs")
   :parameters ((params params) (lr lr) (h (make-hash-table)) (epsilon epsilon))
   :update (()
 	   (if (= (hash-table-count (self h)) 0)
@@ -57,7 +60,10 @@
 
 ; not optimized
 (defoptimizer RMSProp (params &key (lr 1e-3) (epsilon 1e-7) (decay-rate 0.99))
-  :parameters ((params params) (lr lr) (h (make-hash-table)) (epsilon epsilon) (decay-rate 0.99))
+  :document (with-usage "RMSProp"
+	      :overview "Simple RMSProp"
+	      :note "Not Optimized and slow, todo: write docs")
+  :parameters ((params params) (lr lr) (h (make-hash-table)) (epsilon epsilon) (decay-rate decay-rate))
   :update (()
 	   (if (= (hash-table-count (self h)) 0)
 	       (dotimes (i (hash-table-count (self params)))
