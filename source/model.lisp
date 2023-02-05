@@ -105,10 +105,15 @@ Output: => @cl:param(tensor) produced by :forward"
 
 (defmacro with-model-list (&rest models)
   "Applying model-list.
-   Input: models an list of models
-   Output: [Model:Model-List]
-   The model defined by model-list can be used like:
-   (call (Model List Structure you defined) i args...) where i is the index for models"
+
+
+Input: models an list of models
+
+Output: [Model:Model-List]
+
+The model defined by model-list can be used like:
+
+@c((call (Model-List) i args...)) where i is the index for models"
   `(model-list ,models))
 
 (defmacro is-waffe-model (model)
@@ -171,7 +176,7 @@ Example:
 
 @begin[lang=lisp](code)
 
-; defoptimizer's args must start with params (symbol-name doesn't matter) which receives hash-table whose key is 1..n
+;defoptimizer's args must start with params (symbol-name doesn't matter) which receives hash-table whose key is 1..n
 
 (defoptimizer SGD (params &key (lr 1e-3))
   :optimize t
@@ -183,7 +188,7 @@ Example:
          (!modify (gethash i (self params))) :+=
                (!mul (self lr) (grad (gethash i (self params)))))))
 
-@begin[lang=lisp](code)
+@end[lang=lisp](code)
 "
 
   `(defobject ,name ,args
