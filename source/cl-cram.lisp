@@ -1,5 +1,6 @@
 
 (defpackage :cl-cram
+  (:documentation "An package for displaying progress bar.")
   (:use :cl)
   (:export
    #:pdotimes

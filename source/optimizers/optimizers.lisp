@@ -2,9 +2,13 @@
 (in-package :cl-waffe.optimizers)
 
 (defoptimizer SGD (params &key (lr 1e-3))
+  :document (with-usage "SGD"
+	      :overview "Simple SGD."
+	      :args "&key (lr 1e-3)"
+	      :update "Following defnition.")
   :optimize t
   :parameters ((params params :type hash-table)
-	       (lr lr :type single-float))
+	       (lr lr :type float))
   :update (()
 	   (dotimes (i (hash-table-count (self params)))
 	     ; W(n+1) = W(n) - n * grad
@@ -13,7 +17,12 @@
 
 ; not optimized
 (defoptimizer Momentum (params &key (momentum 0.9) (lr 1e-3))
-  :parameters ((params params) (lr 1e-2) (momentum momentum) (velocities (make-hash-table)))
+  :document (with-usage "Momentum"
+	      :overview "Simple Momentum"
+	      :note "This code isn't optimized and slow"
+	      :args "&key (momentum 0.9) (lr 1e-3)"
+	      :update "Following definition.")
+  :parameters ((params params) (lr lr) (momentum momentum) (velocities (make-hash-table)))
   :update (()
 	   (if (= (hash-table-count (self velocities)) 0)
 	       (progn
@@ -30,6 +39,9 @@
 
 ; not optimized
 (defoptimizer AdaGrad (params &key (lr 1e-3) (epsilon 1e-7))
+  :document (with-usage "AdaGrad"
+	      :overview "Simple AdaGrad"
+	      :note "The codes aren't optimized and slow. Todo: Write docs")
   :parameters ((params params) (lr lr) (h (make-hash-table)) (epsilon epsilon))
   :update (()
 	   (if (= (hash-table-count (self h)) 0)
@@ -48,7 +60,10 @@
 
 ; not optimized
 (defoptimizer RMSProp (params &key (lr 1e-3) (epsilon 1e-7) (decay-rate 0.99))
-  :parameters ((params params) (lr lr) (h (make-hash-table)) (epsilon epsilon) (decay-rate 0.99))
+  :document (with-usage "RMSProp"
+	      :overview "Simple RMSProp"
+	      :note "Not Optimized and slow, todo: write docs")
+  :parameters ((params params) (lr lr) (h (make-hash-table)) (epsilon epsilon) (decay-rate decay-rate))
   :update (()
 	   (if (= (hash-table-count (self h)) 0)
 	       (dotimes (i (hash-table-count (self params)))
@@ -64,37 +79,45 @@
 					      (!add (!sqrt (gethash i (self h))) (self epsilon)))))
 			    (data (gethash i (self params)))))))
 
-; still too slow...
+
 (defoptimizer Adam (params &key (lr 1e-3) (epsilon 1e-7) (beta1 0.9) (beta2 0.999))
+  :document (with-usage "Adam"
+	      :overview "Simple Adam. It invokes kernel directly."
+	      :args "&key (lr 1e-3) (epsilon 1e-7) (beta1 0.9) (beta2 0.999)"
+	      :update "Following definition.")
   :optimize t
-  :parameters ((params params  :type hash-table)
-	       (lr lr          :type single-float)
+  :parameters ((params params :type hash-table)
+	       (lr lr :type float)
 	       (m (make-hash-table) :type hash-table)
 	       (v (make-hash-table) :type hash-table)
-	       (n 0             :type fixnum)
-	       (epsilon epsilon :type single-float)
-	       (beta1 beta1 :type single-float)
-	       (beta2 beta2 :type single-float))
+	       (n 0 :type fixnum)
+	       (epsilon epsilon :type float)
+	       (beta1 beta1 :type float)
+	       (beta2 beta2 :type float))
   :update (()
 	   (if (= (hash-table-count (self m)) 0)
 	       (dotimes (i (hash-table-count (self params)))
-		 (setf (gethash i (self m)) (const 0))
-		 (setf (gethash i (self v)) (const 0))))
-	   (incf (self n) 1)
-	   (let ((lr-t (* (self lr) (/ (sqrt (- 1.0 (expt (self beta2) (self n))))
-					     (- 1.0 (expt (self beta1) (self n)))))))
+		 (setf (gethash i (self m)) (data (!zeros (!shape (gethash i (self params))))))
+		 (setf (gethash i (self v)) (data (!zeros (!shape (gethash i (self params))))))))
+	   (setf (self n) (+ (self n) 1))
+	   (let ((lr-t (* (self lr) (/ (sqrt (the (single-float 0e0)
+						  (- 1.0 (expt
+							  (the
+							   (single-float 0e0)
+							   (self beta2))
+						          (the fixnum
+							       (self n))))))
+				       (- 1.0 (expt
+					       (self beta1)
+					       (self n)))))))
 	     (dotimes (i (hash-table-count (self params)))
-	       (!modify (the waffetensor (gethash i (self m)))
-			:+= (!modify (!sub (grad (gethash i (self params)))
-					   (gethash i (self m)))
-				     :*= (- 1 (self beta1))))
-	       
-	       (!modify (the waffetensor (gethash i (self v)))
-			:+= (!modify
-			     (!modify
-			      (!modify (grad (gethash i (self params))) :^= 2)
-			      :-= (gethash i (self v)))
-	   		       :*= (- 1 (self beta2))))
-	       
-	       (!modify (the waffetensor (gethash i (self params))) :-= (!modify (!mul lr-t (gethash i (self m))) :/=
-							    (!modify (!sqrt (gethash i (self v))) :+= (self epsilon))))))))
+	       (cl-waffe.backends.mgl:adam-update
+		            (gethash i (self m))
+			    (gethash i (self v))
+			    (self beta1)
+			    (self beta2)
+			    (data (gethash i (self params)))
+			    (grad (gethash i (self params)))
+			    (mgl-mat:mat-size (gethash i (self m)))
+			    (self epsilon)
+			    lr-t)))))

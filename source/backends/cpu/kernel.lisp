@@ -20,7 +20,7 @@
   (map 'list (lambda (x)
 	       (declare (type waffetensor x))
 	       (typecase (data x)
-		 (function (funcall (data x) nil t))
+		 (function (cl-waffe.backends.mgl:abort-delay (data x)))
 		 (T (data x))))
        args))
 
@@ -39,8 +39,9 @@
       (:pow (expt (car args) (second args)))
       (:tanh (tanh (car args)))
       (:repeat (repeat (car args) (third args) :axis (second args)))
-      ;(:transpose (numcl:transpose (car args) (second args)))
-      (T (error "~a is nt yet implemented" ope)))))
+      (:transpose (car args))
+      (T
+       (error "~a is nt yet implemented" ope)))))
 
 
 (defun infomation ())

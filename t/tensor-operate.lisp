@@ -15,9 +15,11 @@
 (setq scalar 3)
 
 (print "!add")
-(time (!add a b))
+(time (dotimes (i 100) (!add a b)))
+(print "!modify")
+(time (dotimes (i 100) (!modify a :+= b)))
 (print "original")
-(time (mgl-mat:axpy! 1.0 (data a) (data b)))
+(time (dotimes (i 100) (mgl-mat:axpy! 1.0 (data a) (data b))))
 
 (print "scalar-add")
 (time (!add scalar a))

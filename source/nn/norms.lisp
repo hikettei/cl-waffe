@@ -1,12 +1,14 @@
 
 (in-package :cl-waffe.nn)
 
+; Todo Implement Backward
 (defmodel BatchNorm2d (in-features &key (affine t) (epsilon 1e-7))
+  :document (with-usage "BatchNorm2d"
+	      :note "todo: docs")
   :optimize nil
   :parameters ((affine (if affine
 			   (linearlayer in-features in-features T)
-			   T)
-		       :type linearlayer)
+			   T))
 	       (epsilon epsilon :type float))
   :forward ((x)
 	    (let* ((average (!mean x 0 t))
@@ -16,3 +18,5 @@
 	      (if (eql (self affine) T)
 		  r
 		  (call (self affine) r)))))
+
+; Todo LayerNorm (when implementing lstm/rnn)

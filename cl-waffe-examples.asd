@@ -6,7 +6,9 @@
   :version nil
   :author "hikettei"
   :licence nil
-  :depends-on (:cl-waffe :cl-libsvm-format :sb-sprof)
+  :depends-on (:cl-waffe :cl-libsvm-format)
   :components ((:module "examples" :components ((:file "mnist")
-						(:file "cifar-10")))))
+						(:file "rnn"
+						       :depends-on ("kftt-data-parser"))
+						(:file "kftt-data-parser")))))
 

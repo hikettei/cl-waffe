@@ -1,0 +1,33 @@
+@begin(section)
+@title(cl-waffe.nn)
+
+@begin(section)
+@title(Models)
+@cl:with-package[name="cl-waffe.nn"](
+@cl:doc(function linear)
+@cl:doc(struct Embedding)
+@cl:doc(struct LinearLayer)
+@cl:doc(struct DenseLayer)
+@cl:doc(struct Embedding)
+@cl:doc(struct RNN)
+)
+@end(section)
+
+@begin(section)
+@title(aggregations)
+@cl:with-package[name="cl-waffe.nn"](
+@cl:doc(struct Dropout)
+@cl:doc(struct BatchNorm2D)
+)
+@end(section)
+
+@begin(section)
+@title(losses)
+@cl:with-package[name="cl-waffe.nn"](
+@cl:doc(function mse)
+@cl:doc(function cross-entropy)
+@cl:doc(function softmax-cross-entropy)
+)
+@end(section)
+
+@end(section)

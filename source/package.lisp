@@ -2,41 +2,60 @@
 (in-package :cl-user)
 
 (defpackage cl-waffe
+  (:documentation "An package for defining node, initializing and computing with tensor, and backprops.")
   (:use :cl :mgl-mat :alexandria)
-  (:export #:waffetensor
+  (:export
+           ; Functions and structures for tensor
+           #:waffetensor
            #:tensor
 	   #:const
 	   #:sysconst
-	   
+
+	   ; An parameters for displaying tensor.
+	   #:*print-char-max-len*
+	   #:*print-arr-max-size*
+	   #:*print-mat-max-size*
+
+	   ; Functions for using tensor's data
+	   #:warranty
 	   #:data
 	   #:grad
 
 	   #:waffedatatype
 	   #:waffe-array
 
+	   #:waffetensor-thread-data
+
 	   #:with-no-grad
 	   #:*no-grad*
 
 	   #:waffe-tensor-p
-	   
+	   #:waffetensor-is-next-destruct?
+
+	   #:with-searching-calc-node
 	   #:defmodel
 	   #:defnode
 	   #:defoptimizer
 	   #:deftrainer
 	   #:defdataset
+	   #:WaffeDataset
 
-	   #:myself
+	   #:save-for-backward
 	   
 	   #:step-model
 	   #:predict
 	   #:get-dataset
 	   #:get-dataset-length
 
+	   #:call-and-dispatch-kernel
 	   #:with-optimized-operation
 
 	   #:model
 	   #:update
 	   #:zero-grad
+
+	   #:model-list
+	   #:with-model-list
 
 	   #:forward
 	   #:backward
@@ -62,10 +81,6 @@
 	   #:*ignore-optimizer*
 
 	   #:self
-
-	   #:relu
-	   #:sigmoid
-	   #:wf-tanh
 
 	   #:print-model
 
@@ -127,4 +142,13 @@
 	   #:!sigmoid
 	   #:!tanh
 	   #:!softmax
+
+	   #:with-usage
 	   ))
+
+(defparameter *cl-waffe-object-types* `(:model
+					:node
+					:trainer
+					:optimizer
+					:dataset)
+  "An identifiers of cl-waffe's objects.")
