@@ -217,9 +217,9 @@
 
 
 
-(defun !faref1 (tensor &rest dims)
+(defun !faref1 (tensor output &rest dims)
   "Docstring"
-  (declare (optimize (speed 3))
+  (declare (optimize (speed 3) (space 0))
 	   (type waffetensor tensor))
   (let* ((dims (cond ; assure (length dims) == (!dims tensor)
 		 ((> (the fixnum (!dims tensor))
@@ -252,43 +252,55 @@
 						 (list (car x))
 						 (T 0))))
 				  dims)) ;where from copy starts?
-	 (result (sysconst (make-mat dims-result :initial-element 0.0)
-			   :thread-data (waffetensor-thread-data tensor))))
+	 (result
+	   (if (null output)
+	       (sysconst (make-mat dims-result :initial-element 0.0)
+			 :thread-data (waffetensor-thread-data tensor))
+	       output)))
     ; assure if dims are contigous
     (mapcar (lambda (x y)
 	      (declare (type fixnum x))
 	      (etypecase y
 		(boolean nil)
-		(fixnum (if (< x y)
+		(fixnum (if (<= x y)
 			    (error "!aref: the number ~A must be< ~a" y x)))
 		(list (if (and (<= x (the fixnum (second y)))
-			       (>= (the fixnum (car y)) 0))
+			       (< (the fixnum (car y)) 0))
 			  (error "!aref: the number ~a must be < ~a" y x)))
 		(T (error "!faref: ~a is invaild argument" y))))		 
-	    (!shape tensor) dims)
+	    (if (null output)
+		(!shape tensor)
+		(!shape output))
+	    dims)
     
     (labels ((%aref (nth
 		     result-bias
 		     tensor-bias
 		     result-array
 		     tensor-array)
-	       (declare (optimize (speed 3))
+	       (declare (optimize (speed 3) (space 0))
 			(type fixnum nth result-bias tensor-bias)
-			(type (simple-array single-float) result-array tensor-array))
+			(type mat result-array tensor-array))
 	       (let ((tensor-start-point (cl-waffe.backends.mgl:get-difference
-					 (data tensor)
+					 tensor-array
 					 nth))
 		     (result-start-point (cl-waffe.backends.mgl:get-difference
-					  (data result)
-					  nth)))
+					  result-array
+					  nth))
+		     (loop-iter (+ (if (null output)
+				       0
+				       1)
+				   (the fixnum (nth nth dims-displacements))
+				   (the fixnum (nth nth dims-result)))))
 		 (declare (type fixnum tensor-start-point
 				result-start-point))
-		 (loop for i fixnum
-	               upfrom (nth nth dims-displacements) ; start points
-		       below (+ (the fixnum (nth nth dims-displacements))
-			        (the fixnum (nth nth dims-result))) ; the num of iter depends on result's dim.
-		       do (if (< (1+ nth) (the fixnum (!dims tensor)))
+		 (if (< (1+ nth) (the fixnum (!dims tensor)))
+		     (loop for i fixnum
+			   upfrom (nth nth dims-displacements) ; start points
+			     below loop-iter
+			   do 
 			      (%aref (1+ nth)
+				     (if (null output)
 				     (the fixnum
 					  (+ result-bias
 					     (the fixnum
@@ -297,22 +309,30 @@
 							(- i
 							   (the fixnum
 								(nth nth dims-displacements)))) ; result's bias of start index
-					 result-start-point))))
+						   result-start-point))))
+				     (the fixnum
+					  (+ result-bias
+					     (the fixnum (* i result-start-point)))))
 				     (+ tensor-bias
 					(the fixnum (* i tensor-start-point)))
 				     result-array
-				     tensor-array) ; the entry-point of (i-1)th dims
-			      (setf (aref
-				     result-array
-				     (the fixnum
-					  (+
-					   (- i (the fixnum (nth nth dims-displacements)))
-					   result-bias)))
-				    (aref
-				     tensor-array
-				     (+ i tensor-bias))))))
+				     tensor-array)) ; the entry-point of (i-1)th dims
+		     (cl-waffe.backends.mgl:copy-elements
+		      result-array
+		      tensor-array
+		      (the fixnum
+			   (- (+ (the fixnum (nth nth dims-displacements))
+				 (the fixnum (nth nth dims-result)))
+			      (the fixnum (nth nth dims-displacements)))) ; the num of iter
+		      result-bias
+		      tensor-bias
+		      (if (null output)
+			  0
+			  (nth nth dims-displacements))
+		      (if (null output)
+			  (nth nth dims-displacements)
+			  0))))
 	       nil))
-      (with-facets ((result-array ((data result) 'backing-array :direction :output))
-		    (target-array ((data tensor) 'backing-array :direction :input)))
-	(%aref 0 0 0 result-array target-array)
-	result))))
+      
+      (%aref 0 0 0 (data result) (data tensor))
+      result)))

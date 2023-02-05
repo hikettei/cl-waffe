@@ -73,4 +73,31 @@
        (mgl-mat:mat-size copy-from-mat)
        bias)))
 
+(define-lisp-kernel (copy-elements-lisp)
+    ((result :mat :output)
+     (tensor :mat :input)
+     (iter-for fixnum)
+     (result-bias fixnum)
+     (tensor-bias fixnum))
+  (loop for i fixnum upfrom 0 below iter-for
+	do (setf (aref result (+ i result-bias))
+		 (aref tensor (+ i tensor-bias)))))
 
+(defun copy-elements (result
+		      tensor
+		      iter-for
+		      result-bias
+		      tensor-bias
+		      result-displacements
+		      tensor-displacements)
+  (declare (optimize (speed 3))
+	   (type mat result tensor)
+	   (type fixnum iter-for result-bias tensor-bias result-displacements tensor-displacements))
+  (copy-elements-lisp
+   result
+   tensor
+   iter-for
+   (the fixnum (+ result-displacements result-bias)) ; add result-bias to move.
+   (the fixnum (+ tensor-displacements tensor-bias)))
+  nil)
+		      
