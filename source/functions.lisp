@@ -245,7 +245,6 @@
 		(!shape tensor)
 		(!shape output))
 	    dims)
-    
     (labels ((%aref (nth
 		     result-bias
 		     tensor-bias
@@ -260,9 +259,7 @@
 		     (result-start-point (cl-waffe.backends.mgl:get-difference
 					  result-array
 					  nth))
-		     (loop-iter (+ (if (null output)
-				       0
-				       1)
+		     (loop-iter (+ 
 				   (the fixnum (nth nth dims-displacements))
 				   (the fixnum (nth nth dims-result)))))
 		 (declare (type fixnum tensor-start-point
@@ -297,10 +294,11 @@
 			nth
 			result-array
 			tensor-array
+			
 			(the fixnum ; 1d
 			   (- (+ (the fixnum (nth k dims-displacements))
 				 (the fixnum (nth k dims-result)))
-			      (the fixnum (nth nth dims-displacements)))) ; the num of iter
+			      (the fixnum (nth k dims-displacements))))
 			(the fixnum ; 2d
 			   (- (+ (the fixnum (nth nth dims-displacements))
 				 (the fixnum (nth nth dims-result)))
