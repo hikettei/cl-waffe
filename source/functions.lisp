@@ -104,10 +104,9 @@
 
 
 (defun !faref (tensor &rest dims)
-  (if (= 1 (!dims tensor))
+  (if (<= 2 (!dims tensor))
       (!faref-leg tensor dims)
-      (!faref-2d
-		  tensor
+      (!faref-2d tensor
 		  nil
 		  dims)))
 
@@ -125,6 +124,7 @@
 			 i)
 			(nth i aref-dims))))))
     bias))
+
 (defun !write-faref (target tensor &rest dims)
   (!faref-2d tensor target dims))
 
@@ -312,6 +312,7 @@
 			(if (null output)
 			  0
 			  (nth k dims-displacements))
+			
 			(if (null output)
 			  (nth k dims-displacements)
 			  0)
