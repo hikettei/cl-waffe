@@ -15,13 +15,13 @@
 	     (list (!mul (self path-through) dy))))
 
 (defun !relu (x)
-  "Calling relu with making node.
+  "Applying relu to x, return a new sysconst with making nodes.
 
-   Example: x' = { 0 (x < 0), x (x > 0)
+Relu(x) = { 0 (x < 0), x (x > 0) }
 
-   Input: x where x is waffe supported data type.
+Input: x where x is waffe supported data type.
 
-   Output: Tensor"
+Output: Tensor"
   (call (ReLUTensor) (assure-tensor x)))
 
 (defnode SigmoidTensor nil
@@ -34,11 +34,11 @@
 		    (list (!mul p (!mul dy (!sub 1 p)))))))
 
 (defun !sigmoid (x)
-  "Calling sigmoid with making node.
+  "Applyong sigmoid to x, return a new sysconst with making nodes.
 
-   Input: x where x is waffe supported data type.
+Input: x where x is waffe supported data type.
 
-   Output: Tensor"
+Output: Tensor"
   (call (SigmoidTensor) (assure-tensor x)))
 
 (defnode TanhTensor nil
@@ -51,7 +51,7 @@
 	     (list (!mul dy (!sub (const 1) (!pow (!tanh (self xi)) 2))))))
 
 (defun !tanh (x)
-  "Tanh x"
+  "Applying tanh to x, return a new sysconst with making nodes."
   (call (TanhTensor) (assure-tensor x)))
 
 (defun !average (x)
@@ -60,7 +60,9 @@
     (!div z batch-size)))
 
 (defun !softmax (x &key (avoid-overflow t))
-  "Softmax Todo:Details"
+  "Applying softmax.
+
+!softmax has three behaivour depending on the number of dimensions."
   (case (!dims x)
     (1 (!softmax (!unsqueeze x)))
     (2 (let* ((x1 (if avoid-overflow
@@ -77,7 +79,11 @@
 
 ; Todo :docstring
 (defmodel model-list (model-args)
-  ;Define model sequentially, (e.g. x = (sequence `((layer1) (layer2))), (call x 1 tensor) => layer1's output)
+  :document (with-usage "model-list"
+	      :overview "define model sequentially, (e.g. x = (sequence `((layer1) (layer2))), (call x 1 tensor) => layer1's output)"
+	      :args "model1 model2 ..."
+	      :forward "@cl:param(index) represents the index of models. @cl:param(args) is the arguments for index-th model."
+	      :step-args "index &rest args")
   :parameters ((mlist model-args))
   :forward ((index &rest args)
 	    (apply #'call (nth (data index) (self mlist)) args)))

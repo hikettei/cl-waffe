@@ -73,7 +73,7 @@ Todo: Write Doc"
 @begin[code=lisp](code)~%(call (~a) ~a)~%@end[code=lisp](code)~%"
 	       (waffeobjectusage-name usage)
 	       (waffeobjectusage-forward-args usage))
-       (format doc "Note that: Its backward slot will never called.~%@end(def)~%"))
+       (format doc "~%@end(def)~%"))
       (:optimizer
        (format doc "@term(Update)~%")
        (format doc "@def(~a)~%"
