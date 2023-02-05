@@ -245,6 +245,7 @@
 		(!shape tensor)
 		(!shape output))
 	    dims)
+    
     (labels ((%aref (nth
 		     result-bias
 		     tensor-bias
