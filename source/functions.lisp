@@ -88,7 +88,7 @@
 	       (base-shape T))
 
   :forward ((x) (setf (self base-shape) (!shape x))
-		(apply #'!faref x (self shape)))
+		(apply #'!faref x (self shape))) ;thread-node??
   :backward ((dy)
 	     (let ((dy-n (!zeros (self base-shape))))
 	       (setf (!areflist dy-n (self shape)) dy)
@@ -102,8 +102,34 @@
   :backward ((dy)
 	     (list dy (apply #'!faref dy (self shape)))))
 
-; Error: dims isn't type of fixnum
+
 (defun !faref (tensor &rest dims)
+  (if (<= 2 (!dims tensor))
+      (!faref-leg tensor dims)
+      (!faref-2d tensor
+		  nil
+		  dims)))
+
+
+(defun nth-bias (tensor aref-dims n)
+  (let ((bias 0))
+    (dotimes (i (1+ n))
+      (incf bias (if (eql (nth i aref-dims) T)
+		     0
+		     (progn
+		       ;(unless (< (!shape tensor i) (nth i aref-dims))
+			; (error "(setf !aref): ~a is out of range for ~a. shape:~a" (nth i aref-dims) (!shape tensor i) (!shape tensor)))
+		       (* (cl-waffe.backends.mgl:get-difference
+			 (data tensor)
+			 i)
+			(nth i aref-dims))))))
+    bias))
+
+(defun !write-faref (target tensor &rest dims)
+  (!faref-2d tensor target dims))
+
+; Error: dims isn't type of fixnum
+(defun !faref-leg (tensor dims)
   "Example: (!aref vector 1 t t) (!aref vector '(1 3) t t)
   list args: (a b), cut arbitary dims in the range of a<=x<b"
   (let* ((dims (cond
@@ -160,58 +186,147 @@
 		    (nth dim dims-displacements)
 		    total-bias)))
 		 (if (not (eql T (nth dim dims)))
-		     (incf total-bias (* (nth dim dims) bias))))))
+		     (incf total-bias (* (nth dim dims-result) bias))))))
     result))
 
-(defun nth-bias (tensor aref-dims n)
-  (let ((bias 0))
-    (dotimes (i (1+ n))
-      (incf bias (if (eql (nth i aref-dims) T)
-		     0
-		     (progn
-		       ;(unless (< (!shape tensor i) (nth i aref-dims))
-			; (error "(setf !aref): ~a is out of range for ~a. shape:~a" (nth i aref-dims) (!shape tensor i) (!shape tensor)))
-		       (* (cl-waffe.backends.mgl:get-difference
-			 (data tensor)
-			 i)
-			(nth i aref-dims))))))
-    bias))
-
-(defun !write-faref (target tensor &rest dims)
-  "Example: (!aref vector 1 t t) (!aref vector '(1 3) t t)
-  This can be called by (setf(!aref) ~)"
-  (let* ((dims (cond
-		((> (!dims tensor) (length dims))
-		 (concatenate ; complement lacking dims with t
+(defun !faref-2d (tensor output dims)
+  "(!dims tensor must be >= 2)"
+  (declare (optimize (speed 3) (space 0))
+	   (type waffetensor tensor)
+	   (type list dims))
+  (let* ((dims (cond ; assure (length dims) == (!dims tensor)
+		 ((> (the fixnum (!dims tensor))
+		     (the fixnum (length dims)))
+		 (concatenate
 		  'list
 		  dims
-		  (repeat-n t (- (!dims tensor) (length dims)))))
-		((= (!dims tensor) (length dims))
+		  (repeat-n t (the fixnum (- (the fixnum (!dims tensor))
+					     (length dims))))))
+		((= (the fixnum (!dims tensor)) (the fixnum (length dims)))
 		 dims)
 		(T
 		 (error "!aref: dim ~a beyonds tensor's dim" dims))))
-	 (result target))
+	 (dims-result (mapcar (lambda (x y)
+				(the fixnum
+				(typecase x
+				  (fixnum 1)
+				  (list
+				   (unless (= (length x) 2)
+				     (error "!aref: an argument is following: index, t, '(from start). ~a is invaild." x))
+				   (the fixnum
+					(- (the fixnum (second x))
+					   (the fixnum (car x)))))
+				  (T y))))
+			      dims (!shape tensor)))
+	 (dims-displacements (map 'list (lambda (x)
+					  (the fixnum
+					       (typecase x
+						 (fixnum x)
+						 (list (car x))
+						 (T 0))))
+				  dims)) ;where from copy starts?
+	 (result
+	   (if (null output)
+	       (sysconst (make-mat dims-result :initial-element 0.0)
+			 :thread-data (waffetensor-thread-data tensor))
+	       output)))
+    ; assure if dims are contigous
+    (mapcar (lambda (x y)
+	      (declare (type fixnum x))
+	      (etypecase y
+		(boolean nil)
+		(fixnum (if (<= x y)
+			    (error "!aref: the number ~A must be< ~a" y x)))
+		(list (if (and (<= x (the fixnum (second y)))
+			       (< (the fixnum (car y)) 0))
+			  (error "!aref: the number ~a must be < ~a" y x)))
+		(T (error "!faref: ~a is invaild argument" y))))		 
+	    (if (null output)
+		(!shape tensor)
+		(!shape output))
+	    dims)
     
-    (unless (= (apply #'* (!shape (apply #'!aref target dims)))
-	       (apply #'* (!shape tensor)))
-      (error "(setf aref): Mismatch dims...(due to the waffe's bug)")) ; Todo: Cut tensor by args
+    (labels ((%aref (nth
+		     result-bias
+		     tensor-bias
+		     result-array
+		     tensor-array)
+	       (declare (optimize (speed 3) (space 0))
+			(type fixnum nth result-bias tensor-bias)
+			(type mat result-array tensor-array))
+	       (let ((tensor-start-point (cl-waffe.backends.mgl:get-difference
+					 tensor-array
+					 nth))
+		     (result-start-point (cl-waffe.backends.mgl:get-difference
+					  result-array
+					  nth))
+		     (loop-iter (+ 
+				   (the fixnum (nth nth dims-displacements))
+				   (the fixnum (nth nth dims-result)))))
+		 (declare (type fixnum tensor-start-point
+				result-start-point))
+		 (if (< (+ 2 nth) (the fixnum (!dims tensor)))
+		     (loop for i fixnum
+			   upfrom (nth nth dims-displacements) ; start points
+			   below loop-iter
+			   do 
+			      (%aref (1+ nth)
+				     (if (null output)
+				     (the fixnum
+					  (+ result-bias
+					     (the fixnum
+						  (*
+						   (the fixnum
+							(- i
+							   (the fixnum
+								(nth nth dims-displacements)))) ; result's bias of start index
+						   result-start-point))))
+				     (the fixnum
+					  (+ result-bias
+					     (the fixnum (* i result-start-point)))))
+				     (+ tensor-bias
+					(the fixnum (* i tensor-start-point)))
+				     result-array
+				     tensor-array)) ; the entry-point of (i-1)th dims
+		     ; Copy For 2d Array
 
-    (map 'list (lambda (x y)
-		 (etypecase y
-		   (boolean nil)
-		   (fixnum (if (< x y)
-			       (error "!aref: the number ~a must be < ~a" y x)))
-		   (list (if (< x (second y))
-			     (error "!aref: the number ~a must be < ~a" y x)))
-		   (T nil)))			     
-	 (!shape target) dims)
+		     (let ((k (1+ nth)))
+		       (cl-waffe.backends.mgl:copy-elements
+			nth
+			result-array
+			tensor-array
+			
+			(the fixnum ; 1d
+			   (- (+ (the fixnum (nth k dims-displacements))
+				 (the fixnum (nth k dims-result)))
+			      (the fixnum (nth k dims-displacements))))
+			(the fixnum ; 2d
+			   (- (+ (the fixnum (nth nth dims-displacements))
+				 (the fixnum (nth nth dims-result)))
+			      (the fixnum (nth nth dims-displacements))))
+		      
+			result-bias ; bias at current (2D)
+			tensor-bias ; bias at current (2D)
 
-    (loop for dim upfrom 0 below (length dims)
-	  do (if (not (eql T (nth dim dims)))
-		 (progn
-		   (setf bias (nth-bias target dims dim))
-		   (cl-waffe.backends.mgl:write-to-nth-dim-with-range1
-		    (data result)
-		    (data tensor)
-		    (nth-bias target dims dim)))))
-    result))
+			(if (null output)
+			  0
+			  (nth k dims-displacements))
+			
+			(if (null output)
+			  (nth k dims-displacements)
+			  0)
+
+			(if (null output)
+			  0
+			  (nth nth dims-displacements))
+
+			(if (null output)
+			  (nth nth dims-displacements)
+			  0)
+			(if (null output)
+			    1
+			    0)))))
+	       nil))
+      
+      (%aref 0 0 0 (data result) (data tensor))
+      result)))

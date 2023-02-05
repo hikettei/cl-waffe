@@ -636,7 +636,7 @@ Example:
 @begin[lang=lisp](code)
 (!dims (!zeros '(10 10 10))) ; => 3
 @end[lang=lisp](code)"
-  (length (!shape tensor)))
+  (the fixnum (length (!shape tensor))))
 
 (defun !size (tensor)
   "Return total size of tensor

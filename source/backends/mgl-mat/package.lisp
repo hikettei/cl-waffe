@@ -9,4 +9,5 @@
 	   #:create-thread-idx
 	   #:get-difference
 	   #:receive-delay
-	   #:abort-delay))
+	   #:abort-delay
+	   #:copy-elements))
