@@ -1,0 +1,40 @@
+
+@begin(section)
+@title(cl-waffe.optimizers)
+
+@begin(section)
+@title(SGD)
+@cl:with-package[name="cl-waffe.optimizers"](
+@cl:doc(struct SGD)
+)
+@end(section)
+
+@begin(section)
+@title(Momentum)
+@cl:with-package[name="cl-waffe.optimizers"](
+@cl:doc(struct Momentum)
+)
+@end(section)
+
+@begin(section)
+@title(AdaGrad)
+@cl:with-package[name="cl-waffe.optimizers"](
+@cl:doc(struct AdaGrad)
+)
+@end(section)
+
+@begin(section)
+@title(RMSProp)
+@cl:with-package[name="cl-waffe.optimizers"](
+@cl:doc(struct RMSProp)
+)
+@end(section)
+
+@begin(section)
+@title(Adam)
+@cl:with-package[name="cl-waffe.optimizers"](
+@cl:doc(struct Adam)
+)
+@end(section)
+
+@end(section)

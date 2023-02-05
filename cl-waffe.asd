@@ -1,19 +1,22 @@
 
 (in-package :cl-user)
 
+(ql:quickload :lparallel :silent t)
 
 (asdf:defsystem :cl-waffe
-  :author "hikettei twitter -> @ichndm"
-  :licence nil
+  :author "hikettei (Twitter:@icnhdm)"
+  :licence "MIT"
   :version nil
-  :description "an opencl-based deeplearning library"
+  :description "An deep learning framework for Common Lisp"
+  :source-control (:git "https://github.com/hikettei/cl-waffe.git")
   :pathname "source"
   :depends-on (#:numcl
+	       #:lake
 	       #:cl-ansi-text
 	       #:mgl-mat
-	       #:cl-libsvm-format
 	       #:alexandria
 	       #:cl-cuda
+	       #:cl-libsvm-format
 	       #:trivial-garbage
 	       #:bordeaux-threads)
   :in-order-to ((test-op (test-op cl-waffe-test)))
@@ -56,4 +59,7 @@
 			     (:file "nlp")
 			     (:file "layers")
 			     (:file "embedding")
-			     (:file "cnn")))))
+			     (:file "cnn")))
+	       (:module "io"
+		:components ((:file "package")
+			     (:file "libsvm")))))

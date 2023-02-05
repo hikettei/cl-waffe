@@ -47,6 +47,7 @@
 	   #:get-dataset
 	   #:get-dataset-length
 
+	   #:call-and-dispatch-kernel
 	   #:with-optimized-operation
 
 	   #:model

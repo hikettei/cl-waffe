@@ -175,31 +175,46 @@
 	     (list (!matmul dy (!transpose (self yi)))
 		   (!matmul (!transpose (self xi)) dy))))
 
-(defmacro defope (name node-object tensor args &body body)
+(defmacro defope (name node-object tensor args &optional (doc "") &body body)
   (let ((place node-object))
     `(defun ,name ,args
+       ,doc
        (let* ((,tensor (if *no-grad* ,place ,node-object)))
 	,@body))))
 
 (defope !add (AddTensor) node (x y)
+    "Add x y, creating new sysconst and nodes.
+
+As a modify: (!modify x :+= y)"
   (call node (assure-tensor x) (assure-tensor y)))
     
 (defope !sub (SubTensor) node (x y)
+    "Subtract x by y, creating new sysconst and nodes.
+
+As a modify: (!modify x :-= y)"
   (call node (assure-tensor x) (assure-tensor y)))
 
 (defope !mul (MulTensor) node (x y)
+    "Mul x y, creating new sysconst and nodes
+
+As a modify: (!modify x :*= y)"
   (call node (assure-tensor x) (assure-tensor y)))
 
 (defope !div-old (DivTensor) node (x y)
+   "1/x"
   ; (unless (= x 1) (error "!div-old: x must be 1"))
   ; x must be 1, cl-waffe.backends.mgl:div has some problems?...
   (call node (assure-tensor x) (assure-tensor y)))
 
 ; its much faster
 (defun !div (x y)
+  "Div x y, creating new sysconst and nodes.
+
+As a modify: (!modify x :/= y)"
   (!mul x (!div-old 1 y)))
   
 (defope !dot (DotProductTensor) node (x y)
+  "Dot product of x and y, creating new sysconst and nodes"
   ; Todo: dot excepts 1d tensor
   (call node (assure-tensor x) (assure-tensor y)))
 
@@ -213,6 +228,9 @@
 	    result))))
 
 (defun !sum (x &optional (axis nil) (keepdims nil))
+  "Sum up X where x is a tensor (the size of dims doesn't matter.)
+
+Todo: Write docs and examples"
   (case (!dims x)
     (0 (error "!sum: the tensor given is a number"))
     (1 (!sum-2d x axis keepdims))
@@ -236,6 +254,7 @@
 	   result)))))
 
 (defun !mean (x &optional (axis nil) (keepdims nil))
+  "Mean of tensor, todo: write docs and examples"
   (if (null axis)
       (let ((axis-size (!dims x))
 	    (result x))
@@ -249,12 +268,19 @@
 	    result))))
 
 (defope !pow (PowTensor) node (x n)
+    "Pow x n, creating new sysconst and nodes.
+
+As a modify: (!modify x :^= y)"
   (call node (assure-tensor x) (assure-tensor n)))
 
 (defope !sqrt (SqrtTensor) node (x)
+    "Sqrt x, creating new sysconst and nodes.
+
+As a modify: (!modify x :sqrt y)"
   (call node (assure-tensor x)))
 
 (defope !log (LogTensor) node (x)
+  "Log x, creating new sysconst and nodes."
   (call node (assure-tensor x)))
 
 (defun !reshape (x dim)
@@ -276,15 +302,23 @@
       (call (ReshapeTensor (assure-tensor dim)) (assure-tensor x))))
 
 (defun !repeats (x axis repeats)
+  "Repeat Todo: Write docs and example"
   (call (RepeatTensor (assure-tensor axis) (assure-tensor repeats)) (assure-tensor x)))
 
 (defun !transpose (x &optional result)
+  "Transpose
+
+Note: the result of !transpose is lazy evaluated for speed.(Todo: Write details)"
   (call (TransposeTensor (assure-tensor result)) (assure-tensor x)))
 
 (defope !matmul (MatmulTensor) node (x y)
+    "Matmul
+
+Todo: write docs and behaviour"
   (call node (assure-tensor x) (assure-tensor y)))
 	
 (defun !unsqueeze (x &optional (dim 0))
+  "Unsqueeze Todo: write docs"
   ; display error when (!dims x) >= dim
   (let ((s (!shape x)))
     (case dim
@@ -294,6 +328,7 @@
     (!reshape x s)))
 
 (defun !squeeze (x &optional (dim nil))
+  "Squeeze todo: write docs"
   (labels ((remove-nth (nth list)
 	     (loop for i in list
 		   for idx from 0
@@ -314,16 +349,31 @@
       (!reshape x s))))
 
 (defope !exp (ExpTensor) node (x)
+  "Exp x, creating new sysconst and nodes."
   (call node (assure-tensor x)))
 
 (declaim (ftype (function ((or mgl-mat:mat waffetensor) keyword &rest (or waffedatatype waffetensor)) waffetensor) !modify))
 (defun !modify (target instruction &rest args)
   (declare (optimize (speed 3) (space 0) (safety 0)))
-  ;The function that allows destructively operations, always changing the target.
-  ;If you need mgl-mat-wise operations for speed and low memory, this is useful.
-  ;Directly Calling Mgl-mat Operations.
-  ;Please remain that it won't make backwards because of speed problems.
-  ;Always return `target` tensor. target always changed, and args sometimes changed
+  "The function that allows destructively operations, always changing the target.
+
+If you need mgl-mat-wise operations for speed and low memory, this is useful.
+
+Directly Calling Mgl-mat Operations.
+
+Please remain that it won't make backwards because of speed problems.(Todo: Fix)
+
+Always return `target` tensor. target always changed, and args sometimes changed
+
+Instruction is a symbol where described with modify:
+
+Todo: Write more details.
+
+Example:
+
+@begin[lang=lisp](code)
+(!modify x :+= y)
+@end[lang=lisp](code)"
   (unless (gethash instruction *instruction-map*)
     (error "!modify: The instruction ~a is not found. please check the documentation" instruction))
   

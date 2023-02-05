@@ -16,8 +16,11 @@
 
 (defun !relu (x)
   "Calling relu with making node.
+
    Example: x' = { 0 (x < 0), x (x > 0)
+
    Input: x where x is waffe supported data type.
+
    Output: Tensor"
   (call (ReLUTensor) (assure-tensor x)))
 
@@ -32,7 +35,9 @@
 
 (defun !sigmoid (x)
   "Calling sigmoid with making node.
+
    Input: x where x is waffe supported data type.
+
    Output: Tensor"
   (call (SigmoidTensor) (assure-tensor x)))
 
@@ -46,6 +51,7 @@
 	     (list (!mul dy (!sub (const 1) (!pow (!tanh (self xi)) 2))))))
 
 (defun !tanh (x)
+  "Tanh x"
   (call (TanhTensor) (assure-tensor x)))
 
 (defun !average (x)
@@ -54,6 +60,7 @@
     (!div z batch-size)))
 
 (defun !softmax (x &key (avoid-overflow t))
+  "Softmax Todo:Details"
   (case (!dims x)
     (1 (!softmax (!unsqueeze x)))
     (2 (let* ((x1 (if avoid-overflow
@@ -95,6 +102,7 @@
   :backward ((dy)
 	     (list dy (apply #'!faref dy (self shape)))))
 
+; Error: dims isn't type of fixnum
 (defun !faref (tensor &rest dims)
   "Example: (!aref vector 1 t t) (!aref vector '(1 3) t t)
   list args: (a b), cut arbitary dims in the range of a<=x<b"
@@ -126,7 +134,7 @@
 	 (result (!zeros dims-result))
 	 (bias 0)
 	 (total-bias 0))
-    
+
     (map 'list (lambda (x y)
 		 (etypecase y
 		   (boolean nil)

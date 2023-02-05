@@ -48,6 +48,9 @@
 	       (bias nil)
 	       (dropout nil)
 	       (biredical nil))
+  :document (with-usage "RNN"
+	      :overview "Todo: docs"
+	      )
   :parameters ((rnn-layers (model-list
 			    (loop for i upfrom 0 below num-layers
 				  collect (RNNHiddenLayer

@@ -22,7 +22,10 @@ Default: 6")
 (defparameter mgl-mat:*DEFAULT-MAT-CTYPE* :float) ; in default, float
 
 (deftype WaffeSupportedDataType ()
-  `(or fixnum float null cons function ratio)) ;cons?
+  "An type of waffe-tensor's content type,
+
+`(or fixnum float null cons function ratio)"
+  `(or fixnum float null cons function ratio))
 
 (deftype WaffeDataType ()
   `(or fixnum
@@ -40,8 +43,13 @@ Default: 6")
        (every (lambda (e) (typep e 'waffesupporteddatatype)) c)))
 
 (deftype WaffeTensorContentType ()
-  "An type of data that allowed to make tensors with (const ~) or (tensor ~)
-  cl-waffe automatically coerce them to arbitary types"
+  "An type of data that allowed to make tensors with (const ~) or (tensor ~).
+
+cl-waffe automatically coerce them to arbitary types
+
+`(or mgl-mat:mat
+     simple-array
+     waffesupporteddatatype)"
   `(or mgl-mat:mat
        simple-array
        waffesupporteddatatype))
@@ -99,24 +107,34 @@ Default: 6")
 			       (grad nil)
 			       (destructive? t))))
   "An structure of Waffe's Tensor.
-This structure have: 1. data (type of WaffeTensorContentType)
-                     2. the computation node for backprops, and grads.
-                     3. backend informations and parameters for optimizing.
+This structure have:
+@begin(enum)
+@item(data (type of WaffeTensorContentType))
+@item(the computation node for backprops, and grads)
+@item(backend informations and parameters for optimizing.)
+@end(enum)
 
-Constructors:
-   (const value) ... Constant tensor, grad won't be created.
-   (tensor value) ... Parameter tensor, grad will be created.
-   (sysconst value) ... Constant tensor where tensor sometime cached. Users don't have to use this.
+There's three ways to make it.
+@begin(deflist)
+@term((const value))
+@def(Constant tensor, grad won't be created.)
+@term((tensor value))
+@def(Parameter tensor, grad will be created.)
+@term((sysconst value))
+@def(Constant tensor where tensor sometime cached. Users don't have to use this.)
+@end(deflist)
 
 Value is following:
-   simple-array
-   mgl-mat:mat (recommended)
-   fixnum
-   float
-   null
-   cons
-   function (for lazy evaluation)
-   ratio (coerced to float)
+@begin(enum)
+@item(simple-array)
+@item(mgl-mat:mat (recommended))
+@item(fixnum)
+@item(float)
+@item(null)
+@item(cons)
+@item(function (for lazy evaluation))
+@item(ratio (when make, coerced to float))
+@end(enum)
 
 This structure is printable and printed nicely."
   (data nil :type WaffeTensorTypes)
@@ -142,13 +160,21 @@ This structure is printable and printed nicely."
 		 (setf data)))
 (defun data (tensor)
   "Access tensor's data. This won't be copied.
-   When tensor's data is lazy evaluted, this function behave following:
-     When tensor is transposed and lazy evaluted, directly returns function object for speed.
-     When tensor is cached and lazy evaluted, returns mat object.
-  Input: tensor (WaffeTensor)
-  Output: mostly mgl-mat:mat, or waffetensorcontentdata
 
-  Note: this function is setfable"
+When tensor's data is lazy evaluted, this function behave following:
+@begin(enum)
+@item(When tensor is transposed and lazy evaluted, directly returns function object for speed.)
+@item( When tensor is cached and lazy evaluted, returns mat object.)
+@end(enum)
+
+@begin(deflist)
+@term(Input)
+@def(WaffeTensor)
+@term(Output)
+@def(mgl-mat:mat, or waffetensorcontentdata)
+@end(deflist)
+
+Note: this function is setfable and inlined"
   (declare (type waffetensor tensor))
   (typecase (waffetensor-data tensor)
     (function
@@ -169,7 +195,8 @@ This structure is printable and printed nicely."
 
 (defun (setf data) (val &optional tensor)
   "Modifying tensor'data.
-   When argument that you want to insert is a tensor, this function automatically reads tensor's data and modify with it"
+
+When the argument that you want to insert is a tensor, this function automatically reads tensor's data and modify with it"
   (if (typep val 'waffetensor)
       (setf (waffetensor-data tensor) (data val))
       (setf (waffetensor-data tensor) val)))
@@ -227,9 +254,17 @@ This structure is printable and printed nicely."
 
 (defmacro grad (tensor)
   "Accessing tensor's grad.
-   When tensor's grad is nil, an error occurs
-  Input: tensor
-  Output: mostly, mgl-mat:mat or waffetensorcontenttype"
+
+When tensor's grad is nil, an error occurs
+
+@begin(deflist)
+@term(Input)
+@def(WaffeTensor)
+@term(Output)
+@def(An tensor's grad which is the type of mgl-mat:mat or waffetensorcontettype)
+@end(deflist)
+
+Note: grad is @b(not) setfable"
   `(progn
      (unless (typep ,tensor 'WaffeTensor)
        (error "The tensor is not a waffetensor."))
@@ -243,13 +278,27 @@ This structure is printable and printed nicely."
      (waffetensor-grad ,tensor)))
 
 (defmacro parameter (tensor)
-  "Redefining tensor where tensor is const or parameter.
-   The tensor can be made grad.
-   So, use this like: (setq my-param (parameter (!mul 0.01 (!randn `(10 10)))))
-   Note that tensor's computation node will be lost.
-   Only tensor's data and backend will be extended
-   Input: Tensor (that is defined by (const) (sysconst) (tensor))
-   Output: Tensor (that is defined by (tensor))"
+  "Redefining new-tensor where old-tensor is const or tensor.
+
+The new-tensor can made grads.
+
+Excepted usage is like:
+@begin[lang=lisp](code)
+(setq my-param (parameter (!mul 0.01 (!randn `(10 10)))))
+@end[lang=lisp](code)
+
+Note that: tensor's computation node that old-tensor has, will be lost. Only tensor's data and backend will be extended.
+
+@begin(deflist)
+@term(Input)
+@begin(def)
+Tensor (as usual, defined by (const) (sysconst) (tensor))
+@end(def)
+@term(Output)
+@begin(def)
+Tensor (as usual, defined by (tensor))
+@end(def)
+@end(deflist)"
   `(with-slots ((data data) (backend backend)) ,tensor
      (tensor data :backend backend)))
 
@@ -280,9 +329,20 @@ This structure is printable and printed nicely."
      (setf (grad-tmp-value (waffetensor-grad-tmp ,tensor)) ,value)))
 
 (defun backward (tensor)
-  "Backward tensor, and making grads.
-   Note that tensor must be the shape of `(1) or single value. Otherwise an error occurs.
-   In the process calculating backward, backwards won't be created."
+  "Compute back propagation by traversing the Tensor's computation node.
+
+The parameters of the model defined by (tensor) or to which (Parameter tensor) is applied, store the gradient in grad slot.
+
+Note that: tensor must be the shape of `(1) or single value. Otherwise an error occurs.
+
+In the process calculating backward, new backwards won't be created. (*no-grad* automatically becomes t)
+
+@begin(deflist)
+@term(Input)
+@def(WaffeTensor)
+@term(Output)
+@def(NIL)
+@end(deflist)"
   (declare (type waffetensor tensor))
   (if (typep (data tensor) 'mgl-mat:mat)
       (unless (eq (!shape tensor) `(1))
@@ -352,14 +412,20 @@ This structure is printable and printed nicely."
 				 (waffetensor-grad-tmp tensor))))))))))))
   nil)
 
-
+(declaim (ftype (function (cons) waffetensor) !zeros !ones))
 (defun !zeros (shape)
-  "Initializing constant tensor with given shape, where initial element is zero
-   Input: shape (cons)
-   Output: Tensor (where is constant)
-   Example: (!zeros `(10 10)) => #Const(((0.0 0.0 ~ 0.0 0.0)        
+  "Initializing constant tensor with given shape, where initial elements are zero.
+
+Input: shape (cons)
+
+Output: Tensor (which is constant)
+
+Example:
+@begin[lang=lisp](code)
+(!zeros `(10 10)) => #Const(((0.0 0.0 ~ 0.0 0.0)        
                  ...
-        (0.0 0.0 ~ 0.0 0.0)) :mgl t :shape (10 10))"
+       (0.0 0.0 ~ 0.0 0.0)) :mgl t :shape (10 10))
+@end[lang=lisp](code)"
   (const (mgl-mat:make-mat shape :initial-element 0)))
 
 (defun !ones (shape)
@@ -368,14 +434,14 @@ This structure is printable and printed nicely."
 
 (defun !fill (shape element)
   "The same as !zeros, !ones but initial element is given element
-   Input: element ... fixnum or single-float"
+Input: element ... fixnum or single-float"
   (const (mgl-mat:make-mat shape :initial-element element)))
 
 (defmacro !arange (&rest args)
+  "arange can be called with a varying number of positional arguments:"
   `(const (mgl-mat:make-mat (numcl:shape (numcl:arange ,@args))
 			    :initial-contents (numcl:arange ,@args))))
 
-;backendsの引き継ぎは？
 (defmacro !copy (tensor &aux (new-tensor (gensym)))
   `(let ((,new-tensor (!zeros-like ,tensor)))
      (mgl-mat:copy! (data ,tensor) (data ,new-tensor))
@@ -383,6 +449,13 @@ This structure is printable and printed nicely."
 
 (declaim (ftype (function (waffetensor fixnum fixnum) waffetensor) !set-batch))
 (defun !set-batch (dataset start-row-index batch-size)
+  "Set batch where dataset is a 2d mat
+
+Note: dataset's shape must be divided by batch-size (Todo Fix)
+
+Internally, this function just modifying dataset's displacement.
+
+So it's very fast."
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type waffetensor dataset)
 	   (type fixnum start-row-index batch-size))
@@ -393,12 +466,47 @@ This structure is printable and printed nicely."
     dataset))
 
 (defun !reset-batch (dataset)
+  "Reset batch of dataset (i.e.: reset dataset's displacement)"
   (let* ((dim (mgl-mat:mat-dimension (data dataset) 1))
          (len (/ (mgl-mat:mat-max-size (data dataset)) dim)))
     (reshape-and-displace! (data dataset) (list len dim) 0)
     dataset))
 
-(defun !aref (tensor &rest dims) ; example: (aref vector 1 t t), (aref vector `(1 3) t t)
+(defun !aref (tensor &rest dims)
+  "Very fast aref.
+
+This function is setfable.
+
+Cuts the area specified by dims from Tensor and generates a new Const.
+
+This function creates computation node.
+
+dims are following:
+@begin(enum)
+@item(fixnum)
+@item(t ... which means 0 ... maxlen)
+@begin(item)
+Cons (e.g. '(1 3) reads 1<=x<3)
+@end(item)
+@end(enum)
+
+Example:
+@begin[lang=lisp](code)
+
+(setq a (!randn `(10 10)))
+
+;=> #Const(((0.280... 1.941... ~ 0.723... -0.47...)        
+;                   ...
+;          (-1.01... 0.232... ~ -1.16... 0.405...)) :mgl t :shape (10 10))
+
+(!aref a '(0 3) t)
+(!aref a t '(0 3))
+(!aref a 1 1)
+(setq a (setf (!aref a '(0 3) '(0 3)) (!zeros '(3 3)))) ; to update nodes
+
+@end[lang=lisp](code)
+
+Todo: Bugfix"
   (call (ArefTensor dims) tensor))
 
 (defun !areflist (tensor dims)
@@ -423,8 +531,20 @@ This structure is printable and printed nicely."
      ,@body))
 
 (defun !random (dims limit)
-  ; if limit=fixnum, !random=randint
-  ; if limit=float,  !random=random
+  "Initialize an tensor of dims (cons)
+
+!random can be called with a varying number of type of arguments:
+
+When limit=fixnum, init with 0~fixnum
+
+When limit=single-float, init with 0~single-float
+
+When limit=(cons fixnum1 fixnum2), init with fixnum1~fixnum2, where each element is fixnum
+
+When limit=(cons single-float1 single-float2), init with single-float1~single-float2, where each element is single-float
+
+Return: WaffeTensor
+"
   (let* ((res (!zeros dims))
          (upper-limit (if (listp limit) (second limit) limit))
          (lower-limit (if (listp limit) (first limit) 0))
@@ -437,6 +557,9 @@ This structure is printable and printed nicely."
 
 (declaim (ftype (function ((or cons fixnum) function) waffetensor) !random-with))
 (defun !random-with (dims f)
+  "Initialize the tensor of dims.
+
+f is function and each element is initialized with f's value."
   (declare (optimize (speed 3) (safety 0) (space 0))
 	   (type function f))
   (let* ((res (make-array dims :initial-element 0))
@@ -447,6 +570,7 @@ This structure is printable and printed nicely."
     (const res)))
 
 (defun !normal (dims &optional (mean 2.0) (var 1.0))
+  "Init with normal."
   (let* ((res (!zeros dims))
          (len (if (listp dims) (reduce #'* dims) dims)))
     (loop for n from 0 to (1- len)
@@ -454,21 +578,35 @@ This structure is printable and printed nicely."
     res))
 
 (defmacro !randn (dims) ; this can be rewrited it by mgl-mat
-  `(!normal ,dims 0 1))
+  "Init with normal where mean=0.0, var=1.0"
+  `(!normal ,dims 0.0 1.0))
 
 (defun !beta (dims a b)
+  "TODO"
   (declare (ignore dims a b)))
 
 (defun !gamma (dims scale)
+  "TODO"
   (declare (ignore dims scale)))
 
 (defun !chisquare (dims df)
+  "TODO"
   (declare (ignore dims df)))
 
 (defun !bernoulli (dims rate)
+  "Init a tensor of dims with bernoulli
+
+rate is single-float, and [0 1]"
   (!modify (!zeros dims) :bernoulli (const rate)))
 
 (defun !shape (tensor &optional (nth nil))
+  "Return the shape of tensor
+
+Tensor is WaffeTensor.
+
+Output is Cons or fixnum
+
+When nth is not nil, return (nth nth (!shape tensor))"
   (declare (type waffetensor tensor))
   (unless (typep (waffetensor-data tensor) 'waffe-array)
     (unless (or (typep (waffetensor-data tensor) 'function)
@@ -492,24 +630,42 @@ This structure is printable and printed nicely."
 	 (mat-dimensions (waffetensor-data tensor))))))
 
 (defun !dims (tensor)
+  "Return total length of the given tensor's dims
+
+Example:
+@begin[lang=lisp](code)
+(!dims (!zeros '(10 10 10))) ; => 3
+@end[lang=lisp](code)"
   (length (!shape tensor)))
 
 (defun !size (tensor)
+  "Return total size of tensor
+
+Example:
+
+@begin[lang=lisp](code)
+(!dims (!zeros '(10 10 10))) ; => 1000
+@end[lang=lisp](code)"
   (apply #'* (!shape tensor)))
 
 (defun !size-1 (tensor)
   (1- (!size tensor)))
 
 (defun !zeros-like (tensor)
+  "Return a const where the shape is the same as tensor but elements are zero."
   (!zeros (!shape tensor)))
 
 (defun !ones-like (tensor)
+  "Return a const where the shape is the same as tensor but elements are one."
   (!ones (!shape tensor)))
 
-(defun !full-like ())
+(defun !full-like ()
+  "fulls like(todo)")
 
 (defmacro detach (tensor)
-  "Note: this macro doesn't clone data itself"
+  "Expanded to (const (data tensor)).
+
+Note: this macro doesn't clone data itself"
   `(const (data ,tensor)))
 
 (defun write-description (res backward backend)

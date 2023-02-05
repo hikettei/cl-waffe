@@ -8,7 +8,7 @@
 	      :update "Following defnition.")
   :optimize t
   :parameters ((params params :type hash-table)
-	       (lr lr :type single-float))
+	       (lr lr :type float))
   :update (()
 	   (dotimes (i (hash-table-count (self params)))
 	     ; W(n+1) = W(n) - n * grad
@@ -39,6 +39,9 @@
 
 ; not optimized
 (defoptimizer AdaGrad (params &key (lr 1e-3) (epsilon 1e-7))
+  :document (with-usage "AdaGrad"
+	      :overview "Simple AdaGrad"
+	      :note "The codes aren't optimized and slow. Todo: Write docs")
   :parameters ((params params) (lr lr) (h (make-hash-table)) (epsilon epsilon))
   :update (()
 	   (if (= (hash-table-count (self h)) 0)
@@ -57,7 +60,10 @@
 
 ; not optimized
 (defoptimizer RMSProp (params &key (lr 1e-3) (epsilon 1e-7) (decay-rate 0.99))
-  :parameters ((params params) (lr lr) (h (make-hash-table)) (epsilon epsilon) (decay-rate 0.99))
+  :document (with-usage "RMSProp"
+	      :overview "Simple RMSProp"
+	      :note "Not Optimized and slow, todo: write docs")
+  :parameters ((params params) (lr lr) (h (make-hash-table)) (epsilon epsilon) (decay-rate decay-rate))
   :update (()
 	   (if (= (hash-table-count (self h)) 0)
 	       (dotimes (i (hash-table-count (self params)))
@@ -80,14 +86,14 @@
 	      :args "&key (lr 1e-3) (epsilon 1e-7) (beta1 0.9) (beta2 0.999)"
 	      :update "Following definition.")
   :optimize t
-  :parameters ((params params  :type hash-table)
-	       (lr lr          :type single-float)
+  :parameters ((params params :type hash-table)
+	       (lr lr :type float)
 	       (m (make-hash-table) :type hash-table)
 	       (v (make-hash-table) :type hash-table)
-	       (n 0             :type fixnum)
-	       (epsilon epsilon :type single-float)
-	       (beta1 beta1 :type single-float)
-	       (beta2 beta2 :type single-float))
+	       (n 0 :type fixnum)
+	       (epsilon epsilon :type float)
+	       (beta1 beta1 :type float)
+	       (beta2 beta2 :type float))
   :update (()
 	   (if (= (hash-table-count (self m)) 0)
 	       (dotimes (i (hash-table-count (self params)))

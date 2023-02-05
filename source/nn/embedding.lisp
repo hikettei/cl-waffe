@@ -25,6 +25,11 @@
 		     embedding-dim
 		     &key
 		     (pad-idx nil))
+  :document (with-usage "Embedding"
+	      :overview "Embedding"
+	      :args "vocab-size embedding-dim &key (pad-idx nil)"
+	      :forward "Emm"
+	      :step-args "x")
   :parameters ((vocab-size vocab-size :type fixnum)
 	       (embedding-dim embedding-dim :type fixnum)
 	       (padding-idx (if pad-idx

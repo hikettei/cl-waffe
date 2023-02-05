@@ -26,69 +26,96 @@ When you define object (defmodel defnode etc...) all of them will be used for do
 
 (declaim (ftype (function (waffeobjectusage symbol) string) build-docstring))
 (defun build-docstring (usage object-type)
-  ; in progess
+  "Build docstring based on usage and object-type
+
+Todo: Write Doc"
   (with-output-to-string (doc)
-    (format doc "# [~a]:~a~%~%"
+    ; Todo ArgsDesc
+    (format doc "@begin(section)~%@title(cl-waffe's ~:(~a~): ~a)~%"
 	    object-type
 	    (waffeobjectusage-name usage))
-    (format doc "Overview: ~a~%"
+    (format doc "@b(This structure is an cl-waffe object) ~%@begin(deflist)~%")
+    (format doc "@term(Overview)~% @def(~a)~%"
 	    (waffeobjectusage-overview usage))
-    (format doc "~%How to make: `(~a ~a)` => [~a: ~a]~%~%"
+    
+    (unless (equal (waffeobjectusage-note usage) "")
+      (format doc "@term(Note)~%@begin(def)~%@u(~a)~%@end(def)~%" (waffeobjectusage-note usage)))
+
+    (format doc "@term(How to Initialize)~% @begin(def)~%@begin[lang=lisp](code)~%(~a ~a) => [~a: ~a]~%@end[lang=lisp](code)~%@end(def)~%"
 	    (waffeobjectusage-name usage)
 	    (waffeobjectusage-args usage)
 	    object-type
 	    (waffeobjectusage-name usage))
 
-    (unless (equal (waffeobjectusage-note usage) "")
-      (format doc "Note: ~a~%~%" (waffeobjectusage-note usage)))
-
     (case object-type
       (:node
-       (format doc "### Forward~%")
-       (format doc "~a~%"
+       (format doc "@term(Forward)~%")
+       (format doc "@def(~a)~%"
 	       (waffeobjectusage-forward usage))
 
-       (format doc "How to Call Forward: `(call (~a) ~a)`~%"
+       (format doc "@term(Call Forward)~%@begin(def)
+@begin[code=lisp](code)~%(call (~a) ~a)~%@end[code=lisp](code)~%@end(def)~%"
 	       (waffeobjectusage-name usage)
 	       (waffeobjectusage-forward-args usage))
-       (format doc "Backward description: ~a~%"
+       (format doc "@term(Backward description)~%@def(~a)~%"
 	       (waffeobjectusage-backward usage))
-       (format doc "How to Call Backward: `(call-backward (~a) dy)`~%"
+       (format doc "@term(Call Backward)
+@begin(def)~%
+@begin[code=lisp](code)~%(call-backward (~a) dy)~%@end[code=lisp](code)~%"
 	       (waffeobjectusage-name usage))
-       (format doc "Note that: Parameters in node won't be updated.~%"))
+       (format doc "Note that: Parameters in node won't be updated.~%@end(def)~%"))
       (:model
-       (format doc "### Forward~%")
-       (format doc "~a~%"
+       (format doc "@term(Forward)~%")
+       (format doc "@def(~a)~%"
 	       (waffeobjectusage-forward usage))
 
-       (format doc "How to Call Forward: `(call (~a) ~a)`~%"
+       (format doc "@term(Call Forward)~%@begin(def)~%
+@begin[code=lisp](code)~%(call (~a) ~a)~%@end[code=lisp](code)~%"
 	       (waffeobjectusage-name usage)
 	       (waffeobjectusage-forward-args usage))
-       (format doc "Note that: Its backward slot will never called.~%"))
+       (format doc "Note that: Its backward slot will never called.~%@end(def)~%"))
       (:optimizer
-       (format doc "### Update~%")
-       (format doc "~a~%"
+       (format doc "@term(Update)~%")
+       (format doc "@def(~a)~%"
 	       (waffeobjectusage-update usage))
 
-       (format doc "How to call update: use deftrainer and `(update)`, or `(call-forward (~a) &rest args)`~%"
+       (format doc "@term(Call update)~%@begin(def)
+use deftrainer and @c((update)), or @c((call-forward (~a) &rest args))~%@end(def)~%"
 	       (waffeobjectusage-name usage))
-       (format doc "How to call zero-grad: use deftrainer and `(zero-grad)` or `(call-backward (~a))`"
+       (format doc "@term(Call zero-grad)~%@begin(def)~%use deftrainer and @c((zero-grad)) or @c((call-backward (~a)))~%@end(def)~%"
 	       (waffeobjectusage-name usage)))
       (:trainer
-       (format doc "### step-model~%")
-       (format doc "~a~%"
+       (format doc "@term(step-model)~%")
+       (format doc "@def(~a)~%"
 	       (waffeobjectusage-forward usage))
-       (format doc "### predict~%")
-       (format doc "~a~%"
+       (format doc "@term(predict)~%")
+       (format doc "@def(~a)~%"
 	       (waffeobjectusage-predict usage))
 
-       (format doc "How to step model: `(step-model (~a) ~a)`~%"
+       (format doc "@term(Step model)~%@begin(def)
+@begin[lang=lisp](code)
+(step-model (~a) ~a)
+@end[lang=lisp](code)~%@end(def)~%"
 	       (waffeobjectusage-name usage)
 	       (waffeobjectusage-forward-args usage))
-       (format doc "How to predict: `(predict (~a) &rest args)`~%"
+       (format doc "@term(predict)
+@begin(def)
+@begin[lang=lisp](code)
+(predict (~a) &rest args)
+@end[lang=lisp](code)
+@end(def)~%"
 	       (waffeobjectusage-name usage)))
       (:dataset
-       (format doc "### get-dataset~%")))))
+       (format doc "@term(get-dataset)~%")
+       (format doc "@begin(def)~%@begin[lang=lisp](code)~%(get-dataset ~a index) ; => Next Batch~%@end(code)~%@end(def)~%"
+	       (waffeobjectusage-name usage))
+
+       (format doc "@term(get-dataset-length)~%")
+       (format doc "@begin(def)~%@begin[lang=lisp](code)~%(get-dataset-length ~a) ; => Total length of ~a~%@end(code)~%@end(def)~%"
+	       (waffeobjectusage-name usage)
+	       (waffeobjectusage-name usage))))
+    (format doc "~%@term(Object's slots)@def()~%")
+    (format doc "~%@end(deflist)~%@end(section)")))
       
 (defmacro with-usage (object-name
 		      &key
@@ -108,7 +135,9 @@ When you define object (defmodel defnode etc...) all of them will be used for do
 Keyword:
    step-args, arguments for :forward or :step-model, :next.
 
-cl-waffe automatically generate docstrings."
+cl-waffe automatically generate docstrings.
+
+Todo:Write Docs"
   (make-WaffeObjectUsage
    :name object-name
    :overview overview
