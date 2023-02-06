@@ -34,6 +34,7 @@
      lisp-function
      tensor
      args)
+  "The kernel functions, like the shape is immutable, can be lazy evaluated."
   `(return-from
     ,function-name
      (step-and-produce-lazy-eval
@@ -42,40 +43,45 @@
       ,args)))
 
 (defun compile-and-run-lazy (tensor)
-  (let ((tensor-data (data tensor)))
-    (when (typep tensor-data 'function)
-      (funcall tensor-data tensor nil t))))
+  (when (typep (data tensor) 'function)
+    (funcall (data tensor) tensor nil t)))
 
 (defun compile-and-step-lazy-evaluated-nodes
   (tensor-top
    lisp-function
    args)
 
-  (let ((args-table (make-hash-table)))
-    (print (generate-kernel-code args-table tensor-top lisp-function args))
-
-    ))
+  (let* ((args-table (make-hash-table))
+	 (result-code
+	   (generate-kernel-code args-table tensor-top lisp-function args)))
+    (if (use-cuda-p tensor-top)
+	(error "Lazy eval doesn't support cuda environments")
+	result-code)))
 
 (defun parse-argument (args-table tensor)
-  (typecase tensor
+  (typecase (data tensor)
     (function
      (multiple-value-bind
 	   (last-tensor lisp-function args)
-	 (funcall tensor nil nil nil nil t)
+	 (funcall (data tensor) tensor nil nil nil t)
        (generate-kernel-code
 	args-table
 	last-tensor
 	lisp-function
 	args)))
-    (waffetensor
-     (parse-argument args-table (data tensor)))
     (T
-     (typecase tensor
+     (typecase (data tensor)
        (mat
-	tensor)
+	(if (null (cl-waffe::waffetensor-tensor-ident tensor))
+	    (setf (cl-waffe::waffetensor-tensor-ident tensor)
+		  (gensym "KernelArgs")))
+	(setf (gethash
+	       (cl-waffe::waffetensor-tensor-ident tensor)
+	       args-table)
+	      (data tensor))
+	`(:mat ,(cl-waffe::waffetensor-tensor-ident tensor)))
        (T
-	tensor)))))
-	
+	`(:object ,tensor))))))	
       
 (defun generate-kernel-code (args-table tensor lisp-function args)
   `(,lisp-function
@@ -97,5 +103,7 @@
 			nil))
 
 (defun return-test-node ()
-  (let ((a (exp-test (!randn `(3 3)))))
-    (const (add-test (exp-test a) a))))
+  (let ((a (const (exp-test (!randn `(3 3))))))
+    (const (add-test
+	    (const (exp-test a))
+	    a))))
