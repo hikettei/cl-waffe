@@ -172,7 +172,7 @@ This package exports features for making caches (sysconst)")
 		     (error "cl-waffe.caches:cached-data: The tensor that attempted to read has already cached and cleaned.~%Please remain that calculations must be done in the scope that the tensor has created, including defnode."))
 		 (update-calln (cl-waffe::waffetensor-idx tensor))
 		 (if shape?
-		     (mat-dimensions obj)
+		     (!shape (sysconst obj))
 		     obj))))
        (let* ((,state (check-abandon ,place))
 	      (,var (if (and

@@ -140,6 +140,8 @@
 
 (defmethod add-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) (y mgl-mat:mat))
   (declare (optimize (speed 3) (space 1) (safety 0)))
+  (return-and-lazy-eval add-tensor '+ out `(,out1))
+  
   (cond
     ((will-be-destructed out)
      (let ((o (decide-out-buffer out x enable-optimize? t)))
@@ -152,16 +154,21 @@
 	 o))))
 
 (defmethod add-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) y)
-  (declare (optimize (speed 3) (space 1) (safety 0))
-	   (ignore out1))
+  (declare (optimize (speed 3) (space 1) (safety 0)))
+  (return-and-lazy-eval add-tensor '+ out `(,out1))
   (let ((o (decide-out-buffer out x enable-optimize? t)))
     (the mgl-mat:mat (mgl-mat:.+! y o))))
 
 (defmethod add-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) x (y mgl-mat:mat))
-  (declare (optimize (speed 3) (space 1) (safety 0))
-	   (ignore out))
+  (declare (optimize (speed 3) (space 1) (safety 0)))
+  (return-and-lazy-eval add-tensor '+ out `(,out1))
   (let ((o (decide-out-buffer out1 y enable-optimize? t)))
     (the mgl-mat:mat (mgl-mat:.+! x o))))
+
+(defmethod add-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) x y)
+  (declare (optimize (speed 3)))
+  (return-and-lazy-eval add-tensor '+ out out1)
+  (error "JIT is disabled but kernel got lazy-evaluated"))
 
 (defgeneric sub-tensor (enable-optimize? out out1 x y))
 (defmethod sub-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) (y mgl-mat:mat))
@@ -188,6 +195,11 @@
 	   (ignore out))
   (let ((o (decide-out-buffer out1 y enable-optimize? t)))
     (the mgl-mat:mat (mgl-mat:.+! (* -1.0 (the single-float x)) o))))
+
+(defmethod sub-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) x y)
+  (declare (optimize (speed 3)))
+  (return-and-lazy-eval sub-tensor '- out out1)
+  (error "JIT is disabled but kernel got lazy-evaluated"))
 
 (defgeneric mul-tensor (enable-optimize? out out1 x y))
 (defmethod mul-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) (y mgl-mat:mat))

@@ -17,13 +17,6 @@
 	(setf (gethash symbol-name *fname-ids*)
 	      (1+ (hash-table-count *fname-ids*))))))
 
-(defun is-jit-compiled? (symbol-name)
-  (or (gethash symbol-name *fname-ids*)
-      (prog1
-	  (1+ (hash-table-count *fname-ids*))
-	(setf (gethash symbol-name *fname-ids*)
-	      (1+ (hash-table-count *fname-ids*))))))
-
 (defun display-all-nodes (tensor &optional (indent 0))
   (let ((variables (cl-waffe::waffetensor-variables tensor))
 	(state     (cl-waffe::waffetensor-state tensor)))
@@ -73,6 +66,7 @@ When the tensor isn't appropriate, do nothing."
 	  ,args))))
 
 (defun compile-and-run-lazy (tensor)
+  (declare (type waffetensor tensor))
   "If tensor is lazy evaluated, execute all nodes. otherwise return tensor."
   
   (if (typep (data tensor) 'function)
@@ -110,11 +104,12 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 
 (defun parse-argument (jit-id args-table tensor)
   "Parse args, if tensor=mat, register to args-table"
+  (declare (optimize (speed 3)))
   (typecase (data tensor)
     (function
      (multiple-value-bind
 	   (last-tensor lisp-function args)
-	 (funcall (data tensor) tensor nil nil nil t)
+	 (funcall (the function (data tensor)) tensor nil nil nil t)
        (generate-kernel-code
 	jit-id
 	args-table
@@ -138,6 +133,8 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 (defun generate-kernel-code (jit-id args-table tensor lisp-function args)
   "The top level of generating code.
 jit-id is a stream"
+  (declare (optimize (speed 3))
+	   (type stream jit-id))
   (format jit-id ".~a" (fname-get lisp-function)) ;replace . with ( and , with )
   (prog1
       `(,lisp-function
@@ -151,6 +148,7 @@ jit-id is a stream"
     (args-table
      any-tensor
      &key (jit-function-id nil))
+  (declare (optimize (speed 3)))
   (macrolet ((apply-jit (jit-id args)
 	       `(apply (intern (symbol-name ,jit-id)) ,args)))
     (let ((mat-inputs nil))
@@ -171,7 +169,7 @@ jit-id is a stream"
 	   (apply-jit
 	    jit-function-id
 	    `(,(mat-size out) ,out ,@mat-inputs))
-	   (values jit-function-id out))
+	   out)
 	  (T (error "cl-waffe.backends.mgl:JIT -> couldn't find jit-id")))))))
 
 (defun lisp-define-tmp-kernel (jit-id
@@ -222,7 +220,7 @@ Return: compiled-function's id, out"
 	  (apply-jit
 	   jit-ident
 	   `(,(mat-size out) ,out ,@mat-inputs))
-	  (values jit-ident out))))))
+	  out)))))
 
 (defun add-test (tensor x)
   (return-and-lazy-eval add-test
