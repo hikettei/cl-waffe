@@ -107,7 +107,6 @@
   (args-table
    any-tensor
    &key (jit-function-id nil))
-  (print "A")
   (macrolet ((apply-jit (jit-id args)
 	       `(apply (intern (symbol-name ,jit-id)) ,args)))
     (let ((mat-inputs nil))
@@ -134,7 +133,7 @@
 			       code
 			       any-tensor
 			       &aux (jit-ident (gensym "JitFunction")))
-  ;(declare (optimize))
+  (declare (optimize (speed 3)))
   "do define-lisp-kernel and execute it.
 Return: compiled-function's id, out"
   (if (not (null (cl-waffe::waffetensor-jit-id any-tensor)))
