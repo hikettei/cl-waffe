@@ -59,7 +59,10 @@
 	   (generate-kernel-code args-table tensor-top lisp-function args)))
     (if (use-cuda-p tensor-top)
 	(error "Lazy eval doesn't support cuda environments")
-	(lisp-define-tmp-kernel args-table result-code))))
+	(lisp-define-tmp-kernel
+	 args-table
+	 result-code
+	 tensor-top))))
 
 (defun parse-argument (args-table tensor)
   "Parse args, if tensor=mat, register to args-table"
@@ -95,7 +98,7 @@
 		     (parse-argument args-table arg))
 	   args)))
 
-(defun lisp-define-tmp-kernel (args-table code)
+(defun lisp-define-tmp-kernel (args-table code any-tensor)
   "do define-lisp-kernel and execute it."
   (macrolet ((def-dynamic-kernel (args body)
 	       `(progn
@@ -115,14 +118,14 @@
 		      ,@(reverse symbols)))
 
       (setq mat-inputs (reverse mat-inputs))
-      (let* ((kernel-code (def-dynamic-kernel symbols code))
-	     (out (make-mat (mat-dimensions (car mat-inputs)) ; use with-caches
-			    :initial-element 0.0)))
-	(eval kernel-code)
-	(print kernel-code)
-	(apply #'.tmp-kernel
-	       `(,(mat-size out) ,out ,@mat-inputs))
-	out))))
+      (let* ((kernel-code (def-dynamic-kernel symbols code)))
+	(cl-waffe.caches:with-cache (out any-tensor)
+	  (eval kernel-code)
+	  (print kernel-code)
+	  (dotimes (i 1000)
+	    (apply #'.tmp-kernel
+		   `(,(mat-size out) ,out ,@mat-inputs)))
+	  out)))))
 
 (defun add-test (tensor x)
   (return-and-lazy-eval add-test
@@ -141,3 +144,9 @@
     (const (add-test
 	    (const (exp-test a))
 	    a))))
+
+(defun run-orig (a)
+  (time (dotimes (i 1000)
+	     (progn
+	       (!add (!exp (!exp a)) (!exp a))
+	       nil))))
