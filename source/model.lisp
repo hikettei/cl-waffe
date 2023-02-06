@@ -89,7 +89,21 @@ Output: => @cl:param(tensor) produced by :forward"
   (let* ((result (apply
 		  (the function (call-forward model)) args)))
     (declare (type (or null waffetensor list) result))
-        
+
+    (typecase result
+      (waffetensor
+       (when (and (null (waffetensor-thread-data result))
+		  (not (null (car args))))
+	 (setf (waffetensor-thread-data result)
+	       (waffetensor-thread-data (car args)))))
+      (list (mapcar
+	     #'(lambda (r)
+		 (when (and (null (waffetensor-thread-data r))
+			    (not (null (car args))))
+		   (setf (waffetensor-thread-data r)
+			 (waffetensor-thread-data (car args)))))
+		 result)))
+      
     (unless *no-grad*
       (if (slot-value model 'hide-from-tree) ;is model defined by defmodel?
 	  (progn
