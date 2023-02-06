@@ -120,6 +120,11 @@
       (setq mat-inputs (reverse mat-inputs))
       (let* ((kernel-code (def-dynamic-kernel symbols code)))
 	(cl-waffe.caches:with-cache (out any-tensor)
+	  
+	  (if (cl-waffe::waffetensor-thread-data any-tensor)
+	      (incf (cl-waffe::waffenodethread-cache-n
+		     (cl-waffe::waffetensor-thread-data any-tensor))
+		    1))
 	  (eval kernel-code)
 	  (print kernel-code)
 	  (dotimes (i 1000)
