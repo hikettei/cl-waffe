@@ -1,6 +1,7 @@
 
 (in-package :cl-waffe.backends.mgl)
 
+; JIT Compiler
 
 (defun display-all-nodes (tensor &optional (indent 0))
   (let ((variables (cl-waffe::waffetensor-variables tensor))
@@ -56,7 +57,7 @@
 	   (generate-kernel-code args-table tensor-top lisp-function args)))
     (if (use-cuda-p tensor-top)
 	(error "Lazy eval doesn't support cuda environments")
-	result-code)))
+	(lisp-define-tmp-kernel args-table result-code))))
 
 (defun parse-argument (args-table tensor)
   (typecase (data tensor)
@@ -79,9 +80,9 @@
 	       (cl-waffe::waffetensor-tensor-ident tensor)
 	       args-table)
 	      (data tensor))
-	`(:mat ,(cl-waffe::waffetensor-tensor-ident tensor)))
+	`(aref ,(cl-waffe::waffetensor-tensor-ident tensor) index))
        (T
-	`(:object ,tensor))))))	
+	tensor)))))
       
 (defun generate-kernel-code (args-table tensor lisp-function args)
   `(,lisp-function
@@ -89,6 +90,23 @@
     ,@(map 'list #'(lambda (arg)
 		     (parse-argument args-table arg))
 	   args)))
+
+(defun lisp-define-tmp-kernel (args-table code)
+  (macrolet ((def-dynamic-kernel (args body)
+	       `(progn
+		  `(mgl-mat:define-lisp-kernel (.tmp-kernel)
+		    ,,args
+		     (loop for index fixnum upfrom 0 below size
+			   do (setf (aref out index) ,,body))))))
+    (let ((symbols nil))
+      (maphash #'(lambda (key val)
+		   (declare (ignore val))
+		   (push `(,key :mat :input) symbols))
+	       args-table)
+      (setq symbols `((size fixnum)
+		      (out :mat :output)
+		      ,@(reverse symbols)))
+      (def-dynamic-kernel symbols code))))
 
 (defun add-test (tensor x)
   (return-and-lazy-eval add-test
