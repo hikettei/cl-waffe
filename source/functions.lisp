@@ -1,7 +1,6 @@
 
 (in-package :cl-waffe)
 
-
 (defnode ReLUTensor nil
   :optimize t
   :parameters ((path-through nil) (zero-buff nil))
@@ -59,12 +58,12 @@ Output: Tensor"
 	(batch-size (!shape x 0)))
     (!div z batch-size)))
 
-(defun !softmax (x &key (avoid-overflow t))
+(defun !softmax-function (x &key (avoid-overflow t))
   "Applying softmax.
 
 !softmax has three behaivour depending on the number of dimensions."
   (case (!dims x)
-    (1 (!softmax (!unsqueeze x)))
+    (1 (!softmax-function (!unsqueeze x)))
     (2 (let* ((x1 (if avoid-overflow
 		      (!sub x (!average x))
 		      x))
@@ -73,9 +72,17 @@ Output: Tensor"
     (3 (let* ((result (!zeros (!shape x)))) ; For batched inputs
 	 (dotimes (i (!shape x 0))
 	   (setq result (setf (!aref result i)
-			      (!softmax (!squeeze (!aref x i) 0)))))
+			      (!softmax-function (!squeeze (!aref x i) 0)))))
 	 result))
     (T (error "!softmax: softmax only supports where (!dims tensor) <= 3."))))
+
+(defmodel SoftMaxNode (avoid-overflow)
+  :parameters ((avoid-overflow avoid-overflow))
+  :forward ((x)
+	    (!softmax-function x :avoid-overflow (self avoid-overflow))))
+
+(defun !softmax (x &key (avoid-overflow t))
+  (call (SoftMaxNode avoid-overflow) x))
 
 ; Todo :docstring
 (defmodel model-list (model-args)

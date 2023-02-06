@@ -36,6 +36,7 @@
 			     (:file "package")
 			     (:file "utils")
 			     (:file "optimizers")
+			     (:file "lazy-evaluate")
 			     (:file "kernel")))
 	       (:file "package")
 	       (:file "utils")

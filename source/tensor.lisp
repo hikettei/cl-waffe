@@ -148,7 +148,7 @@ This structure is printable and printed nicely."
   (is-param? nil :type boolean)
   (is-ancestor-param nil :type boolean)
   (is-next-destruct? nil :type boolean)
-  (destructive? nil :type boolean) ; unnecessary
+  (destructive? nil :type boolean)
   (thread-data nil :type (or waffenodethread null))
   (is-sysconst? nil :type boolean)
   (path-through-node? nil :type boolean)
