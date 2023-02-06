@@ -35,13 +35,18 @@
      lisp-function
      tensor
      args)
-  "The kernel functions, like the shape is immutable, can be lazy evaluated."
-  `(return-from
-    ,function-name
-     (step-and-produce-lazy-eval
-      ,tensor
-      ,lisp-function
-      ,args)))
+  "The kernel functions, like the shape is immutable, can be lazy evaluated.
+tensor ... the first argument
+args ... must be nil or cons. note that you must ignore the first argument
+
+When the tensor isn't appropriate, do nothing."
+  `(if t
+       (return-from
+	,function-name
+	 (step-and-produce-lazy-eval
+	  ,tensor
+	  ,lisp-function
+	  ,args))))
 
 (defun compile-and-run-lazy (tensor &key (jit-id nil))
   "If tensor is lazy evaluated, execute all nodes. otherwise return tensor."
@@ -63,7 +68,7 @@
 	 (result-code
 	   (generate-kernel-code args-table tensor-top lisp-function args)))
     (if (use-cuda-p tensor-top)
-	(error "Lazy eval doesn't support cuda environments")
+	(error "Lazy eval doesn't support cuda environments") ; Todo: Support it.
 	(lisp-define-tmp-kernel
 	 args-table
 	 result-code
@@ -127,7 +132,8 @@
 	   (apply-jit
 	    jit-function-id
 	    `(,(mat-size out) ,out ,@mat-inputs))
-	   (values jit-function-id out)))))))
+	   (values jit-function-id out))
+	  (T (error "cl-waffe.backends.mgl:JIT -> couldn't find jit-id")))))))
 
 (defun lisp-define-tmp-kernel (args-table
 			       code
