@@ -153,7 +153,6 @@ This structure is printable and printed nicely."
   (is-sysconst? nil :type boolean)
   (path-through-node? nil :type boolean)
   (tensor-ident nil :type (or null symbol))
-  (jit-id nil :type (or null symbol))
   (key nil :type (or null cons))
   (idx nil :type (or null symbol))
   (is-data-destructed? nil :type boolean))
