@@ -43,10 +43,15 @@
       ,lisp-function
       ,args)))
 
-(defun compile-and-run-lazy (tensor)
+(defun compile-and-run-lazy (tensor &key (jit-id nil))
   "If tensor is lazy evaluated, execute all nodes. otherwise return tensor."
+  (setf (cl-waffe::waffetensor-jit-id tensor) jit-id)
   (if (typep (data tensor) 'function)
-      (funcall (data tensor) tensor nil t)
+      (funcall
+       (data tensor)
+       tensor
+       nil
+       t)
       tensor))
 
 (defun compile-and-step-lazy-evaluated-nodes
@@ -98,21 +103,56 @@
 		     (parse-argument args-table arg))
 	   args)))
 
+(defun lisp-execute-tmp-kernel
+  (args-table
+   any-tensor
+   &key (jit-function-id nil))
+  (print "A")
+  (macrolet ((apply-jit (jit-id args)
+	       `(apply (intern (symbol-name ,jit-id)) ,args)))
+    (let ((mat-inputs nil))
+      (maphash #'(lambda (key val)
+		   (declare (ignore key))
+		   (push val mat-inputs))
+	       args-table)
+
+      (setq mat-inputs (reverse mat-inputs))
+      
+      (cl-waffe.caches:with-cache (out any-tensor)
+	(if (cl-waffe::waffetensor-thread-data any-tensor)
+	    (incf (cl-waffe::waffenodethread-cache-n
+		   (cl-waffe::waffetensor-thread-data any-tensor))
+		  1))
+	(cond
+	  (jit-function-id
+	   (apply-jit
+	    jit-function-id
+	    `(,(mat-size out) ,out ,@mat-inputs))
+	   (values jit-function-id out)))))))
+
 (defun lisp-define-tmp-kernel (args-table
 			       code
 			       any-tensor
-			       &key (jit-function-id nil)
-			       &aux (jit-ident (symbol-name (gensym "JitFunction"))))
+			       &aux (jit-ident (gensym "JitFunction")))
   ;(declare (optimize))
-  "do define-lisp-kernel and execute it."
+  "do define-lisp-kernel and execute it.
+Return: compiled-function's id, out"
+  (if (not (null (cl-waffe::waffetensor-jit-id any-tensor)))
+      (multiple-value-bind (id out)
+	  (lisp-execute-tmp-kernel args-table
+				   any-tensor
+				   :jit-function-id
+				   (cl-waffe::waffetensor-jit-id any-tensor))
+	(return-from lisp-define-tmp-kernel (values id out))))
+  
   (macrolet ((def-dynamic-kernel (args body)
 	       `(progn
-		  `(mgl-mat:define-lisp-kernel (,(intern jit-ident))
+		  `(mgl-mat:define-lisp-kernel (,(intern (symbol-name jit-ident)))
 		    ,,args
 		     (loop for index fixnum upfrom 0 below size
 			   do (setf (aref out index) ,,body)))))
 	     (apply-jit (jit-id args)
-	       `(apply (intern ,jit-id) ,args)))
+	       `(apply (intern (symbol-name ,jit-id)) ,args)))
     (let ((symbols nil)
 	  (mat-inputs nil))
       (maphash #'(lambda (key val)
@@ -131,14 +171,11 @@
 	      (incf (cl-waffe::waffenodethread-cache-n
 		     (cl-waffe::waffetensor-thread-data any-tensor))
 		    1))
-	  (cond
-	    (jit-function-id nil)
-	    (T
-	     (eval kernel-code) ; define毎回するのは時間がかかる
-	     (apply-jit
-	      jit-ident
-	      `(,(mat-size out) ,out ,@mat-inputs))
-	     out)))))))
+	  (eval kernel-code)
+	  (apply-jit
+	   jit-ident
+	   `(,(mat-size out) ,out ,@mat-inputs))
+	  (values jit-ident out))))))
 
 (defun add-test (tensor x)
   (return-and-lazy-eval add-test
