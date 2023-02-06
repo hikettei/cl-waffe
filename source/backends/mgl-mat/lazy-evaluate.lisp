@@ -44,14 +44,16 @@
       ,args)))
 
 (defun compile-and-run-lazy (tensor)
-  (when (typep (data tensor) 'function)
-    (funcall (data tensor) tensor nil t)))
+  "If tensor is lazy evaluated, execute all nodes. otherwise return tensor."
+  (if (typep (data tensor) 'function)
+      (funcall (data tensor) tensor nil t)
+      tensor))
 
 (defun compile-and-step-lazy-evaluated-nodes
   (tensor-top
    lisp-function
    args)
-
+  "generate kernel code based on tensor-top's backend."
   (let* ((args-table (make-hash-table))
 	 (result-code
 	   (generate-kernel-code args-table tensor-top lisp-function args)))
@@ -60,6 +62,7 @@
 	(lisp-define-tmp-kernel args-table result-code))))
 
 (defun parse-argument (args-table tensor)
+  "Parse args, if tensor=mat, register to args-table"
   (typecase (data tensor)
     (function
      (multiple-value-bind
@@ -85,6 +88,7 @@
 	tensor)))))
       
 (defun generate-kernel-code (args-table tensor lisp-function args)
+  "The top level of generating code."
   `(,lisp-function
     ,(parse-argument args-table tensor)
     ,@(map 'list #'(lambda (arg)
@@ -92,21 +96,33 @@
 	   args)))
 
 (defun lisp-define-tmp-kernel (args-table code)
+  "do define-lisp-kernel and execute it."
   (macrolet ((def-dynamic-kernel (args body)
 	       `(progn
 		  `(mgl-mat:define-lisp-kernel (.tmp-kernel)
 		    ,,args
 		     (loop for index fixnum upfrom 0 below size
 			   do (setf (aref out index) ,,body))))))
-    (let ((symbols nil))
+    (let ((symbols nil)
+	  (mat-inputs nil))
       (maphash #'(lambda (key val)
-		   (declare (ignore val))
-		   (push `(,key :mat :input) symbols))
+		   (push `(,key :mat :input) symbols)
+		   (push val mat-inputs))
 	       args-table)
+      
       (setq symbols `((size fixnum)
 		      (out :mat :output)
 		      ,@(reverse symbols)))
-      (def-dynamic-kernel symbols code))))
+
+      (setq mat-inputs (reverse mat-inputs))
+      (let* ((kernel-code (def-dynamic-kernel symbols code))
+	     (out (make-mat (mat-dimensions (car mat-inputs)) ; use with-caches
+			    :initial-element 0.0)))
+	(eval kernel-code)
+	(print kernel-code)
+	(apply #'.tmp-kernel
+	       `(,(mat-size out) ,out ,@mat-inputs))
+	out))))
 
 (defun add-test (tensor x)
   (return-and-lazy-eval add-test
@@ -120,8 +136,8 @@
 			tensor
 			nil))
 
-(defun return-test-node ()
-  (let ((a (const (exp-test (!randn `(3 3))))))
+(defun return-test-node (tensor)
+  (let ((a (const (exp-test tensor))))
     (const (add-test
 	    (const (exp-test a))
 	    a))))
