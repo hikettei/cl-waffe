@@ -55,15 +55,17 @@ args ... must be nil or cons. note that you must ignore the first argument
 
 When the tensor isn't appropriate, do nothing."
   `(if (and cl-waffe.caches:*static-node-mode*
-	    ;(cl-waffe::waffetensor-thread-data tensor)
-	    )
+	    (cl-waffe::waffetensor-thread-data ,tensor))
        ; Judge if the Tensor is in the Model's Iteration or in thread-data.
        (return-from
 	,function-name
 	 (step-and-produce-lazy-eval
 	  ,tensor
 	  ,lisp-function
-	  ,args))))
+	  ,(typecase args
+	    (list args)
+	    (waffetensor `(,args))
+	    (T args))))))
 
 (defun compile-and-run-lazy (tensor)
   (declare (type waffetensor tensor))

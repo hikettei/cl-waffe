@@ -19,6 +19,7 @@
 	   ; Functions for using tensor's data
 	   #:warranty
 	   #:data
+	   #:value
 	   #:grad
 
 	   #:waffedatatype

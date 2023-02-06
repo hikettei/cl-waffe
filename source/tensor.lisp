@@ -191,7 +191,17 @@ Note: this function is setfable and inlined"
        (if (null result)
 	   (the function
 		(waffetensor-data tensor))
-	   (the (values mat &optional) result))))
+	   (the (values (or mat function) &optional) result))))
+    (T (waffetensor-data tensor))))
+
+(defun value (tensor)
+  "Access tensor's data, but if tensor is lazy-evaluated, eval them.
+
+Note: this is not setfable"
+  (declare (type waffetensor tensor))
+  (typecase (waffetensor-data tensor)
+    (function
+     (cl-waffe.backends.mgl::compile-and-run-lazy tensor))
     (T (waffetensor-data tensor))))
 
 (defun (setf data) (val &optional tensor)

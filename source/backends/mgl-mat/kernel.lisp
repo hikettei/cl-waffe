@@ -173,6 +173,8 @@
 (defgeneric sub-tensor (enable-optimize? out out1 x y))
 (defmethod sub-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) (y mgl-mat:mat))
   (declare (optimize (speed 3) (space 1) (safety 0)))
+  (return-and-lazy-eval sub-tensor '- out out1)
+  
   (cond
     ((will-be-destructed out)
      (let ((o (decide-out-buffer out x enable-optimize? t)))
@@ -185,14 +187,14 @@
 	 o))))
 
 (defmethod sub-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) y)
-  (declare (optimize (speed 3) (space 1) (safety 0))
-	   (ignore out1))
+  (declare (optimize (speed 3) (space 1) (safety 0)))
+  (return-and-lazy-eval sub-tensor '- out out1)
   (let ((o (decide-out-buffer out x enable-optimize? t)))
     (the mgl-mat:mat (mgl-mat:.+! (* -1.0 (the single-float y)) o))))
 
 (defmethod sub-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) x (y mgl-mat:mat))
-  (declare (optimize (speed 3) (space 1) (safety 0))
-	   (ignore out))
+  (declare (optimize (speed 3) (space 1) (safety 0)))
+  (return-and-lazy-eval sub-tensor '- out out1)
   (let ((o (decide-out-buffer out1 y enable-optimize? t)))
     (the mgl-mat:mat (mgl-mat:.+! (* -1.0 (the single-float x)) o))))
 
@@ -204,7 +206,7 @@
 (defgeneric mul-tensor (enable-optimize? out out1 x y))
 (defmethod mul-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) (y mgl-mat:mat))
   (declare (optimize (speed 3) (space 1) (safety 0)))
-
+  (return-and-lazy-eval mul-tensor '* out out1)
   (cond
     ((will-be-destructed out)
      (let ((o (decide-out-buffer out x enable-optimize? nil)))
@@ -216,22 +218,28 @@
        (mgl-mat:geem! 1 x y 0 o)))))
 
 (defmethod mul-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) x (y mgl-mat:mat))
-  (declare (optimize (speed 3) (space 1) (safety 0))
-	   (ignore out))
+  (declare (optimize (speed 3) (space 1) (safety 0)))
+  (return-and-lazy-eval mul-tensor '* out out1)
   (let ((o (decide-out-buffer out1 y enable-optimize? t)))
 	(mgl-mat:scal! x o)))
 
 (defmethod mul-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) y)
-  (declare (optimize (speed 3) (space 1) (safety 0))
-	   (ignore out1))
+  (declare (optimize (speed 3) (space 1) (safety 0)))
+  (return-and-lazy-eval mul-tensor '* out out1)
   (let ((o (decide-out-buffer out x enable-optimize? t)))
 	(mgl-mat:scal! y o)))
+
+(defmethod mul-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) x y)
+  (declare (optimize (speed 3) (space 1) (safety 0)))
+  (return-and-lazy-eval mul-tensor '* out out1)
+  (error "JIT is disabled but kernel got lazy-evaluated."))
 
 (defun inv-tensor (enable-optim out x)
   (declare (optimize (speed 3) (space 1) (safety 0))
 	   (type boolean enable-optim)
            (type waffetensor out)
 	   (type waffetensor x))
+  (return-and-lazy-eval inv-tensor '/ out nil)
   (let ((o (decide-out-buffer out x enable-optim t)))
     (mgl-mat:.inv! o)
     (the mgl-mat:mat o)))
@@ -242,6 +250,7 @@
   (declare (optimize (speed 3) (space 1) (safety 0))
 	   (type boolean enable-optimize?)
 	   (type waffetensor out out1))
+  (return-and-lazy-eval div-tensor '/ out out1)
   (let ((o (decide-out-buffer out x enable-optimize? nil)))
     (the mgl-mat:mat
 	 (mgl-mat:geem!
@@ -259,11 +268,12 @@
 	   (ignore out))
   (unless (= (the fixnum x) 1)
     (error "cl-waffe.backends.mgl-mat: In (!modify a :/= b), a must be tensor or 1."))
+  (return-and-lazy-eval div-tensor '/ out1 nil)
   (the mgl-mat:mat (inv-tensor enable-optimize? out1 y)))
 
 (defun dot-tensor (enable-optimize? out x y)
   (declare (ignore enable-optimize? out))
-  (mgl-mat:dot (data x) (data y)))
+  (mgl-mat:dot (value x) (value y)))
 				   
 (declaim (ftype (function (boolean waffetensor waffetensor waffetensor) mgl-mat:mat)
 		matmul-tensor
@@ -276,8 +286,8 @@
 	   (type boolean enable-optimize?)
 	   (type waffetensor o))
   
-  (let* ((x1 (ensure-shape :matmul (data x)))
-	 (y1 (ensure-shape :matmul (data y)))
+  (let* ((x1 (ensure-shape :matmul (value x)))
+	 (y1 (ensure-shape :matmul (value y)))
 	 (transpose-map `(,(typep (data x) 'function) ,(typep (data y) 'function))))
     (unless (or (<= (length (the list (mat-dimensions x1))) 3)
 		(<= (length (the list (mat-dimensions y1))) 3))
@@ -385,6 +395,7 @@
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type boolean enable-optim)
            (type waffetensor out x))
+  (return-and-lazy-eval log-tensor 'log out nil)
   (let ((o (decide-out-buffer out x enable-optim t)))
            (mgl-mat:.log! o)))
 
@@ -392,6 +403,7 @@
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type boolean enable-optim)
            (type waffetensor out x))
+  (return-and-lazy-eval exp-tensor 'exp out nil)
   (let ((o (decide-out-buffer out x enable-optim t)))
     (mgl-mat:.exp! o)))
 
@@ -399,6 +411,7 @@
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type boolean enable-optim)
            (type waffetensor out x))
+  (return-and-lazy-eval sqrt-tensor 'sqrt out nil)
   (let ((o (decide-out-buffer out x enable-optim t)))
            (mgl-mat:.sqrt! o)))
 
@@ -406,6 +419,7 @@
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type boolean enable-optim)
            (type waffetensor out x y))
+  (return-and-lazy-eval pow-tensor 'pow x y)
   (let ((o (decide-out-buffer out x enable-optim t)))
     (mgl-mat:.expt! o (data y))))
 
@@ -413,6 +427,7 @@
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type boolean enable-optim)
            (type waffetensor out x))
+  (return-and-lazy-eval tanh-tensor 'tanh out nil)
   (let ((o (decide-out-buffer out x enable-optim t)))
        (mgl-mat:.tanh! o)))
 
