@@ -37,11 +37,18 @@
     (let ((thread (waffetensor-thread-data tensor)))
       (if thread (incf (waffenodethread-cache-n thread) 1)))))
 
+(declaim (ftype (function (waffetensor)
+			  (or mat
+			      simple-array
+			      single-float
+			      fixnum))
+		value))
 (defun value (tensor)
   "Access tensor's data, but if tensor is lazy-evaluated, eval them.
 
 Note: this is not setfable"
   (declare (type waffetensor tensor))
+
   (typecase (waffetensor-data tensor)
     (function
      (setf (data tensor)
@@ -109,7 +116,7 @@ Note: this is not setfable"
 
 (defmacro call-and-dispatch-kernel (kernel-function &rest args)
   "Invoke kernel and run kernel-function. return new sysconst
-
+It's the most general way for users to access cl-waffe's kernel.
 Todo:More Details"
   `(invoke-kernel ,kernel-function ,@args))
 
@@ -194,6 +201,7 @@ Example:
   `(progn
      (unless (typep ,target 'waffetensor)
        (error "cl-waffe.with-kernel-case: target must be waffetensor. Encounted type of ~a, when using ~a" (type-of ,target) ,target))
+     (value ,target)
      (cl-waffe.caches:with-cache
 	 (,var ,target :place (cl-waffe.backends.mgl:create-thread-idx
 			       (waffetensor-thread-data ,target))

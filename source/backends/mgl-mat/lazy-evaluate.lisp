@@ -191,15 +191,15 @@ jit-id is a stream"
 		  1))
 	(cond
 	  (jit-function-id
-	   (print "===New Code Loaded===")
-	   (print jit-function-id)
-	   (dolist (m mat-inputs)
-	     (print (const m)))
+	   ;(print "===New Code Loaded===")
+	   ;(print jit-function-id)
+	   ;(dolist (m mat-inputs)
+	   ;  (print (const m)))
 	   (apply-jit
 	    jit-function-id
 	    `(,(mat-size out) ,out ,@mat-inputs))
-	   (print "RESULT")
-	   (print (const out))
+	   ;(print "RESULT")
+	   ;(print (const out))
 	   out)
 	  (T (error "cl-waffe.backends.mgl:JIT -> couldn't find jit-id")))))))
 
@@ -248,22 +248,23 @@ Return: compiled-function's id, out"
 	  ;let ((out (make-mat (!shape any-tensor))))
 	  ;; Todo: SetfAref -> マクロにする、計算ノード保持するように。
 	  ;; Todo: any-tensorが不要ならany-tensorに書き込む
-          (print "====New Code Compiled==")
-	  (print jit-id)
-	  (print kernel-code)
+          ;(print "====New Code Compiled==")
+	  ;(print jit-id)
+	  ;(print kernel-code)
+
 	  (eval kernel-code)
-	  (dolist (v symbols)
-	    (print v))
-	  (print (const out))
-	  (dolist (v mat-inputs)
-	    (print (const v)))
+	  ;(dolist (v symbols)
+	  ;  (print v))
+	  ;(print (const out))
+	  ;(dolist (v mat-inputs)
+	  ;  (print (data (!aref (const v) 0))))
 	  (setf (gethash jit-id *jit-compiled*)
 		jit-ident)
 	  (apply-jit
 	   jit-ident
 	   `(,(mat-size out) ,out ,@mat-inputs))
-	  (print "Result")
-	  (print (const out))
+	 ; (print "Result")
+	  ;(print (const out))
 	  out)))))
 
 (defun add-test (tensor x)

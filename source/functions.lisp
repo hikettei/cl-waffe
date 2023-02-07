@@ -4,9 +4,9 @@
 (defnode ReLUTensor nil
   :optimize t
   :parameters ((path-through nil) (zero-buff nil))
-  :forward ((x)
+  :forward ((x) ; Todo rewrite more faster way.
 	    (unless (self zero-buff)
-		(setf (self zero-buff) (!zeros (!shape x))))
+	      (setf (self zero-buff) (!zeros (!shape x))))
 	    (let ((mask (with-searching-calc-node :< x (self zero-buff))))
 	      (save-for-backward path-through mask)
 	      (!mul mask x)))
