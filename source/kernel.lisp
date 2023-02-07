@@ -91,6 +91,14 @@ Note: this is not setfable"
 
 (defmethod invoke-kernel (kernel-function
 			  (variables cons)
+			  (first-argument function)
+			  (i fixnum))
+  (declare (optimize (speed 3) (space 0) (safety 0))
+	   (ignore i first-argument))
+  (invoke-mgl-kernel kernel-function variables))
+
+(defmethod invoke-kernel (kernel-function
+			  (variables cons)
 			  first-argument
 			  (i fixnum))
   (declare (optimize (speed 3) (space 0) (safety 0))
@@ -117,6 +125,12 @@ Todo:More Details"
 (defgeneric with-searching-calc-node-optim (kernel-function target-data target-tensor args))
 
 (defmethod with-searching-calc-node-optim (kernel-function (target-data mgl-mat:mat) target-tensor args)
+  (declare (optimize (speed 3) (space 0) (safety 0))
+	   (type keyword kernel-function))
+  (invoke-kernel kernel-function `(,target-tensor ,@args) target-data 0)
+  target-tensor)
+
+(defmethod with-searching-calc-node-optim (kernel-function (target-data function) target-tensor args)
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type keyword kernel-function))
   (invoke-kernel kernel-function `(,target-tensor ,@args) target-data 0)
