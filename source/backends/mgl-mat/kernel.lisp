@@ -513,6 +513,9 @@
 
   (warranty x)
   (warranty y)
+
+  (value x)
+  (value y)
   
   (let* ((dims (mgl-mat:mat-dimensions (data x)))
 	 (dims (if (and (= 1 (the fixnum (car (last dims))))
@@ -539,6 +542,9 @@
 
   (warranty x)
   (warranty y)
+
+  (value x)
+  (value y)
 
   (let* ((dims (mgl-mat:mat-dimensions (data x)))
 	 (dims (if (and (= 1 (the fixnum (car (last dims))))
