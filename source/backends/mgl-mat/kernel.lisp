@@ -120,16 +120,37 @@
 (defparameter *v2v-operations* `(:add :sub :mul :div :dot :matmul))
 (defparameter *abort-delay-instruction* :matmul)
 
+(defun lazy-eval-transpose (tensor args)
+  "Lazy eval's format is following: (free-args shape? return-calculated-value?)"
+  (declare (ignore args))
+  (if (typep tensor 'waffetensor)
+      (error "KernelError: lazy-eval-transpose -> tensor must not be waffetensor."))
+  (labels ((LazyTranspose (given-tensor
+			   return-shape?
+			   compile-and-step?
+			   &optional
+			     ignore?
+			     return-node-info)
+	     (declare (ignore given-tensor))
+	     (cond
+	       (ignore?
+		nil)
+	       (return-shape?
+		; Return transposed dims (for 2d only) for 3d is todo.
+		(reverse (mat-dimensions tensor)))
+	       (return-node-info
+		(values :lazy-transpose nil nil nil))
+	       (compile-and-step?
+		; Transpose is evaluated (its slow)
+		(transpose (value (sysconst tensor))))
+	       (T
+		; Transpose is skipped (evaluated with gemm geem etc...)
+		tensor))))
+    #'LazyTranspose))
+
 (defmacro deliv-delay (tensor func &rest args)
-  `(lambda (_ shape? step? &optional ignore?)
-     (declare (ignore _))
-     (if shape?
-	 (reverse (mgl-mat:mat-dimensions ,tensor))
-	 (if step?
-	     (funcall ,func ,tensor ,@args) ; receive before node
-	     (if ignore?
-		 nil
-		 ,tensor))))) ; abort before node
+  (declare (ignore func))
+  (lazy-eval-transpose tensor args))
 
 (defun next-delay (delay state)
   (if (typep delay 'function)
@@ -193,7 +214,7 @@
 
 (defmethod add-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) x y)
   (declare (optimize (speed 3)))
-  (return-and-lazy-eval add-tensor '+ out out1)
+  (return-and-lazy-eval add-tensor '+ out `(,out1))
   (error "JIT is disabled but kernel got lazy-evaluated"))
 
 (defgeneric sub-tensor (enable-optimize? out out1 x y))
@@ -298,8 +319,19 @@
   (the mgl-mat:mat (inv-tensor enable-optimize? out1 y)))
 
 (defun dot-tensor (enable-optimize? out x y)
-  (declare (ignore enable-optimize? out))
-  (mgl-mat:dot (value x) (value y)))
+  (declare (ignore enable-optimize? out)
+	   (type mgl-mat:mat x y))
+  (mgl-mat:dot x y))
+
+(defun is-transpose? (tensor)
+  (declare (type waffetensor tensor))
+  (typecase (data tensor)
+    (function
+     (multiple-value-bind
+	   (node-type)
+	 (funcall (data tensor) nil nil nil nil t)
+       (eql node-type :lazy-transpose)))
+    (T nil)))
 				   
 (declaim (ftype (function (boolean waffetensor waffetensor waffetensor) mgl-mat:mat)
 		matmul-tensor
@@ -312,9 +344,11 @@
 	   (type boolean enable-optimize?)
 	   (type waffetensor o))
   
-  (let* ((x1 (ensure-shape :matmul (value x)))
-	 (y1 (ensure-shape :matmul (value y)))
-	 (transpose-map `(,(typep (data x) 'function) ,(typep (data y) 'function))))
+  (let* ((transpose-map `(,(is-transpose? x)
+			  ,(is-transpose? y)))
+	 (x1 (value x))
+	 (y1 (value y)))
+    (declare (type mat x1 y1))
     (unless (or (<= (length (the list (mat-dimensions x1))) 3)
 		(<= (length (the list (mat-dimensions y1))) 3))
       (error "cl-waffe.backends.mgl:matmul-tensor Matmul only supports following: 2d * 2d, 2d * 3d, 3d * 2d, 3d * 3d."))
@@ -327,6 +361,9 @@
       (cond
 	((and (= (length x-dims) 2)
 	      (= (length y-dims) 2))
+
+	 ; Todo: check shapes
+
 	 (let ((out-dim `(,(if (car transpose-map)
 			       (car (reverse (mat-dimensions x1)))
 			       (car (mat-dimensions x1)))
@@ -664,7 +701,7 @@
     (:sub     (sub-tensor is-first-time-call? destructable-tensor destructable-tensor1 (data (car args)) (data (second args))))
     (:mul     (mul-tensor is-first-time-call? destructable-tensor destructable-tensor1 (data (car args)) (data (second args))))
     (:div     (div-tensor is-first-time-call? destructable-tensor destructable-tensor1 (data (car args)) (data (second args))))
-    (:dot     (dot-tensor is-first-time-call? destructable-tensor (car args) (second args)))
+    (:dot     (dot-tensor is-first-time-call? destructable-tensor (value args) (value args)))
     (:matmul  (matmul-tensor is-first-time-call? destructable-tensor (car args) (second args)))
     (:log     (log-tensor is-first-time-call? destructable-tensor (car args)))
     (:exp     (exp-tensor is-first-time-call? destructable-tensor (car args)))
@@ -677,7 +714,9 @@
     (:<       (compare-tensor is-first-time-call? destructable-tensor (car args) (second args)))
     (:repeat  (mgl-repeat (data (car args)) (data (third args)) :axis (data (second args))))
     (:bernoulli (bernoulli-tensor is-first-time-call? destructable-tensor (car args) (second args)))
-    (:transpose (deliv-delay (data (car args)) #'transpose))
+    (:transpose (lazy-eval-transpose
+		 (data (car args))
+		 nil))
     (:embedding-forward (embedding-forward nil (car args)
 					   (second args)
 					   (third args)))

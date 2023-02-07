@@ -39,7 +39,7 @@
 	       (return-shape?
 		(!shape last-tensor))
 	       (return-node-info
-		(values last-tensor lisp-function args))
+		(values :lazy-eval last-tensor lisp-function args))
 	       (compile-and-step?
 		(compile-and-step-lazy-evaluated-nodes
 		 tensor-top
@@ -90,15 +90,14 @@ When the tensor isn't appropriate, do nothing."
   "generate kernel code based on tensor-top's backend.
 
 Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-limit"
+  (declare (ignore lisp-function args))
   (let* ((jit-id (make-string-output-stream)) ; jit-id is made for find compiled functions
 	 (args-table (make-hash-table))
 	 (result-code
-	   (generate-kernel-code
+	   (parse-argument
 	    jit-id
 	    args-table
-	    tensor-top
-	    lisp-function
-	    args))
+	    tensor-top))
 	 (jit-id (intern (get-output-stream-string jit-id) :keyword)))
     (if (use-cuda-p tensor-top)
 	(error "Lazy eval doesn't support cuda environments") ; Todo: Support it
@@ -114,14 +113,16 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
   (typecase (data tensor)
     (function
      (multiple-value-bind
-	   (last-tensor lisp-function args)
+	   (node-type last-tensor lisp-function args)
 	 (funcall (the function (data tensor)) tensor nil nil nil t)
-       (generate-kernel-code
-	jit-id
-	args-table
-	last-tensor
-	lisp-function
-	args)))
+       (if (eql node-type :lazy-eval)
+	   (generate-kernel-code
+	    jit-id
+	    args-table
+	    last-tensor
+	    lisp-function
+	    args)
+	   (data tensor))))
     (T
      (typecase (data tensor)
        (mat
@@ -134,7 +135,7 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 	      (data tensor))
 	`(aref ,(cl-waffe::waffetensor-tensor-ident tensor) index))
        (T
-	tensor)))))
+	(data tensor))))))
       
 (defun generate-kernel-code (jit-id args-table tensor lisp-function args)
   "The top level of generating code.
@@ -220,6 +221,8 @@ Return: compiled-function's id, out"
 	      (incf (cl-waffe::waffenodethread-cache-n
 		     (cl-waffe::waffetensor-thread-data any-tensor))
 		    1))
+	  (print jit-id)
+	  (print kernel-code)
 	  (eval kernel-code)
 	  (setf (gethash jit-id *jit-compiled*)
 		jit-ident)

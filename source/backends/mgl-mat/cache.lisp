@@ -158,22 +158,27 @@ This package exports features for making caches (sysconst)")
 	   nil))
       (T nil))))
 
-; copy wo koko de suru.
 (defmacro with-thread-cached-object1 ((var tensor key initform &key place (copy nil))
 				      &body body
 				      &aux (state (gensym)))
   (let ((place (or place (gensym (symbol-name 'place)))))
-    `(labels ((cached-data (tensor shape? _ &optional __)
-	      (declare (ignore _ __))
+    `(labels ((cached-data (tensor return-shape? compile-and-step?
+			    &optional ignore-it? return-node-info)
+		(declare (ignore ignore-it?))
 	       (let ((obj (read-thread-cached-object
 			   (cl-waffe::waffetensor-idx tensor)
 			   (cl-waffe::waffetensor-key tensor))))
 		 (if (null obj)
 		     (error "cl-waffe.caches:cached-data: The tensor that attempted to read has already cached and cleaned.~%Please remain that calculations must be done in the scope that the tensor has created, including defnode."))
 		 (update-calln (cl-waffe::waffetensor-idx tensor))
-		 (if shape?
-		     (!shape (sysconst obj))
-		     obj))))
+		 (cond
+		   (return-shape?
+		    (!shape (sysconst obj)))
+		   (return-node-info
+		    (values :cached-obj nil nil nil))
+		   (compile-and-step?
+		    obj)
+		   (T obj)))))
        (let* ((,state (check-abandon ,place))
 	      (,var (if (and
 			 ,state
