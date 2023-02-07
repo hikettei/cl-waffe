@@ -9,6 +9,9 @@
 (defparameter *fname-ids* (make-hash-table)
   "An hash table, function-name (i.e. exp etc...) -> id")
 
+(defparameter *force-lazy-eval* t;nil
+  "When t, every calculation in cl-waffe became lazy-eval. for debugging.")
+
 (defun fname-get (symbol-name)
   "Translate symbol-name -> id, in order to reduce jit-id"
   (or (gethash symbol-name *fname-ids*)
@@ -54,8 +57,9 @@ tensor ... the first argument
 args ... must be nil or cons. note that you must ignore the first argument
 
 When the tensor isn't appropriate, do nothing."
-  `(if (and cl-waffe.caches:*static-node-mode*
-	    (cl-waffe::waffetensor-thread-data ,tensor))
+  `(if (or (and cl-waffe.caches:*static-node-mode*
+		(cl-waffe::waffetensor-thread-data ,tensor))
+	   *force-lazy-eval*)
        ; Judge if the Tensor is in the Model's Iteration or in thread-data.
        (return-from
 	,function-name

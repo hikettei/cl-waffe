@@ -194,15 +194,6 @@ Note: this function is setfable and inlined"
 	   (the (values (or mat function) &optional) result))))
     (T (waffetensor-data tensor))))
 
-(defun value (tensor)
-  "Access tensor's data, but if tensor is lazy-evaluated, eval them.
-
-Note: this is not setfable"
-  (declare (type waffetensor tensor))
-  (typecase (waffetensor-data tensor)
-    (function
-     (cl-waffe.backends.mgl::compile-and-run-lazy tensor))
-    (T (waffetensor-data tensor))))
 
 (defun (setf data) (val &optional tensor)
   "Modifying tensor'data.
@@ -229,7 +220,6 @@ When the argument that you want to insert is a tensor, this function automatical
 	(+    (* c
 	      (cos (* 2.0 pi (double-random)))
 	      var)))))
-
 
 (declaim (ftype
 	  (function
@@ -524,6 +514,7 @@ Todo: Bugfix"
   (call (ArefTensor dims) tensor))
 
 (defun (setf !aref) (value tensor &rest dims)
+  "Todo: Define it as macro and (setq tensor ~)"
   (setf tensor (setf (!areflist tensor dims) value)))
 
 (defun (setf !areflist) (value tensor dims)

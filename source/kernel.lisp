@@ -37,6 +37,17 @@
     (let ((thread (waffetensor-thread-data tensor)))
       (if thread (incf (waffenodethread-cache-n thread) 1)))))
 
+(defun value (tensor)
+  "Access tensor's data, but if tensor is lazy-evaluated, eval them.
+
+Note: this is not setfable"
+  (declare (type waffetensor tensor))
+  (typecase (waffetensor-data tensor)
+    (function
+     (setf (data tensor)
+	   (cl-waffe.backends.mgl:compile-and-run-lazy tensor)))
+    (T (waffetensor-data tensor))))
+
 (declaim (ftype (function (keyword cons) waffetensor) invoke-mgl-kernel invoke-cpu-kenel))
 (defun invoke-mgl-kernel (kernel-function variables)
   (sysconst (cl-waffe.backends.mgl:dispatch-kernel

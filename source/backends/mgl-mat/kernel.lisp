@@ -37,6 +37,20 @@
 	  (incf (cl-waffe::waffenodethread-cache-n thread-info) 1)
 	  result))
       (decide-out-buffer nil args enable-optim copy?)))
+
+(defmethod decide-out-buffer ((out waffetensor)
+			      (args function)
+			      enable-optim
+			      copy?)
+  (declare (optimize (speed 3) (space 0)))
+  (let* ((args (value (sysconst args))))
+    (if (not (null (waffetensor-thread-data out)))
+	(let* ((thread-info (waffetensor-thread-data out))
+	       (idx (create-thread-idx thread-info)))
+	  (with-cache (result out :place idx :copy copy?)
+	    (incf (cl-waffe::waffenodethread-cache-n thread-info) 1)
+	    result))
+	(decide-out-buffer nil args enable-optim copy?))))
       
 (defmethod decide-out-buffer ((out null)
 			      (args waffetensor)
@@ -55,6 +69,18 @@
       (if copy?
 	  (copy-mat args)
 	  (make-mat (mat-dimensions args)))))
+
+(defmethod decide-out-buffer ((out null)
+			      (args function)
+			      enable-optim
+			      copy?)
+  (declare (optimize (speed 3) (space 0) (safety 0)))
+  (let* ((args (value (sysconst args))))
+    (if enable-optim
+	args
+	(if copy?
+	    (copy-mat args)
+	    (make-mat (mat-dimensions args))))))
 
 (declaim (ftype (function (mgl-mat:mat fixnum &key (:axis fixnum)) mgl-mat:mat) mgl-repeat))
 (defun mgl-repeat (tensor n &key axis)

@@ -10,4 +10,5 @@
 	   #:get-difference
 	   #:receive-delay
 	   #:abort-delay
-	   #:copy-elements))
+	   #:copy-elements
+	   #:compile-and-run-lazy))
