@@ -33,6 +33,9 @@
 
 (defun step-and-produce-lazy-eval (last-tensor lisp-function args)
   "Lazy eval's format is following: (free-args shape? return-calculated-value?)"
+  (declare (type waffetensor last-tensor)
+	   (type symbol list-function)
+	   (type list args))
   (labels ((LazyEvaluatedNodes (tensor-top return-shape? compile-and-step? &optional ignore? return-node-info)
 	     (declare (ignore ignore?))
 	     (cond
@@ -57,6 +60,7 @@ tensor ... the first argument
 args ... must be nil or cons. note that you must ignore the first argument
 
 When the tensor isn't appropriate, do nothing."
+  (declare (type list args))
   `(if (or (and cl-waffe.caches:*static-node-mode*
 		(cl-waffe::waffetensor-thread-data ,tensor))
 	   *force-lazy-eval*)
@@ -66,10 +70,9 @@ When the tensor isn't appropriate, do nothing."
 	 (step-and-produce-lazy-eval
 	  ,tensor
 	  ,lisp-function
-	  ,(typecase args
-	    (list args)
-	    (waffetensor `(,args))
-	    (T args))))))
+	  (typecase ,args
+	    (list ,args)
+	    (T (error "return-lazy-eval: args must be list but got ~a" (type-of ,args))))))))
 
 (defun compile-and-run-lazy (tensor)
   (declare (type waffetensor tensor))
@@ -112,13 +115,17 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 
 (defun parse-argument (jit-id args-table tensor)
   "Parse args, if tensor=mat, register to args-table"
-  (declare (optimize (speed 3))
+  (declare ;(optimize (speed 3))
 	   (type stream jit-id))
   (typecase (data tensor)
     (function
      (multiple-value-bind
 	   (node-type last-tensor lisp-function args)
 	 (funcall (the function (data tensor)) tensor nil nil nil t)
+       (declare (type list args))
+       (print "ARGS")
+       (print args)
+       
        (if (eql node-type :lazy-eval)
 	   (generate-kernel-code
 	    jit-id
@@ -126,7 +133,10 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 	    last-tensor
 	    lisp-function
 	    args)
-	   (data tensor))))
+	   (parse-argument
+	    jit-id
+	    args-table
+	    (data tensor)))))
     (T
      (typecase (data tensor)
        (mat
@@ -138,7 +148,8 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 	       args-table)
 	      (data tensor))
 	(format jit-id "M")
-	`(aref ,(cl-waffe::waffetensor-tensor-ident tensor) index))
+	`(aref ,(cl-waffe::waffetensor-tensor-ident tensor)
+	       (mod index ,(!size tensor))))
        (T
 	(format jit-id "O")
 	(data tensor))))))

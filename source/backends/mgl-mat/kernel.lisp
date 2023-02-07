@@ -220,7 +220,7 @@
 (defgeneric sub-tensor (enable-optimize? out out1 x y))
 (defmethod sub-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) (y mgl-mat:mat))
   (declare (optimize (speed 3) (space 1) (safety 0)))
-  (return-and-lazy-eval sub-tensor '- out out1)
+  (return-and-lazy-eval sub-tensor '- out `(,out1))
   
   (cond
     ((will-be-destructed out)
@@ -235,25 +235,25 @@
 
 (defmethod sub-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) y)
   (declare (optimize (speed 3) (space 1) (safety 0)))
-  (return-and-lazy-eval sub-tensor '- out out1)
+  (return-and-lazy-eval sub-tensor '- out `(,out1))
   (let ((o (decide-out-buffer out x enable-optimize? t)))
     (the mgl-mat:mat (mgl-mat:.+! (* -1.0 (the single-float y)) o))))
 
 (defmethod sub-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) x (y mgl-mat:mat))
   (declare (optimize (speed 3) (space 1) (safety 0)))
-  (return-and-lazy-eval sub-tensor '- out out1)
+  (return-and-lazy-eval sub-tensor '- out `(,out1))
   (let ((o (decide-out-buffer out1 y enable-optimize? t)))
     (the mgl-mat:mat (mgl-mat:.+! (* -1.0 (the single-float x)) o))))
 
 (defmethod sub-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) x y)
   (declare (optimize (speed 3)))
-  (return-and-lazy-eval sub-tensor '- out out1)
+  (return-and-lazy-eval sub-tensor '- out `(,out1))
   (error "JIT is disabled but kernel got lazy-evaluated"))
 
 (defgeneric mul-tensor (enable-optimize? out out1 x y))
 (defmethod mul-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) (y mgl-mat:mat))
   (declare (optimize (speed 3) (space 1) (safety 0)))
-  (return-and-lazy-eval mul-tensor '* out out1)
+  (return-and-lazy-eval mul-tensor '* out `(,out1))
   (cond
     ((will-be-destructed out)
      (let ((o (decide-out-buffer out x enable-optimize? nil)))
@@ -266,19 +266,19 @@
 
 (defmethod mul-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) x (y mgl-mat:mat))
   (declare (optimize (speed 3) (space 1) (safety 0)))
-  (return-and-lazy-eval mul-tensor '* out out1)
+  (return-and-lazy-eval mul-tensor '* out `(,out1))
   (let ((o (decide-out-buffer out1 y enable-optimize? t)))
 	(mgl-mat:scal! x o)))
 
 (defmethod mul-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) y)
   (declare (optimize (speed 3) (space 1) (safety 0)))
-  (return-and-lazy-eval mul-tensor '* out out1)
+  (return-and-lazy-eval mul-tensor '* out `(,out1))
   (let ((o (decide-out-buffer out x enable-optimize? t)))
 	(mgl-mat:scal! y o)))
 
 (defmethod mul-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) x y)
   (declare (optimize (speed 3) (space 1) (safety 0)))
-  (return-and-lazy-eval mul-tensor '* out out1)
+  (return-and-lazy-eval mul-tensor '* out `(,out1))
   (error "JIT is disabled but kernel got lazy-evaluated."))
 
 (defun inv-tensor (enable-optim out x)
@@ -297,7 +297,7 @@
   (declare (optimize (speed 3) (space 1) (safety 0))
 	   (type boolean enable-optimize?)
 	   (type waffetensor out out1))
-  (return-and-lazy-eval div-tensor '/ out out1)
+  (return-and-lazy-eval div-tensor '/ out `(,out1))
   (let ((o (decide-out-buffer out x enable-optimize? nil)))
     (the mgl-mat:mat
 	 (mgl-mat:geem!
@@ -482,7 +482,7 @@
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type boolean enable-optim)
            (type waffetensor out x y))
-  (return-and-lazy-eval pow-tensor 'pow x y)
+  (return-and-lazy-eval pow-tensor 'pow x `(,y))
   (let ((o (decide-out-buffer out x enable-optim t)))
     (mgl-mat:.expt! o (data y))))
 
@@ -498,8 +498,10 @@
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type boolean enable-optim)
            (type waffetensor out x y))
+  ; Todo do lazy
+  (value x)
   (let ((o (decide-out-buffer out x enable-optim t)))
-           (mgl-mat:.<! (data y) o)))
+           (mgl-mat:.<! (value y) o)))
 
 (defun sum-tensor (is-first-time-call? out x y)
   (declare (optimize (speed 3) (space 0) (safety 0))
