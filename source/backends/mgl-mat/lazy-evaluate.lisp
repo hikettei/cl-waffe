@@ -40,6 +40,7 @@
 	     (declare (ignore ignore?))
 	     (cond
 	       (return-shape?
+		; How could i say last-tensor must be shape? it could be a number.
 		(!shape last-tensor))
 	       (return-node-info
 		(values :lazy-eval last-tensor lisp-function args))
@@ -78,8 +79,10 @@ When the tensor isn't appropriate, do nothing."
   (declare (type waffetensor tensor))
   "If tensor is lazy evaluated, execute all nodes. otherwise return tensor."
 
-  (unless nil;(null (cl-waffe::waffetensor-thread-data tensor))
-    (display-all-nodes tensor))
+  (print "==Node==")
+  (fresh-line)
+  (if (typep (data tensor) 'function)
+      (display-all-nodes tensor))
   
   (if (typep (data tensor) 'function)
       (funcall
@@ -123,8 +126,6 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 	   (node-type last-tensor lisp-function args)
 	 (funcall (the function (data tensor)) tensor nil nil nil t)
        (declare (type list args))
-       (print "ARGS")
-       (print args)
        
        (if (eql node-type :lazy-eval)
 	   (generate-kernel-code
@@ -172,7 +173,7 @@ jit-id is a stream"
     (args-table
      any-tensor
      &key (jit-function-id nil))
-  (declare (optimize (speed 3)))
+  ;(declare (optimize (speed 3)))
   (macrolet ((apply-jit (jit-id args)
 	       `(apply (intern (symbol-name ,jit-id)) ,args)))
     (let ((mat-inputs nil))
@@ -190,9 +191,15 @@ jit-id is a stream"
 		  1))
 	(cond
 	  (jit-function-id
+	   (print "===New Code Loaded===")
+	   (print jit-function-id)
+	   (dolist (m mat-inputs)
+	     (print (const m)))
 	   (apply-jit
 	    jit-function-id
 	    `(,(mat-size out) ,out ,@mat-inputs))
+	   (print "RESULT")
+	   (print (const out))
 	   out)
 	  (T (error "cl-waffe.backends.mgl:JIT -> couldn't find jit-id")))))))
 
@@ -205,13 +212,11 @@ jit-id is a stream"
   "do define-lisp-kernel and execute it.
 Return: compiled-function's id, out"
   (if (gethash jit-id *jit-compiled*)
-      (multiple-value-bind (id out)
+      (return-from lisp-define-tmp-kernel
 	  (lisp-execute-tmp-kernel args-table
 				   any-tensor
 				   :jit-function-id
-				   (gethash jit-id *jit-compiled*))
-	(declare (ignore id))
-	(return-from lisp-define-tmp-kernel out)))
+				   (gethash jit-id *jit-compiled*))))
   
   (macrolet ((def-dynamic-kernel (args body)
 	       `(progn
@@ -234,17 +239,17 @@ Return: compiled-function's id, out"
 
       (setq mat-inputs (reverse mat-inputs))
       (let* ((kernel-code (def-dynamic-kernel symbols code)))
-	(
-	   ;cl-waffe.caches:with-cache (out any-tensor)
-	  ;(if (cl-waffe::waffetensor-thread-data any-tensor)
-	   ;   (incf (cl-waffe::waffenodethread-cache-n
-	;	     (cl-waffe::waffetensor-thread-data any-tensor))
-	;	    1))
+	(cl-waffe.caches:with-cache (out any-tensor)
+	  (if (cl-waffe::waffetensor-thread-data any-tensor)
+	      (incf (cl-waffe::waffenodethread-cache-n
+		     (cl-waffe::waffetensor-thread-data any-tensor))
+		    1))
 
-	 let ((out (make-mat (!shape any-tensor))))
+	  ;let ((out (make-mat (!shape any-tensor))))
 	  ;; Todo: SetfAref -> マクロにする、計算ノード保持するように。
 	  ;; Todo: any-tensorが不要ならany-tensorに書き込む
-	 (print jit-id)
+          (print "====New Code Compiled==")
+	  (print jit-id)
 	  (print kernel-code)
 	  (eval kernel-code)
 	  (dolist (v symbols)
