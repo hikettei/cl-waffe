@@ -101,9 +101,6 @@ Output: => @cl:param(tensor) produced by :forward"
 		   (setf (waffetensor-thread-data r)
 			 (waffetensor-thread-data (car args)))))
 	     result)))
-
-    (unless (null (waffetensor-thread-data result))
-      (cl-waffe.backends.mgl::display-all-nodes result))
       
     (unless *no-grad*
       (if (slot-value model 'hide-from-tree) ;is model defined by defmodel?

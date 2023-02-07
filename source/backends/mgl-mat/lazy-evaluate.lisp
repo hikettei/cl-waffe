@@ -9,7 +9,7 @@
 (defparameter *fname-ids* (make-hash-table)
   "An hash table, function-name (i.e. exp etc...) -> id")
 
-(defparameter *force-lazy-eval* t;nil
+(defparameter *force-lazy-eval* nil
   "When t, every calculation in cl-waffe became lazy-eval. for debugging.")
 
 (defun fname-get (symbol-name)
@@ -74,6 +74,9 @@ When the tensor isn't appropriate, do nothing."
 (defun compile-and-run-lazy (tensor)
   (declare (type waffetensor tensor))
   "If tensor is lazy evaluated, execute all nodes. otherwise return tensor."
+
+  (unless nil;(null (cl-waffe::waffetensor-thread-data tensor))
+    (display-all-nodes tensor))
   
   (if (typep (data tensor) 'function)
       (funcall
@@ -219,19 +222,31 @@ Return: compiled-function's id, out"
 
       (setq mat-inputs (reverse mat-inputs))
       (let* ((kernel-code (def-dynamic-kernel symbols code)))
-	(cl-waffe.caches:with-cache (out any-tensor)
-	  (if (cl-waffe::waffetensor-thread-data any-tensor)
-	      (incf (cl-waffe::waffenodethread-cache-n
-		     (cl-waffe::waffetensor-thread-data any-tensor))
-		    1))
-	  (print jit-id)
+	(
+	   ;cl-waffe.caches:with-cache (out any-tensor)
+	  ;(if (cl-waffe::waffetensor-thread-data any-tensor)
+	   ;   (incf (cl-waffe::waffenodethread-cache-n
+	;	     (cl-waffe::waffetensor-thread-data any-tensor))
+	;	    1))
+
+	 let ((out (make-mat (!shape any-tensor))))
+	  ;; Todo: SetfAref -> マクロにする、計算ノード保持するように。
+	  ;; Todo: any-tensorが不要ならany-tensorに書き込む
+	 (print jit-id)
 	  (print kernel-code)
 	  (eval kernel-code)
+	  (dolist (v symbols)
+	    (print v))
+	  (print (const out))
+	  (dolist (v mat-inputs)
+	    (print (const v)))
 	  (setf (gethash jit-id *jit-compiled*)
 		jit-ident)
 	  (apply-jit
 	   jit-ident
 	   `(,(mat-size out) ,out ,@mat-inputs))
+	  (print "Result")
+	  (print (const out))
 	  out)))))
 
 (defun add-test (tensor x)

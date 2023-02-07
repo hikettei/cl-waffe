@@ -43,7 +43,7 @@
 			      enable-optim
 			      copy?)
   (declare (optimize (speed 3) (space 0)))
-  (let* ((args (value (sysconst args))))
+  (let* ((args (value out)))
     (if (not (null (waffetensor-thread-data out)))
 	(let* ((thread-info (waffetensor-thread-data out))
 	       (idx (create-thread-idx thread-info)))
