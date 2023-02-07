@@ -38,7 +38,6 @@ This package exports features for making caches (sysconst)")
       (incf (cachedata-calln-per-step calln) 1))
     
     (incf (cachedata-calln calln) 1)
-
     (when (cachedata-lock calln)
       (setf (cachedata-calln calln)
 	    (case (cachedata-calln-per-step calln)
@@ -173,18 +172,22 @@ This package exports features for making caches (sysconst)")
 		 (update-calln (cl-waffe::waffetensor-idx tensor))
 		 (cond
 		   (return-shape?
-		    (!shape (sysconst obj)))
+		    (typecase obj
+		      (function
+		       (!shape (sysconst obj)))
+		      (T
+		       (mat-dimensions obj))))
 		   (return-node-info
 		    (values :cached-obj nil nil nil))
 		   (compile-and-step?
-		    obj)
+		    (copy-mat obj))
 		   (T obj)))))
        (let* ((,state (check-abandon ,place))
 	      (,var (if (and
 			 ,state
 			 (cl-waffe::waffetensor-is-sysconst? ,tensor))
 			; tensor is allowed to be abandoned.
-			(copy-mat (data ,tensor))
+		        (data ,tensor)
 			,initform)))
 	 (if ,copy
 	     (unless ,state ; when ,var is filled with 0.0
@@ -195,8 +198,8 @@ This package exports features for making caches (sysconst)")
 	   (return-thread-cached-object ,place
 					,key
 					(if ,state
-					    (data ,tensor)
-					    (data ,tensor))
+					    (value ,tensor)
+					    (value ,tensor))
 					(cl-waffe::waffetensor-thread-data ,tensor))
 	   (setf (data ,tensor) #'cached-data)
 	   (setf (cl-waffe::waffetensor-key ,tensor) ,key)

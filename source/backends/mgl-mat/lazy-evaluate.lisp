@@ -40,8 +40,24 @@
 	     (declare (ignore ignore?))
 	     (cond
 	       (return-shape?
-		; How could i say last-tensor must be shape? it could be a number.
-		(!shape last-tensor))
+		(let* ((first-shape (!shape last-tensor))
+		       (args-shape (map 'list
+					#'(lambda (x)
+					    (typecase (data x)
+					      (function nil)
+					      (T (!shape x))))
+					args))
+		       (mat-shape (find 0 args-shape :test
+					#'(lambda (x y)
+					    (not (= x (car y)))))))
+		  (cond
+		    ((null args-shape)
+		     first-shape)
+		    ((= (car first-shape) 0)
+		     (if mat-shape
+			 mat-shape
+			 first-shape))
+		    (T first-shape))))
 	       (return-node-info
 		(values :lazy-eval last-tensor lisp-function args))
 	       (compile-and-step?
@@ -79,12 +95,12 @@ When the tensor isn't appropriate, do nothing."
   (declare (type waffetensor tensor))
   "If tensor is lazy evaluated, execute all nodes. otherwise return tensor."
 
-  #|
+  
   (print "==Node==")
   (fresh-line)
   (if (typep (data tensor) 'function)
       (display-all-nodes tensor))
-  |#
+  
   
   (if (typep (data tensor) 'function)
       (funcall
@@ -152,7 +168,7 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 	      (data tensor))
 	(format jit-id "M")
 	`(aref ,(cl-waffe::waffetensor-tensor-ident tensor)
-	       (mod index ,(!size tensor))))
+	       (mod index size)))
        (T
 	(if (null (cl-waffe::waffetensor-tensor-ident tensor))
 	    (setf (cl-waffe::waffetensor-tensor-ident tensor) (gensym "KernelArgs")))
@@ -166,7 +182,7 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 (defun generate-kernel-code (jit-id args-table tensor lisp-function args)
   "The top level of generating code.
 jit-id is a stream"
-  (declare (optimize (speed 3))
+  (declare ;(optimize (speed 3))
 	   (type stream jit-id))
   (format jit-id ".~a" (fname-get lisp-function)) ;replace . with ( and , with )
   (prog1
@@ -214,7 +230,7 @@ jit-id is a stream"
 			       code
 			       any-tensor
 			       &aux (jit-ident (gensym "JitFunction")))
-  (declare (optimize (speed 3)))
+  ;(declare (optimize (speed 3)))
   "do define-lisp-kernel and execute it.
 Return: compiled-function's id, out"
   (if (gethash jit-id *jit-compiled*)
@@ -265,9 +281,9 @@ Return: compiled-function's id, out"
 
 	  (eval kernel-code)
 	  
-	  (dolist (v symbols)
-	    (print v))
-	  	  
+	  ;(dolist (v symbols)
+	  ;  (print v))
+
 	  (setf (gethash jit-id *jit-compiled*)
 		jit-ident)
 	  (apply-jit

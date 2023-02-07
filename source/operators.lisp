@@ -139,12 +139,10 @@
 
 (defnode SumUpTensor ()
   :parameters ((total-len) (shape))
-  :forward ((x)
+  :forward ((x) ; only for 2d
 	    (setf (self total-len) (/ (!size x)))
 	    (setf (self shape) (!shape x))
-	    (with-kernel-case x out
-	      :mgl ((* -1 (asum out))) ; asum >= 0
-	      :mgl-cuda nil))
+	    (!sum (!sum x 1) 0))
   :backward ((dy)
 	     (list (sysconst (scal! (self total-len)
 				    (make-mat (self shape)

@@ -276,22 +276,6 @@
      (let ((o (decide-out-buffer out x enable-optimize? nil)))
        (mgl-mat:geem! 1 x y 0 o)))))
 
-#|
-(defmethod mul-tensor (enable-optimize?
-		       (out waffetensor)
-		       (out1 waffetensor)
-		       x
-		       (y mgl-mat:mat))
-  (declare (optimize (speed 3) (space 1) (safety 1)))
-  (return-and-lazy-eval mul-tensor '* out `(,out1))
-
-  (if (typep x 'function)
-      (mul-tensor enable-optimize? out out1 (value out) (value out1)))
-
-  (let ((o (decide-out-buffer out1 y enable-optimize? t)))
-    (mgl-mat:scal! x o)))
-|#
-
 (defmethod mul-tensor (enable-optimize?
 		       (out waffetensor)
 		       (out1 waffetensor)
@@ -353,9 +337,8 @@
   (the mgl-mat:mat (inv-tensor enable-optimize? out1 y)))
 
 (defun dot-tensor (enable-optimize? out x y)
-  (declare (ignore enable-optimize? out)
-	   (type mgl-mat:mat x y))
-  (mgl-mat:dot x y))
+  (declare (ignore enable-optimize? out))
+  (mgl-mat:dot (value x) (value y)))
 
 (defun is-transpose? (tensor)
   (declare (type waffetensor tensor))
@@ -742,7 +725,7 @@
     (:sub     (sub-tensor is-first-time-call? destructable-tensor destructable-tensor1 (data (car args)) (data (second args))))
     (:mul     (mul-tensor is-first-time-call? destructable-tensor destructable-tensor1 (data (car args)) (data (second args))))
     (:div     (div-tensor is-first-time-call? destructable-tensor destructable-tensor1 (data (car args)) (data (second args))))
-    (:dot     (dot-tensor is-first-time-call? destructable-tensor (value args) (value args)))
+    (:dot     (dot-tensor is-first-time-call? destructable-tensor (car args) (second args)))
     (:matmul  (matmul-tensor is-first-time-call? destructable-tensor (car args) (second args)))
     (:log     (log-tensor is-first-time-call? destructable-tensor (car args)))
     (:exp     (exp-tensor is-first-time-call? destructable-tensor (car args)))
