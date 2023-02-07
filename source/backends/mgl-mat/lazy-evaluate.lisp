@@ -109,7 +109,8 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 
 (defun parse-argument (jit-id args-table tensor)
   "Parse args, if tensor=mat, register to args-table"
-  (declare (optimize (speed 3)))
+  (declare (optimize (speed 3))
+	   (type stream jit-id))
   (typecase (data tensor)
     (function
      (multiple-value-bind
@@ -133,8 +134,10 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 	       (cl-waffe::waffetensor-tensor-ident tensor)
 	       args-table)
 	      (data tensor))
+	(format jit-id "M")
 	`(aref ,(cl-waffe::waffetensor-tensor-ident tensor) index))
        (T
+	(format jit-id "O")
 	(data tensor))))))
       
 (defun generate-kernel-code (jit-id args-table tensor lisp-function args)
