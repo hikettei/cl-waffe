@@ -608,7 +608,6 @@
     (mgl-mat:reshape! x1 (data y))
     x1))
 
-
 (define-lisp-kernel (bernoulli-lisp)
     ((mask :mat :io)
      (start-mask fixnum)
