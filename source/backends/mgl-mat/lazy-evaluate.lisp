@@ -31,6 +31,7 @@
       (if (not (null v))
 	  (display-all-nodes v (+ indent 2))))))
 
+
 (defun step-and-produce-lazy-eval (last-tensor lisp-function args)
   "Lazy eval's format is following: (free-args shape? return-calculated-value?)"
   (declare (type waffetensor last-tensor)
@@ -66,7 +67,7 @@
 		 lisp-function
 		 args)))))
     #'LazyEvaluatedNodes))
-  
+
 (defmacro return-and-lazy-eval
     (function-name
      lisp-function

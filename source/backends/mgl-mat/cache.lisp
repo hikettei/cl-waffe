@@ -198,8 +198,8 @@ This package exports features for making caches (sysconst)")
 	   (return-thread-cached-object ,place
 					,key
 					(if ,state
-					    (value ,tensor)
-					    (value ,tensor))
+					    (data ,tensor)
+					    (data ,tensor))
 					(cl-waffe::waffetensor-thread-data ,tensor))
 	   (setf (data ,tensor) #'cached-data)
 	   (setf (cl-waffe::waffetensor-key ,tensor) ,key)
