@@ -199,7 +199,8 @@ Return: compiled-function's id, out"
 				   any-tensor
 				   :jit-function-id
 				   (gethash jit-id *jit-compiled*))
-	(return-from lisp-define-tmp-kernel (values id out))))
+	(declare (ignore id))
+	(return-from lisp-define-tmp-kernel out)))
   
   (macrolet ((def-dynamic-kernel (args body)
 	       `(progn
