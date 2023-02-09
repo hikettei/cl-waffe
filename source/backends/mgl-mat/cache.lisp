@@ -180,7 +180,7 @@ This package exports features for making caches (sysconst)")
 		   (return-node-info
 		    (values :cached-obj nil nil nil))
 		   (compile-and-step?
-		    (copy-mat obj))
+		    obj)
 		   (T obj)))))
        (let* ((,state (check-abandon ,place))
 	      (,var (if (and

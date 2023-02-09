@@ -303,7 +303,7 @@
   (declare (optimize (speed 3) (space 1) (safety 1))
 	   (type boolean enable-optim)
            (type waffetensor out)
-	   (type waffetensor x))
+	   (type mat x))
   (return-and-lazy-eval inv-tensor '/ out nil)
   (let ((o (decide-out-buffer out x enable-optim t)))
     (mgl-mat:.inv! o)

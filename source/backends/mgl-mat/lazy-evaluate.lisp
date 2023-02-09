@@ -13,7 +13,7 @@
   "When t, every calculation in cl-waffe became lazy-eval. for debugging.")
 
 (defparameter *verbose* t
-  "When t, jit print the compiled functions. for debugging")
+  "When t, jit compiler and cl-waffe.caches can output logs. for debugging.")
 
 ; utils
 (defun mkstr (&rest args)
@@ -131,7 +131,8 @@ When the tensor isn't appropriate, do nothing."
   "generate kernel code based on tensor-top's backend.
 
 Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-limit"
-  (declare (ignore lisp-function args))
+  (declare (optimize (speed 3))
+	   (ignore lisp-function args))
   (let* ((jit-id (make-string-output-stream)) ; jit-id is made for find compiled functions
 	 (args-table (make-hash-table))
 	 (mat-size-table (make-hash-table))
@@ -153,7 +154,7 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 
 (defun parse-argument (jit-id args-table mat-size-table tensor)
   "Parse args, if tensor=mat, register to args-table"
-  (declare ;(optimize (speed 3))
+  (declare (optimize (speed 3))
 	   (type stream jit-id))
   (typecase (data tensor)
     (function
@@ -227,7 +228,7 @@ jit-id is a stream"
      mat-size-table
      any-tensor
      &key (jit-function-id nil))
-  (declare (optimize (speed 3)))
+  (declare (optimize (speed 3) (space 0)))
   (macrolet ((apply-jit (jit-id args)
 	       `(apply (intern (symbol-name ,jit-id)) ,args)))
     (let ((mat-inputs nil)
@@ -270,6 +271,7 @@ jit-id is a stream"
   ;(declare (optimize (speed 3)))
   "do define-lisp-kernel and execute it.
 Return: compiled-function's id, out"
+  (declare (optimize (speed 3) (space 0)))
   (if (gethash jit-id *jit-compiled*)
       (return-from lisp-define-tmp-kernel
 	(lisp-execute-tmp-kernel args-table

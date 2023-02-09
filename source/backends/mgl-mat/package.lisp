@@ -12,4 +12,6 @@
 	   #:abort-delay
 	   #:copy-elements
 	   #:*verbose*
+	   #:*force-lazy-eval*
+	   #:*static-node-mode*
 	   #:compile-and-run-lazy))
