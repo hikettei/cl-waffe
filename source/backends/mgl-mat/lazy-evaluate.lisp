@@ -48,17 +48,16 @@
 					      (function nil)
 					      (T (!shape x))))
 					args))
-		       (mat-shape (find 0 args-shape :test
-					#'(lambda (x y)
-					    (not (= x (car y)))))))
-		  (cond
-		    ((null args-shape)
-		     first-shape)
-		    ((= (car first-shape) 0)
-		     (if mat-shape
-			 mat-shape
-			 first-shape))
-		    (T first-shape))))
+		       (max-size (apply #'max
+					(apply #'* first-shape)
+					(map 'list
+						   #'(lambda (x) (apply #'* x))
+						   args-shape)))
+		       (max-pos (position
+				 max-size
+				 `(,first-shape ,@args-shape)
+				 :test #'(lambda (size x) (= size (apply #'* x))))))
+		  (nth max-pos `(,first-shape ,@args-shape))))
 	       (return-node-info
 		(values :lazy-eval last-tensor lisp-function args))
 	       (compile-and-step?
