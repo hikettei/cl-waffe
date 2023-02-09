@@ -327,9 +327,7 @@ Return: compiled-function's id, out"
 			       ,@(map 'list (lambda (x) `(sysconst ,x
 								   :no-jit t))
 				      (cdr mat-args))
-			       ,@(map 'list (lambda (x) x)
-				      (cdr mat-args))
-			       :output-mat ,(car mat-args))))))
+			       :output ,(car mat-args))))))
 		   (progn
 		      `(mgl-mat:define-lisp-kernel
 			   (,(intern (symbol-name jit-ident)))
