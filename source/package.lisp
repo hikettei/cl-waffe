@@ -10,7 +10,7 @@
            #:tensor
 	   #:const
 	   #:sysconst
-
+	   
 	   ; An parameters for displaying tensor.
 	   #:*print-char-max-len*
 	   #:*print-arr-max-size*

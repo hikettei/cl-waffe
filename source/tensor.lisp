@@ -157,8 +157,8 @@ This structure is printable and printed nicely."
   (idx nil :type (or null symbol))
   (is-data-destructed? nil :type boolean))
 
-(declaim (inline data
-		 (setf data)))
+;(declaim (inline data
+;		 (setf data)))
 (defun data (tensor)
   "Access tensor's data. This won't be copied.
 
@@ -175,23 +175,46 @@ When tensor's data is lazy evaluted, this function behave following:
 @def(mgl-mat:mat, or waffetensorcontentdata)
 @end(deflist)
 
+when (data tensor) is a function and is:
+
+@begin(deflist)
+@term(cached mat)
+@def(Return mgl-mat, this do not make copy)
+@term(lazy-evaluation or transposed)
+@def(Return function itself)
+@end(deflist)
+
 Note: this function is setfable and inlined"
   (declare (type waffetensor tensor))
   (typecase (waffetensor-data tensor)
     (function
-     (let ((result
+     (let ((function-info
 	     (funcall
 	      (the
 	       function
 	       (waffetensor-data tensor))
-	      tensor
+	      nil
+	      nil
 	      nil
 	      nil
 	      t)))
-       (if (null result)
-	   (the function
-		(waffetensor-data tensor))
-	   (the (values (or mat function) &optional) result))))
+       (case function-info
+	 (:lazy-eval (waffetensor-data tensor))
+	 (:lazy-transpose (waffetensor-data tensor))
+	 (T
+	  (let ((result
+		  (funcall
+		   (the
+		    function
+		    (waffetensor-data tensor))
+		   tensor
+		   nil
+		   nil
+		   t)))
+	    (if (null result)
+		(the function
+		     (waffetensor-data tensor))
+		(the (values (or mat function) &optional) result)))))))
     (T (waffetensor-data tensor))))
 
 

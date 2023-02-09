@@ -36,6 +36,9 @@
 	(setf (gethash symbol-name *fname-ids*)
 	      (1+ (hash-table-count *fname-ids*))))))
 
+(defun get-function-type (func)
+  (funcall func nil nil nil nil t))
+
 (defun display-all-nodes (tensor &optional (indent 0))
   (let ((variables (cl-waffe::waffetensor-variables tensor))
 	(state     (cl-waffe::waffetensor-state tensor)))
@@ -108,9 +111,8 @@ When the tensor isn't appropriate, do nothing."
 	    (T (error "return-lazy-eval: args must be list but got ~a" (type-of ,args))))))))
 
 (defun compile-and-run-lazy (tensor)
-  (declare (type waffetensor tensor))
   "If tensor is lazy evaluated, execute all nodes. otherwise return tensor."
-
+  (declare (type waffetensor tensor))
   (when *verbose*
     (format t "~%JIT Found Compileable node:~%")
     (if (typep (data tensor) 'function)

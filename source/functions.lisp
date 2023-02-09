@@ -28,7 +28,8 @@ Output: Tensor"
   :parameters ((xi T))
   :forward ((x)
 	    (save-for-backward xi x)
-            (!div (!add 1 (!tanh (!div x 2))) (const 2)))
+            (!div (!add 1 (!tanh (!div x 2)))
+		  (const 2)))
   :backward ((dy) (let ((p (!sigmoid (self xi))))
 		    (list (!mul p (!mul dy (!sub 1 p)))))))
 
