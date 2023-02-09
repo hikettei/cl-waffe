@@ -275,8 +275,7 @@
 			 (* -1.0 (the single-float y1)))
 		    o)))
   :scal-mat ((let ((o (get-out-buffer y :copy t)))
-	       (.+! (the single-float
-			 (* -1.0 (the single-float x1)))
+	       (.+! x1
 		    (scal! -1.0 o))))
   :mat-mat ((cond
 	      ((will-be-destructed x)
