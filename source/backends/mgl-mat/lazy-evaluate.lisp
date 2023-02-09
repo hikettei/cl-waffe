@@ -12,6 +12,9 @@
 (defparameter *force-lazy-eval* nil
   "When t, every calculation in cl-waffe became lazy-eval. for debugging.")
 
+(defparameter *verbose* t
+  "When t, jit print the compiled functions. for debugging")
+
 ; utils
 (defun mkstr (&rest args)
   "concatenates args by printing into string"
@@ -108,12 +111,10 @@ When the tensor isn't appropriate, do nothing."
   (declare (type waffetensor tensor))
   "If tensor is lazy evaluated, execute all nodes. otherwise return tensor."
 
-  
-  (print "==Node==")
-  (fresh-line)
-  (if (typep (data tensor) 'function)
-      (display-all-nodes tensor))
-  
+  (when *verbose*
+    (format t "~%JIT Found Compileable node:~%")
+    (if (typep (data tensor) 'function)
+	(display-all-nodes tensor)))
   
   (if (typep (data tensor) 'function)
       (funcall
@@ -156,12 +157,14 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 	   (type stream jit-id))
   (typecase (data tensor)
     (function
+     ; when tensor has unevaluated nodes?
      (multiple-value-bind
 	   (node-type last-tensor lisp-function args)
 	 (funcall (the function (data tensor)) tensor nil nil nil t)
        (declare (type list args))
        
        (if (eql node-type :lazy-eval)
+	   ; the function is lazy-eval, explore them.
 	   (generate-kernel-code
 	    jit-id
 	    args-table
@@ -169,6 +172,7 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 	    last-tensor
 	    lisp-function
 	    args)
+	   ; otherwise, regard the function as mat (cached or transposed).
 	   (parse-argument
 	    jit-id
 	    args-table
@@ -177,6 +181,7 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
     (T
      (typecase (data tensor)
        (mat
+	; when tensor is the end of node?
 	(if (null (cl-waffe::waffetensor-tensor-ident tensor))
 	    (setf (cl-waffe::waffetensor-tensor-ident tensor) (gensym "K")))
 	
@@ -205,9 +210,10 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 (defun generate-kernel-code (jit-id args-table mat-size-table tensor lisp-function args)
   "The top level of generating code.
 jit-id is a stream"
-  (declare ;(optimize (speed 3))
-	   (type stream jit-id))
-  (format jit-id ".~a" (fname-get lisp-function)) ;replace . with ( and , with )
+  (declare (optimize (speed 3))
+           (type stream jit-id))
+  ; in jit-id, (f 1 2) -> .fOO, to reduce the length of chars
+  (format jit-id ".~a" (fname-get lisp-function))
   (prog1
       `(,lisp-function
 	,(parse-argument jit-id args-table mat-size-table tensor)
@@ -221,7 +227,7 @@ jit-id is a stream"
      mat-size-table
      any-tensor
      &key (jit-function-id nil))
-  ;(declare (optimize (speed 3)))
+  (declare (optimize (speed 3)))
   (macrolet ((apply-jit (jit-id args)
 	       `(apply (intern (symbol-name ,jit-id)) ,args)))
     (let ((mat-inputs nil)
@@ -246,15 +252,14 @@ jit-id is a stream"
 		  1))
 	(cond
 	  (jit-function-id
-	   (print "===New Code Loaded===")
-	   (print jit-function-id)
-	   (dolist (m mat-inputs)
-	     (print (const m)))
+	   (when *verbose*
+	     (format t "~%JIT Loaded Compiled Function: ~a~%" jit-function-id))	   
 	   (apply-jit
 	    jit-function-id
 	    `(,(mat-size out) ,out ,@mat-inputs))
 	   out)
-	  (T (error "cl-waffe.backends.mgl:JIT -> couldn't find jit-id")))))))
+	  (T ; when jit-function-id is not found? (in that case hash-table could be modified)
+	   (error "cl-waffe.backends.mgl:isp-execute-tmp-kernel (JIT) -> couldn't find jit-id")))))))
 
 (defun lisp-define-tmp-kernel (jit-id
 			       args-table
@@ -281,6 +286,7 @@ Return: compiled-function's id, out"
 			   do (setf (aref out index) ,,body)))))
 	     (apply-jit (jit-id args)
 	       `(apply (intern (symbol-name ,jit-id)) ,args)))
+    ; collecting inputs
     (let ((symbols nil)  ; args for mat, obj
 	  (nsymbols nil) ; args for mat-size
 	  (mat-inputs nil) ; the list of values
@@ -316,20 +322,21 @@ Return: compiled-function's id, out"
 		     (cl-waffe::waffetensor-thread-data any-tensor))
 		    1))
 
-	  ;let ((out (make-mat (!shape any-tensor))))
 	  ;; Todo: SetfAref -> マクロにする、計算ノード保持するように。
 	  ;; Todo: any-tensorが不要ならany-tensorに書き込む
-          (print "====New Code Compiled==")
-	  (print jit-id)
-	  (print kernel-code)
 
+	  (when *verbose*
+	    (format t "~%JIT Compiled New function ~a~%" jit-ident)
+	    (print kernel-code)
+	    (fresh-line))
+
+	  ; eval define-lisp-kernel/define-cuda-kernel
 	  (eval kernel-code)
-	  
-	  ;(dolist (v symbols)
-	  ;  (print v))
 
-	  (setf (gethash jit-id *jit-compiled*)
-		jit-ident)
+	  ; make compiled function recallable.
+	  (setf (gethash jit-id *jit-compiled*) jit-ident)
+
+	  ; execute it and write result to out.
 	  (apply-jit
 	   jit-ident
 	   `(,(mat-size out) ,out ,@mat-inputs))

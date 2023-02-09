@@ -11,4 +11,5 @@
 	   #:receive-delay
 	   #:abort-delay
 	   #:copy-elements
+	   #:*verbose*
 	   #:compile-and-run-lazy))
