@@ -285,7 +285,6 @@ jit-id is a stream"
 	  (setq result nil)))
     result))
 
-; Todo Cant compile like (!add a a)
 (defun lisp-define-tmp-kernel (jit-id
 			       args-table
 			       mat-size-table
@@ -317,7 +316,6 @@ Return: compiled-function's id, out"
 			   (declare (ignore val))
 			   (push key tmp-args))
 		       ,args-table)
-		      (print tmp-args)
 		     `(defun ,(intern (symbol-name jit-ident))
 			,(map 'list #'car ,args)
 			(declare (optimize (speed 3)
