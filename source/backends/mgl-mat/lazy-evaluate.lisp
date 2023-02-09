@@ -15,6 +15,9 @@
 (defparameter *verbose* nil
   "When t, jit compiler and cl-waffe.caches can output logs. for debugging.")
 
+(defparameter *ignore-jit-max-len* 3
+  "When computation node is built and that length <= *ignore-jit-max-len* call backpoint and call blas api.")
+
 ; utils
 (defun mkstr (&rest args)
   "concatenates args by printing into string"
@@ -113,10 +116,10 @@ When the tensor isn't appropriate, do nothing."
 (defun compile-and-run-lazy (tensor)
   "If tensor is lazy evaluated, execute all nodes. otherwise return tensor."
   (declare (type waffetensor tensor))
-  (when *verbose*
-    (format t "~%JIT Found Compileable node:~%")
-    (if (typep (data tensor) 'function)
-	(display-all-nodes tensor)))
+  ;(when *verbose*
+  ;  (format t "~%JIT Found Compileable node:~%")
+  ;  (if (typep (data tensor) 'function)
+;	(display-all-nodes tensor)))
   
   (if (typep (data tensor) 'function)
       (funcall
@@ -253,8 +256,9 @@ jit-id is a stream"
 		  1))
 	(cond
 	  (jit-function-id
-	   (when *verbose*
-	     (format t "~%JIT Loaded Compiled Function: ~a~%" jit-function-id))	   
+	   
+	   ;(when *verbose*
+	   ;  (format t "~%JIT Loaded Compiled Function: ~a~%" jit-function-id))	   
 	   (apply-jit
 	    jit-function-id
 	    `(,(mat-size out) ,out ,@mat-inputs))
@@ -271,7 +275,8 @@ jit-id is a stream"
   ;(declare (optimize (speed 3)))
   "do define-lisp-kernel and execute it.
 Return: compiled-function's id, out"
-  (declare (optimize (speed 3) (space 0)))
+  (declare (optimize (speed 3) (space 0))
+	   (type list code))
   (if (gethash jit-id *jit-compiled*)
       (return-from lisp-define-tmp-kernel
 	(lisp-execute-tmp-kernel args-table
@@ -281,11 +286,35 @@ Return: compiled-function's id, out"
 				 (gethash jit-id *jit-compiled*))))
   
   (macrolet ((def-dynamic-kernel (args body)
-	       `(progn
-		  `(mgl-mat:define-lisp-kernel (,(intern (symbol-name jit-ident)))
-		    ,,args
-		     (loop for index fixnum upfrom 0 below size
-			   do (setf (aref out index) ,,body)))))
+	       `(if (and (<= (length code) (the fixnum *ignore-jit-max-len*))
+			 (<= (length ,args) (+ 1 1 (* 2 2))))
+		    ; ignore jit like: (+ a b) or (exp a)
+		   (progn
+		     `(defun ,(intern (symbol-name jit-ident))
+			,(map 'list #'car ,args)
+			(declare (ignore
+				  size
+				  ,@(map
+				     'list
+				     #'car
+				     (remove-if
+				       (lambda (x)
+					 (eql (second x) :mat))
+				       ,args))))
+			,(let* ((mat-args (remove-if-not
+					   (lambda (x)
+					     (eql (second x) :mat))
+					   ,args))
+				(mat-args (map 'list #'car mat-args)))
+			   `(progn
+			      (axpy! 1.0 ,(car mat-args) ,(second mat-args))
+			      ,(third mat-args)))))
+		   (progn
+		      `(mgl-mat:define-lisp-kernel
+			   (,(intern (symbol-name jit-ident)))
+			   ,,args
+			 (loop for index fixnum upfrom 0 below size
+			       do (setf (aref out index) ,,body))))))
 	     (apply-jit (jit-id args)
 	       `(apply (intern (symbol-name ,jit-id)) ,args)))
     ; collecting inputs
