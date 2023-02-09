@@ -271,12 +271,11 @@
 (define-waffe-kernel kernel-sub (x y) (x1 y1)
   :jit -
   :mat-scal ((let ((o (get-out-buffer x :copy t)))
-	       (.+! (the single-float
-			 (* -1.0 (the single-float y1)))
-		    o)))
-  :scal-mat ((let ((o (get-out-buffer y :copy t)))
-	       (.+! x1
+	       (.+! y1
 		    (scal! -1.0 o))))
+  :scal-mat ((let ((o (get-out-buffer y :copy t)))
+	       (.+! (the single-float (* -1.0 x1))
+		    o)))
   :mat-mat ((cond
 	      ((will-be-destructed x)
 	       (let ((o (get-out-buffer x :copy t)))
@@ -296,8 +295,8 @@
 	       (let ((o (get-out-buffer x :copy nil)))
 		 (geem! 1.0 x1 y1 0.0 o)))
 	      ((will-be-destructed y)
-	       (geem! 1.0 x1 y1 0.0 (get-out-buffer y :copy t)))
-	      (T (geem! 1.0 x1 y1 0.0 (get-out-buffer x :copy 0))))))
+	       (geem! 1.0 x1 y1 0.0 (get-out-buffer y :copy nil)))
+	      (T (geem! 1.0 x1 y1 0.0 (get-out-buffer x :copy nil))))))
 
 (define-waffe-kernel kernel-inv (x) (x1)
   :jit /
@@ -320,11 +319,11 @@
 	       (geem! 1.0 x1 (kernel-inv
 			      enable-optimize?
 			      y)
-		      0.0 (get-out-buffer y :copy t)))
+		      0.0 (get-out-buffer y :copy nil)))
 	      (T (geem! 1.0 x1 (kernel-inv
 				enable-optimize?
 				y)
-			0.0 (get-out-buffer x :copy 0))))))
+			0.0 (get-out-buffer x :copy nil))))))
 
 (defun dot-tensor (enable-optimize? out x y)
   (declare (ignore enable-optimize? out))
