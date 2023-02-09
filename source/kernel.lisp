@@ -37,13 +37,15 @@
     (let ((thread (waffetensor-thread-data tensor)))
       (if thread (incf (waffenodethread-cache-n thread) 1)))))
 
+#|
 (declaim (ftype (function (waffetensor)
 			  (or mat
 			      simple-array
 			      single-float
-			      fixnum))
-		value))
-(defun value (tensor)
+			      fixnum
+			      function))
+		value))|#
+(defun value (tensor &key (ignore-transpose nil))
   "Access tensor's data, but if tensor is lazy-evaluated, eval them.
 
 Note: this is not setfable"
@@ -52,9 +54,25 @@ Note: this is not setfable"
 
   (typecase (waffetensor-data tensor)
     (function
-     (setf (data tensor)
-	   (the mgl-mat:mat
-		(cl-waffe.backends.mgl:compile-and-run-lazy tensor))))
+     (let ((function-info
+	     (funcall
+	      (the
+	       function
+	       (waffetensor-data tensor))
+	      tensor
+	      nil
+	      nil
+	      nil
+	      t)))
+       (if (and (eql function-info :lazy-transpose) ignore-transpose)
+	   ; do not step.
+	   (setf (data tensor)
+		 (the mgl-mat:mat
+		      (funcall (the function (waffetensor-data tensor))
+			       tensor nil nil)))
+	   (setf (data tensor)
+		 (the mgl-mat:mat
+		      (cl-waffe.backends.mgl:compile-and-run-lazy tensor))))))
     (T (setf (data tensor) (data tensor)))))
 
 (declaim (ftype (function (keyword cons) waffetensor) invoke-mgl-kernel invoke-cpu-kenel))

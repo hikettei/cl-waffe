@@ -12,7 +12,7 @@
 (defparameter *force-lazy-eval* nil
   "When t, every calculation in cl-waffe became lazy-eval. for debugging.")
 
-(defparameter *verbose* t
+(defparameter *verbose* nil
   "When t, jit compiler and cl-waffe.caches can output logs. for debugging.")
 
 ; utils
@@ -165,7 +165,6 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 	   (node-type last-tensor lisp-function args)
 	 (funcall (the function (data tensor)) tensor nil nil nil t)
        (declare (type list args))
-       
        (if (eql node-type :lazy-eval)
 	   ; the function is lazy-eval, explore them.
 	   (generate-kernel-code
@@ -187,7 +186,6 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 	; when tensor is the end of node?
 	(if (null (cl-waffe::waffetensor-tensor-ident tensor))
 	    (setf (cl-waffe::waffetensor-tensor-ident tensor) (gensym "K")))
-	
 	(setf (gethash
 	       (cl-waffe::waffetensor-tensor-ident tensor)
 	       args-table)
@@ -247,8 +245,8 @@ jit-id is a stream"
 
       (setq mat-inputs `(,@(reverse mat-inputs)
 			 ,@(reverse mat-ninputs)))
-      
-      (cl-waffe.caches:with-cache (out any-tensor)
+      ;(warranty any-tensor)
+      (let ((out (make-mat (!shape any-tensor))));cl-waffe.caches:with-cache (out any-tensor)
 	(if (cl-waffe::waffetensor-thread-data any-tensor)
 	    (incf (cl-waffe::waffenodethread-cache-n
 		   (cl-waffe::waffetensor-thread-data any-tensor))
@@ -320,7 +318,8 @@ Return: compiled-function's id, out"
       (setq mat-inputs `(,@(reverse mat-inputs)
 			 ,@(reverse mat-ninputs)))
       (let* ((kernel-code (def-dynamic-kernel symbols code)))
-	(cl-waffe.caches:with-cache (out any-tensor)
+	;(warranty any-tensor)
+	(let ((out (make-mat (!shape any-tensor))));cl-waffe.caches:with-cache (out any-tensor)
 	  (if (cl-waffe::waffetensor-thread-data any-tensor)
 	      (incf (cl-waffe::waffenodethread-cache-n
 		     (cl-waffe::waffetensor-thread-data any-tensor))

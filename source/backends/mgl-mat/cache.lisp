@@ -12,6 +12,7 @@ This package exports features for making caches (sysconst)")
 
 (in-package :cl-waffe.caches)
 
+; cache want models to be static, while jit doesn't.
 (defparameter *static-node-mode* t
   "When every time you call your model and their computations node is static,
    enable this. By doing so, cl-waffe can optimize ram usage and computation speed.")
@@ -163,7 +164,8 @@ This package exports features for making caches (sysconst)")
   (let ((place (or place (gensym (symbol-name 'place)))))
     `(labels ((cached-data (tensor return-shape? compile-and-step?
 			    &optional ignore-it? return-node-info)
-		(declare (ignore ignore-it?))
+	      (declare (ignore ignore-it?))
+	      ;todo fix this complicated codes.
 	       (let ((obj (read-thread-cached-object
 			   (cl-waffe::waffetensor-idx tensor)
 			   (cl-waffe::waffetensor-key tensor))))
@@ -199,7 +201,7 @@ This package exports features for making caches (sysconst)")
 					,key
 					(if ,state
 					    (data ,tensor)
-					    (data ,tensor))
+					    (copy-mat (data ,tensor)))
 					(cl-waffe::waffetensor-thread-data ,tensor))
 	   (setf (data ,tensor) #'cached-data)
 	   (setf (cl-waffe::waffetensor-key ,tensor) ,key)
