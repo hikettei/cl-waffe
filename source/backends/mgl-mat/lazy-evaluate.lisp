@@ -102,9 +102,12 @@ args ... must be nil or cons. note that you must ignore the first argument
 
 When the tensor isn't appropriate, do nothing."
   (declare (type list args))
-  `(if (or (and cl-waffe.caches:*static-node-mode*
-		(cl-waffe::waffetensor-thread-data ,tensor))
-	   *force-lazy-eval*)
+  `(if (and
+	; force-ignore-jit: avoid kernel -> jit -> kernel -> jit ...
+	(not (cl-waffe::waffetensor-force-ignore-jit ,tensor))
+	(or (and cl-waffe.caches:*static-node-mode*
+		 (cl-waffe::waffetensor-thread-data ,tensor))
+	    *force-lazy-eval*))
        ; Judge if the Tensor is in the Model's Iteration or in thread-data.
        (return-from
 	,function-name
@@ -321,11 +324,12 @@ Return: compiled-function's id, out"
 			      (funcall
 			       fname
 			       t
-			       ,@(map 'list (lambda (x) `(sysconst ,x))
+			       ,@(map 'list (lambda (x) `(sysconst ,x
+								   :no-jit t))
 				      (cdr mat-args))
 			       ,@(map 'list (lambda (x) x)
 				      (cdr mat-args))
-			       :output ,(car mat-args))))))
+			       :output-mat ,(car mat-args))))))
 		   (progn
 		      `(mgl-mat:define-lisp-kernel
 			   (,(intern (symbol-name jit-ident)))

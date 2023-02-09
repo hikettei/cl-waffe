@@ -191,20 +191,135 @@
 ; Otherwise ignore jit can't return correctly.
 ; Todo: Write macro in order to define this.
 
-(defmacro define-waffe-kernel-function (name
-					args
-					&key
-					  (jit nil)
-					  (mat-mat nil)
-					  (scal-mat nil)
-					  (mat-scal))
-  "(define-waffe-kernel-function add-tensor (x y)
+(defmacro define-waffe-kernel (name
+			       args
+			       args-mat
+			       &key
+				 (jit nil)
+				 (mat-mat nil)
+				 (scal-mat nil)
+				 (mat-scal nil))
+  "(define-waffe-kernel-function add-tensor (a b) (x y)
       :jit '+)
       :mat-mat ~
       :scal-mat ~
       :mat-scal ~"
-  `(defun ,name (enable-optimize? ,@args &key (obl-out nil))
-     nil))
+  `(defun ,name (enable-optimize? ,@args &key (output nil))
+     ,(unless (null jit)
+	; place jit trigger.
+	`(return-and-lazy-eval
+	  ,name
+	  ',jit
+	  ,(car args)
+	  ,(cdr args)))
+
+     ; if jit triggered, the form below never called.
+
+     (macrolet ((get-out-buffer (tensor &key (copy nil))
+		  `(if output
+		       (if ,copy
+		 	   (copy! (value ,tensor) output)
+			   output)
+		       (decide-out-buffer
+		        ,tensor (value ,tensor) enable-optimize? ,copy))))
+       
+       (let (,@(map 'list (lambda (target val)
+			    `(,target (value ,val)))
+		    args-mat args))
+	 (cond
+	   ((or (= (length ',args) 1)
+		(and (= (length ',args) 2)
+		   (and (typep ,(car args-mat) 'mat)
+			(typep ,(second args-mat) 'mat)))
+		(and (>= (length ',args) 3)))
+	    ,@mat-mat)
+	   ((or (= (length ',args) 1)
+		(and (= (length ',args) 2)
+		     (and (not (typep ,(car args-mat) 'mat))
+			  (typep ,(second args-mat) 'mat)))
+		(and (>= (length ',args) 3)))
+	    ,(if (null scal-mat)
+		 `(progn ,@mat-mat)
+		 `(progn ,@scal-mat)))
+	   ((or (= (length ',args) 1)
+		(and (= (length ',args) 2)
+		     (and (typep ,(car args-mat) 'mat)
+			  (not (typep ,(second args-mat) 'mat))))
+		(and (>= (length ',args) 3)))
+	    ,(if (null mat-scal)
+		`(progn ,@mat-mat)
+		`(progn ,@mat-scal)))
+	   (T (error "define-waffe-kernel: arguments didn't hit.")))))))
+
+(define-waffe-kernel kernel-add (x y) (x1 y1)
+  :jit +
+  :mat-scal ((let ((o (get-out-buffer x :copy t)))
+	       (.+! y1 o)))
+  :scal-mat ((let ((o (get-out-buffer y :copy t)))
+	       (.+! x1 o)))
+  :mat-mat ((cond
+	      ((will-be-destructed x)
+	       (let ((o (get-out-buffer x :copy t)))
+		 (axpy! 1.0 y1 o)))
+	      ((will-be-destructed y)
+	       (axpy! 1.0 x1 (get-out-buffer y :copy t)))
+	      (T (axpy! 1.0 y1 (get-out-buffer x :copy t))))))
+
+(define-waffe-kernel kernel-sub (x y) (x1 y1)
+  :jit -
+  :mat-scal ((let ((o (get-out-buffer x :copy t)))
+	       (.+! (* -1.0 y1) o)))
+  :scal-mat ((let ((o (get-out-buffer y :copy t)))
+	       (.+! (* -1.0 x1) (scal! -1.0 o))))
+  :mat-mat ((cond
+	      ((will-be-destructed x)
+	       (let ((o (get-out-buffer x :copy t)))
+		 (axpy! -1.0 y1 o)))
+	      ((will-be-destructed y)
+	       (axpy! 1.0 x1 (scal! -1.0 (get-out-buffer y :copy t))))
+	      (T (axpy! -1.0 y1 (get-out-buffer x :copy t))))))
+
+(define-waffe-kernel kernel-mul (x y) (x1 y1)
+  :jit *
+  :mat-scal ((let ((o (get-out-buffer x :copy t)))
+	       (scal! y1 o)))
+  :scal-mat ((let ((o (get-out-buffer y :copy t)))
+	       (scal! x1 o)))
+  :mat-mat ((cond
+	      ((will-be-destructed x)
+	       (let ((o (get-out-buffer x :copy nil)))
+		 (geem! 1.0 x1 y1 0.0 o)))
+	      ((will-be-destructed y)
+	       (geem! 1.0 x1 y1 0.0 (get-out-buffer y :copy t)))
+	      (T (geem! 1.0 x1 y1 0.0 (get-out-buffer x :copy 0))))))
+
+(define-waffe-kernel kernel-inv (x) (x1)
+  :jit /
+  :mat-mat ((.inv! (get-out-buffer x :copy t))))
+
+(define-waffe-kernel kernel-div (x y) (x1 y1)
+  :jit /
+  :mat-scal ((let ((o (get-out-buffer x :copy t)))
+	       (scal! (/ y1) o)))
+  :scal-mat ((let ((o (get-out-buffer y :copy t)))
+	       (scal! (/ x1) o)))
+  :mat-mat ((cond
+	      ((will-be-destructed x)
+	       (let ((o (get-out-buffer x :copy nil)))
+		 (geem! 1.0 x1 (kernel-inv
+				enable-optimize?
+				y)
+			0.0 o)))
+	      ((will-be-destructed y)
+	       (geem! 1.0 x1 (kernel-inv
+			      enable-optimize?
+			      y)
+		      0.0 (get-out-buffer y :copy t)))
+	      (T (geem! 1.0 x1 (kernel-inv
+				enable-optimize?
+				y)
+			0.0 (get-out-buffer x :copy 0))))))
+
 
 (defgeneric add-tensor (enable-optimize? out out1 x y))
 (defmethod add-tensor (enable-optimize?
