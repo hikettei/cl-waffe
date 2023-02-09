@@ -189,13 +189,16 @@ This package exports features for making caches (sysconst)")
 			 ,state
 			 (cl-waffe::waffetensor-is-sysconst? ,tensor))
 			; tensor is allowed to be abandoned.
-		        (data ,tensor)
+		        (if *static-node-mode*
+			    (data ,tensor)
+			    (copy-mat (data ,tensor)))
 			,initform)))
 	 (if ,copy
 	     (unless ,state ; when ,var is filled with 0.0
 	       (copy! (data ,tensor) ,var)))
 	 
-	 (when (cl-waffe::waffetensor-is-sysconst? ,tensor)
+	 (when (and *static-node-mode*
+		    (cl-waffe::waffetensor-is-sysconst? ,tensor))
 	   ; when args is sysconst, cache.
 	   (return-thread-cached-object ,place
 					,key
