@@ -255,7 +255,7 @@ jit-id is a stream"
 
       (setq mat-inputs `(,@(reverse mat-inputs)
 			 ,@(reverse mat-ninputs)))
-      ;(warranty any-tensor)
+      (warranty any-tensor)
       (let ((out (make-mat (!shape any-tensor))));cl-waffe.caches:with-cache (out any-tensor)
 	(if (cl-waffe::waffetensor-thread-data any-tensor)
 	    (incf (cl-waffe::waffenodethread-cache-n
@@ -277,7 +277,10 @@ jit-id is a stream"
   "judge whether: (+ tensor tensor) (f tensor)"
   (let ((result t))
     (dolist (i (cdr code))
-      (if (and (equal (symbol-name (car i)) "AREF") result)
+      (if (and (or
+		(typep i 'symbol)
+		(equal (symbol-name (car i)) "AREF"))
+	       result)
 	  (setq result t)
 	  (setq result nil)))
     result))
@@ -303,12 +306,18 @@ Return: compiled-function's id, out"
 				 :jit-function-id
 				 (gethash jit-id *jit-compiled*))))
   
-  (macrolet ((def-dynamic-kernel (args body)
+  (macrolet ((def-dynamic-kernel (args-table args body) ;default-args wo tuika
 	       `(if (and (<= (length code) (the fixnum *ignore-jit-max-len*))
 			 (<= (length ,args) (+ 1 1 (* 2 2)))
 			 (check-returnable code))
 		    ; ignore jit like: (+ a b) or (exp a)
-		    (progn
+		    (let ((tmp-args nil))
+		      (maphash
+		       #'(lambda (key val)
+			   (declare (ignore val))
+			   (push key tmp-args))
+		       ,args-table)
+		      (print tmp-args)
 		     `(defun ,(intern (symbol-name jit-ident))
 			,(map 'list #'car ,args)
 			(declare (optimize (speed 3)
@@ -316,14 +325,20 @@ Return: compiled-function's id, out"
 					   (safety 1)
 					   (compilation-speed 0))
 			         (ignore
-				  size
 				  ,@(map
 				     'list
 				     #'car
 				     (remove-if
-				       (lambda (x)
-					 (eql (second x) :mat))
-				       ,args))))
+				      #'(lambda (x)
+					  (find (car x)
+						tmp-args
+						:test
+						#'(lambda (x y)
+						    (declare (type symbol x y))
+						    (or
+						     (eql x 'out)
+						     (eql x y)))))
+					  ,args))))
 			,(let* ((mat-args (remove-if-not
 					   (lambda (x)
 					     (eql (second x) :mat))
@@ -344,7 +359,7 @@ Return: compiled-function's id, out"
 				    t
 				    ,@(map 'list (lambda (x) `(sysconst ,x
 									:no-jit t))
-					   (cdr mat-args))
+					   tmp-args)
 				    :output ,(car mat-args))))))))
 		   (progn
 		      `(mgl-mat:define-lisp-kernel
@@ -370,7 +385,6 @@ Return: compiled-function's id, out"
 		   (push val mat-inputs))
 	       args-table)
 
-
       (maphash #'(lambda (key val)
 		   (push `(,key fixnum) nsymbols)
 		   (push val mat-ninputs))
@@ -383,7 +397,7 @@ Return: compiled-function's id, out"
 
       (setq mat-inputs `(,@(reverse mat-inputs)
 			 ,@(reverse mat-ninputs)))
-      (let* ((kernel-code (def-dynamic-kernel symbols code)))
+      (let* ((kernel-code (def-dynamic-kernel args-table symbols code)))
 	;(warranty any-tensor)
 	(let ((out (make-mat (!shape any-tensor))));cl-waffe.caches:with-cache (out any-tensor)
 	  (if (cl-waffe::waffetensor-thread-data any-tensor)
