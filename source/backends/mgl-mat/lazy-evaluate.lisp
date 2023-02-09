@@ -299,7 +299,11 @@ Return: compiled-function's id, out"
 		   (progn
 		     `(defun ,(intern (symbol-name jit-ident))
 			,(map 'list #'car ,args)
-			(declare (ignore
+			(declare (optimize (speed 3)
+					   (space 0)
+					   (safety 1)
+					   (compilation-speed 0))
+			         (ignore
 				  size
 				  ,@(map
 				     'list
@@ -393,26 +397,3 @@ Return: compiled-function's id, out"
 	   `(,(mat-size out) ,out ,@mat-inputs))
 	  out)))))
 
-(defun add-test (tensor x)
-  (return-and-lazy-eval add-test
-			'+
-			tensor
-			`(,x)))
-
-(defun exp-test (tensor)
-  (return-and-lazy-eval exp-test
-			'exp
-			tensor
-			nil))
-
-(defun return-test-node (tensor)
-  (let ((a (const (exp-test tensor))))
-    (const (add-test
-	    (const (exp-test a))
-	    a))))
-
-(defun run-orig (a)
-  (time (dotimes (i 1000)
-	     (progn
-	       (!add (!exp (!exp a)) (!exp a))
-	       nil))))
