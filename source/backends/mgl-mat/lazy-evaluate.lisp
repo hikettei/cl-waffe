@@ -278,7 +278,7 @@ jit-id is a stream"
 			       code
 			       any-tensor
 			       &aux (jit-ident (gensym "JitFunction")))
-  ;(declare (optimize (speed 3)))
+  (declare (optimize (speed 3)))
   "do define-lisp-kernel and execute it.
 Return: compiled-function's id, out"
   (declare (optimize (speed 3) (space 0))
@@ -325,13 +325,14 @@ Return: compiled-function's id, out"
 						     nil
 						     nil
 						     t)))
-			      (funcall
-			       fname
-			       t
-			       ,@(map 'list (lambda (x) `(sysconst ,x
-								   :no-jit t))
-				      (cdr mat-args))
-			       :output ,(car mat-args))))))
+			      (the mat
+				   (funcall
+				    fname
+				    t
+				    ,@(map 'list (lambda (x) `(sysconst ,x
+									:no-jit t))
+					   (cdr mat-args))
+				    :output ,(car mat-args)))))))
 		   (progn
 		      `(mgl-mat:define-lisp-kernel
 			   (,(intern (symbol-name jit-ident)))
@@ -384,7 +385,7 @@ Return: compiled-function's id, out"
 	    (format t "~%JIT Compiled New function ~a~%" jit-ident)
 	    (print kernel-code)
 	    (fresh-line))
-
+	  
 	  ; eval define-lisp-kernel/define-cuda-kernel
 	  (eval kernel-code)
 
