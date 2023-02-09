@@ -186,9 +186,32 @@
 		tanh-tensor
 		exp-tensor))
 
-(defgeneric add-tensor (enable-optimize? out out1 x y))
+; kernel function must be following:
+; fname (enable-optimize? args-tensor1 args-tensor2 ... mat1 mat2 ....)
+; Otherwise ignore jit can't return correctly.
+; Todo: Write macro in order to define this.
 
-(defmethod add-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) (y mgl-mat:mat))
+(defmacro define-waffe-kernel-function (name
+					args
+					&key
+					  (jit nil)
+					  (mat-mat nil)
+					  (scal-mat nil)
+					  (mat-scal))
+  "(define-waffe-kernel-function add-tensor (x y)
+      :jit '+)
+      :mat-mat ~
+      :scal-mat ~
+      :mat-scal ~"
+  `(defun ,name (enable-optimize? ,@args &key (obl-out nil))
+     nil))
+
+(defgeneric add-tensor (enable-optimize? out out1 x y))
+(defmethod add-tensor (enable-optimize?
+		       (out waffetensor)
+		       (out1 waffetensor)
+		       (x mgl-mat:mat)
+		       (y mgl-mat:mat))
   (declare (optimize (speed 3) (space 1)))
   (return-and-lazy-eval add-tensor '+ out `(,out1))
   
@@ -204,19 +227,31 @@
 	 o))))
 
 (defgeneric scal-add-tensor (enable-optimize? out out1 x y))
-(defmethod scal-add-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) (x mgl-mat:mat) y)
+(defmethod scal-add-tensor (enable-optimize?
+			    (out waffetensor)
+			    (out1 waffetensor)
+			    (x mgl-mat:mat)
+			    y)
   (declare (optimize (speed 3) (space 1)))
   (return-and-lazy-eval scal-add-tensor '+ out `(,out1))
   (let ((o (decide-out-buffer out x enable-optimize? t)))
     (the mgl-mat:mat (mgl-mat:.+! (value out1) o))))
 
-(defmethod scal-add-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) x (y mgl-mat:mat))
+(defmethod scal-add-tensor (enable-optimize?
+			    (out waffetensor)
+			    (out1 waffetensor)
+			    x
+			    (y mgl-mat:mat))
   (declare (optimize (speed 3) (space 1)))
   (return-and-lazy-eval scal-add-tensor '+ out `(,out1))
   (let ((o (decide-out-buffer out1 y enable-optimize? t)))
     (the mgl-mat:mat (mgl-mat:.+! (value out) o))))
 
-(defmethod add-tensor (enable-optimize? (out waffetensor) (out1 waffetensor) x y)
+(defmethod add-tensor (enable-optimize?
+		       (out waffetensor)
+		       (out1 waffetensor)
+		       x
+		       y)
   (declare (optimize (speed 3)))
   (return-and-lazy-eval add-tensor '+ out `(,out1))
 

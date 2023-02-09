@@ -54,12 +54,12 @@
 	  (display-all-nodes v (+ indent 2))))))
 
 
-(defun step-and-produce-lazy-eval (last-tensor lisp-function args)
+(defun step-and-produce-lazy-eval (function-name last-tensor lisp-function args)
   "Lazy eval's format is following: (free-args shape? return-calculated-value?)"
   (declare (type waffetensor last-tensor)
 	   (type symbol list-function)
 	   (type list args))
-  (labels ((LazyEvaluatedNodes (tensor-top return-shape? compile-and-step? &optional ignore? return-node-info)
+  (labels ((LazyEvaluatedNodes (tensor-top return-shape? compile-and-step? &optional ignore? return-node-info return-f)
 	     (declare (ignore ignore?))
 	     (cond
 	       (return-shape?
@@ -82,6 +82,8 @@
 		  (nth max-pos `(,first-shape ,@args-shape))))
 	       (return-node-info
 		(values :lazy-eval last-tensor lisp-function args))
+	       (return-f
+		function-name)
 	       (compile-and-step?
 		(compile-and-step-lazy-evaluated-nodes
 		 tensor-top
@@ -107,6 +109,7 @@ When the tensor isn't appropriate, do nothing."
        (return-from
 	,function-name
 	 (step-and-produce-lazy-eval
+	  ',function-name
 	  ,tensor
 	  ,lisp-function
 	  (typecase ,args
@@ -277,6 +280,7 @@ jit-id is a stream"
 Return: compiled-function's id, out"
   (declare (optimize (speed 3) (space 0))
 	   (type list code))
+  ; any-tensor is the top of node, and (data any-tensor) is always function.
   (if (gethash jit-id *jit-compiled*)
       (return-from lisp-define-tmp-kernel
 	(lisp-execute-tmp-kernel args-table
@@ -306,7 +310,15 @@ Return: compiled-function's id, out"
 					     (eql (second x) :mat))
 					   ,args))
 				(mat-args (map 'list #'car mat-args)))
-			   `(progn
+			   `(let ((fname #',(funcall (the function
+							  (data any-tensor))
+						     nil
+						     nil
+						     nil
+						     nil
+						     nil
+						     t)))
+			      (print fname)
 			      (axpy! 1.0 ,(car mat-args) ,(second mat-args))
 			      ,(third mat-args)))))
 		   (progn
