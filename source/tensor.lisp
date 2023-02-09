@@ -397,7 +397,8 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
 			      (grad-tmp-value grad-tmp-before)
 			      (sysconst 1))))
 	; calculating backward(state, dy) -> x.grad, y.grad...
-        (progn
+
+	(progn
 	  (let ((grads (funcall
 			(the function
 			     (call-backward (waffetensor-state tensor)))

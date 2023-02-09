@@ -87,7 +87,6 @@ Output: => @cl:param(tensor) produced by :forward"
   (let* ((result (apply
 		  (the function (call-forward model)) args)))
     (declare (type (or null waffetensor list) result))
-    
     (typecase result
       (waffetensor
        (when (and (null (waffetensor-thread-data result))

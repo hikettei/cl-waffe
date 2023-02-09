@@ -204,7 +204,7 @@ This package exports features for making caches (sysconst)")
 					,key
 					(if ,state
 					    (data ,tensor)
-					    (copy-mat (data ,tensor)))
+					    (data ,tensor)) ;copy-mat
 					(cl-waffe::waffetensor-thread-data ,tensor))
 	   (setf (data ,tensor) #'cached-data)
 	   (setf (cl-waffe::waffetensor-key ,tensor) ,key)

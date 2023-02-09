@@ -121,7 +121,8 @@ When the tensor isn't appropriate, do nothing."
 
 (defun compile-and-run-lazy (tensor)
   "If tensor is lazy evaluated, execute all nodes. otherwise return tensor."
-  (declare (type waffetensor tensor))
+  (declare (optimize (speed 3))
+	   (type waffetensor tensor))
   ;(when *verbose*
   ;  (format t "~%JIT Found Compileable node:~%")
   ;  (if (typep (data tensor) 'function)
@@ -129,7 +130,7 @@ When the tensor isn't appropriate, do nothing."
   
   (if (typep (data tensor) 'function)
       (funcall
-       (data tensor)
+       (the function (data tensor))
        tensor
        nil
        t)
@@ -268,10 +269,20 @@ jit-id is a stream"
 	   (apply-jit
 	    jit-function-id
 	    `(,(mat-size out) ,out ,@mat-inputs))
-	   out)
+	   (the mat out))
 	  (T ; when jit-function-id is not found? (in that case hash-table could be modified)
 	   (error "cl-waffe.backends.mgl:isp-execute-tmp-kernel (JIT) -> couldn't find jit-id")))))))
 
+(defun check-returnable (code)
+  "judge whether: (+ tensor tensor) (f tensor)"
+  (let ((result t))
+    (dolist (i (cdr code))
+      (if (and (equal (symbol-name (car i)) "AREF") result)
+	  (setq result t)
+	  (setq result nil)))
+    result))
+
+; Todo Cant compile like (!add a a)
 (defun lisp-define-tmp-kernel (jit-id
 			       args-table
 			       mat-size-table
@@ -294,9 +305,10 @@ Return: compiled-function's id, out"
   
   (macrolet ((def-dynamic-kernel (args body)
 	       `(if (and (<= (length code) (the fixnum *ignore-jit-max-len*))
-			 (<= (length ,args) (+ 1 1 (* 2 2))))
+			 (<= (length ,args) (+ 1 1 (* 2 2)))
+			 (check-returnable code))
 		    ; ignore jit like: (+ a b) or (exp a)
-		   (progn
+		    (progn
 		     `(defun ,(intern (symbol-name jit-ident))
 			,(map 'list #'car ,args)
 			(declare (optimize (speed 3)
@@ -326,13 +338,14 @@ Return: compiled-function's id, out"
 						     nil
 						     t)))
 			      (the mat
-				   (funcall
+				   (apply
 				    fname
+				    (list
 				    t
 				    ,@(map 'list (lambda (x) `(sysconst ,x
 									:no-jit t))
 					   (cdr mat-args))
-				    :output ,(car mat-args)))))))
+				    :output ,(car mat-args))))))))
 		   (progn
 		      `(mgl-mat:define-lisp-kernel
 			   (,(intern (symbol-name jit-ident)))
@@ -396,5 +409,5 @@ Return: compiled-function's id, out"
 	  (apply-jit
 	   jit-ident
 	   `(,(mat-size out) ,out ,@mat-inputs))
-	  out)))))
+	  (the mat out))))))
 

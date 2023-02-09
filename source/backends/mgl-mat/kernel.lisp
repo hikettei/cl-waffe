@@ -215,7 +215,7 @@
 	  ',jit
 	  ,(car args)
 	  (list ,@(cdr args))))
-
+     
      ; if jit triggered, the form below never called.
 
      (macrolet ((get-out-buffer (tensor &key (copy nil))
@@ -523,12 +523,12 @@
   (value x)
   (value y)
   
-  (let* ((dims (mgl-mat:mat-dimensions (data x)))
+  (let* ((dims (mgl-mat:mat-dimensions (value x)))
 	 (dims (if (and (= 1 (the fixnum (car (last dims))))
 			(= 3 (length dims)))
 		   (butlast dims)
 		   dims))
-	 (x1 (mgl-mat:reshape! (mgl-mat:copy-mat (data x)) dims))
+	 (x1 (mgl-mat:reshape! (mgl-mat:copy-mat (value x)) dims))
 	 (dims (case (data y)
 		 (1 `(,@(list (car dims)) 1))
 		 (0 `(1 ,@(cdr dims)))
