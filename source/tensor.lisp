@@ -193,7 +193,7 @@ Note: this function is setfable and inlined"
 	      (the
 	       function
 	       (waffetensor-data tensor))
-	      nil
+	      tensor
 	      nil
 	      nil
 	      nil
