@@ -462,45 +462,45 @@
   (gemm! 1.0 x y 0.0 out :transpose-a? ta? :transpose-b? tb?)
   out)
 
-(defun log-tensor (enable-optim out x)
-  (declare (optimize (speed 3) (space 0) (safety 1))
-	   (type boolean enable-optim)
-           (type waffetensor out x))
-  (return-and-lazy-eval log-tensor 'log out nil)
-  (let ((o (decide-out-buffer out x enable-optim t)))
-           (mgl-mat:.log! o)))
+(define-waffe-kernel kernel-log (x) (x1)
+  :jit log
+  :mat-mat ((.log! (get-out-buffer x :copy t))))
 
-(defun exp-tensor (enable-optim out x)
-  (declare (optimize (speed 3) (space 0) (safety 1))
-	   (type boolean enable-optim)
-           (type waffetensor out x))
-  (return-and-lazy-eval exp-tensor 'exp out nil)
-  (let ((o (decide-out-buffer out x enable-optim t)))
-    (mgl-mat:.exp! o)))
+(define-waffe-kernel kernel-exp (x) (x1)
+  :jit exp
+  :mat-mat ((.exp! (get-out-buffer x :copy t))))
 
-(defun sqrt-tensor (enable-optim out x)
-  (declare (optimize (speed 3) (space 0) (safety 1))
-	   (type boolean enable-optim)
-           (type waffetensor out x))
-  (return-and-lazy-eval sqrt-tensor 'sqrt out nil)
-  (let ((o (decide-out-buffer out x enable-optim t)))
-           (mgl-mat:.sqrt! o)))
+(define-waffe-kernel kernel-sqrt (x) (x1)
+  :jit sqrt
+  :mat-mat ((.sqrt! (get-out-buffer x :copy t))))
 
-(defun pow-tensor (enable-optim out x y)
-  (declare (optimize (speed 3) (space 0) (safety 1))
-	   (type boolean enable-optim)
-           (type waffetensor out x y))
-  (return-and-lazy-eval pow-tensor 'pow x `(,y))
-  (let ((o (decide-out-buffer out x enable-optim t)))
-    (mgl-mat:.expt! o (data y))))
+(define-waffe-kernel kernel-pow (x n) (x1 n1)
+  :jit pow
+  :mat-mat ((.expt! (get-out-buffer x :copy t) n1)))
 
-(defun tanh-tensor (enable-optim out x)
-  (declare (optimize (speed 3) (space 0) (safety 1))
-	   (type boolean enable-optim)
-           (type waffetensor out x))
-  (return-and-lazy-eval tanh-tensor 'tanh out nil)
-  (let ((o (decide-out-buffer out x enable-optim t)))
-       (mgl-mat:.tanh! o)))
+(define-waffe-kernel kernel-sin (x) (x1)
+  :jit sin
+  :mat-mat ((.sin! (get-out-buffer x :copy t))))
+
+(define-waffe-kernel kernel-cos (x) (x1)
+  :jit cos
+  :mat-mat ((.cos! (get-out-buffer x :copy t))))
+
+(define-waffe-kernel kernel-tan (x) (x1)
+  :jit tan
+  :mat-mat ((.tan! (get-out-buffer x :copy t))))
+
+(define-waffe-kernel kernel-sinh (x) (x1)
+  :jit sinh
+  :mat-mat ((.sinh! (get-out-buffer x :copy t))))
+
+(define-waffe-kernel kernel-cosh (x) (x1)
+  :jit cosh
+  :mat-mat ((.cosh! (get-out-buffer x :copy t))))
+
+(define-waffe-kernel kernel-tanh (x) (x1)
+  :jit tanh
+  :mat-mat ((.tanh! (get-out-buffer x :copy t))))
 
 (defun compare-tensor (enable-optim out x y)
   (declare (optimize (speed 3) (space 0) (safety 1))
@@ -729,13 +729,22 @@
 	       destructable-tensor1))
     (:dot     (dot-tensor is-first-time-call? destructable-tensor (car args) (second args)))
     (:matmul  (matmul-tensor is-first-time-call? destructable-tensor (car args) (second args)))
-    (:log     (log-tensor is-first-time-call? destructable-tensor (car args)))
-    (:exp     (exp-tensor is-first-time-call? destructable-tensor (car args)))
-    (:pow     (pow-tensor is-first-time-call? destructable-tensor (car args) (second args)))
-    (:sqrt    (sqrt-tensor is-first-time-call? destructable-tensor (car args)))
+    
+    (:log     (kernel-log is-first-time-call? destructable-tensor))
+    (:exp     (kernel-exp is-first-time-call? destructable-tensor))
+    (:sqrt    (kernel-sqrt is-first-time-call? destructable-tensor))
+    (:sin     (kernel-log is-first-time-call? destructable-tensor))
+    (:cos     (kernel-cos is-first-time-call? destructable-tensor))
+    (:tan     (kernel-tan is-first-time-call? destructable-tensor))
+    (:sinh    (kernel-sinh is-first-time-call? destructable-tensor))
+    (:cosh    (kernel-cosh is-first-time-call? destructable-tensor))
+    (:tanh    (kernel-tanh is-first-time-call? destructable-tensor))
+    (:pow     (kernel-pow
+	       is-first-time-call?
+	       destructable-tensor
+	       destructable-tensor1))
     (:sum     (sum-tensor is-first-time-call? destructable-tensor (car args) (second args)))
     (:mean    (mean-tensor is-first-time-call? destructable-tensor (car args) (second args)))
-    (:tanh    (tanh-tensor is-first-time-call? destructable-tensor (car args)))
     (:reshape (reshape-tensor is-first-time-call? destructable-tensor (car args) (second args)))
     (:<       (compare-tensor is-first-time-call? destructable-tensor (car args) (second args)))
     (:repeat  (mgl-repeat (data (car args)) (data (third args)) :axis (data (second args))))
