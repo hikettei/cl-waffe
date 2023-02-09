@@ -12,6 +12,16 @@
 (defparameter *force-lazy-eval* nil
   "When t, every calculation in cl-waffe became lazy-eval. for debugging.")
 
+; utils
+(defun mkstr (&rest args)
+  "concatenates args by printing into string"
+  (with-output-to-string (s)
+    (dolist (a args) (princ a s))))
+
+(defun symb (&rest args)
+  "interns the mkstr output/returns as symbol"
+  (values (intern (apply #'mkstr args))))
+
 (defun fname-get (symbol-name)
   "Translate symbol-name -> id, in order to reduce jit-id"
   (or (gethash symbol-name *fname-ids*)
@@ -168,7 +178,7 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 	      (data tensor))
 	(format jit-id "M")
 	`(aref ,(cl-waffe::waffetensor-tensor-ident tensor)
-	       (mod index size)))
+	       (mod index (array-total-size ,(cl-waffe::waffetensor-tensor-ident tensor)))))
        (T
 	(if (null (cl-waffe::waffetensor-tensor-ident tensor))
 	    (setf (cl-waffe::waffetensor-tensor-ident tensor) (gensym "KernelArgs")))
