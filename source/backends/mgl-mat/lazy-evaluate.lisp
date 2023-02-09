@@ -318,9 +318,14 @@ Return: compiled-function's id, out"
 						     nil
 						     nil
 						     t)))
-			      (print fname)
-			      (axpy! 1.0 ,(car mat-args) ,(second mat-args))
-			      ,(third mat-args)))))
+			      (funcall
+			       fname
+			       t
+			       ,@(map 'list (lambda (x) `(sysconst ,x))
+				      (cdr mat-args))
+			       ,@(map 'list (lambda (x) x)
+				      (cdr mat-args))
+			       :output ,(car mat-args))))))
 		   (progn
 		      `(mgl-mat:define-lisp-kernel
 			   (,(intern (symbol-name jit-ident)))
