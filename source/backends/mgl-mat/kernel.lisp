@@ -310,22 +310,10 @@
 	       (error "cl-waffe.backends.mgl:kernel-inv excepts x1 to be 1"))
 	     (let ((o (get-out-buffer y :copy t)))
 	       (.inv! o)))
-  :mat-mat ((cond
-	      ((will-be-destructed x)
-	       (let ((o (get-out-buffer x :copy nil)))
-		 (geem! 1.0 x1 (kernel-inv
-				enable-optimize?
-				y)
-			0.0 o)))
-	      ((will-be-destructed y)
-	       (geem! 1.0 x1 (kernel-inv
-			      enable-optimize?
-			      y)
-		      0.0 (get-out-buffer y :copy nil)))
-	      (T (geem! 1.0 x1 (kernel-inv
-				enable-optimize?
-				y)
-			0.0 (get-out-buffer x :copy nil))))))
+  :mat-mat ((geem! 1.0 x1 (kernel-inv
+			   enable-optimize?
+			   y)
+		   0.0 (get-out-buffer x :copy nil))))
 
 (defun dot-tensor (enable-optimize? out x y)
   (declare (ignore enable-optimize? out))

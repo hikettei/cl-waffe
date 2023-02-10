@@ -27,7 +27,7 @@
 		   (loop for i fixnum upfrom 0 below (!size x)
 			 do (if (and
 				 result
-				 (= (aref r i)
+				 (~= (aref r i)
 				    (funcall lisp-func (aref x1 i) (aref y1 i))))
 				(setq result t)
 				(setq result nil))))
