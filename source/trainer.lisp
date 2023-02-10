@@ -293,7 +293,7 @@ Input: dataset ... dataset defined by defdataset.
 	  do (let* ((ds (get-dataset dataset index))
 		    (x (car ds))
 		    (y (second ds))
-		    (out (call (slot-value trainer 'model) x))
+		    (out (const (value (call (slot-value trainer 'model) x))))
 		    (out-labels (max-position-column (mgl-mat:mat-to-array (data out))))
 		    (y-labels   (max-position-column (mgl-mat:mat-to-array (data y)))))
 	       (loop for i below (length out-labels)

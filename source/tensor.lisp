@@ -80,12 +80,14 @@ cl-waffe automatically coerce them to arbitary types
 				     (extend nil)
 				     (thread-data nil)
 				     (path-through-node? nil)
+				     (no-jit nil)
 			     &aux (data (init-waffe-tensor-data value))
 			       (backend (check-backend backend extend))
 			       (grad nil)
 			       (thread-data thread-data)
 			       (destructive? t)
 			       (is-sysconst? t)
+			       (force-ignore-jit no-jit)
 			       (path-through-node? path-through-node?)
 			       (is-mat (typep value 'mgl-mat:mat))
 			       (grad-tmp (make-grad-tmp))))
@@ -148,16 +150,18 @@ This structure is printable and printed nicely."
   (is-param? nil :type boolean)
   (is-ancestor-param nil :type boolean)
   (is-next-destruct? nil :type boolean)
-  (destructive? nil :type boolean) ; unnecessary
+  (destructive? nil :type boolean)
   (thread-data nil :type (or waffenodethread null))
   (is-sysconst? nil :type boolean)
   (path-through-node? nil :type boolean)
+  (tensor-ident nil :type (or null symbol))
+  (force-ignore-jit nil :type boolean)
   (key nil :type (or null cons))
   (idx nil :type (or null symbol))
   (is-data-destructed? nil :type boolean))
 
-(declaim (inline data
-		 (setf data)))
+;(declaim (inline data
+;		 (setf data)))
 (defun data (tensor)
   "Access tensor's data. This won't be copied.
 
@@ -174,11 +178,20 @@ When tensor's data is lazy evaluted, this function behave following:
 @def(mgl-mat:mat, or waffetensorcontentdata)
 @end(deflist)
 
+when (data tensor) is a function and is:
+
+@begin(deflist)
+@term(cached mat)
+@def(Return mgl-mat, this do not make copy)
+@term(lazy-evaluation or transposed)
+@def(Return function itself)
+@end(deflist)
+
 Note: this function is setfable and inlined"
   (declare (type waffetensor tensor))
   (typecase (waffetensor-data tensor)
     (function
-     (let ((result
+     (let ((function-info
 	     (funcall
 	      (the
 	       function
@@ -186,12 +199,27 @@ Note: this function is setfable and inlined"
 	      tensor
 	      nil
 	      nil
+	      nil
 	      t)))
-       (if (null result)
-	   (the function
-		(waffetensor-data tensor))
-	   (the (values mat &optional) result))))
+       (case function-info
+	 (:lazy-eval (waffetensor-data tensor))
+	 (:lazy-transpose (waffetensor-data tensor))
+	 (T
+	  (let ((result
+		  (funcall
+		   (the
+		    function
+		    (waffetensor-data tensor))
+		   tensor
+		   nil
+		   nil
+		   t)))
+	    (if (null result)
+		(the function
+		     (waffetensor-data tensor))
+		(the (values (or mat function) &optional) result)))))))
     (T (waffetensor-data tensor))))
+
 
 (defun (setf data) (val &optional tensor)
   "Modifying tensor'data.
@@ -218,7 +246,6 @@ When the argument that you want to insert is a tensor, this function automatical
 	(+    (* c
 	      (cos (* 2.0 pi (double-random)))
 	      var)))))
-
 
 (declaim (ftype
 	  (function
@@ -370,7 +397,8 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
 			      (grad-tmp-value grad-tmp-before)
 			      (sysconst 1))))
 	; calculating backward(state, dy) -> x.grad, y.grad...
-        (progn
+
+	(progn
 	  (let ((grads (funcall
 			(the function
 			     (call-backward (waffetensor-state tensor)))
@@ -513,6 +541,7 @@ Todo: Bugfix"
   (call (ArefTensor dims) tensor))
 
 (defun (setf !aref) (value tensor &rest dims)
+  "Todo: Define it as macro and (setq tensor ~)"
   (setf tensor (setf (!areflist tensor dims) value)))
 
 (defun (setf !areflist) (value tensor dims)

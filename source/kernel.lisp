@@ -37,6 +37,44 @@
     (let ((thread (waffetensor-thread-data tensor)))
       (if thread (incf (waffenodethread-cache-n thread) 1)))))
 
+#|
+(declaim (ftype (function (waffetensor)
+			  (or mat
+			      simple-array
+			      single-float
+			      fixnum
+			      function))
+		value))|#
+(defun value (tensor &key (ignore-transpose nil))
+  "Access tensor's data, but if tensor is lazy-evaluated, eval them.
+
+Note: this is not setfable"
+  (declare (optimize (speed 3))
+	   (type waffetensor tensor))
+
+  (typecase (waffetensor-data tensor)
+    (function
+     (let ((function-info
+	     (funcall
+	      (the
+	       function
+	       (waffetensor-data tensor))
+	      tensor
+	      nil
+	      nil
+	      nil
+	      t)))
+       (if (and (eql function-info :lazy-transpose) ignore-transpose)
+	   ; do not step.
+	   (setf (data tensor)
+		 (the mgl-mat:mat
+		      (funcall (the function (waffetensor-data tensor))
+			       tensor nil nil)))
+	   (setf (data tensor)
+		 (the mgl-mat:mat
+		      (cl-waffe.backends.mgl:compile-and-run-lazy tensor))))))
+    (T (setf (data tensor) (data tensor)))))
+
 (declaim (ftype (function (keyword cons) waffetensor) invoke-mgl-kernel invoke-cpu-kenel))
 (defun invoke-mgl-kernel (kernel-function variables)
   (sysconst (cl-waffe.backends.mgl:dispatch-kernel
@@ -80,6 +118,14 @@
 
 (defmethod invoke-kernel (kernel-function
 			  (variables cons)
+			  (first-argument function)
+			  (i fixnum))
+  (declare (optimize (speed 3) (space 0) (safety 0))
+	   (ignore i first-argument))
+  (invoke-mgl-kernel kernel-function variables))
+
+(defmethod invoke-kernel (kernel-function
+			  (variables cons)
 			  first-argument
 			  (i fixnum))
   (declare (optimize (speed 3) (space 0) (safety 0))
@@ -90,7 +136,7 @@
 
 (defmacro call-and-dispatch-kernel (kernel-function &rest args)
   "Invoke kernel and run kernel-function. return new sysconst
-
+It's the most general way for users to access cl-waffe's kernel.
 Todo:More Details"
   `(invoke-kernel ,kernel-function ,@args))
 
@@ -106,6 +152,12 @@ Todo:More Details"
 (defgeneric with-searching-calc-node-optim (kernel-function target-data target-tensor args))
 
 (defmethod with-searching-calc-node-optim (kernel-function (target-data mgl-mat:mat) target-tensor args)
+  (declare (optimize (speed 3) (space 0) (safety 0))
+	   (type keyword kernel-function))
+  (invoke-kernel kernel-function `(,target-tensor ,@args) target-data 0)
+  target-tensor)
+
+(defmethod with-searching-calc-node-optim (kernel-function (target-data function) target-tensor args)
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type keyword kernel-function))
   (invoke-kernel kernel-function `(,target-tensor ,@args) target-data 0)
@@ -169,6 +221,7 @@ Example:
   `(progn
      (unless (typep ,target 'waffetensor)
        (error "cl-waffe.with-kernel-case: target must be waffetensor. Encounted type of ~a, when using ~a" (type-of ,target) ,target))
+     (value ,target)
      (cl-waffe.caches:with-cache
 	 (,var ,target :place (cl-waffe.backends.mgl:create-thread-idx
 			       (waffetensor-thread-data ,target))

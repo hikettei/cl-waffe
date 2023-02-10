@@ -1,8 +1,6 @@
 
 (in-package :cl-waffe)
 
-(declaim (inline call))
-
 (defparameter *no-grad* nil
   "When t, some node will be ignored. see references below for details. default: nil")
 
@@ -69,7 +67,7 @@ Output: An last value of layers."
 	      layers)
      ,input))
 
-(declaim (inline call))
+;(declaim (inline call))
 (declaim (ftype (function (t &rest waffetensor) waffetensor) call))
 (defun call (model &rest args)
   "Calling Forward Step defined by defmodel, defnode, defoptimizer.
@@ -89,7 +87,6 @@ Output: => @cl:param(tensor) produced by :forward"
   (let* ((result (apply
 		  (the function (call-forward model)) args)))
     (declare (type (or null waffetensor list) result))
-
     (typecase result
       (waffetensor
        (when (and (null (waffetensor-thread-data result))
@@ -102,7 +99,7 @@ Output: => @cl:param(tensor) produced by :forward"
 			    (not (null (car args))))
 		   (setf (waffetensor-thread-data r)
 			 (waffetensor-thread-data (car args)))))
-		 result)))
+	     result)))
       
     (unless *no-grad*
       (if (slot-value model 'hide-from-tree) ;is model defined by defmodel?

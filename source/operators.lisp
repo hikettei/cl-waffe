@@ -46,8 +46,8 @@
 	    (save-for-backward xi x)
 	    (save-for-backward yi y)
 	    (with-searching-calc-node :mul x y))
-  :backward ((dy) (list (!modify (self yi) :*= dy)
-			(!modify (self xi) :*= dy))))
+  :backward ((dy) (list (!mul (self yi) dy)
+			(!mul (self xi) dy))))
 
 (defnode DivTensor nil
   :optimize t
@@ -58,8 +58,8 @@
 	    (save-for-backward yi y)
 	    (with-searching-calc-node :div x y))
   :backward ((dy) (list (!div dy (self yi))
-			(!div (!modify (!modify (self xi) :*= dy) :*= -1)
-			      (!modify (self yi) :^= 2)))))
+			(!div (!mul (!mul (self xi) dy) -1)
+			      (!pow (self yi) 2)))))
 
 (defnode PowTensor nil
   :optimize t
@@ -69,11 +69,12 @@
 	    (save-for-backward yi y1)
 	    (with-searching-calc-node :pow x1 y1))
   :backward ((dy)
-	     (list (!modify (!mul dy (self yi)) :*= (!pow (self xi) (- (the single-float (data (self yi))) 1)))
-		   (!modify (!modify
-			     (!log (self xi)) :*=
-			     (!modify (self xi) :^= (self yi)))
-			    :*= dy))))
+	     (list (!mul (!mul dy (self yi))
+			 (!pow (self xi) (- (the single-float (data (self yi))) 1)))
+		   (!mul (!mul
+			     (!log (self xi))
+			     (!pow (self xi) (self yi)))
+			 dy))))
 
 (defnode SqrtTensor nil
   :optimize t
@@ -81,7 +82,7 @@
   :forward ((x1) (save-for-backward xi x1)
 		 (with-searching-calc-node :sqrt x1))
   :backward ((dy)
-	     (list (!div dy (!modify (!modify (self xi) :sqrt) :*= 2)))))
+	     (list (!div dy (!mul (!sqrt (self xi)) 2)))))
 
 (defnode LogTensor nil
   :optimize t
@@ -96,7 +97,6 @@
   :forward ((x) (setf (self prev-shape) (!shape x))
 		(with-searching-calc-node :reshape x (self shape)))
   :backward ((dy)
-	     (print dy)
 	     (list (!reshape dy (self prev-shape)))))
 
 (defnode DotProductTensor nil
@@ -139,12 +139,10 @@
 
 (defnode SumUpTensor ()
   :parameters ((total-len) (shape))
-  :forward ((x)
+  :forward ((x) ; only for 2d
 	    (setf (self total-len) (/ (!size x)))
 	    (setf (self shape) (!shape x))
-	    (with-kernel-case x out
-	      :mgl ((* -1 (asum out))) ; asum >= 0
-	      :mgl-cuda nil))
+	    (!sum (!sum x 1) 0))
   :backward ((dy)
 	     (list (sysconst (scal! (self total-len)
 				    (make-mat (self shape)
@@ -163,7 +161,7 @@
   :forward ((x) (save-for-backward xi x)
 		(with-searching-calc-node :exp x))
   :backward ((dy)
-	     (list (!modify (!exp (self xi)) :*= dy))))
+	     (list (!mul (!exp (self xi)) dy))))
 
 (defnode MatMulTensor ()
   :optimize t

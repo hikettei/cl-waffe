@@ -12,6 +12,7 @@ This package exports features for making caches (sysconst)")
 
 (in-package :cl-waffe.caches)
 
+; cache want models to be static, while jit doesn't.
 (defparameter *static-node-mode* t
   "When every time you call your model and their computations node is static,
    enable this. By doing so, cl-waffe can optimize ram usage and computation speed.")
@@ -38,7 +39,6 @@ This package exports features for making caches (sysconst)")
       (incf (cachedata-calln-per-step calln) 1))
     
     (incf (cachedata-calln calln) 1)
-
     (when (cachedata-lock calln)
       (setf (cachedata-calln calln)
 	    (case (cachedata-calln-per-step calln)
@@ -158,40 +158,53 @@ This package exports features for making caches (sysconst)")
 	   nil))
       (T nil))))
 
-; copy wo koko de suru.
 (defmacro with-thread-cached-object1 ((var tensor key initform &key place (copy nil))
 				      &body body
 				      &aux (state (gensym)))
   (let ((place (or place (gensym (symbol-name 'place)))))
-    `(labels ((cached-data (tensor shape? _ &optional __)
-	      (declare (ignore _ __))
+    `(labels ((cached-data (tensor return-shape? compile-and-step?
+			    &optional ignore-it? return-node-info)
+	      (declare (ignore ignore-it?))
+	      ;todo fix this complicated codes.
 	       (let ((obj (read-thread-cached-object
 			   (cl-waffe::waffetensor-idx tensor)
 			   (cl-waffe::waffetensor-key tensor))))
 		 (if (null obj)
 		     (error "cl-waffe.caches:cached-data: The tensor that attempted to read has already cached and cleaned.~%Please remain that calculations must be done in the scope that the tensor has created, including defnode."))
 		 (update-calln (cl-waffe::waffetensor-idx tensor))
-		 (if shape?
-		     (mat-dimensions obj)
-		     obj))))
+		 (cond
+		   (return-shape?
+		    (typecase obj
+		      (function
+		       (!shape (sysconst obj)))
+		      (T
+		       (mat-dimensions obj))))
+		   (return-node-info
+		    (values :cached-obj nil nil nil))
+		   (compile-and-step?
+		    obj)
+		   (T obj)))))
        (let* ((,state (check-abandon ,place))
 	      (,var (if (and
 			 ,state
 			 (cl-waffe::waffetensor-is-sysconst? ,tensor))
 			; tensor is allowed to be abandoned.
-			(copy-mat (data ,tensor))
+		        (if *static-node-mode*
+			    (data ,tensor)
+			    (data ,tensor)) ; copy-mat
 			,initform)))
 	 (if ,copy
 	     (unless ,state ; when ,var is filled with 0.0
 	       (copy! (data ,tensor) ,var)))
 	 
-	 (when (cl-waffe::waffetensor-is-sysconst? ,tensor)
+	 (when (and *static-node-mode*
+		    (cl-waffe::waffetensor-is-sysconst? ,tensor))
 	   ; when args is sysconst, cache.
 	   (return-thread-cached-object ,place
 					,key
 					(if ,state
 					    (data ,tensor)
-					    (data ,tensor))
+					    (data ,tensor)) ;copy-mat
 					(cl-waffe::waffetensor-thread-data ,tensor))
 	   (setf (data ,tensor) #'cached-data)
 	   (setf (cl-waffe::waffetensor-key ,tensor) ,key)

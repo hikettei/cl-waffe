@@ -27,4 +27,3 @@
 
   :backward ((dy)
 	     (list (!mul (self mask) dy))))
-

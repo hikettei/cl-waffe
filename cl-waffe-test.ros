@@ -1,0 +1,24 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#|
+exec ros -Q -- $0 "$@"
+|#
+(progn ;;init forms
+  (ros:ensure-asdf)
+  (load "cl-waffe.asd")
+  (load "cl-waffe-test.asd")
+  #+quicklisp(ql:quickload '(:lake :fiveam) :silent t)
+  )
+
+(defpackage :ros.script.cl-waffe-test.3884930125
+  (:use :cl :lake :cl-syntax :asdf)
+  (:shadowing-import-from :lake
+                          :directory))
+(in-package :ros.script.cl-waffe-test.3884930125)
+
+(use-syntax :interpol)
+
+(defun main (&rest argv)
+  (declare (ignorable argv))
+  (asdf:test-system :cl-waffe-test))
+;;; vim: set ft=lisp lisp:

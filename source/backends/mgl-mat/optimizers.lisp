@@ -1,7 +1,6 @@
 
 (in-package :cl-waffe.backends.mgl)
 
-
 (mgl-mat:define-lisp-kernel (adam-step-grads)
     ((params :mat :io)
      (m :mat :io)
