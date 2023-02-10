@@ -35,27 +35,8 @@
 
 (defun demo () (time (demo1)))
 (defun demo1 ()
-  (defparameter batch-size 300)
+  (defparameter batch-size 100)
   
-  (sb-profile:profile mgl-mat::blas-sgemm
-		      mgl-mat::blas-scopy
-		      mgl-mat::array-to-mat
-		      cl-waffe::step-model
-		      cl-waffe::backward1
-		      cl-waffe.nn::softmax-cross-entropy
-		      cl-waffe::!sum
-		      cl-waffe::!mul
-		      cl-waffe::!div
-		      cl-waffe::!add
-		      cl-waffe::!matmul
-		      cl-waffe::!relu
-		      cl-waffe::!exp
-		      cl-waffe::!softmax
-		      cl-waffe::!faref
-		      cl-waffe::!write-faref
-		      cl-waffe.backends.mgl::adam-update
-		      svmformat:parse-file)
-
   (setq trainer (MLPTrainer :relu 1e-4))
 
   (format t "Loading examples/tmp/mnist.scale ...~%")
@@ -74,13 +55,33 @@
     (defparameter mnist-target-test target))
 
   
-#|  
+  #|  
   (defparameter mnist-dataset (!ones `(60000 784)))
   (defparameter mnist-target  (!randn `(60000 10)))
 
   (defparameter mnist-dataset-test (!zeros `(100 784)))
   (defparameter mnist-target-test (!zeros `(100 10)))
   |#
+
+    
+  (sb-profile:profile mgl-mat::blas-sgemm
+		      mgl-mat::blas-scopy
+		      mgl-mat::array-to-mat
+		      cl-waffe::step-model
+		      cl-waffe::backward1
+		      cl-waffe.nn::softmax-cross-entropy
+		      cl-waffe::!sum
+		      cl-waffe::!mul
+		      cl-waffe::!div
+		      cl-waffe::!add
+		      cl-waffe::!matmul
+		      cl-waffe::!relu
+		      cl-waffe::!exp
+		      cl-waffe::!softmax
+		      cl-waffe::!faref
+		      cl-waffe::!write-faref
+		      cl-waffe.backends.mgl::adam-update
+		      svmformat:parse-file)
 
   (format t "Training: ~a~%" (!shape mnist-dataset))
   (format t "Valid   : ~a~%" (!shape mnist-target))
