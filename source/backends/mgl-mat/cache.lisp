@@ -191,7 +191,7 @@ This package exports features for making caches (sysconst)")
 			; tensor is allowed to be abandoned.
 		        (if *static-node-mode*
 			    (data ,tensor)
-			    (copy-mat (data ,tensor))) ; copy-mat
+			    (data ,tensor)) ; copy-mat
 			,initform)))
 	 (if ,copy
 	     (unless ,state ; when ,var is filled with 0.0
@@ -204,7 +204,7 @@ This package exports features for making caches (sysconst)")
 					,key
 					(if ,state
 					    (data ,tensor)
-					    (copy-mat (data ,tensor))) ;copy-mat
+					    (data ,tensor)) ;copy-mat
 					(cl-waffe::waffetensor-thread-data ,tensor))
 	   (setf (data ,tensor) #'cached-data)
 	   (setf (cl-waffe::waffetensor-key ,tensor) ,key)
