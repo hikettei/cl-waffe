@@ -16,3 +16,5 @@
 	   #:*force-lazy-eval*
 	   #:*static-node-mode*
 	   #:compile-and-run-lazy))
+
+(setf mgl-mat:*default-lisp-kernel-declarations* `((optimize (speed 3) (space 0) (safety 1))))

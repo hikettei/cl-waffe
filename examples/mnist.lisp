@@ -8,7 +8,7 @@
 ; this file is excluded from cl-waffe-test
 ; here's mnist example codes and benchmark
 
-(setf cl-waffe.backends.mgl:*verbose* nil)
+(setf cl-waffe.backends.mgl:*verbose* t)
 (setf cl-waffe.backends.mgl:*static-node-mode* t)
 
 (defmodel MLP (activation)
@@ -28,8 +28,8 @@
   :step-model ((x y)
 	       (zero-grad)
 	       (let ((out (cl-waffe.nn:softmax-cross-entropy (call (model) x) y)))
-		 ;(backward out)
-		 ;(update)
+		 (backward out)
+		 (update)
 		 out))
  :predict ((x) (call (model) x)))
 
@@ -97,7 +97,7 @@
     (time (train trainer train :max-iterate 600
 			       :epoch 10
 			       :batch-size batch-size
-			       ;:valid-dataset test
+			       :valid-dataset test
 			       :verbose t :random t :print-each 100))
     (format t "Count: ~a~%" count)
     (format t "Consumed: ~abytes~%" n-bytes))

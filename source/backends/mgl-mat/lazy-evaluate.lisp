@@ -113,7 +113,7 @@ When the tensor isn't appropriate, do nothing."
 	(not (cl-waffe::waffetensor-force-ignore-jit ,tensor))
 	(or (and cl-waffe.caches:*static-node-mode*
 		 (cl-waffe::waffetensor-thread-data ,tensor))
-	    *force-lazy-eval*))
+	    (or cl-waffe:*no-grad* *force-lazy-eval*)))
        ; Judge if the Tensor is in the Model's Iteration or in thread-data.
        (return-from
 	,function-name
