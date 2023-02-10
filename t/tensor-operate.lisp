@@ -19,7 +19,7 @@
 	(r4 (funcall fname c b))
 	(r5 (funcall fname a a))
 	(c1 (!fill (!shape a) (data c))))
-    (labels ((getacc (res x y)
+    (labels ((getacc (nth res x y)
 	       (let ((result t))
 		 (with-facets ((r  ((value res) 'backing-array :direction :input))
 			       (x1 ((value x) 'backing-array))
@@ -31,12 +31,18 @@
 				    (funcall lisp-func (aref x1 i) (aref y1 i))))
 				(setq result t)
 				(setq result nil))))
+		 (format t "~ath Test: ~a~%" nth result)
+		 (unless result
+		   (progn
+		     (print x)
+		     (print y)
+		     (print res)))
 		 result)))
-      (and (getacc r1 a b)
-	   (getacc r2 a c1)
-	   (getacc r3 c1 a)
-	   (getacc r4 c1 b)
-	   (getacc r5 a a)))))
+      (and (getacc 1 r1 a b)
+	   (getacc 2 r2 a c1)
+	   (getacc 3 r3 c1 a)
+	   (getacc 4 r4 c1 b)
+	   (getacc 5 r5 a a)))))
 
 (defun operate-func (fname lisp-func)
   (format t "Running Test of ~a~%" fname)
@@ -71,6 +77,19 @@
 		 (print k))))
     result))
 
+(defun test-cross-entropy ()
+  (let ((result t))
+    (dotimes (i 100)
+      (let ((loss (cl-waffe.nn:softmax-cross-entropy (!randn `(10 10))
+						     (!ones `(10 10)))))
+	(format t "CrossEntropyLoss:~a~%" loss)
+	(if (and result (>= (data loss) 0))
+	    (setq result t)
+	    (setq result nil))))
+    result))
+
+(format t "Operating with Default Mode(cache=nil, jit=nil).~%")
+
 (test cl-waffe-test
   (is (operate-test #'!add #'+))
   (is (operate-test #'!sub #'-))
@@ -80,6 +99,7 @@
   (is (operate-func #'!exp #'exp))
   (is (operate-func #'!log #'log))
   (is (operate-func #'!sqrt #'sqrt))
-  (is (operate-func #'!tanh #'tanh)))
+  (is (operate-func #'!tanh #'tanh))
+  (is (test-cross-entropy)))
 
 
