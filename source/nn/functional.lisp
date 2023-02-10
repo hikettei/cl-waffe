@@ -7,4 +7,3 @@
   (if bias
       (!add (!matmul x weight) bias)
       (!matmul x weight)))
-

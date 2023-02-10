@@ -12,6 +12,7 @@
 	   #:abort-delay
 	   #:copy-elements
 	   #:*verbose*
+	   #:reset-jit
 	   #:*force-lazy-eval*
 	   #:*static-node-mode*
 	   #:compile-and-run-lazy))

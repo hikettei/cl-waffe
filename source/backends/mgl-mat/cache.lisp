@@ -191,7 +191,7 @@ This package exports features for making caches (sysconst)")
 			; tensor is allowed to be abandoned.
 		        (if *static-node-mode*
 			    (data ,tensor)
-			    (data ,tensor)) ; copy-mat
+			    (copy-mat (data ,tensor))) ; copy-mat
 			,initform)))
 	 (if ,copy
 	     (unless ,state ; when ,var is filled with 0.0

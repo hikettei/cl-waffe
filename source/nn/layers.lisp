@@ -22,7 +22,6 @@ Output: Applied tensor, where the tensor is the shape of (batch-size out-feature
   :forward ((x)
 	    (cl-waffe.nn:linear x (self weight) (self bias))))
 
-
 (defmodel DenseLayer (in-features out-features &optional (bias T) (activation :relu))
   :document "Calling LinearLayer, and activation.
 Args:  in-features (fixnum)

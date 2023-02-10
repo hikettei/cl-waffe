@@ -271,11 +271,11 @@
 (define-waffe-kernel kernel-sub (x y) (x1 y1)
   :jit -
   :mat-scal ((let ((o (get-out-buffer x :copy t)))
-	       (.+! y1
-		    (scal! -1.0 o))))
-  :scal-mat ((let ((o (get-out-buffer y :copy t)))
-	       (.+! (the single-float (* -1.0 x1))
+	       (.+! (the single-float (* -1.0 y1))
 		    o)))
+  :scal-mat ((let ((o (get-out-buffer y :copy t)))
+	       (.+! x1
+		    (scal! -1.0 o))))
   :mat-mat ((cond
 	      ((will-be-destructed x)
 	       (let ((o (get-out-buffer x :copy t)))
@@ -306,8 +306,10 @@
   :jit /
   :mat-scal ((let ((o (get-out-buffer x :copy t)))
 	       (scal! (/ y1) o)))
-  :scal-mat ((let ((o (get-out-buffer y :copy t)))
-	       (scal! (/ x1) o)))
+  :scal-mat ((unless (= x1 1)
+	       (error "cl-waffe.backends.mgl:kernel-inv excepts x1 to be 1"))
+	     (let ((o (get-out-buffer y :copy t)))
+	       (.inv! o)))
   :mat-mat ((cond
 	      ((will-be-destructed x)
 	       (let ((o (get-out-buffer x :copy nil)))

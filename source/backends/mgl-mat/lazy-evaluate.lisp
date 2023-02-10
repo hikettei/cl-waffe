@@ -18,6 +18,12 @@
 (defparameter *ignore-jit-max-len* 3
   "When computation node is built and that length <= *ignore-jit-max-len* call backpoint and call blas api.")
 
+(defun reset-jit ()
+  "Dispose all compiled jit functions. (compiled code remains)"
+  (setf *jit-compiled* (make-hash-table))
+  (setf *fname-ids* (make-hash-table))
+  nil)
+
 ; utils
 (defun mkstr (&rest args)
   "concatenates args by printing into string"
