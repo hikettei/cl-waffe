@@ -110,7 +110,7 @@ When the tensor isn't appropriate, do nothing."
   (declare (type list args))
   `(if (and
 	; force-ignore-jit: avoid kernel -> jit -> kernel -> jit ...
-	(not (or cl-waffe:*no-grad* (cl-waffe::waffetensor-force-ignore-jit ,tensor)))
+	(not (cl-waffe::waffetensor-force-ignore-jit ,tensor))
 	(or (and cl-waffe.caches:*static-node-mode*
 		 (cl-waffe::waffetensor-thread-data ,tensor))
 	    (or *force-lazy-eval*)))
