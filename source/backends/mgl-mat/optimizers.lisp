@@ -2,9 +2,9 @@
 (in-package :cl-waffe.backends.mgl)
 
 (mgl-mat:define-lisp-kernel (adam-step-grads)
-    ((params :mat :io)
-     (m :mat :io)
-     (v :mat :io)
+    ((params :mat :output)
+     (m :mat :output)
+     (v :mat :output)
      (grads :mat :input)
      (eps single-float)
      (lr-t single-float)
