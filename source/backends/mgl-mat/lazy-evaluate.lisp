@@ -110,10 +110,10 @@ When the tensor isn't appropriate, do nothing."
   (declare (type list args))
   `(if (and
 	; force-ignore-jit: avoid kernel -> jit -> kernel -> jit ...
-	(not (cl-waffe::waffetensor-force-ignore-jit ,tensor))
+	(not (or cl-waffe:*no-grad* (cl-waffe::waffetensor-force-ignore-jit ,tensor)))
 	(or (and cl-waffe.caches:*static-node-mode*
 		 (cl-waffe::waffetensor-thread-data ,tensor))
-	    (or cl-waffe:*no-grad* *force-lazy-eval*)))
+	    (or *force-lazy-eval*)))
        ; Judge if the Tensor is in the Model's Iteration or in thread-data.
        (return-from
 	,function-name
@@ -140,7 +140,7 @@ When the tensor isn't appropriate, do nothing."
        tensor
        nil
        t)
-      tensor))
+      (data tensor)))
 
 (defun compile-and-step-lazy-evaluated-nodes
   (tensor-top
@@ -153,12 +153,12 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 	   (ignore lisp-function args))
   (let* ((jit-id (make-string-output-stream)) ; jit-id is made for find compiled functions
 	 (args-table (make-hash-table))
-	 (mat-size-table (make-hash-table))
+	 (mat-dims-table (make-hash-table))
 	 (result-code
-	   (parse-argument
+	   (parse-argument ; for lisp kernel.
 	    jit-id
 	    args-table
-	    mat-size-table
+	    mat-dims-table
 	    tensor-top))
 	 (jit-id (intern (get-output-stream-string jit-id) :keyword)))
     (if (use-cuda-p tensor-top)
@@ -166,11 +166,11 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 	(lisp-define-tmp-kernel
 	 jit-id
 	 args-table
-	 mat-size-table
+	 mat-dims-table
 	 result-code
 	 tensor-top))))
 
-(defun parse-argument (jit-id args-table mat-size-table tensor)
+(defun parse-argument (jit-id args-table mat-dims-table tensor)
   "Parse args, if tensor=mat, register to args-table"
   (declare (optimize (speed 3))
 	   (type stream jit-id))
@@ -186,7 +186,7 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 	   (generate-kernel-code
 	    jit-id
 	    args-table
-	    mat-size-table
+	    mat-dims-table
 	    last-tensor
 	    lisp-function
 	    args)
@@ -194,7 +194,7 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 	   (parse-argument
 	    jit-id
 	    args-table
-	    mat-size-table
+	    mat-dims-table
 	    (data tensor)))))
     (T
      (typecase (data tensor)
@@ -209,8 +209,8 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 	(setf (gethash
 	       (mat-size-symbol
 		(cl-waffe::waffetensor-tensor-ident tensor))
-	       mat-size-table)
-	      (mat-size (data tensor))) ; (data tensor) is supposed to be mat. (the end of node.)
+	       mat-dims-table)
+	      (mat-dimensions (data tensor))) ; (data tensor) is supposed to be mat. (the end of node.)
 	(format jit-id "M")
 	`(aref ,(cl-waffe::waffetensor-tensor-ident tensor)
 	       (mod index ,(mat-size-symbol (cl-waffe::waffetensor-tensor-ident tensor)))))
@@ -224,7 +224,7 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 	(format jit-id "O")
 	(cl-waffe::waffetensor-tensor-ident tensor))))))
       
-(defun generate-kernel-code (jit-id args-table mat-size-table tensor lisp-function args)
+(defun generate-kernel-code (jit-id args-table mat-dims-table tensor lisp-function args)
   "The top level of generating code.
 jit-id is a stream"
   (declare (optimize (speed 3))
@@ -233,22 +233,24 @@ jit-id is a stream"
   (format jit-id ".~a" (fname-get lisp-function))
   (prog1
       `(,lisp-function
-	,(parse-argument jit-id args-table mat-size-table tensor)
+	,(parse-argument jit-id args-table mat-dims-table tensor)
 	,@(map 'list #'(lambda (arg)
-			 (parse-argument jit-id args-table mat-size-table arg))
+			 (parse-argument jit-id args-table mat-dims-table arg))
 	       args))
     (format jit-id ",")))
 
 (defun lisp-execute-tmp-kernel
     (args-table
-     mat-size-table
+     mat-dims-table
      any-tensor
      &key (jit-function-id nil))
   (declare (optimize (speed 3) (space 0)))
   (macrolet ((apply-jit (jit-id args)
 	       `(apply (intern (symbol-name ,jit-id)) ,args)))
     (let ((mat-inputs nil)
-	  (mat-ninputs nil))
+	  (mat-ninputs nil)
+	  (out-mat-shape nil)
+	  (out-mat-size 0))
       (maphash #'(lambda (key val)
 		   (declare (ignore key))
 		   (push val mat-inputs))
@@ -256,25 +258,35 @@ jit-id is a stream"
 
       (maphash #'(lambda (key val)
 		   (declare (ignore key))
-		   (push val mat-ninputs))
-	       mat-size-table)
-
+		   (let ((n-mat-size (apply #'* val)))
+		     (push n-mat-size mat-ninputs)
+		     (if (null out-mat-shape)
+			 (progn
+			   (setq out-mat-shape val)
+			   (setq out-mat-size n-mat-size))
+			 (when (>= (the fixnum n-mat-size)
+				   (the fixnum out-mat-size))
+			   (progn
+			     (setq out-mat-shape val)
+			     (setq out-mat-size n-mat-size))))))
+	       mat-dims-table)
+      
       (setq mat-inputs `(,@(reverse mat-inputs)
 			 ,@(reverse mat-ninputs)))
       (warranty any-tensor)
-      (let ((out (make-mat (!shape any-tensor))));cl-waffe.caches:with-cache (out any-tensor)
-	(if (cl-waffe::waffetensor-thread-data any-tensor)
-	    (incf (cl-waffe::waffenodethread-cache-n
-		   (cl-waffe::waffetensor-thread-data any-tensor))
-		  1))
+      (let ((out (make-mat out-mat-shape)));cl-waffe.caches:with-cache (out any-tensor)
+	;;(if (cl-waffe::waffetensor-thread-data any-tensor)
+	;;    (incf (cl-waffe::waffenodethread-cache-n
+	;;	   (cl-waffe::waffetensor-thread-data any-tensor))
+	;;	  1))
 	(cond
 	  (jit-function-id
 	   
-	   ;(when *verbose*
-	   ;  (format t "~%JIT Loaded Compiled Function: ~a~%" jit-function-id))	   
+	   ;; (when *verbose*
+	   ;;  (format t "~%JIT Loaded Compiled Function: ~a ~a~%" jit-function-id out-mat-shape))
 	   (apply-jit
 	    jit-function-id
-	    `(,(mat-size out) ,out ,@mat-inputs))
+	    `(,out-mat-size ,out ,@mat-inputs))
 	   (the mat out))
 	  (T ; when jit-function-id is not found? (in that case hash-table could be modified)
 	   (error "cl-waffe.backends.mgl:isp-execute-tmp-kernel (JIT) -> couldn't find jit-id")))))))
@@ -293,7 +305,7 @@ jit-id is a stream"
 
 (defun lisp-define-tmp-kernel (jit-id
 			       args-table
-			       mat-size-table
+			       mat-dims-table
 			       code
 			       any-tensor
 			       &aux (jit-ident (gensym "JitFunction")))
@@ -306,7 +318,7 @@ Return: compiled-function's id, out"
   (if (gethash jit-id *jit-compiled*)
       (return-from lisp-define-tmp-kernel
 	(lisp-execute-tmp-kernel args-table
-				 mat-size-table
+				 mat-dims-table
 				 any-tensor
 				 :jit-function-id
 				 (gethash jit-id *jit-compiled*))))
@@ -374,10 +386,12 @@ Return: compiled-function's id, out"
 	     (apply-jit (jit-id args)
 	       `(apply (intern (symbol-name ,jit-id)) ,args)))
     ; collecting inputs
-    (let ((symbols nil)  ; args for mat, obj
-	  (nsymbols nil) ; args for mat-size
-	  (mat-inputs nil) ; the list of values
-	  (mat-ninputs nil)) ; the list of value's size
+    (let ((symbols nil)     ; args for mat, obj
+	  (nsymbols nil)    ; args for mat-size
+	  (mat-inputs nil)  ; the list of values
+	  (mat-ninputs nil) ; the list of value's size
+	  (out-mat-shape nil)
+	  (out-mat-size 0)) 
       
       (maphash #'(lambda (key val)
 		   (push `(,key ,@(typecase val
@@ -391,8 +405,18 @@ Return: compiled-function's id, out"
 
       (maphash #'(lambda (key val)
 		   (push `(,key fixnum) nsymbols)
-		   (push val mat-ninputs))
-	       mat-size-table)
+		   (let ((n-mat-size (apply #'* val)))		     
+		     (push n-mat-size mat-ninputs)
+		     (if (null out-mat-shape)
+			 (progn
+			   (setq out-mat-shape val)
+			   (setq out-mat-size n-mat-size))
+			 (when (>= (the fixnum n-mat-size)
+				   (the fixnum out-mat-size))
+			   (progn
+			     (setq out-mat-shape val)
+			     (setq out-mat-size n-mat-size))))))
+	       mat-dims-table)
       
       (setq symbols `((size fixnum)
 		      (out :mat :output)
@@ -401,13 +425,15 @@ Return: compiled-function's id, out"
 
       (setq mat-inputs `(,@(reverse mat-inputs)
 			 ,@(reverse mat-ninputs)))
+
       (let* ((kernel-code (def-dynamic-kernel args-table symbols code)))
 	;(warranty any-tensor)
-	(let ((out (make-mat (!shape any-tensor))));cl-waffe.caches:with-cache (out any-tensor)
-	  (if (cl-waffe::waffetensor-thread-data any-tensor)
-	      (incf (cl-waffe::waffenodethread-cache-n
-		     (cl-waffe::waffetensor-thread-data any-tensor))
-		    1))
+	(let ((out (make-mat out-mat-shape)))
+	  ;; cl-waffe.caches:with-cache (out any-tensor)
+	  ;;(if (cl-waffe::waffetensor-thread-data any-tensor)
+	  ;;    (incf (cl-waffe::waffenodethread-cache-n
+	  ;;	     (cl-waffe::waffetensor-thread-data any-tensor))
+	  ;;	    1))
 
 	  ;; Todo: SetfAref -> マクロにする、計算ノード保持するように。
 	  ;; Todo: any-tensorが不要ならany-tensorに書き込む
@@ -415,6 +441,7 @@ Return: compiled-function's id, out"
 	  (when *verbose*
 	    (format t "~%JIT Compiled New function ~a~%" jit-ident)
 	    (print kernel-code)
+	    (format t "~%Output Mat Shape: ~a~%" out-mat-shape)
 	    (fresh-line))
 	  
 	  ; eval define-lisp-kernel/define-cuda-kernel
@@ -426,6 +453,6 @@ Return: compiled-function's id, out"
 	  ; execute it and write result to out.
 	  (apply-jit
 	   jit-ident
-	   `(,(mat-size out) ,out ,@mat-inputs))
+	   `(,out-mat-size ,out ,@mat-inputs))
 	  (the mat out))))))
 

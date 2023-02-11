@@ -207,7 +207,7 @@ Example:
     :optimize ,optimize
     :forward ,update
     ;zero-grad
-    :backward ((model) (dolist (p (find-variables model))
+    :backward ((model) (dolist (p (find-variables model)) ; Todo Rewrite.
 			 (setf (waffetensor-state p) nil)
 			 (setf (waffetensor-backward p) nil)
 			 (setf (waffetensor-variables p) nil)
@@ -361,7 +361,7 @@ Example:
 					thread-info)
 				       :copy t)
 				    (incf (waffenodethread-cache-n thread-info) 1)
-				    (setf (self ,name) (const tmp))))
+				    (setf (self ,name) tmp)))
 				 (T (!allow-destruct smaller-value)
 				    (setf (self ,name) smaller-value))))))))
 	     ,(if is-node

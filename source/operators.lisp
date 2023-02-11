@@ -165,7 +165,7 @@
 
 (defnode MatMulTensor ()
   :optimize t
-  :parameters ((xi T) (yi T))
+  :parameters ((xi nil) (yi nil))
   :forward ((x y) (save-for-backward xi x)
 		  (save-for-backward yi y)
 		  (with-searching-calc-node :matmul x y))
@@ -177,13 +177,12 @@
   (let ((place node-object))
     `(defun ,name ,args
        ,doc
+       (declare (optimize (speed 3) (safety 0)))
        (let* ((,tensor (if *no-grad* ,place ,node-object)))
 	,@body))))
 
 (defope !add (AddTensor) node (x y)
-    "Add x y, creating new sysconst and nodes.
-
-As a modify: (!modify x :+= y)"
+    "Add x + y, creating a new const."
   (call node (assure-tensor x) (assure-tensor y)))
     
 (defope !sub (SubTensor) node (x y)
@@ -311,7 +310,6 @@ Note: the result of !transpose is lazy evaluated for speed.(Todo: Write details)
 
 (defope !matmul (MatmulTensor) node (x y)
     "Matmul
-
 Todo: write docs and behaviour"
   (call node (assure-tensor x) (assure-tensor y)))
 	

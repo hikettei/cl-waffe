@@ -17,6 +17,7 @@
 	       #:alexandria
 	       #:cl-cuda
 	       #:cl-libsvm-format
+	       #:inlined-generic-function
 	       #:trivial-garbage
 	       #:bordeaux-threads)
   :in-order-to ((test-op (test-op cl-waffe-test)))
