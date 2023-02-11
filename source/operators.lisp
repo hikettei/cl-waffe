@@ -310,7 +310,6 @@ Note: the result of !transpose is lazy evaluated for speed.(Todo: Write details)
 
 (defope !matmul (MatmulTensor) node (x y)
     "Matmul
-
 Todo: write docs and behaviour"
   (call node (assure-tensor x) (assure-tensor y)))
 	

@@ -135,6 +135,7 @@
 			     ignore?
 			     return-node-info)
 	     (declare (ignore given-tensor))
+	     ; given-tensor is always lazytranspsoed.
 	     (cond
 	       (ignore?
 		nil)
@@ -145,9 +146,11 @@
 		(values :lazy-transpose nil nil nil))
 	       (compile-and-step?
 		; Transpose is evaluated (its slow)
-		(transpose (value (sysconst tensor))))
+		(transpose (compile-and-run-lazy (sysconst tensor))))
 	       (T
-		; Transpose is skipped (evaluated with gemm geem etc...)
+		; The Last Transpose is skipped, returning untransposed tensor
+                ; this block will be called by (value ~ :ignore-transpose t)
+                ; so, if tensor should function, this will be evaluated.
 		(value (sysconst tensor))))))
     #'LazyTranspose))
 
@@ -339,7 +342,6 @@
 	   (ignore enable-optimize? o)
 	   (type boolean enable-optimize?)
 	   (type waffetensor o x y))
-  
   (let* ((transpose-map `(,(is-transpose? x)
 			  ,(is-transpose? y)))
 	 (x1 (value x :ignore-transpose t))

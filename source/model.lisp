@@ -349,6 +349,7 @@ Example:
 				       (not
 					(waffetensor-path-through-node? ,value))
 				       t)
+			       ; todo Add is-ancestor-param to cond.
 			       ; save-for-backward is ignored when 1. in with-no-grad macro. 2. Nodes connected like (Node) -> (Node) ; (in nodes, :forward :backward doesn't create grads.)
 			       (cond
 				 ((and (typep (data ,value) 'mat)
