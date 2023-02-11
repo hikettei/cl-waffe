@@ -207,7 +207,7 @@ Example:
     :optimize ,optimize
     :forward ,update
     ;zero-grad
-    :backward ((model) (dolist (p (find-variables model))
+    :backward ((model) (dolist (p (find-variables model)) ; Todo Rewrite.
 			 (setf (waffetensor-state p) nil)
 			 (setf (waffetensor-backward p) nil)
 			 (setf (waffetensor-variables p) nil)
@@ -349,7 +349,6 @@ Example:
 				       (not
 					(waffetensor-path-through-node? ,value))
 				       t)
-			       ; todo Add is-ancestor-param to cond.
 			       ; save-for-backward is ignored when 1. in with-no-grad macro. 2. Nodes connected like (Node) -> (Node) ; (in nodes, :forward :backward doesn't create grads.)
 			       (cond
 				 ((and (typep (data ,value) 'mat)
@@ -362,7 +361,7 @@ Example:
 					thread-info)
 				       :copy t)
 				    (incf (waffenodethread-cache-n thread-info) 1)
-				    (setf (self ,name) (const tmp))))
+				    (setf (self ,name) tmp)))
 				 (T (!allow-destruct smaller-value)
 				    (setf (self ,name) smaller-value))))))))
 	     ,(if is-node

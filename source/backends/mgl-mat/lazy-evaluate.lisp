@@ -110,10 +110,10 @@ When the tensor isn't appropriate, do nothing."
   (declare (type list args))
   `(if (and
 	; force-ignore-jit: avoid kernel -> jit -> kernel -> jit ...
-	(not (cl-waffe::waffetensor-force-ignore-jit ,tensor))
+	(not (or cl-waffe:*no-grad* (cl-waffe::waffetensor-force-ignore-jit ,tensor)))
 	(or (and cl-waffe.caches:*static-node-mode*
 		 (cl-waffe::waffetensor-thread-data ,tensor))
-	    (or cl-waffe:*no-grad* *force-lazy-eval*)))
+	    (or *force-lazy-eval*)))
        ; Judge if the Tensor is in the Model's Iteration or in thread-data.
        (return-from
 	,function-name
@@ -282,8 +282,8 @@ jit-id is a stream"
 	(cond
 	  (jit-function-id
 	   
-	   ;(when *verbose*
-	   ;  (format t "~%JIT Loaded Compiled Function: ~a~%" jit-function-id))	   
+	   ;; (when *verbose*
+	   ;;  (format t "~%JIT Loaded Compiled Function: ~a ~a~%" jit-function-id out-mat-shape))
 	   (apply-jit
 	    jit-function-id
 	    `(,out-mat-size ,out ,@mat-inputs))
@@ -441,7 +441,7 @@ Return: compiled-function's id, out"
 	  (when *verbose*
 	    (format t "~%JIT Compiled New function ~a~%" jit-ident)
 	    (print kernel-code)
-	    (format t "~%Output Mat Shape: ~a~%" (!shape any-tensor))
+	    (format t "~%Output Mat Shape: ~a~%" out-mat-shape)
 	    (fresh-line))
 	  
 	  ; eval define-lisp-kernel/define-cuda-kernel

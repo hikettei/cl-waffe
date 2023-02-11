@@ -165,7 +165,7 @@
 
 (defnode MatMulTensor ()
   :optimize t
-  :parameters ((xi T) (yi T))
+  :parameters ((xi nil) (yi nil))
   :forward ((x y) (save-for-backward xi x)
 		  (save-for-backward yi y)
 		  (with-searching-calc-node :matmul x y))

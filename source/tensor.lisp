@@ -411,9 +411,7 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
 	    (dotimes (n (length grads))
 	      (setf (waffetensor-thread-data (nth n grads))
 		    (waffetensor-thread-data tensor))
-	      (setfgradtmp (nth-var tensor n) (nth n grads)))
-
-	    (dotimes (n (length grads))
+	      (setfgradtmp (nth-var tensor n) (nth n grads))
 	      (step-next-node tensor n)))
 	  nil)))
     (T
@@ -425,18 +423,18 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
 	 (if (typep (waffetensor-grad tensor) 'cons)
 	     ; is it first value? or not?
 	     (let ((new-grad (grad-tmp-value (waffetensor-grad-tmp tensor))))
-	       (setf (waffetensor-grad tensor) (data new-grad)))
+	       (setf (waffetensor-grad tensor) (value new-grad)))
 	     
 	     ;Otherwise (grad-tmp is created), Sum up grads for multiple variables
 	     (if (typep (waffetensor-grad tensor) 'mat)
-		 (axpy! 1.0
-			(data (grad-tmp-value
+		 (axpy! 1.0 ; todo: integrate add with jit.
+			(value (grad-tmp-value
 			       (waffetensor-grad-tmp tensor)))
 			(waffetensor-grad tensor))
 		 (setf (waffetensor-grad tensor)
 		       (+ (the single-float (waffetensor-grad tensor))
 			  (the single-float
-			       (data (grad-tmp-value
+			       (value (grad-tmp-value
 				 (waffetensor-grad-tmp tensor))))))))))))
   nil)
 
