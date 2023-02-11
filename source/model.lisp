@@ -416,8 +416,7 @@ Example:
 (defmacro defmodel (name args
 			 &key
 			   (parameters nil)
-			   (forward `((&rest args)
-				      (error ":forward isn't defined.")))
+			   forward
 			   (optimize nil)
 			   (document "An model, defined by cl-waffe"))
   "This macro defines a cl-waffe model as @cl:param(name).
@@ -477,8 +476,8 @@ When backward, @b(Automatic differentiation applies).
 		     args
 		     &key
 		      parameters
-		      (forward `((&rest args) (error ":forward isn't defined.")))
-		      (backward `((&rest args) (error ":backward isn't defined.:"))) ; Todo: displaying model name
+		      forward
+		      backward
 		      hide-from-tree
 		      optimize
 		      (regard-as-node nil)
