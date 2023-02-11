@@ -1,8 +1,6 @@
 
 (in-package :cl-waffe)
 
-(declaim (inline callop))
-
 ; dispaches kernel based on backends. and optimize node
 
 (defparameter *kernels* `(:mgl)
@@ -107,38 +105,46 @@ Note: this is not setfable"
 					     #'waffetensor-path-through-node?
 					     variables))))
 
-(defgeneric invoke-kernel (kernel-function variables first-argument i))
-(defmethod invoke-kernel (kernel-function
-			  (variables cons)
-			  (first-argument mgl-mat:mat)
-			  (i fixnum))
-  (declare (optimize (speed 3) (space 0) (safety 0))
-	   (ignore i first-argument))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+(defgeneric invoke-kernel-inlined (kernel-function variables first-argument i)
+  (:generic-function-class inlined-generic-function)))
+
+(defmethod invoke-kernel-inlined ((kernel-function T)
+				  (variables list)
+				  (first-argument mgl-mat:mat)
+				  (i fixnum))
   (invoke-mgl-kernel kernel-function variables))
 
-(defmethod invoke-kernel (kernel-function
-			  (variables cons)
-			  (first-argument function)
-			  (i fixnum))
-  (declare (optimize (speed 3) (space 0) (safety 0))
-	   (ignore i first-argument))
+(defmethod invoke-kernel-inlined ((kernel-function T)
+				  (variables list)
+				  (first-argument function)
+				  (i fixnum))
   (invoke-mgl-kernel kernel-function variables))
 
-(defmethod invoke-kernel (kernel-function
-			  (variables cons)
-			  first-argument
-			  (i fixnum))
-  (declare (optimize (speed 3) (space 0) (safety 0))
-	   (ignore first-argument))
+(defmethod invoke-kernel-inlined ((kernel-function T)
+				  (variables list)
+				  (first-argument T)
+				  (i fixnum))
+  (declare (type fixnum i))
   (if (= i 0)
-      (invoke-kernel kernel-function variables (data (second variables)) (+ i 1))
+      (invoke-kernel-inlined
+       kernel-function
+       variables
+       (data (second variables)) (+ i 1))
       (invoke-cpu-kernel kernel-function variables)))
+
+(defun invoke-kernel (kernel-function
+		      variables
+		      first-argument
+		      i)
+  (declare (inline invoke-kernel-inlined))
+  (invoke-kernel-inlined kernel-function variables first-argument i))
 
 (defmacro call-and-dispatch-kernel (kernel-function &rest args)
   "Invoke kernel and run kernel-function. return new sysconst
 It's the most general way for users to access cl-waffe's kernel.
 Todo:More Details"
-  `(invoke-kernel ,kernel-function ,@args))
+  `(invoke-kernel ,kernel-function ,args (car ,args) 0))
 
 (declaim (ftype (function (keyword &rest waffetensor) waffetensor)))
 (defun with-searching-calc-node (kernel-function &rest args)

@@ -3,7 +3,7 @@
 
 (defpackage cl-waffe
   (:documentation "An package for defining node, initializing and computing with tensor, and backprops.")
-  (:use :cl :mgl-mat :alexandria)
+  (:use :cl :mgl-mat :alexandria :inlined-generic-function)
   (:export
            ; Functions and structures for tensor
            #:waffetensor
