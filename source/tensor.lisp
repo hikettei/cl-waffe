@@ -447,25 +447,72 @@ Output: Tensor (which is constant)
 
 Example:
 @begin[lang=lisp](code)
-(!zeros `(10 10)) => #Const(((0.0 0.0 ~ 0.0 0.0)        
-                 ...
-       (0.0 0.0 ~ 0.0 0.0)) :mgl t :shape (10 10))
+(!zeros `(10 10))
+;#Const(((0.0 0.0 ~ 0.0 0.0)        
+;                ...
+;        (0.0 0.0 ~ 0.0 0.0)) :mgl t :shape (10 10))
 @end[lang=lisp](code)"
+  (declare (type cons shape))
   (const (mgl-mat:make-mat shape :initial-element 0)))
 
 (defun !ones (shape)
-  "The same as !zeros but initial element is one"
+  "The same as !zeros but initial element is one.
+
+Example:
+@begin[lang=lisp](code)
+(!ones `(10 10))
+;#Const(((1.0 1.0 ~ 1.0 1.0)        
+;                ...
+;        (1.0 1.0 ~ 1.0 1.0)) :mgl t :shape (10 10))
+@end[lang=lisp](code)"
+  (declare (type cons shape))
   (const (mgl-mat:make-mat shape :initial-element 1)))
 
 (defun !fill (shape element)
-  "The same as !zeros, !ones but initial element is given element
-Input: element ... fixnum or single-float"
+  "The same as !zeros, !ones but initial element is given element.
+
+Note: the argument @cl:param(element) coerced into @cl:param(mgl-mat:*default-mat-ctype*)
+
+Example:
+@begin[lang=lisp](code)
+(!fill '(10 10) 10)
+;#Const(((10.0 10.0 ~ 10.0 10.0)        
+;                  ...
+;        (10.0 10.0 ~ 10.0 10.0)) :mgl t :shape (10 10))
+@end[lang=lisp](code)
+"
+  (declare (type cons shape))
   (const (mgl-mat:make-mat shape :initial-element element)))
 
 (defmacro !arange (&rest args)
-  "arange can be called with a varying number of positional arguments:"
-  `(const (mgl-mat:make-mat (numcl:shape (numcl:arange ,@args))
-			    :initial-contents (numcl:arange ,@args))))
+  "Like numpy's arange, arange can be called with a varying number of positional arguments:
+
+@begin(section)
+@title((!arange stop))
+@begin[lang=lisp](code)
+(!arange 10)
+;#Const((0.0 1.0 ~ 8.0 9.0) :mgl t :shape (10))
+@end[lang=lisp](code)
+@end(section)
+
+@begin(section)
+@title((!arange start stop))
+@begin[lang=lisp](code)
+(!arange 3 10)
+;=>#Const((3.0 4.0 ~ 8.0 9.0) :mgl t :shape (7))
+@end[lang=lisp](code)
+@end(section)
+
+@begin(section)
+@title((!arange start stop step))
+@begin[lang=lisp](code)
+(!arange 3 10 2)
+;#Const((3.0 5.0 7.0 9.0) :mgl t :shape (4))
+@end[lang=lisp](code)
+@end(section)"
+  `(let ((base-array (numcl:arange ,@args)))
+     (const (make-mat (numcl:shape base-array)
+		      :initial-contents base-array))))
 
 (defmacro !copy (tensor &aux (new-tensor (gensym)))
   `(let ((,new-tensor (!zeros-like ,tensor)))
@@ -474,13 +521,10 @@ Input: element ... fixnum or single-float"
 
 (declaim (ftype (function (waffetensor fixnum fixnum) waffetensor) !set-batch))
 (defun !set-batch (dataset start-row-index batch-size)
-  "Set batch where dataset is a 2d mat
+  "Set batch where dataset is a 2d mat.
 
-Note: dataset's shape must be divided by batch-size (Todo Fix)
-
-Internally, this function just modifying dataset's displacement.
-
-So it's very fast."
+Todo: Backward."
+  
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type waffetensor dataset)
 	   (type fixnum start-row-index batch-size))
@@ -529,9 +573,7 @@ Example:
 (!aref a 1 1)
 (setq a (setf (!aref a '(0 3) '(0 3)) (!zeros '(3 3)))) ; to update nodes
 
-@end[lang=lisp](code)
-
-Todo: Bugfix"
+@end[lang=lisp](code)"
   (call (ArefTensor dims) tensor))
 
 (defun !areflist (tensor dims)
