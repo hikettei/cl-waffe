@@ -67,7 +67,7 @@ Output: An last value of layers."
 	      layers)
      ,input))
 
-;(declaim (inline call))
+(declaim (inline call))
 (declaim (ftype (function (t &rest waffetensor) waffetensor) call))
 (defun call (model &rest args)
   "Calling Forward Step defined by defmodel, defnode, defoptimizer.
@@ -107,11 +107,12 @@ Output: => @cl:param(tensor) produced by :forward"
 	    (setf (waffetensor-backward result) t)
 	    (setf (waffetensor-state result) model)
 	    (setf (waffetensor-variables result) args)
-	    (setf (waffetensor-is-ancestor-param result) (if (member-if #'(lambda (x)
-				                                            (waffetensor-is-ancestor-param x))
-								      args)
-							   t
-							   nil)))))
+	    (setf (waffetensor-is-ancestor-param result)
+		  (if (member-if #'(lambda (x)
+		                     (waffetensor-is-ancestor-param x))
+				 args)
+		      t
+		      nil)))))
     result))
 
 (defmacro with-model-list (&rest models)
