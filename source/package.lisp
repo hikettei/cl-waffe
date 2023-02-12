@@ -99,6 +99,7 @@
 	   #:!where
 	   #:!random
 	   #:!random-with
+	   #:!init-with
 	   #:!normal
 	   #:!randn
 	   #:!bernoulli

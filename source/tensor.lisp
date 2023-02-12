@@ -603,13 +603,34 @@ Example:
 
 !random can be called with a varying number of type of arguments:
 
-When limit=fixnum, init with 0~fixnum
+@begin(section)
+@title(When limit=fixnum, init within the range of @c(0<=x<limit))
+@begin[lang=lisp](code)
+;#Const(((1.0 2.0 ~ 2.0 1.0)        
+;                 ...
+;        (2.0 2.0 ~ 2.0 2.0)) :mgl t :shape (10 10))
+@end[lang=lisp](code)
+@end(section)
 
-When limit=single-float, init with 0~single-float
+@begin(section)
+@title(When limit=single-float, init within the range of @c(0<=x<limit))
+@begin[lang=lisp](code)
+(!random '(10 10) 3.0)
+;#Const(((0.152... 2.203... ~ 2.360... 2.216...)        
+;                 ...
+;        (1.003... 2.257... ~ 2.305... 2.025...)) :mgl t :shape (10 10))
+@end[lang=lisp](code)
+@end(section)
 
-When limit=(cons fixnum1 fixnum2), init with fixnum1~fixnum2, where each element is fixnum
-
-When limit=(cons single-float1 single-float2), init with single-float1~single-float2, where each element is single-float
+@begin(section)
+@title(When limit=(cons single-float1 single-float2), init with single-float1<=x<single-float2, where each element is single-float)
+@begin[lang=lisp](code)
+(!random '(10 10) '(1.0 3.0))
+;#Const(((1.982... 1.526... ~ 1.388... 1.312...)        
+;                 ...
+;        (1.829... 2.676... ~ 1.226... 2.980...)) :mgl t :shape (10 10))
+@end[lang=lisp](code)
+@end(section)
 
 Return: WaffeTensor
 "
@@ -625,17 +646,31 @@ Return: WaffeTensor
 
 (declaim (ftype (function ((or cons fixnum) function) waffetensor) !random-with))
 (defun !random-with (dims f)
-  "Initialize the tensor of dims.
+  "Initializes the tensor of dims. Each element is initialized with @cl:param(f) where f is a lambda exp and called with index.
 
-f is function and each element is initialized with f's value."
+Example:
+@begin[lang=lisp](code)
+(!random-with '(10 10) #'(lambda (n) n))
+;#Const(((0.0 1.0 ~ 8.0 9.0)        
+;                 ...
+;        (90.0 91.0 ~ 98.0 99.0)) :mgl t :shape (10 10))
+@end[lang=lisp](code)
+
+See also: !init-with which is alias for !random-with.
+"
   (declare (optimize (speed 3) (safety 0) (space 0))
 	   (type function f))
   (let* ((res (make-array dims :initial-element 0))
          (len (the fixnum (if (listp dims) (reduce #'* dims) dims))))
     (loop for n fixnum from 0 to (1- len)
           do (setf (row-major-aref res n)
-                   (funcall f)))
+                   (funcall f n)))
     (const res)))
+
+(declaim (inline !init-with))
+(defun !init-with (dims f)
+  "Alias for !random-with. This function is inlined."
+  (!random-with dims f))
 
 (defun !normal (dims &optional (mean 2.0) (var 1.0))
   "Init with normal."
