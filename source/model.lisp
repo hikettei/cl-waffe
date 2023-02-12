@@ -352,25 +352,25 @@ Example:
 				       t)
 			       ; save-for-backward is ignored when 1. in with-no-grad macro. 2. Nodes connected like (Node) -> (Node) ; (in nodes, :forward :backward doesn't create grads.)
 
-			       (when (find t
-					   (list ,@(map 'list
-							#'(lambda (x)
-							    `(waffetensor-is-ancestor-param ,x))
-							',args)))
-			       (cond
-				 ((and (typep (data ,value) 'mat)
-				       (not (null thread-info)))
-				  (cl-waffe.caches:with-cache
-				      (tmp
-				       smaller-value
-				       :place
-				       (cl-waffe.backends.mgl:create-thread-idx
-					thread-info)
-				       :copy t)
-				    (incf (waffenodethread-cache-n thread-info) 1)
-				    (setf (self ,name) tmp)))
-				 (T (!allow-destruct smaller-value)
-				    (setf (self ,name) smaller-value)))))))))
+			       (when (member t (list ,@',args)
+					     :test
+					     #'(lambda (x y)
+						 (eql x (waffetensor-is-ancestor-param y))))
+				 ;(print ,value)
+				 (cond
+				   ((and (typep (data ,value) 'mat)
+					 (not (null thread-info)))
+				    (cl-waffe.caches:with-cache
+					(tmp
+					 smaller-value
+					 :place
+					 (cl-waffe.backends.mgl:create-thread-idx
+					  thread-info)
+					 :copy t)
+				      (incf (waffenodethread-cache-n thread-info) 1)
+				      (setf (self ,name) tmp)))
+				   (T (!allow-destruct smaller-value)
+				      (setf (self ,name) smaller-value)))))))))
 	     ,(if is-node
 		  ; when method is for models, copy tensors, and caches.
 		  `(let* ((,thread (thread (decide-thread-idx ,@args)))
