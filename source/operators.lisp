@@ -182,19 +182,126 @@
 	,@body))))
 
 (defope !add (AddTensor) node (x y)
-    "Add x + y, creating a new const."
+    "Adds x and y.
+
+In the case when x or y is not a tensor, automatically creates a new tensor.
+
+It supports:
+
+@begin(enum)
+@item(Broadcasting shapes)
+@item(JIT)
+@end(enum)
+
+@begin(section)
+@title(Examples)
+@begin[lang=lisp](code)
+
+(setq a (!randn `(3 3)))
+(setq b (!randn `(3 3)))
+(setq c (!randn `(3 1)))
+
+(!add 1 1)
+;=> Const(2)
+
+(!add (const 1) (const 1))
+;=> Const(2)
+
+(!add a b)
+;#Const(((3.418... 1.974... 0.177...)
+;                 ...
+;        (-1.30... 0.987... 1.917...)) :mgl t :shape (3 3))
+
+(!add a c)
+;#Const(((1.426... 2.129... 1.050...)
+;                 ...
+;        (-0.64... 0.269... 0.303...)) :mgl t :shape (3 3))
+
+@end[lang=lisp](code)
+@end(section)"
   (call node (assure-tensor x) (assure-tensor y)))
     
 (defope !sub (SubTensor) node (x y)
-    "Subtract x by y, creating new sysconst and nodes.
+    "Subtract x by y.
 
-As a modify: (!modify x :-= y)"
+In the case when x or y is not a tensor, automatically creates a new tensor.
+
+It supports:
+
+@begin(enum)
+@item(Broadcasting shapes)
+@item(JIT)
+@end(enum)
+
+@begin(section)
+@title(Examples)
+@begin[lang=lisp](code)
+
+(setq a (!randn `(3 3)))
+(setq b (!randn `(3 3)))
+(setq c (!randn `(3 1)))
+
+(!sub 1 1)
+;=> Const(0)
+
+(!sub (const 1) (const 1))
+;=> Const(0)
+
+(!sub a b)
+;#Const(((-0.86... 1.413... 1.139...)
+;                 ...
+;        (0.017... -0.44... -1.31...)) :mgl t :shape (3 3))
+
+(!sub a c)
+;#Const(((1.128... 1.258... 0.267...)
+;                 ...
+;        (-0.64... 0.269... 0.303...)) :mgl t :shape (3 3))
+
+@end[lang=lisp](code)
+@end(section)
+"
+
   (call node (assure-tensor x) (assure-tensor y)))
 
 (defope !mul (MulTensor) node (x y)
-    "Mul x y, creating new sysconst and nodes
+    "Multiply x and y with element-wise.
 
-As a modify: (!modify x :*= y)"
+In the case when x or y is not a tensor, automatically creates a new tensor.
+
+It supports:
+
+@begin(enum)
+@item(Broadcasting shapes)
+@item(JIT)
+@end(enum)
+
+@begin(section)
+@title(Examples)
+@begin[lang=lisp](code)
+
+(setq a (!randn `(3 3)))
+(setq b (!randn `(3 3)))
+(setq c (!randn `(3 1)))
+
+(!mul 1 1)
+;=> Const(1)
+
+(!mul (const 1) (const 1))
+;=> Const(1)
+
+(!mul a b)
+;#Const(((2.734... 0.475... -0.31...)        
+;                 ...
+;        (0.426... 0.193... 0.490...)) :mgl t :shape (3 3))
+
+(!mul a c)
+;#Const(((2.734... 0.475... -0.31...)        
+;                 ...
+;        (0.426... 0.193... 0.490...)) :mgl t :shape (3 3))
+
+@end[lang=lisp](code)
+@end(section)
+"
   (call node (assure-tensor x) (assure-tensor y)))
 
 (defope !div-old (DivTensor) node (x y)
@@ -205,14 +312,63 @@ As a modify: (!modify x :*= y)"
 
 ; its much faster
 (defun !div (x y)
-  "Div x y, creating new sysconst and nodes.
+  "Divides x by y.
 
-As a modify: (!modify x :/= y)"
+In the case when x or y is not a tensor, automatically creates a new tensor.
+
+It supports:
+
+@begin(enum)
+@item(Broadcasting shapes)
+@item(JIT)
+@end(enum)
+
+@begin(section)
+@title(Examples)
+@begin[lang=lisp](code)
+
+(setq a (!randn `(3 3)))
+(setq b (!ones `(3 3)))
+(setq c (!ones `(3 1)))
+
+(!div 2 1)
+;=> Const(2)
+
+(!div (const 2) (const 1))
+;=> Const(2)
+
+(!div a b)
+;#Const(((1.734... 0.475... -0.31...)        
+;                 ...
+;        (0.426... 0.193... 0.490...)) :mgl t :shape (3 3))
+
+(!div a c)
+;#Const(((2.734... 0.475... -0.31...)        
+;                 ...
+;        (0.426... 0.193... 0.490...)) :mgl t :shape (3 3))
+
+@end[lang=lisp](code)
+@end(section)
+"
   (!mul x (!div-old 1 y)))
   
 (defope !dot (DotProductTensor) node (x y)
-  "Dot product of x and y, creating new sysconst and nodes"
-  ; Todo: dot excepts 1d tensor
+    "Computes the dot product of x and y where x and y are 1d Tensor.
+
+🗒Note: Unlike Numpy's dot, !dot only supports for 1d tensors with the same number of elements and the tensor of which dims is larger than 1, regarded as 1d tensors.
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+
+(setq a (!randn `(10)))
+(setq b (!randn `(10)))
+
+(!dot a b)
+;=> #Const(1.0842022e-19)
+@end[lang=lisp](code)
+@end(section)
+"
   (call node (assure-tensor x) (assure-tensor y)))
 
 (defun !sum-2d (x &optional (axis nil) (keepdims nil))
@@ -225,12 +381,61 @@ As a modify: (!modify x :/= y)"
 	    result))))
 
 (defun !sum (x &optional (axis nil) (keepdims nil))
-  "Sum up X where x is a tensor (the size of dims doesn't matter.)
+  "Sum up x where x is a cl-waffe tensor.
 
-Todo: Write docs and examples"
+For nd tensors...
+@begin(deflist)
+@def(1D)
+@term(unsqueeze x with 1, and call !sum again.)
+@def(2D and more.)
+@term(Sum up al elements of X)
+@end(deflist)
+
+@begin(section)
+@title(arguments)
+
+@begin(deflist)
+@def(axis)
+@term(a dimension to reduce)
+@def(keepdims)
+@term(When t, the returning tensor is repeated with @cl:param(axis))
+@end(deflist)
+
+@end(section)
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+(setq a (!randn `(10)))
+(!sum a)
+;=>#Const(4.74653)
+
+(setq a (!randn `(10 10)))
+(!sum a)
+;=>#Const(1.5428619)
+
+(!sum a 0)
+;=>#Const(((-2.07... 0.463... ~ 1.778... 1.695...)) :mgl t :shape (1 10))
+
+(!sum a 1)
+;#Const(((0.967...)        
+;                 ...
+;        (2.774...)) :mgl t :shape (10 1))
+
+(!sum a 0 t)
+;#Const(((-2.07... 0.463... ~ 1.778... 1.695...)        
+;                 ...
+;        (-2.07... 0.463... ~ 1.778... 1.695...)) :mgl t :shape (10 10))
+@end[lang=lisp](code)
+@end(section)
+"
+
+  (declare (type (or null fixnum) axis)
+	   (type boolean keepdims)
+	   (type waffetensor x))
   (case (!dims x)
     (0 (error "!sum: the tensor given is a number"))
-    (1 (!sum-2d x axis keepdims))
+    (1 (!sum-2d (!unsqueeze x 1) axis keepdims))
     (2 (!sum-2d x axis keepdims))
     (T
      (if (null axis)
@@ -251,37 +456,65 @@ Todo: Write docs and examples"
 	   result)))))
 
 (defun !mean (x &optional (axis nil) (keepdims nil))
-  "Mean of tensor, todo: write docs and examples"
+  "Mean of tensor, todo: write docs and examples
+
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+
+@end[lang=lisp](code)
+@end(section)"
   (if (null axis)
-      (let ((axis-size (!dims x))
-	    (result x))
-	(dotimes (i axis-size)
-	  (setq result (!mean result (1- (- axis-size i)))))
-	result)
-      (let ((nrepeat (!shape x axis))
-	    (result (call (MeanTensor (assure-tensor axis)) (assure-tensor x))))
-	(if keepdims
-	    (!repeats result axis nrepeat)
-	    result))))
+      (!div (!sum x axis keepdims) (apply #'* (!shape x)))
+      (!div (!sum x axis keepdims) (!shape x axis))))
 
 (defope !pow (PowTensor) node (x n)
     "Pow x n, creating new sysconst and nodes.
 
-As a modify: (!modify x :^= y)"
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+
+@end[lang=lisp](code)
+@end(section)"
   (call node (assure-tensor x) (assure-tensor n)))
 
 (defope !sqrt (SqrtTensor) node (x)
     "Sqrt x, creating new sysconst and nodes.
 
-As a modify: (!modify x :sqrt y)"
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+
+@end[lang=lisp](code)
+@end(section)"
   (call node (assure-tensor x)))
 
 (defope !log (LogTensor) node (x)
-  "Log x, creating new sysconst and nodes."
+    "Log x, creating new sysconst and nodes.
+
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+
+@end[lang=lisp](code)
+@end(section)"
   (call node (assure-tensor x)))
 
 (defun !reshape (x dim)
-  "(!reshape x dim) ,if dim has t, t is automatically predicted."
+  "(!reshape x dim) ,if dim has t, t is automatically predicted.
+
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+
+@end[lang=lisp](code)
+@end(section)"
   (if (find t dim)
       (progn
 	(unless (= (count t dim) 1)
@@ -299,11 +532,28 @@ As a modify: (!modify x :sqrt y)"
       (call (ReshapeTensor (assure-tensor dim)) (assure-tensor x))))
 
 (defun !repeats (x axis repeats)
-  "Repeat Todo: Write docs and example"
+  "Repeat Todo: Write docs and example
+
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+
+@end[lang=lisp](code)
+@end(section)"
+  
   (call (RepeatTensor (assure-tensor axis) (assure-tensor repeats)) (assure-tensor x)))
 
 (defun !transpose (x &optional result)
   "Transpose
+
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+
+@end[lang=lisp](code)
+@end(section)
 
 Note: the result of !transpose is lazy evaluated for speed.(Todo: Write details)"
   (call (TransposeTensor (assure-tensor result)) (assure-tensor x)))
@@ -314,7 +564,15 @@ Todo: write docs and behaviour"
   (call node (assure-tensor x) (assure-tensor y)))
 	
 (defun !unsqueeze (x &optional (dim 0))
-  "Unsqueeze Todo: write docs"
+  "Unsqueeze Todo: write docs
+
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+
+@end[lang=lisp](code)
+@end(section)"
   ; display error when (!dims x) >= dim
   (let ((s (!shape x)))
     (case dim
@@ -324,7 +582,15 @@ Todo: write docs and behaviour"
     (!reshape x s)))
 
 (defun !squeeze (x &optional (dim nil))
-  "Squeeze todo: write docs"
+  "Squeeze todo: write docs
+
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+
+@end[lang=lisp](code)
+@end(section)"
   (labels ((remove-nth (nth list)
 	     (loop for i in list
 		   for idx from 0
@@ -345,7 +611,16 @@ Todo: write docs and behaviour"
       (!reshape x s))))
 
 (defope !exp (ExpTensor) node (x)
-  "Exp x, creating new sysconst and nodes."
+    "Exp x, creating new sysconst and nodes.
+
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+
+@end[lang=lisp](code)
+@end(section)"
+  
   (call node (assure-tensor x)))
 
 (declaim (ftype (function ((or mgl-mat:mat waffetensor) keyword &rest (or waffedatatype waffetensor)) waffetensor) !modify))
