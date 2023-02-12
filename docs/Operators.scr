@@ -1,6 +1,149 @@
 @begin(section)
 @title(Operators)
 
+
+@begin(section)
+@title(!zeros)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !zeros)
+)
+@end(section)
+
+
+@begin(section)
+@title(!ones)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !ones)
+)
+@end(section)
+
+
+@begin(section)
+@title(!fill)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !fill)
+)
+@end(section)
+
+
+@begin(section)
+@title(!arange)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !arange)
+)
+@end(section)
+
+@begin(section)
+@title(!random)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !random)
+)
+@end(section)
+
+
+@begin(section)
+@title(!random-with)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !random-with)
+)
+@end(section)
+
+
+@begin(section)
+@title(!normal)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !normal)
+)
+@end(section)
+
+
+@begin(section)
+@title(!randn)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !randn)
+)
+@end(section)
+
+
+@begin(section)
+@title(!beta)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !beta)
+)
+@end(section)
+
+
+@begin(section)
+@title(!gamma)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !gamma)
+)
+@end(section)
+
+
+@begin(section)
+@title(!chisquare)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !chisquare)
+)
+@end(section)
+
+
+@begin(section)
+@title(!bernoulli)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !bernoulli)
+)
+@end(section)
+
+
+@begin(section)
+@title(!shape)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !shape)
+)
+@end(section)
+
+
+@begin(section)
+@title(!dims)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !dims)
+)
+@end(section)
+
+
+@begin(section)
+@title(!size)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !size)
+)
+@end(section)
+
+
+@begin(section)
+@title(!zeros-like)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !zeros-like)
+)
+@end(section)
+
+
+@begin(section)
+@title(!ones-like)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !ones-like)
+)
+@end(section)
+
+
+@begin(section)
+@title(!full-like)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !full-like)
+)
+@end(section)
+
 @begin(section)
 @title(!add)
 @cl:with-package[name="cl-waffe"](
@@ -168,63 +311,119 @@
 @begin(section)
 @title(!abs)
 @cl:with-package[name="cl-waffe"](
-@cl:doc(function !log)
+@cl:doc(function !abs)
 )
 @end(section)
 
 @begin(section)
 @title(!where)
 @cl:with-package[name="cl-waffe"](
-@cl:doc(function !log)
+@cl:doc(function !where)
+)
+@end(section)
+
+@begin(section)
+@title(!index)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !index)
 )
 @end(section)
 
 @begin(section)
 @title(!argmax)
 @cl:with-package[name="cl-waffe"](
-@cl:doc(function !log)
+@cl:doc(function !argmax)
 )
 @end(section)
 
 @begin(section)
 @title(!argmin)
 @cl:with-package[name="cl-waffe"](
-@cl:doc(function !log)
+@cl:doc(function !argmin)
 )
 @end(section)
 
 @begin(section)
-@title(!less-equal)
+@title(!<=)
 @cl:with-package[name="cl-waffe"](
-@cl:doc(function !log)
+@cl:doc(function !<=)
 )
 @end(section)
 
 @begin(section)
-@title(!greater-equal)
+@title(!>=)
 @cl:with-package[name="cl-waffe"](
-@cl:doc(function !log)
+@cl:doc(function !>=)
 )
 @end(section)
 
 @begin(section)
 @title(!einsum)
 @cl:with-package[name="cl-waffe"](
-@cl:doc(function !log)
+@cl:doc(function !einsum)
 )
 @end(section)
 
 @begin(section)
 @title(!ravel)
 @cl:with-package[name="cl-waffe"](
-@cl:doc(function !log)
+@cl:doc(function !ravel)
 )
 @end(section)
 
 @begin(section)
 @title(!flatten)
 @cl:with-package[name="cl-waffe"](
-@cl:doc(function !log)
+@cl:doc(function !flatten)
+)
+@end(section)
+
+@begin(section)
+@title(!aref)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !aref)
+)
+@end(section)
+
+@begin(section)
+@title(!softmax)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !softmax)
+)
+@end(section)
+
+@begin(section)
+@title(!sigmoid)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !sigmoid)
+)
+@end(section)
+
+@begin(section)
+@title(!relu)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !relu)
+)
+@end(section)
+
+@begin(section)
+@title(!gelu)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !gelu)
+)
+@end(section)
+
+@begin(section)
+@title(!leakey-relu)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !leakey-relu)
+)
+@end(section)
+
+@begin(section)
+@title(!swish)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !swish)
 )
 @end(section)
 

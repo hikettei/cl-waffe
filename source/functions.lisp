@@ -54,6 +54,10 @@ Output: Tensor"
   "Applying tanh to x, return a new sysconst with making nodes."
   (call (TanhTensor) (assure-tensor x)))
 
+(defun !gelu () "Todo")
+(defun !leakey-relu () "Todo")
+(defun !swish () "Todo")
+
 (defun !average (x)
   (let ((z (!sum x 1))
 	(batch-size (!shape x 0)))
@@ -83,6 +87,7 @@ Output: Tensor"
 	    (!softmax-function x :avoid-overflow (self avoid-overflow))))
 
 (defun !softmax (x &key (avoid-overflow t))
+  "Nothing here"
   (call (SoftMaxNode avoid-overflow) x))
 
 ; Todo :docstring

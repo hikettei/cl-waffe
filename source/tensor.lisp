@@ -220,7 +220,6 @@ Note: this function is setfable and inlined"
 		(the (values (or mat function) &optional) result)))))))
     (T (waffetensor-data tensor))))
 
-
 (defun (setf data) (val &optional tensor)
   "Modifying tensor'data.
 
@@ -547,8 +546,8 @@ Todo: Bugfix"
   ; To solve this problem, i guess i need more macros.
   (setf tensor (call (SetfArefTensor dims) tensor (assure-tensor value))))
 	 
-(defmacro !where ()) ; todo
-(defmacro !index ()) ; todo
+(defun !where () "Todo")
+(defun !index () "Todo")
 
 (defmacro !row-major-aref (tensor index)
   `(mgl-mat:row-major-mref (data ,tensor) ,index))

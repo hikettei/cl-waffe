@@ -613,7 +613,6 @@ Todo: write docs and behaviour"
 (defope !exp (ExpTensor) node (x)
     "Exp x, creating new sysconst and nodes.
 
-
 @begin(section)
 @title(Example)
 @begin[lang=lisp](code)
@@ -622,6 +621,30 @@ Todo: write docs and behaviour"
 @end(section)"
   
   (call node (assure-tensor x)))
+
+(defun !sin () "Todo")
+(defun !cos () "Todo")
+(defun !tan () "Todo")
+
+(defun !asin () "Todo")
+(defun !acos () "Todo")
+(defun !atan () "Todo")
+
+(defun !sinh () "Todo")
+(defun !cosh () "Todo")
+
+(defun !argmax () "Todo")
+(defun !argmin () "Todo")
+
+(defun !abs () "Todo")
+
+(defun != () "Todo")
+(defun !<= () "Todo")
+(defun !>= () "Todo")
+
+(defun !einsum () "Todo")
+(defun !ravel () "Todo")
+(defun !flatten () "Todo")
 
 (declaim (ftype (function ((or mgl-mat:mat waffetensor) keyword &rest (or waffedatatype waffetensor)) waffetensor) !modify))
 (defun !modify (target instruction &rest args)
