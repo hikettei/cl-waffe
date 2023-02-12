@@ -604,7 +604,9 @@ Example:
 !random can be called with a varying number of type of arguments:
 
 @begin(section)
-@title(When limit=fixnum, init within the range of @c(0<=x<limit))
+@title(When limit=fixnum)
+init within the range of @c(0<=x<limit)
+
 @begin[lang=lisp](code)
 ;#Const(((1.0 2.0 ~ 2.0 1.0)        
 ;                 ...
@@ -613,7 +615,8 @@ Example:
 @end(section)
 
 @begin(section)
-@title(When limit=single-float, init within the range of @c(0<=x<limit))
+@title(When limit=single-float)
+init within the range of @c(0<=x<limit)
 @begin[lang=lisp](code)
 (!random '(10 10) 3.0)
 ;#Const(((0.152... 2.203... ~ 2.360... 2.216...)        
@@ -623,7 +626,8 @@ Example:
 @end(section)
 
 @begin(section)
-@title(When limit=(cons single-float1 single-float2), init with single-float1<=x<single-float2, where each element is single-float)
+@title(When limit=(cons single-float1 single-float2))
+init with single-float1<=x<single-float2, where each element is single-float.
 @begin[lang=lisp](code)
 (!random '(10 10) '(1.0 3.0))
 ;#Const(((1.982... 1.526... ~ 1.388... 1.312...)        
@@ -680,9 +684,18 @@ See also: !init-with which is alias for !random-with.
           do (setf (!row-major-aref res n) (gaussiandb-random var mean)))
     res))
 
-(defmacro !randn (dims) ; this can be rewrited it by mgl-mat
-  "Init with normal where mean=0.0, var=1.0"
-  `(!normal ,dims 0.0 1.0))
+(defun !randn (dims)
+  "Init with !normal where mean=0.0, var=1.0
+
+Example
+
+@begin[lang=lisp](code)
+(!randn `(10 10))
+;#Const(((0.677... 0.054... ~ 0.257... 0.261...)        
+;                 ...
+;        (0.063... 0.607... ~ 0.460... 0.730...)) :mgl t :shape (10 10))
+@end[lang=lisp](code)"
+  (const (uniform-random! (make-mat dims))))
 
 (defun !beta (dims a b)
   "TODO"
