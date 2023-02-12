@@ -5,14 +5,11 @@
 
 @title(Package: cl-waffe)
 This package is under development and APIs can be changed without notice.
+@end(section)
 
-There's
-@begin(enum)
-@item(WaffeTensor and APIs for it)
-@item(Macros for defining objects)
-@item(Train Function)
-@item(Basic Tensor Operations)
-@end(enum)
+@begin(section)
+@title(Sections)
+Put table here
 @end(section)
 
 @begin(section)
@@ -187,6 +184,7 @@ Configs when printing tensor.
 )
 
 @end(section)
+
 
 @begin(section)
 @title(Cut and Displace Tensor)

@@ -1,0 +1,231 @@
+@begin(section)
+@title(Operators)
+
+@begin(section)
+@title(!add)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !add)
+)
+@end(section)
+
+@begin(section)
+@title(!sub)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !sub)
+)
+@end(section)
+
+@begin(section)
+@title(!mul)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !mul)
+)
+@end(section)
+
+@begin(section)
+@title(!div)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !div)
+)
+@end(section)
+
+@begin(section)
+@title(!dot)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !dot)
+)
+@end(section)
+
+@begin(section)
+@title(!sum)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !sum)
+)
+@end(section)
+
+
+@begin(section)
+@title(!mean)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !mean)
+)
+@end(section)
+
+@begin(section)
+@title(!exp)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !exp)
+)
+@end(section)
+
+@begin(section)
+@title(!pow)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !pow)
+)
+@end(section)
+
+
+@begin(section)
+@title(!sqrt)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !sqrt)
+)
+@end(section)
+
+
+@begin(section)
+@title(!log)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !log)
+)
+@end(section)
+
+@begin(section)
+@title(!sin)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !log)
+)
+@end(section)
+
+@begin(section)
+@title(!cos)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !log)
+)
+@end(section)
+
+@begin(section)
+@title(!tan)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !log)
+)
+@end(section)
+
+@begin(section)
+@title(!sinh)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !log)
+)
+@end(section)
+
+@begin(section)
+@title(!cosh)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !log)
+)
+@end(section)
+
+@begin(section)
+@title(!tanh)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !tanh)
+)
+@end(section)
+
+@begin(section)
+@title(!matmul)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !matmul)
+)
+@end(section)
+
+@begin(section)
+@title(!unsqueeze)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !unsqueeze)
+)
+@end(section)
+
+@begin(section)
+@title(!squeeze)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !squeeze)
+)
+@end(section)
+
+@begin(section)
+@title(!transpose)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !transpose)
+)
+@end(section)
+
+@begin(section)
+@title(!repeats)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !repeats)
+)
+@end(section)
+
+@begin(section)
+@title(!reshape)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !reshape)
+)
+@end(section)
+
+@begin(section)
+@title(!abs)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !log)
+)
+@end(section)
+
+@begin(section)
+@title(!where)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !log)
+)
+@end(section)
+
+@begin(section)
+@title(!argmax)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !log)
+)
+@end(section)
+
+@begin(section)
+@title(!argmin)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !log)
+)
+@end(section)
+
+@begin(section)
+@title(!less-equal)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !log)
+)
+@end(section)
+
+@begin(section)
+@title(!greater-equal)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !log)
+)
+@end(section)
+
+@begin(section)
+@title(!einsum)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !log)
+)
+@end(section)
+
+@begin(section)
+@title(!ravel)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !log)
+)
+@end(section)
+
+@begin(section)
+@title(!flatten)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !log)
+)
+@end(section)
+
+@end(section)
