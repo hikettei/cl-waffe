@@ -67,7 +67,7 @@ Output: An last value of layers."
 	      layers)
      ,input))
 
-;(declaim (inline call))
+(declaim (inline call))
 (declaim (ftype (function (t &rest waffetensor) waffetensor) call))
 (defun call (model &rest args)
   "Calling Forward Step defined by defmodel, defnode, defoptimizer.
@@ -107,11 +107,12 @@ Output: => @cl:param(tensor) produced by :forward"
 	    (setf (waffetensor-backward result) t)
 	    (setf (waffetensor-state result) model)
 	    (setf (waffetensor-variables result) args)
-	    (setf (waffetensor-is-ancestor-param result) (if (member-if #'(lambda (x)
-				                                            (waffetensor-is-ancestor-param x))
-								      args)
-							   t
-							   nil)))))
+	    (setf (waffetensor-is-ancestor-param result)
+		  (if (member-if #'(lambda (x)
+		                     (waffetensor-is-ancestor-param x))
+				 args)
+		      t
+		      nil)))))
     result))
 
 (defmacro with-model-list (&rest models)
@@ -350,20 +351,26 @@ Example:
 					(waffetensor-path-through-node? ,value))
 				       t)
 			       ; save-for-backward is ignored when 1. in with-no-grad macro. 2. Nodes connected like (Node) -> (Node) ; (in nodes, :forward :backward doesn't create grads.)
-			       (cond
-				 ((and (typep (data ,value) 'mat)
-				       (not (null thread-info)))
-				  (cl-waffe.caches:with-cache
-				      (tmp
-				       smaller-value
-				       :place
-				       (cl-waffe.backends.mgl:create-thread-idx
-					thread-info)
-				       :copy t)
-				    (incf (waffenodethread-cache-n thread-info) 1)
-				    (setf (self ,name) tmp)))
-				 (T (!allow-destruct smaller-value)
-				    (setf (self ,name) smaller-value))))))))
+
+			       (when (member t (list ,@',args)
+					     :test
+					     #'(lambda (x y)
+						 (eql x (waffetensor-is-ancestor-param y))))
+				 ;(print ,value)
+				 (cond
+				   ((and (typep (data ,value) 'mat)
+					 (not (null thread-info)))
+				    (cl-waffe.caches:with-cache
+					(tmp
+					 smaller-value
+					 :place
+					 (cl-waffe.backends.mgl:create-thread-idx
+					  thread-info)
+					 :copy t)
+				      (incf (waffenodethread-cache-n thread-info) 1)
+				      (setf (self ,name) tmp)))
+				   (T (!allow-destruct smaller-value)
+				      (setf (self ,name) smaller-value)))))))))
 	     ,(if is-node
 		  ; when method is for models, copy tensors, and caches.
 		  `(let* ((,thread (thread (decide-thread-idx ,@args)))
@@ -416,8 +423,7 @@ Example:
 (defmacro defmodel (name args
 			 &key
 			   (parameters nil)
-			   (forward `((&rest args)
-				      (error ":forward isn't defined.")))
+			   forward
 			   (optimize nil)
 			   (document "An model, defined by cl-waffe"))
   "This macro defines a cl-waffe model as @cl:param(name).
@@ -477,8 +483,8 @@ When backward, @b(Automatic differentiation applies).
 		     args
 		     &key
 		      parameters
-		      (forward `((&rest args) (error ":forward isn't defined.")))
-		      (backward `((&rest args) (error ":backward isn't defined.:"))) ; Todo: displaying model name
+		      forward
+		      backward
 		      hide-from-tree
 		      optimize
 		      (regard-as-node nil)
