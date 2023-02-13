@@ -685,13 +685,35 @@ The matrix and x's each matrix are multiplied and is returned.
     (T (call node (assure-tensor x) (assure-tensor y)))))
 	
 (defun !unsqueeze (x &optional (dim 0))
-  "Unsqueeze Todo: write docs
+  "Returns a new tensor with a dimension of size one inserted at the specified position.
 
+dim indicates the position, when dim=-1, it indicates a last dimension of @cl:param(x).
 
 @begin(section)
 @title(Example)
 @begin[lang=lisp](code)
+(setq a (!randn `(10 10)))
+;#Const(((0.685... 0.827... ~ 0.076... 0.102...)        
+;                 ...
+;        (0.802... 0.571... ~ 0.207... 0.283...)) :mgl t :shape (10 10))
+(!unsqueeze a)
+;#Const((((0.685... 0.827... ~ 0.076... 0.102...)         
+;                   ...
+;         (0.802... 0.571... ~ 0.207... 0.283...))) :mgl t :shape (1 10 10))
 
+(!unsqueeze a -1)
+;#Const((((0.685...)         
+;                   ...
+;         (0.102...))        
+;                 ...
+;        ((0.802...)         
+;                   ...
+;         (0.283...))) :mgl t :shape (10 10 1))
+
+(!unsqueeze a 2)
+;#Const(((0.685... 0.827... ~ 0.076... 0.102...)        
+;                 ...
+;        (0.802... 0.571... ~ 0.207... 0.283...)) :mgl t :shape (10 10 1 1))
 @end[lang=lisp](code)
 @end(section)"
   ; display error when (!dims x) >= dim
@@ -703,13 +725,34 @@ The matrix and x's each matrix are multiplied and is returned.
     (!reshape x s)))
 
 (defun !squeeze (x &optional (dim nil))
-  "Squeeze todo: write docs
+  "Returns a new tensor with a dimension of size one removed at the specified position.
 
+When dim=nil or -1, the last position of dim will be removed.
+
+If the specified position of a tensor isn't one, !squeeze is skipped.
 
 @begin(section)
 @title(Example)
 @begin[lang=lisp](code)
+(setq a (!randn `(10 1 10)))
+;#Const((((0.928... 0.556... ~ 0.697... 0.973...))        
+;                 ...
+;        ((0.368... 0.995... ~ 0.589... 0.716...))) :mgl t :shape (10 1 10))
 
+(!squeeze a 1)
+;#Const(((0.928... 0.556... ~ 0.697... 0.973...)        
+;                 ...
+;        (0.368... 0.995... ~ 0.589... 0.716...)) :mgl t :shape (10 10))
+
+(!squeeze a -1)
+;#Const((((0.928... 0.556... ~ 0.697... 0.973...))        
+;                 ...
+;        ((0.368... 0.995... ~ 0.589... 0.716...))) :mgl t :shape (10 1 10))
+
+(setq a (!randn `(10 10 1)))
+;#Const(((0.991... 0.248... ~ 0.610... 0.289...)        
+;                 ...
+;        (0.593... 0.177... ~ 0.374... 0.668...)) :mgl t :shape (10 10))
 @end[lang=lisp](code)
 @end(section)"
   (labels ((remove-nth (nth list)
@@ -732,12 +775,19 @@ The matrix and x's each matrix are multiplied and is returned.
       (!reshape x s))))
 
 (defope !exp (ExpTensor) node (x)
-    "Exp x, creating new sysconst and nodes.
+    "Applying exp to each element of x, creating a new sysconst.
 
 @begin(section)
 @title(Example)
 @begin[lang=lisp](code)
-
+(setq a (!randn `(10 10)))
+;#Const(((0.624... 0.807... ~ 0.500... 0.937...)        
+;                 ...
+;        (0.662... 0.299... ~ 0.761... 0.729...)) :mgl t :shape (10 10))
+(!exp a)
+;#Const(((1.866... 2.242... ~ 1.650... 2.553...)        
+;                 ...
+;        (1.939... 1.349... ~ 2.140... 2.073...)) :mgl t :shape (10 10))
 @end[lang=lisp](code)
 @end(section)"
   
