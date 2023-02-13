@@ -103,6 +103,7 @@
 	   #:!normal
 	   #:!randn
 	   #:!bernoulli
+	   #:!binomial
 	   #:!beta
 	   #:!gamma
 	   #:!chisquare

@@ -9,7 +9,6 @@
 )
 @end(section)
 
-
 @begin(section)
 @title(!ones)
 @cl:with-package[name="cl-waffe"](
@@ -29,7 +28,7 @@
 @begin(section)
 @title(!arange)
 @cl:with-package[name="cl-waffe"](
-@cl:doc(function !arange)
+@cl:doc(macro !arange)
 )
 @end(section)
 
@@ -45,6 +44,13 @@
 @title(!random-with)
 @cl:with-package[name="cl-waffe"](
 @cl:doc(function !random-with)
+)
+@end(section)
+
+@begin(section)
+@title(!random-with)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !init-with)
 )
 @end(section)
 
@@ -93,6 +99,13 @@
 @title(!bernoulli)
 @cl:with-package[name="cl-waffe"](
 @cl:doc(function !bernoulli)
+)
+@end(section)
+
+@begin(section)
+@title(!binomial)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !binomial)
 )
 @end(section)
 
@@ -227,35 +240,56 @@
 @begin(section)
 @title(!sin)
 @cl:with-package[name="cl-waffe"](
-@cl:doc(function !log)
+@cl:doc(function !sin)
 )
 @end(section)
 
 @begin(section)
 @title(!cos)
 @cl:with-package[name="cl-waffe"](
-@cl:doc(function !log)
+@cl:doc(function !cos)
 )
 @end(section)
 
 @begin(section)
 @title(!tan)
 @cl:with-package[name="cl-waffe"](
-@cl:doc(function !log)
+@cl:doc(function !tan)
+)
+@end(section)
+
+@begin(section)
+@title(!asin)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !asin)
+)
+@end(section)
+
+@begin(section)
+@title(!acos)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !acos)
+)
+@end(section)
+
+@begin(section)
+@title(!atan)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !atan)
 )
 @end(section)
 
 @begin(section)
 @title(!sinh)
 @cl:with-package[name="cl-waffe"](
-@cl:doc(function !log)
+@cl:doc(function !sinh)
 )
 @end(section)
 
 @begin(section)
 @title(!cosh)
 @cl:with-package[name="cl-waffe"](
-@cl:doc(function !log)
+@cl:doc(function !cosh)
 )
 @end(section)
 
@@ -382,6 +416,19 @@
 @title(!aref)
 @cl:with-package[name="cl-waffe"](
 @cl:doc(function !aref)
+)
+@end(section)
+
+@begin(section)
+@title(!dotensors)
+@cl:with-package[name="cl-waffe"](
+)
+@end(section)
+
+@begin(section)
+@title(!set-batch)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !set-batch)
 )
 @end(section)
 

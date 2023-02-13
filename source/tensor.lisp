@@ -652,6 +652,8 @@ Return: WaffeTensor
 (defun !random-with (dims f)
   "Initializes the tensor of dims. Each element is initialized with @cl:param(f) where f is a lambda exp and called with index.
 
+Warning: Using mref and slow algorithm, @b(it is so slow).
+
 Example:
 @begin[lang=lisp](code)
 (!random-with '(10 10) #'(lambda (n) n))
@@ -677,7 +679,11 @@ See also: !init-with which is alias for !random-with.
   (!random-with dims f))
 
 (defun !normal (dims &optional (mean 2.0) (var 1.0))
-  "Init with normal distribution."
+  "Init with normal distribution.
+
+Warning: Using mref and slow algorithm, @b(its sooo slow.)
+
+It is recommended to use !randn and transform it instead."
   (let* ((res (!zeros dims))
          (len (if (listp dims) (reduce #'* dims) dims)))
     (loop for n from 0 to (1- len)
@@ -685,9 +691,9 @@ See also: !init-with which is alias for !random-with.
     res))
 
 (defun !randn (dims)
-  "Initializes tensor with normal distribution where mean=0.0, var=1.0
+  "Initializes tensor with normal distribution in a faster way where mean=0.0, var=1.0.
 
-Example
+Example:
 
 @begin[lang=lisp](code)
 (!randn `(10 10))
@@ -698,7 +704,7 @@ Example
   (const (uniform-random! (make-mat dims))))
 
 (defun !beta (dims alpha beta)
-  "Initializes tensor with beta distribution.
+  "Initializes tensor with samples of beta distribution in a faster way.
 
 Algorithm: https://dl.acm.org/doi/pdf/10.1145/359460.359482
 
@@ -742,6 +748,11 @@ where B(a,b)=∫1,0{x^a−1(1−x)^b−1}dx
 			 (!beta-bc alpha a b)))))
     result))
 
+(declaim (ftype (function
+		 (single-float single-float single-float)
+		 single-float)
+		!beta-bb
+		!beta-bc))
 (defun !beta-bb (a0 a b)
   "Generates beta variances.
 
@@ -864,19 +875,61 @@ Note: !beta excepts that @c((min a b) <= 1)"
 	  (/ w (+ b w))
 	  (/ b (+ b w))))))
 
-(defun !gamma (dims scale)
-  "TODO"
-  (declare (ignore dims scale)))
+(defun !gamma (dims k &optional (theta 1.0))
+  "Initialize tensor with samples of gamma distribution.
+
+Todo: Use fast algorithms and approximations in response to @cl:param(k).
+
+Example:
+@begin[lang=lisp](code)
+(!gamma '(10 10) 1.0)
+;#Const(((2.155... 3.374... ~ 1.274... 0.147...)        
+;                 ...
+;        (0.194... 0.081... ~ 0.816... 0.209...)) :mgl t :shape (10 10))
+@end[lang=lisp](code)"
+  (declare ;(optimize (speed 3))
+	   (type cons dims)
+	   (type single-float scale))
+  
+  ; ↓やる気無くした人 適当な早いアルゴリズム実装してぇ~~
+  (const (make-mat dims
+		   :initial-contents (numcl:gamma k theta dims))))
 
 (defun !chisquare (dims df)
-  "TODO"
-  (declare (ignore dims df)))
+  "@b(Not implemented yet)
+Todo: Use fast algorithms and approximations.
+
+Example:
+@begin[lang=lisp](code)
+@end[lang=lisp](code)"
+  (declare (ignore df dims))
+  (error "Not Implemented."))
 
 (defun !bernoulli (dims rate)
   "Init a tensor of dims with bernoulli
 
-rate is single-float, and [0 1]"
+rate is single-float, and [0 1]
+
+See also: @cl:param(!binomial), alias for it.
+
+Example:
+@begin[lang=lisp](code)
+(!binomial '(10 10) 0.5)
+;#Const(((1.0 0.0 ~ 1.0 1.0)        
+;                 ...
+;        (0.0 1.0 ~ 1.0 0.0)) :mgl t :shape (10 10))
+@end[lang=lisp](code)"
+  (declare (optimize (speed 3))
+	   (type cons dims)
+	   (type (single-float 0e0) rate))
+  (unless (<= rate 1.0)
+    (error "!bernoulli: rate must be in the range of [0 1]"))
   (!modify (!zeros dims) :bernoulli (const rate)))
+
+(declaim (inline !binomial))
+(defun !binomial (dims rate)
+  "Alias for !bernoulli"
+  (!bernoulli dims rate))
 
 (defun !shape (tensor &optional (nth nil))
   "Return the shape of tensor
