@@ -1,6 +1,6 @@
 
 (defpackage :mnist-example
-  (:use :cl :cl-waffe :cl-waffe.nn :cl-waffe.io)
+  (:use :cl :cl-waffe :cl-waffe.nn :cl-waffe.io :flamegraph :tracer)
   (:export demo))
 
 (in-package :mnist-example)
@@ -8,7 +8,7 @@
 ; this file is excluded from cl-waffe-test
 ; here's mnist example codes and benchmark
 
-(setf cl-waffe.backends.mgl:*verbose* t)
+(setf cl-waffe.backends.mgl:*verbose* nil)
 (setf cl-waffe.backends.mgl:*static-node-mode* t)
 
 (defmodel MLP (activation)
@@ -35,7 +35,7 @@
 
 (defun demo () (time (demo1)))
 (defun demo1 ()
-  (defparameter batch-size 100)
+  (defparameter batch-size 300)
   
   (setq trainer (MLPTrainer :relu 1e-4))
 
@@ -63,7 +63,7 @@
   (defparameter mnist-target-test (!zeros `(100 10)))
   |#
 
-    
+  #|
   (sb-profile:profile mgl-mat::blas-sgemm
 		      mgl-mat::blas-scopy
 		      mgl-mat::array-to-mat
@@ -80,9 +80,12 @@
 		      cl-waffe::!softmax
 		      cl-waffe::!faref
 		      cl-waffe::!write-faref
+		      cl-waffe::call
+		      cl-waffe::call-forward
+		      cl-waffe::call-backward
 		      cl-waffe.backends.mgl::adam-update
 		      svmformat:parse-file)
-
+  |#
   (format t "Training: ~a~%" (!shape mnist-dataset))
   (format t "Valid   : ~a~%" (!shape mnist-target))
   (format t "Test    : ~a~%"  (!shape mnist-dataset-test))
@@ -93,15 +96,25 @@
   (setq test (WaffeDataSet mnist-dataset-test
 			   mnist-target-test
 			   :batch-size 100))
-  
+
+  (progn;tracer:with-tracing ("CL-WAFFE"
+;			"CL-WAFFE.NN"
+;			"CL-WAFFE.OPTIMIZERS"
+;			"CL-WAFFE.BACKENDS.MGL"
+;			"CL-WAFFE.CACHES"
+;			"MGL-MAT")
+
+   ;flamegraph:save-flame-graph ("/tmp/nonjit.stack")
   (mgl-mat:with-mat-counters (:count count :n-bytes n-bytes)
     (time (train trainer train :max-iterate 600
-			       :epoch 10
+			       :epoch 20
 			       :batch-size batch-size
 			       :valid-dataset test
 			       :verbose t :random t :print-each 100))
     (format t "Count: ~a~%" count)
-    (format t "Consumed: ~abytes~%" n-bytes))
+    (format t "Consumed: ~abytes~%" n-bytes)))
 
-  (sb-profile:report))
+;  (tracer:save-report "report.json")
+  ;(sb-profile:report)
+  )
 
