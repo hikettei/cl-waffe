@@ -932,13 +932,16 @@ Example:
   (!bernoulli dims rate))
 
 (defun !shape (tensor &optional (nth nil))
-  "Return the shape of tensor
+  "Returns the shape of tensor when nth=nil.
 
-Tensor is WaffeTensor.
+@cl:param(nth) indicates the index of shape, !shape return specified value.
 
-Output is Cons or fixnum
-
-When nth is not nil, return (nth nth (!shape tensor))"
+Example:
+@begin[lang=lisp](code)
+(setq a (!randn `(10 10 10)))
+(!shape a) ; => (10 10 10)
+(!shape a 0) ;=> 10
+@end[lang=lisp](code)"
   (declare (type waffetensor tensor))
   (unless (typep (waffetensor-data tensor) 'waffe-array)
     (unless (or (typep (waffetensor-data tensor) 'function)
@@ -962,7 +965,7 @@ When nth is not nil, return (nth nth (!shape tensor))"
 	 (mat-dimensions (waffetensor-data tensor))))))
 
 (defun !dims (tensor)
-  "Return total length of the given tensor's dims
+  "Returns the total length of a given tensor's dims
 
 Example:
 @begin[lang=lisp](code)
@@ -971,12 +974,11 @@ Example:
   (the fixnum (length (!shape tensor))))
 
 (defun !size (tensor)
-  "Return total size of tensor
+  "Returns the total size of a tensor
 
 Example:
-
 @begin[lang=lisp](code)
-(!dims (!zeros '(10 10 10))) ; => 1000
+(!size (!zeros '(10 10 10))) ; => 1000
 @end[lang=lisp](code)"
   (apply #'* (!shape tensor)))
 
@@ -984,20 +986,60 @@ Example:
   (1- (!size tensor)))
 
 (defun !zeros-like (tensor)
-  "Return a const where the shape is the same as tensor but elements are zero."
+  "Return a const where the shape is the same as tensor but elements are zero.
+
+Example:
+@begin[lang=lisp](code)
+(setq a (!randn `(10 10)))
+(!zeros-like a)
+;#Const(((0.0 0.0 ~ 0.0 0.0)        
+;                 ...
+;        (0.0 0.0 ~ 0.0 0.0)) :mgl t :shape (10 10))
+@end[lang=lisp](code)"
   (!zeros (!shape tensor)))
 
 (defun !ones-like (tensor)
-  "Return a const where the shape is the same as tensor but elements are one."
+  "Return a const where the shape is the same as tensor but elements are one.
+Example:
+@begin[lang=lisp](code)
+(setq a (!randn `(10 10)))
+(!ones-like a)
+;#Const(((1.0 1.0 ~ 1.0 1.0)        
+;                 ...
+;        (1.0 1.0 ~ 1.0 1.0)) :mgl t :shape (10 10))
+@end[lang=lisp](code)"
   (!ones (!shape tensor)))
 
-(defun !full-like ()
-  "fulls like(todo)")
+(defun !full-like (tensor element)
+  "Return a const where the shape is the same as tensor but elements are specified value by @cl:param(element).
+Example:
+@begin[lang=lisp](code)
+(setq a (!randn `(10 10)))
+(!full-like a 3)
+;#Const(((3.0 3.0 ~ 3.0 3.0)        
+;                 ...
+;        (3.0 3.0 ~ 3.0 3.0)) :mgl t :shape (10 10))
+@end[lang=lisp](code)"
+  (!fill (!shape tensor) element))
 
 (defmacro detach (tensor)
-  "Expanded to (const (data tensor)).
+  "Create a Const with all information except data and backend erased.
 
-Note: this macro doesn't clone data itself"
+This macro expanded to @c((const (data tensor))).
+
+Note: this macro doesn't clone data itself.
+
+Example:
+@begin[lang=lisp](code)
+(setq a (parameter (!randn `(10 10))))
+;#Parameter{((0.062... 0.716... ~ 0.088... 0.692...)            
+;                         ...
+;            (0.458... 0.194... ~ 0.902... 0.480...)) :mgl t :shape (10 10) :device :MGL :backward NIL}
+(detach a)
+;#Const(((0.062... 0.716... ~ 0.088... 0.692...)        
+;                 ...
+;        (0.458... 0.194... ~ 0.902... 0.480...)) :mgl t :shape (10 10))
+@end[lang=lisp](code)"
   `(const (data ,tensor)))
 
 (defun write-description (res backward backend)
