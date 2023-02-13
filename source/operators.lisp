@@ -970,7 +970,7 @@ atanh(x) = 1/tanh(x)"
                 (aref pos-arr i) j))))
     pos-arr))
 
-(defun !argmaxmin (tensor max-or-min &key (dim nil) (keepdims nil))
+(defun !argmaxmin (tensor max-or-min &key (dim nil))
   "Todo: For GPU"
   (declare (optimize (speed 3))
 	   (type waffetensor tensor))
@@ -985,8 +985,7 @@ atanh(x) = 1/tanh(x)"
 				      collect (!shape tensor i))
 				`(1)))))
 	 (iter-num (/ (the fixnum (!size tensor))
-		      (the fixnum (!size result))))
- 	 (result-dims (map 'list #'1- (!shape result))))
+		      (the fixnum (!size result)))))
 
     (if (>= (the fixnum (or dim 0))
 	    (the fixnum (!dims tensor)))
@@ -995,18 +994,27 @@ atanh(x) = 1/tanh(x)"
 	       (!dims tensor)
 	       dim
 	       (!dims tensor)))
-    (print iter-num)
-    (print result-dims)
     (with-facet (return-array ((data result) 'array :direction :output))
       (labels ((apply-tensor (rest-dims apply-dims)
 		 (loop for i fixnum upfrom 0 below (car rest-dims)
 		       do (if (= (length rest-dims) 1)
 			      ; the tensor now referring is the last.
-			      (let ((m-val nil)
-				    (m-pos nil)
-				    (result-dim `(,@apply-dims ,i)))
+			      (let* ((m-val nil)
+				     (m-pos nil)
+				     (ts (loop for i fixnum upfrom 0 below dim
+					       collect t))
+				     (result-dim `(,@apply-dims ,i))
+				     (result-dim1 `(,@ts ,@(cdr result-dim)))
+				     (result-dim1 (if (= dim 0)
+						      result-dim1
+						      result-dim)))
 				(with-facet (arr
-					     ((data (apply #'!faref tensor result-dim)) 'backing-array :direction :input))
+					     ((data (apply
+						     #'!faref
+						     tensor
+						     result-dim1))
+					      'backing-array
+					      :direction :input))
 				  (declare (type (simple-array single-float) arr))
 				  (loop for m fixnum upfrom 0 below iter-num
 					do (case max-or-min
@@ -1033,20 +1041,20 @@ atanh(x) = 1/tanh(x)"
 				 m-pos
 				 return-array
 				 result-dim)))
-			      ;else
-			      (progn
-				(apply-tensor (cdr rest-dims)
-					      `(,@apply-dims ,i)))))))
+			      ;else			      
+			      (apply-tensor (cdr rest-dims)
+					    `(,@apply-dims ,i))))))
 	(apply-tensor (!shape result)
 		      nil)
 	result))))
 
-(defun !argmax (tensor)
+(defun !argmax (tensor &key (dim nil) (keepdims nil))
   "Todo"
-  )
-(defun !argmin ()
+  (!argmaxmin tensor :max :dim dim))
+
+(defun !argmin (tensor &key (dim nil) (keepdims nil))
   "Todo"
-  )
+  (!argmaxmin tensor :min :dim dim))
 
 (defun !abs () "Todo")
 
