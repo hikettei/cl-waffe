@@ -469,3 +469,128 @@ Output: Tensor"
 				      `(,i)))))))
 	(next-node dims-indices nil nil)
 	result))))
+
+
+(defun !setf-faref (value tensor &rest dims)
+  "(setf tensor value)
+
+(!aref tensor dims) <- (!aref value (!shape dims))"
+  (declare (optimize (speed 3))
+	   (type waffetensor tensor))
+  (let* ((tensor-dims (!shape tensor))
+	 (dims (cond
+		 ((> (!dims tensor) (length dims))
+		  (concatenate
+		   'list
+		   dims
+		   (repeat-n t (the fixnum (- (!dims tensor)
+					      (the fixnum
+						   (length dims)))))))
+		 ((= (!dims tensor) (length dims)) dims)
+		 (T
+		  (error "!aref: dim ~a beyonds tensor's dim ~a"
+			 dims
+			 (!shape tensor)))))
+	 (dims (loop for i fixnum upfrom 0 below (length dims)
+		     collect (let ((x (nth i dims)))
+			       (typecase x
+				 (fixnum
+				  (if (< x 0)
+				      (the fixnum
+					   (+ (the fixnum (!shape tensor i))
+					      (the fixnum x)))
+				      x))
+				 (list
+				  (list
+				   (if (< (the fixnum (car x)) 0)
+				       (the fixnum
+					    (+
+					     (the fixnum (!shape tensor i))
+					     (the fixnum (car x))))
+				       (car x))
+				   (if (< (the fixnum (second x)) 0)
+				       (the fixnum
+					    (+
+					     (the fixnum (!shape tensor i))
+					     (the fixnum (second x))))
+				       (second x))))
+				 (T x)))))
+	 (dims-result
+	   (mapcar
+	    #'(lambda (x y)
+		(typecase x
+		  (fixnum 1)
+		  (list
+		   (unless (= (length x) 2)
+		     (error "!faref: the range is specified by list, but length != 2. at ~a" dims))
+		   (the fixnum (- (the fixnum (second x))
+				  (the fixnum (first x)))))
+		  (T y)))
+	    dims tensor-dims))
+	 (dims-indices
+	   (mapcar #'(lambda (x y)
+		       (typecase x
+			 (fixnum 1)
+			 (list (repeat-c (the fixnum
+					      (- (the fixnum (second x))
+						 (the fixnum (car x))))
+					 :start (car x)))
+			 (T (repeat-c y))))
+		   dims dims-result))
+	 (reshaped-tensor value))
+    (loop for i fixnum upfrom 0 below (length dims)
+	  do (let ((x (nth i dims)))
+	       (typecase x
+		 (fixnum
+		  (if (or (< x 0)
+			  (> x (the fixnum (!shape tensor i))))
+		      (error "!faref: dims must be in the range of 0<=x<=~a, but got ~a. when processing ~a, called with ~a" (!shape tensor i) x tensor dims)))
+		 (list
+		  (if (or (< (the fixnum (car x)) 0)
+			  (> (the fixnum (car x))
+			     (the fixnum (!shape tensor i))))
+		      (error "!faref: dims must be in the range of 0<=x<=~a, but got ~a. when processing ~a, called with ~a" (!shape tensor i) (car x) tensor dims))
+		  (if (or (< (the fixnum (second x)) 0)
+			  (> (the fixnum (second x))
+			     (the fixnum (!shape tensor i))))
+		      (error "!faref: dims must be in the range of 0<=x<=~a, but got ~a. when processing ~a, called with ~a" (!shape tensor i) (second x) tensor dims))))))
+
+    (with-facets ((from-array ((data reshaped-tensor) ; todo for cuda.
+				 'array :direction :input))
+		  (result-array ((data tensor)
+				 'array :direction :output)))
+      (labels ((next-node (drest args rargs)
+		 (if (= (length args) (length dims))
+		     (apply
+		      #'(setf aref)
+		      (apply
+		       #'aref
+		       from-array
+		       (loop for i fixnum upfrom 0 below (length rargs)
+			     collect (mod
+				      (the fixnum (nth i rargs))
+				      (the fixnum (!shape value i)))))
+		      result-array
+		      args))
+
+		 (if (typep (car drest) 'fixnum)
+		     (next-node
+		      (cdr drest)
+		      (concatenate 'list args
+				   `(,(nth (length args) dims)))
+		      (concatenate 'list rargs `(0)))
+		     (loop
+		       for i fixnum
+		       upfrom 0
+			 below (length (the list (car drest)))
+		       do (next-node (cdr drest)
+				     (concatenate
+				      'list
+				      args
+				    `(,(nth i (car drest))))
+				     (concatenate
+				      'list
+				      rargs
+				      `(,i)))))))
+	(next-node dims-indices nil nil)
+	tensor))))
