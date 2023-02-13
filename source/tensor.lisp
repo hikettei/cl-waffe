@@ -964,6 +964,7 @@ Example:
 	(T
 	 (mat-dimensions (waffetensor-data tensor))))))
 
+(declaim (ftype (function (waffetensor) fixnum) !dims !size))
 (defun !dims (tensor)
   "Returns the total length of a given tensor's dims
 
