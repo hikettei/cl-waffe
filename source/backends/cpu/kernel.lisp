@@ -37,9 +37,14 @@
       (:sqrt (sqrt (car args)))
       (:exp (exp (car args)))
       (:pow (expt (car args) (second args)))
-      (:tanh (tanh (car args)))
       (:repeat (repeat (car args) (third args) :axis (second args)))
       (:transpose (car args))
+      (:sin (sin (car args)))
+      (:cos (cos (car args)))
+      (:tan (tan (car args)))
+      (:sinh (tanh (car args)))
+      (:cosh (tanh (car args)))
+      (:tanh (tanh (car args)))
       (T
        (error "~a is nt yet implemented" ope)))))
 

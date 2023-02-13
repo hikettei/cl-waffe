@@ -173,6 +173,51 @@
 	     (list (!matmul dy (!transpose (self yi)))
 		   (!matmul (!transpose (self xi)) dy))))
 
+(defnode SinTensor ()
+  :optimize t
+  :parameters ((xi nil))
+  :forward ((x)
+	    (save-for-backward xi x)
+	    (with-searching-calc-node :sin x))
+  :backward ((dy)
+	     (list (!mul dy (!cos (self x))))))
+
+(defnode CosTensor ()
+  :optimize t
+  :parameters ((xi nil))
+  :forward ((x)
+	    (save-for-backward xi x)
+	    (with-searching-calc-node :cos x))
+  :backward ((dy)
+	     (list (!mul dy (!mul -1.0 (!sin (self x)))))))
+
+(defnode TanTensor ()
+  :optimize t
+  :parameters ((xi nil))
+  :forward ((x)
+	    (save-for-backward xi x)
+	    (with-searching-calc-node :tan x))
+  :backward ((dy)
+	     (list (!mul dy (!div 1 (!pow (!cos (self x)) 2))))))
+
+(defnode HyperbolicSinTensor ()
+  :optimize t
+  :parameters ((xi nil))
+  :forward ((x)
+	    (save-for-backward xi x)
+	    (with-searching-calc-node :sinh x))
+  :backward ((dy)
+	     (list (!mul dy (!cosh (self x))))))
+
+(defnode HyperbolicCosTensor ()
+  :optimize t
+  :parameters ((xi nil))
+  :forward ((x)
+	    (save-for-backward xi x)
+	    (with-searching-calc-node :cosh x))
+  :backward ((dy)
+	     (list (!mul dy (!sinh (self x))))))
+
 (defmacro defope (name node-object tensor args &optional (doc "") &body body)
   (let ((place node-object))
     `(defun ,name ,args
@@ -793,16 +838,84 @@ If the specified position of a tensor isn't one, !squeeze is skipped.
   
   (call node (assure-tensor x)))
 
-(defun !sin () "Todo")
-(defun !cos () "Todo")
-(defun !tan () "Todo")
+(defope !sin (SinTensor) node (x)
+    "Applying sin to each element of x, creating a new sysconst.
 
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+(setq a (!randn `(5)))
+;=>#Const((0.638... 0.527... 0.515... 0.495... 0.912...) :mgl t :shape (5))
+(!sin a)
+;=>#Const((-0.44... -0.64... -0.66... -0.70... -0.09...) :mgl t :shape (5))
+@end[lang=lisp](code)
+@end(section)"
+
+  (call node (assure-tensor x)))
+
+(defope !cos (CosTensor) node (x)
+    "Applying cos to each element of x, creating a new sysconst.
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+(setq a (!randn `(5)))
+;=>#Const((0.638... 0.527... 0.515... 0.495... 0.912...) :mgl t :shape (5))
+(!cos a)
+;=>#Const((0.803... 0.864... 0.870... 0.879... 0.611...) :mgl t :shape (5))
+@end[lang=lisp](code)
+@end(section)"
+
+  (call node (assure-tensor x)))
+
+(defope !tan (TanTensor) node (x)
+    "Applying tan to each element of x, creating a new sysconst.
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+(setq a (!randn `(5)))
+;=>#Const((0.638... 0.527... 0.515... 0.495... 0.912...) :mgl t :shape (5))
+(!tan a)
+;=>#Const((0.741... 0.582... 0.566... 0.540... 1.293...) :mgl t :shape (5))
+@end[lang=lisp](code)
+@end(section)"
+
+  (call node (assure-tensor x)))
+
+(defope !sinh (HyperbolicSinTensor) node (x)
+    "Applying sinh to each element of x, creating a new sysconst.
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+(setq a (!randn `(5)))
+;=>#Const((0.638... 0.527... 0.515... 0.495... 0.912...) :mgl t :shape (5))
+(!sinh a)
+;=>#Const((0.682... 0.551... 0.538... 0.516... 1.044...) :mgl t :shape (5))
+@end[lang=lisp](code)
+@end(section)"
+
+  (call node (assure-tensor x)))
+
+(defope !cosh (HyperbolicCosTensor) node (x)
+    "Applying cosh to each element of x, creating a new sysconst.
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+(setq a (!randn `(5)))
+;=>#Const((0.638... 0.527... 0.515... 0.495... 0.912...) :mgl t :shape (5))
+(!cosh a)
+;=>#Const((1.210... 1.142... 1.135... 1.125... 1.446...) :mgl t :shape (5))
+@end[lang=lisp](code)
+@end(section)"
+
+  (call node (assure-tensor x)))
 (defun !asin () "Todo")
 (defun !acos () "Todo")
 (defun !atan () "Todo")
 
-(defun !sinh () "Todo")
-(defun !cosh () "Todo")
 
 (defun !argmax () "Todo")
 (defun !argmin () "Todo")
