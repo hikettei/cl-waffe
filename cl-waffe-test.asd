@@ -16,6 +16,7 @@
 					 (:file "deriv")
 					 (:file "tensor-operate")
 					 (:file "operators")
+					 (:file "optimizers")
 					 )))
   :perform (test-op (o s)
 		    (symbol-call :fiveam :run! :test)))

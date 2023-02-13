@@ -713,7 +713,15 @@ PDF: fX(x)=x^a−1*(1−x)*b−1/B(a,b)
 where B(a,b)=∫1,0{x^a−1(1−x)^b−1}dx
 
 @begin[lang=lisp](code)
-
+(time (!beta '(200) 5.0 1.0))
+;Evaluation took:
+;  0.000 seconds of real time
+;  0.000063 seconds of total run time (0.000063 user, 0.000000 system)
+;  100.00% CPU
+;  143,846 processor cycles
+;  0 bytes consed
+  
+;#Const((0.813... 0.832... ~ 0.865... 0.787...) :mgl t :shape (200))
 @end[lang=lisp](code)"
 
   (declare (optimize (speed 3))
@@ -740,7 +748,7 @@ where B(a,b)=∫1,0{x^a−1(1−x)^b−1}dx
 Algorithm: https://dl.acm.org/doi/pdf/10.1145/359460.359482
 
 Note: !beta excepts that @c((min a b) > 1)"
-  (declare (optimize (speed 3));(safety 0) (debug 0))
+  (declare (optimize (speed 3) (safety 0) (debug 0))
 	   (type cons dims)
 	   (type single-float a0)
 	   (type (single-float 0e0) a b))
@@ -748,7 +756,6 @@ Note: !beta excepts that @c((min a b) > 1)"
   (unless (> (min a b) 1.0)
     (error "cl-waffe:!beta failed because of (min a b) > 1."))
 
-  (print (<= a b))
   (let* ((alpha (+ a b))
   	 (beta  (sqrt (the (single-float 0e0)
 			   (/ (- alpha 2.0)
@@ -794,7 +801,7 @@ Note: !beta excepts that @c((min a b) > 1)"
 Algorithm: https://dl.acm.org/doi/pdf/10.1145/359460.359482
 
 Note: !beta excepts that @c((min a b) <= 1)"
-  (declare (optimize (speed 3));(safety 0) (debug 0))
+  (declare (optimize (speed 3) (safety 0) (debug 0))
 	   (type cons dims)
 	   (type single-float a0)
 	   (type (single-float 0e0) a b))

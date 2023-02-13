@@ -88,6 +88,16 @@
 	    (setq result nil))))
     result))
 
+(defun test-beta ()
+  (let ((beta1 (!beta '(1000 1000) 5.0 5.0))
+	(beta2 (!beta '(1000 1000) 0.5 0.5))
+	(avg1 (/ 5.0 10.0))
+	(avg2 (/ 0.5 1.0)))
+    (if (and (~=1 (expt (data (!mean beta1)) 2) (expt avg1 2))
+	     (~=1 (expt (data (!mean beta2)) 2) (expt avg2 2)))
+	t
+	nil)))
+
 (format t "Operating with Default Mode(cache=nil, jit=nil).~%")
 
 (test cl-waffe-test
@@ -100,6 +110,6 @@
   (is (operate-func #'!log #'log))
   (is (operate-func #'!sqrt #'sqrt))
   (is (operate-func #'!tanh #'tanh))
-  (is (test-cross-entropy)))
-
+  (is (test-cross-entropy))
+  (is (test-beta)))
 
