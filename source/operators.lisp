@@ -912,10 +912,43 @@ If the specified position of a tensor isn't one, !squeeze is skipped.
 @end(section)"
 
   (call node (assure-tensor x)))
-(defun !asin () "Todo")
-(defun !acos () "Todo")
-(defun !atan () "Todo")
 
+
+(defun !asin (x)
+  "Applying asin to each element
+
+asin(x) = 1/sin(x)"
+  (!div 1 (!sin x)))
+
+(defun !acos (x)
+  "Applying acos to each element
+
+acos(x) = 1/cos(x)"
+  (!div 1 (!cos x)))
+
+(defun !atan (x)
+  "Applying atan to each element
+
+atan(x) = 1/tan(x)"
+  (!div 1 (!tan x)))
+
+(defun !asinh (x)
+  "Applying asinh to each element
+
+asinh(x) = 1/sinh(x)"
+  (!div 1 (!sinh x)))
+
+(defun !acosh (x)
+  "Applying acosh to each element
+
+acosh(x) = 1/cosh(x)"
+  (!div 1 (!cosh x)))
+
+(defun !atanh (x)
+  "Applying atanh to each element
+
+atanh(x) = 1/tanh(x)"
+  (!div 1 (!tanh x)))
 
 (defun !argmax () "Todo")
 (defun !argmin () "Todo")

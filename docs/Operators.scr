@@ -301,6 +301,27 @@
 @end(section)
 
 @begin(section)
+@title(!asinh)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !asinh)
+)
+@end(section)
+
+@begin(section)
+@title(!acosh)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !acosh)
+)
+@end(section)
+
+@begin(section)
+@title(!atanh)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !atanh)
+)
+@end(section)
+
+@begin(section)
 @title(!matmul)
 @cl:with-package[name="cl-waffe"](
 @cl:doc(function !matmul)
