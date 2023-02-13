@@ -985,7 +985,8 @@ atanh(x) = 1/tanh(x)"
 				      collect (!shape tensor i))
 				`(1)))))
 	 (iter-num (/ (the fixnum (!size tensor))
-		      (the fixnum (!size result)))))
+		      (the fixnum (!size result))))
+	 (dim (or dim 0)))
 
     (if (>= (the fixnum (or dim 0))
 	    (the fixnum (!dims tensor)))
@@ -1049,12 +1050,90 @@ atanh(x) = 1/tanh(x)"
 	result))))
 
 (defun !argmax (tensor &key (dim nil) (keepdims nil))
-  "Todo"
-  (!argmaxmin tensor :max :dim dim))
+  "Returns the indices of the maximum value of all elements in the input tensor.
+
+@begin(deflist)
+@def(dim)
+@term(The dimension to reduce. If nil, the argmax of the flattened input is returned.)
+@def(keepdims)
+@term(whether the output tensor has dim retained or not. Ignored if dim=nil.)
+@end(deflist)
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+(setq a (!randn `(5)))
+;#Const((0.933... 0.158... 0.822... 0.881... 0.831...) :mgl t :shape (5))
+(!argmax a)
+;#Const((0.0) :mgl t :shape (1))
+(setq a (!randn `(10 10 10)))
+;#Const((((0.393... 0.658... ~ 0.003... 0.609...)         
+;                   ...
+;         (0.394... 0.252... ~ 0.688... 0.057...))        
+;                 ...
+;        ((0.325... 0.794... ~ 0.540... 0.381...)         
+;                   ...
+;         (0.310... 0.035... ~ 0.280... 0.431...))) :mgl t :shape (10 10 10))
+
+(!argmax a :dim 2)
+
+;#Const(((5.0 9.0 ~ 0.0 4.0)        
+;                 ...
+;        (2.0 0.0 ~ 2.0 5.0)) :mgl t :shape (10 10))
+
+(!argmax a :dim 2 :keepdims t)
+;#Const((((5.0 5.0 ~ 5.0 5.0)         
+;                   ...
+;         (4.0 4.0 ~ 4.0 4.0))        
+;                 ...
+;        ((2.0 2.0 ~ 2.0 2.0)         
+;                   ...
+;         (5.0 5.0 ~ 5.0 5.0))) :mgl t :shape (10 10 10))
+@end[lang=lisp](code)
+@end(section)"
+  (if (null keepdims)
+      (!argmaxmin tensor :max :dim dim)
+      (!repeats (!unsqueeze (!argmaxmin tensor :max :dim dim) dim)
+		dim
+		(!shape tensor dim))))
 
 (defun !argmin (tensor &key (dim nil) (keepdims nil))
-  "Todo"
-  (!argmaxmin tensor :min :dim dim))
+  "Returns the indices of the minimum value of all elements in the input tensor.
+
+@begin(deflist)
+@def(dim)
+@term(The dimension to reduce. If nil, the argmax of the flattened input is returned.)
+@def(keepdims)
+@term(whether the output tensor has dim retained or not. Ignored if dim=nil.)
+@end(deflist)
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+(setq a (!randn `(5)))
+;=>#Const((0.635... 0.101... 0.864... 0.563... 0.481...) :mgl t :shape (5))
+(!argmin a)
+;=>#Const((1.0) :mgl t :shape (1))
+
+(setq a (!randn `(10 10 10)))
+;#Const((((0.267... 0.113... ~ 0.142... 0.208...)         
+;                   ...
+;         (0.174... 0.948... ~ 0.232... 0.462...))        
+;                 ...
+;        ((0.454... 0.361... ~ 0.605... 0.731...)         
+;                   ...
+;         (0.099... 0.816... ~ 0.729... 0.996...))) :mgl t :shape (10 10 10))
+
+(!argmin a)
+;#Const((415.0...) :mgl t :shape (1))
+@end[lang=lisp](code)
+@end(section)"
+  
+  (if (null keepdims)
+      (!argmaxmin tensor :min :dim dim)
+      (!repeats (!unsqueeze (!argmaxmin tensor :min :dim dim) dim)
+		dim
+		(!shape tensor dim))))
 
 (defun !abs () "Todo")
 
