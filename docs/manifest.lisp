@@ -13,4 +13,7 @@
 			"references-nn.scr"
 			"references-optimizers.scr"
 			"references-io.scr"
-			"references-caches.scr"))))
+			"references-caches.scr"
+			"Operators.scr"
+			"NN.scr"
+			"Optim.scr"))))

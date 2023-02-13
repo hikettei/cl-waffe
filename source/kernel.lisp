@@ -106,8 +106,10 @@ Note: this is not setfable"
 					     variables))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-(defgeneric invoke-kernel-inlined (kernel-function variables first-argument i)
-  (:generic-function-class inlined-generic-function)))
+  (unless *gendoc-mode*
+    (defgeneric invoke-kernel-inlined (kernel-function variables first-argument i)
+      (:generic-function-class inlined-generic-function))
+    (defgeneric invoke-kernel-inlined (kernel-function variables first-argument i))))
 
 (defmethod invoke-kernel-inlined ((kernel-function T)
 				  (variables list)

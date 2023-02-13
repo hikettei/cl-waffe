@@ -1,10 +1,7 @@
 
 (in-package :cl-waffe)
 
-; Utils for build documents.
-; emmm i guess it is waste of memory usage...?
-
-;(defparameter *object-usages* (make-hash-table))
+(defparameter *gendoc-mode* t)
 
 (defstruct WaffeObjectUsage
   "An structure of restoring waffe objects usage

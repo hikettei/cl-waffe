@@ -1,0 +1,498 @@
+@begin(section)
+@title(Operators)
+
+
+@begin(section)
+@title(!zeros)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !zeros)
+)
+@end(section)
+
+@begin(section)
+@title(!ones)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !ones)
+)
+@end(section)
+
+
+@begin(section)
+@title(!fill)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !fill)
+)
+@end(section)
+
+
+@begin(section)
+@title(!arange)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(macro !arange)
+)
+@end(section)
+
+@begin(section)
+@title(!random)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !random)
+)
+@end(section)
+
+
+@begin(section)
+@title(!random-with)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !random-with)
+)
+@end(section)
+
+@begin(section)
+@title(!random-with)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !init-with)
+)
+@end(section)
+
+
+@begin(section)
+@title(!normal)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !normal)
+)
+@end(section)
+
+
+@begin(section)
+@title(!randn)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !randn)
+)
+@end(section)
+
+
+@begin(section)
+@title(!beta)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !beta)
+)
+@end(section)
+
+
+@begin(section)
+@title(!gamma)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !gamma)
+)
+@end(section)
+
+
+@begin(section)
+@title(!chisquare)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !chisquare)
+)
+@end(section)
+
+
+@begin(section)
+@title(!bernoulli)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !bernoulli)
+)
+@end(section)
+
+@begin(section)
+@title(!binomial)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !binomial)
+)
+@end(section)
+
+
+@begin(section)
+@title(!shape)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !shape)
+)
+@end(section)
+
+
+@begin(section)
+@title(!dims)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !dims)
+)
+@end(section)
+
+
+@begin(section)
+@title(!size)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !size)
+)
+@end(section)
+
+
+@begin(section)
+@title(!zeros-like)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !zeros-like)
+)
+@end(section)
+
+
+@begin(section)
+@title(!ones-like)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !ones-like)
+)
+@end(section)
+
+
+@begin(section)
+@title(!full-like)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !full-like)
+)
+@end(section)
+
+@begin(section)
+@title(!add)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !add)
+)
+@end(section)
+
+@begin(section)
+@title(!sub)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !sub)
+)
+@end(section)
+
+@begin(section)
+@title(!mul)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !mul)
+)
+@end(section)
+
+@begin(section)
+@title(!div)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !div)
+)
+@end(section)
+
+@begin(section)
+@title(!dot)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !dot)
+)
+@end(section)
+
+@begin(section)
+@title(!sum)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !sum)
+)
+@end(section)
+
+
+@begin(section)
+@title(!mean)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !mean)
+)
+@end(section)
+
+@begin(section)
+@title(!exp)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !exp)
+)
+@end(section)
+
+@begin(section)
+@title(!pow)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !pow)
+)
+@end(section)
+
+
+@begin(section)
+@title(!sqrt)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !sqrt)
+)
+@end(section)
+
+
+@begin(section)
+@title(!log)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !log)
+)
+@end(section)
+
+@begin(section)
+@title(!sin)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !sin)
+)
+@end(section)
+
+@begin(section)
+@title(!cos)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !cos)
+)
+@end(section)
+
+@begin(section)
+@title(!tan)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !tan)
+)
+@end(section)
+
+@begin(section)
+@title(!asin)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !asin)
+)
+@end(section)
+
+@begin(section)
+@title(!acos)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !acos)
+)
+@end(section)
+
+@begin(section)
+@title(!atan)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !atan)
+)
+@end(section)
+
+@begin(section)
+@title(!sinh)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !sinh)
+)
+@end(section)
+
+@begin(section)
+@title(!cosh)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !cosh)
+)
+@end(section)
+
+@begin(section)
+@title(!tanh)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !tanh)
+)
+@end(section)
+
+@begin(section)
+@title(!asinh)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !asinh)
+)
+@end(section)
+
+@begin(section)
+@title(!acosh)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !acosh)
+)
+@end(section)
+
+@begin(section)
+@title(!atanh)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !atanh)
+)
+@end(section)
+
+@begin(section)
+@title(!matmul)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !matmul)
+)
+@end(section)
+
+@begin(section)
+@title(!unsqueeze)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !unsqueeze)
+)
+@end(section)
+
+@begin(section)
+@title(!squeeze)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !squeeze)
+)
+@end(section)
+
+@begin(section)
+@title(!transpose)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !transpose)
+)
+@end(section)
+
+@begin(section)
+@title(!repeats)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !repeats)
+)
+@end(section)
+
+@begin(section)
+@title(!reshape)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !reshape)
+)
+@end(section)
+
+@begin(section)
+@title(!abs)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !abs)
+)
+@end(section)
+
+@begin(section)
+@title(!where)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !where)
+)
+@end(section)
+
+@begin(section)
+@title(!index)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !index)
+)
+@end(section)
+
+@begin(section)
+@title(!argmax)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !argmax)
+)
+@end(section)
+
+@begin(section)
+@title(!argmin)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !argmin)
+)
+@end(section)
+
+@begin(section)
+@title(!<=)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !<=)
+)
+@end(section)
+
+@begin(section)
+@title(!>=)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !>=)
+)
+@end(section)
+
+@begin(section)
+@title(!einsum)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !einsum)
+)
+@end(section)
+
+@begin(section)
+@title(!ravel)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !ravel)
+)
+@end(section)
+
+@begin(section)
+@title(!flatten)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !flatten)
+)
+@end(section)
+
+@begin(section)
+@title(!aref)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !aref)
+)
+@end(section)
+
+@begin(section)
+@title(!dotensors)
+@cl:with-package[name="cl-waffe"](
+)
+@end(section)
+
+@begin(section)
+@title(!set-batch)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !set-batch)
+)
+@end(section)
+
+@begin(section)
+@title(!softmax)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !softmax)
+)
+@end(section)
+
+@begin(section)
+@title(!sigmoid)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !sigmoid)
+)
+@end(section)
+
+@begin(section)
+@title(!relu)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !relu)
+)
+@end(section)
+
+@begin(section)
+@title(!gelu)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !gelu)
+)
+@end(section)
+
+@begin(section)
+@title(!leakey-relu)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !leakey-relu)
+)
+@end(section)
+
+@begin(section)
+@title(!swish)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !swish)
+)
+@end(section)
+
+@end(section)

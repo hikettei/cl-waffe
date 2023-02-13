@@ -356,7 +356,6 @@ Example:
 					     :test
 					     #'(lambda (x y)
 						 (eql x (waffetensor-is-ancestor-param y))))
-				 ;(print ,value)
 				 (cond
 				   ((and (typep (data ,value) 'mat)
 					 (not (null thread-info)))

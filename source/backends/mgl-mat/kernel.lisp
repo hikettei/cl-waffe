@@ -141,7 +141,7 @@
 		nil)
 	       (return-shape?
 		; Return transposed dims (for 2d only) for 3d is todo.
-		(reverse (mat-dimensions tensor)))
+		(reverse (!shape (sysconst tensor))))
 	       (return-node-info
 		(values :lazy-transpose nil nil nil))
 	       (compile-and-step?
