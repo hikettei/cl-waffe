@@ -388,7 +388,7 @@ For nd tensors...
 @def(1D)
 @term(unsqueeze x with 1, and call !sum again.)
 @def(2D and more.)
-@term(Sum up al elements of X)
+@term(Sum up all elements of X)
 @end(deflist)
 
 @begin(section)
@@ -456,13 +456,17 @@ For nd tensors...
 	   result)))))
 
 (defun !mean (x &optional (axis nil) (keepdims nil))
-  "Mean of tensor, todo: write docs and examples
-
+  "The usage is the same as !sum.
 
 @begin(section)
 @title(Example)
 @begin[lang=lisp](code)
-
+(setq a (!ones '(10 10)))
+;#Const(((1.0 1.0 ~ 1.0 1.0)        
+;                 ...
+;        (1.0 1.0 ~ 1.0 1.0)) :mgl t :shape (10 10))
+(!mean a)
+;=>Const(1.0)
 @end[lang=lisp](code)
 @end(section)"
   (if (null axis)
@@ -470,51 +474,75 @@ For nd tensors...
       (!div (!sum x axis keepdims) (!shape x axis))))
 
 (defope !pow (PowTensor) node (x n)
-    "Pow x n, creating new sysconst and nodes.
-
+    "Takes the power of each element in @cl:param(x) with n, returning a new sysconst.
 
 @begin(section)
 @title(Example)
 @begin[lang=lisp](code)
-
+(setq a (!ones `(10 10)))
+(!pow a 3)
+;#Const(((1.0 1.0 ~ 1.0 1.0)        
+;                 ...
+;        (1.0 1.0 ~ 1.0 1.0)) :mgl t :shape (10 10))
 @end[lang=lisp](code)
 @end(section)"
   (call node (assure-tensor x) (assure-tensor n)))
 
 (defope !sqrt (SqrtTensor) node (x)
-    "Sqrt x, creating new sysconst and nodes.
-
+    "Takes the power of eachelement in @cl:param(x) with 1/2, creating new sysconst and nodes.
 
 @begin(section)
 @title(Example)
 @begin[lang=lisp](code)
-
+(setq a (!ones `(10 10)))
+(!sqrt a 3)
+;#Const(((1.0 1.0 ~ 1.0 1.0)
+;                 ...
+;        (1.0 1.0 ~ 1.0 1.0)) :mgl t :shape (10 10))
 @end[lang=lisp](code)
 @end(section)"
   (call node (assure-tensor x)))
 
 (defope !log (LogTensor) node (x)
-    "Log x, creating new sysconst and nodes.
+    "Returns a new tensor with the natural logarithm of the elements of input.
 
+yi = log(e xi)
 
 @begin(section)
 @title(Example)
 @begin[lang=lisp](code)
-
+(setq a (!ones '(10 10)))
+(!log a)
+;#Const(((0.0 0.0 ~ 0.0 0.0)        
+;                 ...
+;        (0.0 0.0 ~ 0.0 0.0)) :mgl t :shape (10 10))
 @end[lang=lisp](code)
 @end(section)"
   (call node (assure-tensor x)))
 
 (defun !reshape (x dim)
-  "(!reshape x dim) ,if dim has t, t is automatically predicted.
+  "Return a new sysconst with changing its shape. x won't be modified.
 
+If dims has the element of @cl:param(t), t is automatically inferred from the remaining dimensions and the number of elements in dim. (count t dim) must be 1 (Todo: Fix).
+
+The total size of tensor must not be changed before or after the call to reshape.
+
+See also: nil
 
 @begin(section)
 @title(Example)
 @begin[lang=lisp](code)
+(setq a (!randn `(10 10 10)))
+(!reshape a '(1 10 100))
+;#Const((((0.454... 0.277... ~ 0.536... 0.135...)         
+;                   ...
+;         (0.857... 0.714... ~ 0.169... 0.279...))) :mgl t :shape (1 10 100))
 
+(!reshape a '(1 1 t))
+;#Const((((0.454... 0.277... ~ 0.169... 0.279...))) :mgl t :shape (1 1 1000))
 @end[lang=lisp](code)
 @end(section)"
+  (declare (type cons dim))
   (if (find t dim)
       (progn
 	(unless (= (count t dim) 1)
@@ -532,36 +560,129 @@ For nd tensors...
       (call (ReshapeTensor (assure-tensor dim)) (assure-tensor x))))
 
 (defun !repeats (x axis repeats)
-  "Repeat Todo: Write docs and example
-
+  "Repeats @cl:param(x) along specified @cl:param(axis) by @cl:param(repeats), creating new sysconst.
 
 @begin(section)
 @title(Example)
 @begin[lang=lisp](code)
-
+(setq a (!randn '(1 3 3)))
+;#Const((((0.333... 0.914... 0.260...)         
+;                   ...
+;         (0.611... 0.110... 0.113...))) :mgl t :shape (1 3 3))
+(!repeats a 0 3)
+;#Const((((0.333... 0.914... 0.260...)         
+;                   ...
+;         (0.611... 0.110... 0.113...))        
+;                 ...
+;        ((0.333... 0.914... 0.260...)         
+;                   ...
+;         (0.611... 0.110... 0.113...))) :mgl t :shape (3 3 3))
 @end[lang=lisp](code)
 @end(section)"
-  
+  (declare (type waffetensor x)
+	   (type fixnum axis repeats))
   (call (RepeatTensor (assure-tensor axis) (assure-tensor repeats)) (assure-tensor x)))
 
 (defun !transpose (x &optional result)
-  "Transpose
+  "Transpose x where x is a 2d tensor.
 
+Transposed x is lazy evaluated until called by !matmul.
+
+Todo: implement 3d, 4d version...
 
 @begin(section)
 @title(Example)
 @begin[lang=lisp](code)
+(setq a (!randn `(3 5)))
+(setq a (!transpose a))
+;#Const(#<FUNCTION (LABELS CL-WAFFE.BACKENDS.MGL::LAZYTRANSPOSE :IN CL-WAFFE.BACKENDS.MGL::LAZY-EVAL-TRANSPOSE) {10038CBADB}>)
 
+(!matmul a (!randn '(3 5)))
+;#Const(((0.653... 0.400... 0.471... 0.705... 0.623...)        
+;                 ...
+;        (1.220... 0.760... 0.975... 1.360... 1.029...)) :mgl t :shape (5 5))
 @end[lang=lisp](code)
-@end(section)
-
-Note: the result of !transpose is lazy evaluated for speed.(Todo: Write details)"
+@end(section)"
   (call (TransposeTensor (assure-tensor result)) (assure-tensor x)))
 
 (defope !matmul (MatmulTensor) node (x y)
-    "Matmul
-Todo: write docs and behaviour"
-  (call node (assure-tensor x) (assure-tensor y)))
+    "Multiplying matrices @cl:param(x) and @cl:param(y).
+
+!matmul has many behaviours depends on the dimensionality of the tensors as follows:
+
+@begin(deflist)
+@def(x and y are 1D)
+@begin(term)
+The dot-product is returned.
+@begin[lang=lisp](code)
+(setq a (!randn `(10)))
+(setq b (!randn `(10)))
+(!matmul a b)
+;=>#Const(-2.0)
+@end[lang=lisp](code)
+@end(term)
+
+@def(x and y are both 2D)
+@begin(term)
+The matrix-matrix product is returned.
+@begin[lang=lisp](code)
+(setq a (!randn `(3 10)))
+(setq b (!randn `(10 3)))
+(!matmul a b)
+;#Const(((2.309... 2.223... 3.630...)        
+;                 ...
+;        (2.334... 2.850... 3.678...)) :mgl t :shape (3 3))
+@end[lang=lisp](code)
+@end(term)
+
+@def(x is 2D and y is 3D.)
+@begin(term)
+The matrix and y's each matrix are multiplied and is returned.
+@begin[lang=lisp](code)
+(setq a (!randn `(3 10)))
+(setq b (!randn `(5 10 3)))
+
+(!matmul a b)
+;(!aref b 0) ~ (!aref b 4) is multiplied with a
+
+;#Const((((3.257... 2.731... 1.670...)         
+;                   ...
+;         (2.523... 2.251... 1.276...))        
+;                 ...
+;        ((2.610... 2.764... 2.415...)         
+;                   ...
+;         (2.080... 2.204... 1.751...))) :mgl t :shape (5 3 3))
+@end[lang=lisp](code)
+@end(term)
+
+@def(x is 3D and y is 2D.)
+@begin(term)
+The matrix and x's each matrix are multiplied and is returned.
+@begin[lang=lisp](code)
+(setq a (!randn `(5 3 10)))
+(setq b (!randn `(10 3)))
+
+(!matmul a b)
+;(!aref a 0) ~ (!aref a 4) is multiplied with b
+;#Const((((2.309... 2.204... 1.556...)         
+;                   ...
+;         (3.746... 3.869... 3.091...))        
+;                 ...
+;        ((3.260... 3.200... 2.847...)         
+;                   ...
+;         (3.008... 2.186... 2.376...))) :mgl t :shape (5 3 3))
+@end[lang=lisp](code)
+@end(term)
+
+@def(For more...)
+@term(More will be added (e.g.: 1d and 2d, for larger than 4d ...))
+
+@end(deflist)"
+  (cond
+    ((and (= (the fixnum (!dims x)) 1)
+	  (= (the fixnum (!dims y)) 1))
+     (!dot x y))
+    (T (call node (assure-tensor x) (assure-tensor y)))))
 	
 (defun !unsqueeze (x &optional (dim 0))
   "Unsqueeze Todo: write docs
