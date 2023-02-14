@@ -1171,7 +1171,10 @@ OutputのShapeは全て共通じゃないとダメ
 			   collect (nth i `,description)))
 	 (explicts   (loop for i fixnum upfrom (1+ (position '-> `,description))
 			   until (null (nth i `,description))
-			   collect (nth i `,description))))
+			   collect (nth i `,description)))
+	 (subscripts-indices
+	   (loop for i fixnum upfrom 0 below (length subscripts)
+		 collect i)))
 
     (map 'list #'(lambda (arg)
 		   (typecase arg
@@ -1192,7 +1195,9 @@ OutputのShapeは全て共通じゃないとダメ
     ; Optimize einsum Operations.
 
     (let* ((paths)) ; paths -> (tensors) -> (values n paths)
-      (labels ((get-sum-symbols (symbols)
+      (labels ((create-path-lambda ()
+		 )
+	       (get-sum-symbols (symbols)
 		 (let ((symbols (flatten symbols)))
 		   (map 'list
 			#'(lambda (x)
@@ -1208,34 +1213,45 @@ OutputのShapeは全て共通じゃないとダメ
 		 (loop for i fixnum upfrom 0 below (length list)
 		       when (< i n)
 			 collect (nth i list)))
-	       (explore-path (operations outs last-out)
+	       (explore-path (operations indices outs last-out)
 		 (if (> (length operations) 2)
 		     ; subscriptions are larger than 2.
 		     (dotimes (i (length operations))
 		       (let ((rest (afternth operations i))
-			     (ith-operation (nth i operations)))
+			     (rest-i (afternth indices i))
+			     (ith-operation (nth i operations))
+			     (ope-i (nth i indices)))
 			 (dotimes (k (length rest))
 			   (let ((pair (nth k rest))
-				 (others (butnth operations i k)))
+				 (pair-i (nth k rest-i))
+				 (others (butnth operations i k))
+				 (others-i (butnth indices i k)))
 
 			     (let* ((next-out (get-sum-symbols `(,@ith-operation ,@pair)))
 				    (others-next `(,next-out ,@others)))
 			       (unless (null next-out) ; maybe reducible
 				 (explore-path
 				  others-next
-				  `(,outs
-				    (,ith-operation
-				     ,pair
+				  `(,next-out ,@others-i)
+				  `(,@outs ; 上から下に実行
+				    ((,ith-operation ,ope-i)
+				     (,pair ,pair-i)
 				     ->
 				     ,next-out))
 				  (get-sum-symbols others-next))))))))
 		     (progn
 		       ; reached AB -> C 
-		       (print operations)
-		       (print (cdr outs))
-		       (print last-out)
+		       (print operations) ; result
+		       (print indices)    ; result + indices
+
+		       (dolist (o outs)
+			 (print o))
+		       (print "+++")
 		       ))))
-	(explore-path `,subscripts nil (get-sum-symbols `,subscripts))
+	(explore-path `,subscripts
+		      subscripts-indices
+		      nil
+		      (get-sum-symbols `,subscripts))
 	`(lambda (tensors)
 	   (unless (= (length tensors)
 		      (length ',subscripts))
