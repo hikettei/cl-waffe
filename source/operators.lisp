@@ -1149,7 +1149,10 @@ Example:
 
 (defmacro -> (einsum &rest args)
   ""
-  `(funcall (the function ,einsum) (list ,@args)))
+  ;Todo: protect here with alexandria:once-only
+  `(multiple-value-bind (outs operations indices explicts)
+       (funcall ,einsum (list ,@args))
+     outs))
 
 (defmacro !einsum (&rest description)
   "Sums the product of the elements of the input operands along dimensions specified using a notation based on the Einstein summation convention.
@@ -1175,7 +1178,10 @@ OutputのShapeは全て共通じゃないとダメ
 	 (subscripts-indices
 	   (loop for i fixnum upfrom 0 below (length subscripts)
 		 collect i)))
-
+    
+    (unless explicts
+      (push `(NIL) explicts))
+    
     (map 'list #'(lambda (arg)
 		   (typecase arg
 		     (symbol nil)
@@ -1307,12 +1313,10 @@ OutputのShapeは全て共通じゃないとダメ
 		     (top-operation (nth 1 code))
 		     (top-operation-indices (nth 2 code))
 		     (top-explicts (nth 3 code)))
-		 (print path)
-		 (print outs)
-		 (print top-operation)
-		 (print top-operation-indices)
-		 (print top-explicts)
-		 ))))))))
+		 (values outs
+			 top-operation
+			 top-operation-indices
+			 top-explicts)))))))))
 
 (defun !ravel () "Todo")
 (defun !flatten (tensor)
