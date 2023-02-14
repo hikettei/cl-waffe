@@ -218,6 +218,19 @@
   :backward ((dy)
 	     (list (!mul dy (!sinh (self x))))))
 
+(defnode AbsTensor ()
+  :optimize t
+  :parameters ((mask nil))
+  :forward ((x)
+	    (let ((mask (!where #'(lambda (x)
+				    (declare (type single-float x))
+				    (> x 0.0))
+				x 1.0 -1.0)))
+	      (save-for-backward mask x)
+	      (!mul x mask)))
+  :backward ((dy)
+	     (list (!mul dy (self mask)))))
+
 (defmacro defope (name node-object tensor args &optional (doc "") &body body)
   (let ((place node-object))
     `(defun ,name ,args
@@ -913,7 +926,6 @@ If the specified position of a tensor isn't one, !squeeze is skipped.
 
   (call node (assure-tensor x)))
 
-
 (defun !asin (x)
   "Applying asin to each element
 
@@ -1115,7 +1127,21 @@ atanh(x) = 1/tanh(x)"
 		dim
 		(!shape tensor dim))))
 
-(defun !abs () "Todo")
+(defope !abs (AbsTensor) node (x)
+    "Computes the absolute value of each element in @cl:param(x).
+
+Example:
+@begin[lang=lisp](code)
+(setq a (!random `(10 10) '(-1.0 1.0)))
+;#Const(((0.048... 0.805... ~ 0.769... 0.252...)        
+;                 ...
+;        (0.159... -0.66... ~ -0.55... -0.23...)) :mgl t :shape (10 10))
+(!abs a)
+;#Const(((0.048... 0.805... ~ 0.769... 0.252...)        
+;                 ...
+;        (0.159... 0.667... ~ 0.553... 0.239...)) :mgl t :shape (10 10))
+@end[lang=lisp](code)"
+  (call node (assure-tensor x)))
 
 (defun != () "Todo")
 (defun !<= () "Todo")
@@ -1127,7 +1153,7 @@ atanh(x) = 1/tanh(x)"
 (defun !flatten (tensor)
   "Flattens input by reshaping it into a one-dimensional tensor.
 
-The operation is the same as @c((!reshape tensor '(t))
+The operation is the same as @c((!reshape tensor '(t)))
 
 Example:
 @begin[lang=lisp](code)

@@ -135,6 +135,7 @@
 	   #:!exp
 	   #:!matmul
 	   #:!repeats
+	   #:!abs
 
 	   #:!squeeze
 	   #:!unsqueeze
