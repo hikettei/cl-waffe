@@ -1208,19 +1208,6 @@ OutputのShapeは全て共通じゃないとダメ
 		 (loop for i fixnum upfrom 0 below (length list)
 		       when (< i n)
 			 collect (nth i list)))
-	       (reducible? (inner1 inner2 outer last-out)
-		 ; i, k -> i *, *, k?
-		 (let ((inner (flatten `(,inner1 ,inner2)))
-		       (outer (flatten outer)))
-		   ; 下のmap関数の補集合 => reducibleな演算
-                   ; find t <- 全てのlast-outに対して、reducibleじゃないのが一つでもあるか？
-		   (not (find t (map
-				 'list
-				 #'(lambda (out-symbol)
-					;分解する行列の内部か外部のsigmaで、和をとるSymbolを持たない組合せがどちらか存在する？
-				     (or (null (find out-symbol inner))
-					 (null (find out-symbol outer))))
-				     last-out)))))
 	       (explore-path (operations outs last-out)
 		 (if (> (length operations) 2)
 		     ; subscriptions are larger than 2.
@@ -1230,25 +1217,18 @@ OutputのShapeは全て共通じゃないとダメ
 			 (dotimes (k (length rest))
 			   (let ((pair (nth k rest))
 				 (others (butnth operations i k)))
-			     (print (reducible?
-				     ith-operation
-				     pair
-				     others
-				     last-out))
-			     (if (reducible?
-				  ith-operation
-				  pair
-				  others
-				  last-out)
+
+			     (let* ((next-out (get-sum-symbols `(,@ith-operation ,@pair)))
+				    (others-next `(,next-out ,@others)))
+			       (unless (null next-out) ; maybe reducible
 				 (explore-path
-				  others
+				  others-next
 				  `(,outs
 				    (,ith-operation
 				     ,pair
 				     ->
-				     ,(get-sum-symbols
-				       (list ith-operation pair))))
-				  (get-sum-symbols others)))))))
+				     ,next-out))
+				  (get-sum-symbols others-next))))))))
 		     (progn
 		       ; reached AB -> C 
 		       (print operations)
