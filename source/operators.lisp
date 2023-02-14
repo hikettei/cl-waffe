@@ -1195,8 +1195,27 @@ OutputのShapeは全て共通じゃないとダメ
     ; Optimize einsum Operations.
 
     (let* ((paths)) ; paths -> (tensors) -> (values n paths)
-      (labels ((create-path-lambda ()
-		 )
+      (labels ((create-path-lambda (o-exp outs opes indices exps
+				    &aux (routs (map 'list
+						     #'(lambda (x)
+							 (cddr (reverse x)))
+						     outs)))
+		 #'(lambda (tensors)
+		     (let ((ctime 0))
+		       (dolist (o o-exp)
+			 (when (eql (car o) :*)
+			   (incf ctime (apply #'*
+					      (let ((index 0))
+						(mapc
+						 #'(lambda (o1)
+						     (mapc
+						      #'(lambda (t1)
+							  (if (eql (car t1) (cdr o))
+							      (setq index (second t1))))
+						      o1))
+						 routs)
+						(!shape (nth index tensors)))))))
+		       (values ctime (list o-exp outs opes indices exps)))))
 	       (get-sum-symbols (symbols)
 		 (let ((symbols (flatten symbols)))
 		   (map 'list
@@ -1213,7 +1232,22 @@ OutputのShapeは全て共通じゃないとダメ
 		 (loop for i fixnum upfrom 0 below (length list)
 		       when (< i n)
 			 collect (nth i list)))
-	       (explore-path (operations indices outs last-out)
+	       (get-computation-time (out)
+		 (let* ((iter-symbols (nth (1- (length out)) out)))
+		   `(:* ,@iter-symbols)))
+	       (explore-ctime (explicts indices outs)
+		 (map 'list
+		      #'(lambda (index)
+			  (typecase index
+			    (fixnum (get-computation-time explicts))
+			    (list (get-computation-time
+				   (find index outs
+					 :test #'(lambda (s o)
+						   (equal
+						    s
+						    (nth (1- (length o)) o))))))))
+		      indices))
+	       (explore-path (operations indices outs)
 		 (if (> (length operations) 2)
 		     ; subscriptions are larger than 2.
 		     (dotimes (i (length operations))
@@ -1237,30 +1271,39 @@ OutputのShapeは全て共通じゃないとダメ
 				    ((,ith-operation ,ope-i)
 				     (,pair ,pair-i)
 				     ->
-				     ,next-out))
-				  (get-sum-symbols others-next))))))))
-		     (progn
+				     ,next-out)))))))))
+		     (progn		       
 		       ; reached AB -> C 
-		       (print operations) ; result
-		       (print indices)    ; result + indices
 
-		       (dolist (o outs)
-			 (print o))
-		       (print "+++")
-		       ))))
+		      ; (print `(,@operations -> ,@explicts))
+		      ; (print `(,@indices -> ,@explicts)) ; result
+
+		       (push (create-path-lambda
+			      (explore-ctime explicts indices outs)
+			      outs
+			      operations
+			      indices
+			      explicts)
+			     paths)))))
 	(explore-path `,subscripts
 		      subscripts-indices
-		      nil
-		      (get-sum-symbols `,subscripts))
+		      nil)
 	`(lambda (tensors)
 	   (unless (= (length tensors)
 		      (length ',subscripts))
 	     (error "!einsum: The size of subscripts and tensor doesn't match."))
 
-
-	   (let ((path nil)
-		 (path-ns nil))
-	     ))))))
+	   (multiple-value-bind (p code) (funcall (car ',paths) tensors)
+	     (let ((path p)
+		   (code code))
+	       (dolist (p (cdr ',paths))
+		 (multiple-value-bind (n1 code1) (funcall p tensors)
+		   (if (< n1 path)
+		       (progn
+			 (setq path n1)
+			 (setq code code1)))))
+	       (print path)
+	       (print code))))))))
 
 (defun !ravel () "Todo")
 (defun !flatten (tensor)
