@@ -1147,7 +1147,124 @@ Example:
 (defun !<= () "Todo")
 (defun !>= () "Todo")
 
-(defun !einsum () "Todo")
+(defmacro -> (einsum &rest args)
+  ""
+  `(funcall (the function ,einsum) (list ,@args)))
+
+(defmacro !einsum (&rest description)
+  "Sums the product of the elements of the input operands along dimensions specified using a notation based on the Einstein summation convention.
+
+See also: This operator is used with @cl:param(->).
+
+方針: !arefと既存の命令でBackward可能にする。
+!sumとか既存の命令に置き換えれる場合はそれに置き換える。
+OutputのShapeは全て共通じゃないとダメ
+... => ~ (repeat)"
+  (unless (find '-> `,description)
+    ; Implict Mode
+    (error "!einsum: Invaild Syntax. The required keyword -> is not found in given arguments ~a" `,description))
+
+  ; Explict Mode
+  ; parse arguments and check syntax.
+  (let* ((subscripts (loop for i fixnum upfrom 0 below (length `,description)
+			   until (equal '-> (nth i `,description))
+			   collect (nth i `,description)))
+	 (explicts   (loop for i fixnum upfrom (1+ (position '-> `,description))
+			   until (null (nth i `,description))
+			   collect (nth i `,description))))
+
+    (map 'list #'(lambda (arg)
+		   (typecase arg
+		     (symbol nil)
+		     (list
+		      (map 'list #'(lambda (x)
+				     (unless (or (typep x 'symbol)
+						 (typep x 'list))
+				       (error "!einsum: Invaild Syntax. !einsum excepts symbol or list as a subscripts but got ~a" x)))
+			   arg)
+
+		      (if (>= (count '~ arg) 2)
+			  (error "!einsum: Invaild Syntax. ~a can be used at once in one subscriptions. at ~a" '~ arg))
+		      nil)
+		     (T
+		      (error "!einsum: Invaild Syntax. !einsum excepts symbol or list as arguments but got ~a" `,arg))))
+	 `,subscripts)
+    ; Optimize einsum Operations.
+
+    (let* ((paths)) ; paths -> (tensors) -> (values n paths)
+      (labels ((get-sum-symbols (symbols)
+		 (let ((symbols (flatten symbols)))
+		   (map 'list
+			#'(lambda (x)
+			    (setq symbols (delete x symbols :count 1)))
+		    (remove-duplicates symbols))
+		   (remove-duplicates symbols)))
+	       (butnth (list n &optional (n1 nil))
+		 (loop for i fixnum upfrom 0 below (length list)
+		       when (not (or (= i n)
+				     (= i (or n1 -1))))
+			 collect (nth i list)))
+	       (afternth (list n)
+		 (loop for i fixnum upfrom 0 below (length list)
+		       when (< i n)
+			 collect (nth i list)))
+	       (reducible? (inner1 inner2 outer last-out)
+		 ; i, k -> i *, *, k?
+		 (let ((inner (flatten `(,inner1 ,inner2)))
+		       (outer (flatten outer)))
+		   ; 下のmap関数の補集合 => reducibleな演算
+                   ; find t <- 全てのlast-outに対して、reducibleじゃないのが一つでもあるか？
+		   (not (find t (map
+				 'list
+				 #'(lambda (out-symbol)
+					;分解する行列の内部か外部のsigmaで、和をとるSymbolを持たない組合せがどちらか存在する？
+				     (or (null (find out-symbol inner))
+					 (null (find out-symbol outer))))
+				     last-out)))))
+	       (explore-path (operations outs last-out)
+		 (if (> (length operations) 2)
+		     ; subscriptions are larger than 2.
+		     (dotimes (i (length operations))
+		       (let ((rest (afternth operations i))
+			     (ith-operation (nth i operations)))
+			 (dotimes (k (length rest))
+			   (let ((pair (nth k rest))
+				 (others (butnth operations i k)))
+			     (print (reducible?
+				     ith-operation
+				     pair
+				     others
+				     last-out))
+			     (if (reducible?
+				  ith-operation
+				  pair
+				  others
+				  last-out)
+				 (explore-path
+				  others
+				  `(,outs
+				    (,ith-operation
+				     ,pair
+				     ->
+				     ,(get-sum-symbols
+				       (list ith-operation pair))))
+				  (get-sum-symbols others)))))))
+		     (progn
+		       ; reached AB -> C 
+		       (print operations)
+		       (print (cdr outs))
+		       (print last-out)
+		       ))))
+	(explore-path `,subscripts nil (get-sum-symbols `,subscripts))
+	`(lambda (tensors)
+	   (unless (= (length tensors)
+		      (length ',subscripts))
+	     (error "!einsum: The size of subscripts and tensor doesn't match."))
+
+
+	   (let ((path nil)
+		 (path-ns nil))
+	     ))))))
 
 (defun !ravel () "Todo")
 (defun !flatten (tensor)
