@@ -221,7 +221,7 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 	       (cl-waffe::waffetensor-tensor-ident tensor)
 	       args-table)
 	      (data tensor))
-	(format jit-id "O")
+	(format jit-id "O") ; it could produce type-error, replace with its type name.
 	(cl-waffe::waffetensor-tensor-ident tensor))))))
       
 (defun generate-kernel-code (jit-id args-table mat-dims-table tensor lisp-function args)
