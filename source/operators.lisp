@@ -1215,7 +1215,8 @@ OutputのShapeは全て共通じゃないとダメ
 						      o1))
 						 routs)
 						(!shape (nth index tensors)))))))
-		       (values ctime (list o-exp outs opes indices exps)))))
+		       (values ctime
+			       (list outs opes indices exps)))))
 	       (get-sum-symbols (symbols)
 		 (let ((symbols (flatten symbols)))
 		   (map 'list
@@ -1302,8 +1303,16 @@ OutputのShapeは全て共通じゃないとダメ
 		       (progn
 			 (setq path n1)
 			 (setq code code1)))))
-	       (print path)
-	       (print code))))))))
+	       (let ((outs (nth 0 code))
+		     (top-operation (nth 1 code))
+		     (top-operation-indices (nth 2 code))
+		     (top-explicts (nth 3 code)))
+		 (print path)
+		 (print outs)
+		 (print top-operation)
+		 (print top-operation-indices)
+		 (print top-explicts)
+		 ))))))))
 
 (defun !ravel () "Todo")
 (defun !flatten (tensor)
