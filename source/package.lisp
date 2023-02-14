@@ -138,7 +138,7 @@
 
 	   #:!squeeze
 	   #:!unsqueeze
-
+	   #:!flatten
 	   #:!modify
 	   
 	   #:!relu
