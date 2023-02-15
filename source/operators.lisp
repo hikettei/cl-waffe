@@ -1,19 +1,15 @@
 
 (in-package :cl-waffe)
 
-(defgeneric assure-tensor (x))
-
 ; Todo: generic function is too slow for the usage like assure-tensor
 ; because an type isn't determined until the code executed.
 ; So, rewrite this by using typecase
-(defmethod assure-tensor ((x waffetensor)) x)
-(defmethod assure-tensor ((x fixnum))   (const x))
-(defmethod assure-tensor ((x float))    (const x))
-(defmethod assure-tensor ((x null))     (const x))
-(defmethod assure-tensor ((x cons))     (const x))
-(defmethod assure-tensor ((x function)) (const x))
-(defmethod assure-tensor ((x ratio))    (const x))
-(defmethod assure-tensor ((x mgl-mat:mat)) (const x))
+
+(declaim (ftype (function (t) waffetensor) assure-tensor))
+(defun assure-tensor (x)
+  (typecase x
+    (waffetensor x)
+    (T (const x))))
 
 (defparameter *instruction-map* (alist-hash-table `((:+= . :add)
 						    (:-= . :sub)
