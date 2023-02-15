@@ -119,6 +119,16 @@
   :backward ((d1)
 	     (list (!transpose d1))))
 
+(defnode TransposeOriginalTensor (shape)
+  :optimize t
+  :parameters ((prev-shape nil) (shape shape))
+  :forward ((x)
+	    (setf (self prev-shape) (!shape x))
+	    (with-facet (array ((value x) 'array :direction :input))
+	      (sysconst (array-to-mat (numcl:transpose array)))))
+  :backward ((dy)
+	     (list (!transpose1 dy (self prev-shape)))))
+
 (defnode MeanTensor (axis)
   :optimize t
   :parameters ((axis axis) (repeats T))
@@ -662,6 +672,26 @@ Todo: implement 3d, 4d version...
 @end[lang=lisp](code)
 @end(section)"
   (call (TransposeTensor (assure-tensor result)) (assure-tensor x)))
+
+(defun !transpose1 (x &optional result)
+  "Transpose x where x is a 2d tensor but doesn't create lazy-eval.
+
+Todo: implement 3d, 4d version...
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+(setq a (!randn `(3 5)))
+(setq a (!transpose a))
+;#Const(#<FUNCTION (LABELS CL-WAFFE.BACKENDS.MGL::LAZYTRANSPOSE :IN CL-WAFFE.BACKENDS.MGL::LAZY-EVAL-TRANSPOSE) {10038CBADB}>)
+
+(!matmul a (!randn '(3 5)))
+;#Const(((0.653... 0.400... 0.471... 0.705... 0.623...)        
+;                 ...
+;        (1.220... 0.760... 0.975... 1.360... 1.029...)) :mgl t :shape (5 5))
+@end[lang=lisp](code)
+@end(section)"
+  (call (TransposeOriginalTensor (assure-tensor result)) (assure-tensor x)))
 
 (defope !matmul (MatmulTensor) node (x y)
     "Multiplying matrices @cl:param(x) and @cl:param(y).
