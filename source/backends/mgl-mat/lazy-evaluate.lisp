@@ -62,7 +62,8 @@
 
 (defun step-and-produce-lazy-eval (function-name last-tensor lisp-function args)
   "Lazy eval's format is following: (free-args shape? return-calculated-value?)"
-  (declare (type waffetensor last-tensor)
+  (declare (optimize (speed 3))
+           (type waffetensor last-tensor)
 	   (type symbol list-function)
 	   (type list args))
   (labels ((LazyEvaluatedNodes (tensor-top return-shape? compile-and-step? &optional ignore? return-node-info return-f)
@@ -84,7 +85,9 @@
 		       (max-pos (position
 				 max-size
 				 `(,first-shape ,@args-shape)
-				 :test #'(lambda (size x) (= size (apply #'* x))))))
+				 :test #'(lambda (size x)
+					   (declare (type fixnum size))
+					   (= size (the fixnum (apply #'* x)))))))
 		  (nth max-pos `(,first-shape ,@args-shape))))
 	       (return-node-info
 		(values :lazy-eval last-tensor lisp-function args))
@@ -293,11 +296,12 @@ jit-id is a stream"
 
 (defun check-returnable (code)
   "judge whether: (+ tensor tensor) (f tensor)"
+  (declare (optimize (speed 3)))
   (let ((result t))
     (dolist (i (cdr code))
       (if (and (or
 		(typep i 'symbol)
-		(equal (symbol-name (car i)) "AREF"))
+		(string-equal (symbol-name (the symbol (car i))) "AREF"))
 	       result)
 	  (setq result t)
 	  (setq result nil)))
@@ -309,7 +313,6 @@ jit-id is a stream"
 			       code
 			       any-tensor
 			       &aux (jit-ident (gensym "JitFunction")))
-  (declare (optimize (speed 3)))
   "do define-lisp-kernel and execute it.
 Return: compiled-function's id, out"
   (declare (optimize (speed 3) (space 0))
