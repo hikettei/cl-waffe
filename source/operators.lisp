@@ -1266,56 +1266,6 @@ Example:
 	    (nth 0 tensors))))
   0)
 
-(defmacro ->1 (einsum &rest args)
-  "(-> (!einsum ~~) tensor1 tensor2)"
-					; jitで高速化したい
-					; IQ1e-10みたいな実装になった・・・
-					; Todo: protect here with alexandria:once-only
-  `(multiple-value-bind
-	 (outs operations indices explicts top-iters subscripts)
-       (funcall ,einsum (list ,@args))
-
-     (let* ((shapes-table (make-hash-table))
-	    (index-table  (make-hash-table)))
-       (mapc
-	#'(lambda (symbs tensor)
-	    (loop for i fixnum upfrom 0 below (length symbs)
-		  do (progn
-		       (setf (gethash (nth i symbs) shapes-table)
-			     (!shape tensor i)))))
-	subscripts (list ,@args))
-
-       (let ((top-shape
-	       (map 'list #'(lambda (sym) (gethash sym shapes-table)) top-iters)))
-	 (if (eql (caar explicts) 'nil)
-					;sum mode
-	     (let ((result))
-	       (mapc
-		#'(lambda (symb iter-num)
-		    (loop for i fixnum upfrom 0 below iter-num
-			  do (progn
-			       (setf (gethash symb index-table) i)
-			       (let ((output
-				       (buildup-einsum-node
-					shapes-table
-					index-table
-					operations
-					indices
-					explicts
-					outs
-					top-iters
-					(list ,@args)
-					nil)))
-				 (if (null result)
-				     (setq result output)
-				     (setq result (!add result output)))))))
-		top-iters top-shape)
-	       result)
-					;result is tensor
-	     (let ((result))
-
-	       ))))))
-
 (defmacro -> (einsum &rest args)
   ""
   (declare (optimize (speed 3)))
