@@ -674,21 +674,12 @@ Todo: implement 3d, 4d version...
   (call (TransposeTensor (assure-tensor result)) (assure-tensor x)))
 
 (defun !transpose1 (x &optional result)
-  "Transpose x where x is a 2d tensor but doesn't create lazy-eval.
-
-Todo: implement 3d, 4d version...
+  "Transpose x but doesn't produce lazy-eval.
 
 @begin(section)
 @title(Example)
 @begin[lang=lisp](code)
-(setq a (!randn `(3 5)))
-(setq a (!transpose a))
-;#Const(#<FUNCTION (LABELS CL-WAFFE.BACKENDS.MGL::LAZYTRANSPOSE :IN CL-WAFFE.BACKENDS.MGL::LAZY-EVAL-TRANSPOSE) {10038CBADB}>)
 
-(!matmul a (!randn '(3 5)))
-;#Const(((0.653... 0.400... 0.471... 0.705... 0.623...)        
-;                 ...
-;        (1.220... 0.760... 0.975... 1.360... 1.029...)) :mgl t :shape (5 5))
 @end[lang=lisp](code)
 @end(section)"
   (call (TransposeOriginalTensor (assure-tensor result)) (assure-tensor x)))

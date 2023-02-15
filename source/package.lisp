@@ -132,6 +132,7 @@
 	   #:!log
 	   #:!reshape
 	   #:!transpose
+	   #:!transpose1
 	   #:!exp
 	   #:!matmul
 	   #:!repeats
