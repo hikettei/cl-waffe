@@ -3,6 +3,9 @@
 
 (defgeneric assure-tensor (x))
 
+; Todo: generic function is too slow for the usage like assure-tensor
+; because an type isn't determined until the code executed.
+; So, rewrite this by using typecase
 (defmethod assure-tensor ((x waffetensor)) x)
 (defmethod assure-tensor ((x fixnum))   (const x))
 (defmethod assure-tensor ((x float))    (const x))
