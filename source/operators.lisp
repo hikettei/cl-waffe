@@ -1,12 +1,9 @@
 
 (in-package :cl-waffe)
 
-; Todo: generic function is too slow for the usage like assure-tensor
-; because an type isn't determined until the code executed.
-; So, rewrite this by using typecase
-
 (declaim (ftype (function (t) waffetensor) assure-tensor))
 (defun assure-tensor (x)
+  "This function is used in order to implement this: e.g. (!add 1 1)"
   (typecase x
     (waffetensor x)
     (T (const x))))

@@ -1,7 +1,9 @@
 
 (in-package :cl-waffe)
 
-(defparameter *gendoc-mode* t)
+(defparameter *gendoc-mode* t
+  "Enable this nil for general usage.
+Owing to inlined-generic-function's bugs, without this param be t, stackoverflow occurs.")
 
 (defstruct WaffeObjectUsage
   "An structure of restoring waffe objects usage
