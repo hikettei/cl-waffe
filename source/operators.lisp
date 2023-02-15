@@ -72,8 +72,8 @@
 	     (list (!mul (!mul dy (self yi))
 			 (!pow (self xi) (- (the single-float (data (self yi))) 1)))
 		   (!mul (!mul
-			     (!log (self xi))
-			     (!pow (self xi) (self yi)))
+			  (!log (self xi))
+			  (!pow (self xi) (self yi)))
 			 dy))))
 
 (defnode SqrtTensor nil
@@ -107,8 +107,8 @@
 		    (save-for-backward yi x2)
 		    (with-searching-calc-node :dot x1 x2))
   :backward ((dy)
-	       (list (!dot dy (!transpose (self yi)))
-		     (!dot (!transpose (self xi)) dy))))
+	     (list (!dot dy (!transpose (self yi)))
+		   (!dot (!transpose (self xi)) dy))))
 
 (defnode TransposeTensor (shape)
   :optimize t
@@ -140,9 +140,9 @@
 (defnode SumUpTensor ()
   :parameters ((total-len) (shape))
   :forward ((x) ; only for 2d
-	    (setf (self total-len) (/ (!size x)))
-	    (setf (self shape) (!shape x))
-	    (!sum (!sum x 1) 0))
+		(setf (self total-len) (/ (!size x)))
+		(setf (self shape) (!shape x))
+		(!sum (!sum x 1) 0))
   :backward ((dy)
 	     (list (sysconst (scal! (self total-len)
 				    (make-mat (self shape)
@@ -237,7 +237,7 @@
        ,doc
        (declare (optimize (speed 3) (safety 0)))
        (let* ((,tensor (if *no-grad* ,place ,node-object)))
-	,@body))))
+	 ,@body))))
 
 (defope !add (AddTensor) node (x y)
     "Adds x and y.
@@ -278,7 +278,7 @@ It supports:
 @end[lang=lisp](code)
 @end(section)"
   (call node (assure-tensor x) (assure-tensor y)))
-    
+
 (defope !sub (SubTensor) node (x y)
     "Subtract x by y.
 
@@ -363,12 +363,12 @@ It supports:
   (call node (assure-tensor x) (assure-tensor y)))
 
 (defope !div-old (DivTensor) node (x y)
-   "1/x"
-  ; (unless (= x 1) (error "!div-old: x must be 1"))
-  ; x must be 1, cl-waffe.backends.mgl:div has some problems?...
+    "1/x"
+					; (unless (= x 1) (error "!div-old: x must be 1"))
+					; x must be 1, cl-waffe.backends.mgl:div has some problems?...
   (call node (assure-tensor x) (assure-tensor y)))
 
-; its much faster
+					; its much faster
 (defun !div (x y)
   "Divides x by y.
 
@@ -409,7 +409,7 @@ It supports:
 @end(section)
 "
   (!mul x (!div-old 1 y)))
-  
+
 (defope !dot (DotProductTensor) node (x y)
     "Computes the dot product of x and y where x and y are 1d Tensor.
 
@@ -502,7 +502,7 @@ For nd tensors...
 		 do (setq result (!add result (!sum (!aref x i)))))
 	   result)
 	 (let* ((dims (!shape x axis))
-	       ; Note: keepdims is ignored. And May need exclusive kernel for it because its too slow when forward and backward.
+					; Note: keepdims is ignored. And May need exclusive kernel for it because its too slow when forward and backward.
 
 		(sum-dims #'(lambda (n) (loop for i upfrom 0 below (!dims x)
 	 				      collect (if (= i axis)
@@ -741,7 +741,7 @@ The matrix and x's each matrix are multiplied and is returned.
 	  (= (the fixnum (!dims y)) 1))
      (!dot x y))
     (T (call node (assure-tensor x) (assure-tensor y)))))
-	
+
 (defun !unsqueeze (x &optional (dim 0))
   "Returns a new tensor with a dimension of size one inserted at the specified position.
 
@@ -774,7 +774,7 @@ dim indicates the position, when dim=-1, it indicates a last dimension of @cl:pa
 ;        (0.802... 0.571... ~ 0.207... 0.283...)) :mgl t :shape (10 10 1 1))
 @end[lang=lisp](code)
 @end(section)"
-  ; display error when (!dims x) >= dim
+					; display error when (!dims x) >= dim
   (let ((s (!shape x)))
     (case dim
       (0  (setq s `(1 ,@s)))
@@ -822,11 +822,11 @@ If the specified position of a tensor isn't one, !squeeze is skipped.
       (cond
 	((null dim) (setq s (remove 1 s)))
 	((eq dim 0) (setq s (if (= (car s) 1)
-		       (cdr s)
-		       s)))
+				(cdr s)
+				s)))
 	((eq dim -1) (setq s (if (= (car (last s)) 1)
-			(butlast s)
-			s)))
+				 (butlast s)
+				 s)))
 	(T (setq s (if (= (nth dim s) 1)
 		       (remove-nth dim s)
 		       s))))
@@ -971,11 +971,11 @@ atanh(x) = 1/tanh(x)"
 				 (the fixnum dim)))
 		  dim))
 	 (result (!zeros (if (null dim)
-			    '(1)
-			    (or (loop for i fixnum upfrom 0 below (!dims tensor)
-				      while (< i (the fixnum dim))
-				      collect (!shape tensor i))
-				`(1)))))
+			     '(1)
+			     (or (loop for i fixnum upfrom 0 below (!dims tensor)
+				       while (< i (the fixnum dim))
+				       collect (!shape tensor i))
+				 `(1)))))
 	 (iter-num (/ (the fixnum (!size tensor))
 		      (the fixnum (!size result))))
 	 (dim (or dim 0)))
@@ -991,7 +991,7 @@ atanh(x) = 1/tanh(x)"
       (labels ((apply-tensor (rest-dims apply-dims)
 		 (loop for i fixnum upfrom 0 below (car rest-dims)
 		       do (if (= (length rest-dims) 1)
-			      ; the tensor now referring is the last.
+					; the tensor now referring is the last.
 			      (let* ((m-val nil)
 				     (m-pos nil)
 				     (ts (loop for i fixnum upfrom 0 below dim
@@ -1029,12 +1029,12 @@ atanh(x) = 1/tanh(x)"
 						 (setq m-pos (+ 0.0 m)))))
 					     (T (error "!argmaxmin, max-or-min is :max or :min."))))
 				  
-				(apply
-				 #'(setf aref)
-				 m-pos
-				 return-array
-				 result-dim)))
-			      ;else			      
+				  (apply
+				   #'(setf aref)
+				   m-pos
+				   return-array
+				   result-dim)))
+					;else			      
 			      (apply-tensor (cdr rest-dims)
 					    `(,@apply-dims ,i))))))
 	(apply-tensor (!shape result)
@@ -1155,7 +1155,7 @@ Example:
 	     (setq symbols (delete x symbols :count 1)))
 	 (remove-duplicates symbols))
     (remove-duplicates symbols)))
-				
+
 (defun execute-einsum-out (shapes-table
 			   index-table
 			   tensors
@@ -1180,18 +1180,18 @@ Example:
 	 (typecase index
 	   (list
 	    (let* ((target-out1 (find index outs
-				    :test #'(lambda (sym out)
-					      (eql sym (nth (1- (length out)) out)))))
+				      :test #'(lambda (sym out)
+						(eql sym (nth (1- (length out)) out)))))
 		   (target-out (loop for i fixnum upfrom 0 below (length target-out1)
 				     until (eql (nth i target-out1) '->)
 				     collect (typecase (nth i target-out1)
 					       (symbol (nth i target-out1))
 					       (list (butlast (nth i target-out1))))))
 		   (target-index (loop for i fixnum upfrom 0 below (length target-out1)
-				     until (eql (nth i target-out1) '->)
-				     collect (typecase (nth i target-out1)
-					       (symbol (nth i target-out1))
-					       (list (lastcar (nth i target-out1)))))))
+				       until (eql (nth i target-out1) '->)
+				       collect (typecase (nth i target-out1)
+						 (symbol (nth i target-out1))
+						 (list (lastcar (nth i target-out1)))))))
 	      (setf (gethash index index-table) count)
 	      (buildup-einsum-node
 	       shapes-table
@@ -1208,17 +1208,17 @@ Example:
 	 (incf count 1))
      indices)
 
-  ;(setf (gethash top-iters ~~))
+					;(setf (gethash top-iters ~~))
 
 
     (print "evaluated")
-;    (print operations)
- ;   (print indices)
-  ;(print explicts)
-  ;(print top-iters)
+					;    (print operations)
+					;   (print indices)
+					;(print explicts)
+					;(print top-iters)
 
-  
-  ;  (print (gethash (car explicts) index-table))
+    
+					;  (print (gethash (car explicts) index-table))
 
     (let ((target-tensor (map 'list #'(lambda (x)
 					(print "INDEX")
@@ -1238,27 +1238,27 @@ Example:
 
 (defmacro ->1 (einsum &rest args)
   "(-> (!einsum ~~) tensor1 tensor2)"
-  ; jitで高速化したい
-  ; IQ1e-10みたいな実装になった・・・
-  ; Todo: protect here with alexandria:once-only
+					; jitで高速化したい
+					; IQ1e-10みたいな実装になった・・・
+					; Todo: protect here with alexandria:once-only
   `(multiple-value-bind
-	(outs operations indices explicts top-iters subscripts)
+	 (outs operations indices explicts top-iters subscripts)
        (funcall ,einsum (list ,@args))
 
      (let* ((shapes-table (make-hash-table))
 	    (index-table  (make-hash-table)))
        (mapc
-	    #'(lambda (symbs tensor)
-		(loop for i fixnum upfrom 0 below (length symbs)
-		      do (progn
-			   (setf (gethash (nth i symbs) shapes-table)
-				 (!shape tensor i)))))
-	    subscripts (list ,@args))
+	#'(lambda (symbs tensor)
+	    (loop for i fixnum upfrom 0 below (length symbs)
+		  do (progn
+		       (setf (gethash (nth i symbs) shapes-table)
+			     (!shape tensor i)))))
+	subscripts (list ,@args))
 
        (let ((top-shape
 	       (map 'list #'(lambda (sym) (gethash sym shapes-table)) top-iters)))
 	 (if (eql (caar explicts) 'nil)
-	     ;sum mode
+					;sum mode
 	     (let ((result))
 	       (mapc
 		#'(lambda (symb iter-num)
@@ -1281,7 +1281,7 @@ Example:
 				     (setq result (!add result output)))))))
 		top-iters top-shape)
 	       result)
-  	     ;result is tensor
+					;result is tensor
 	     (let ((result))
 
 	       ))))))
@@ -1302,11 +1302,11 @@ See also: This operator is used with @cl:param(->).
 OutputのShapeは全て共通じゃないとダメ
 ... => ~ (repeat)"
   (unless (find '-> `,description)
-    ; Implict Mode
+					; Implict Mode
     (error "!einsum: Invaild Syntax. The required keyword -> is not found in given arguments ~a" `,description))
 
-  ; Explict Mode
-  ; parse arguments and check syntax.
+					; Explict Mode
+					; parse arguments and check syntax.
   (let* ((subscripts (loop for i fixnum upfrom 0 below (length `,description)
 			   until (equal '-> (nth i `,description))
 			   collect (nth i `,description)))
@@ -1336,7 +1336,7 @@ OutputのShapeは全て共通じゃないとダメ
 		     (T
 		      (error "!einsum: Invaild Syntax. !einsum excepts symbol or list as arguments but got ~a" `,arg))))
 	 `,subscripts)
-    ; Optimize einsum Operations.
+					; Optimize einsum Operations.
 
     (let* ((paths)) ; paths -> (tensors) -> (values n paths)
       (labels ((create-path-lambda (o-exp outs opes indices exps
@@ -1371,7 +1371,7 @@ OutputのShapeは全て共通じゃないとダメ
 		   (map 'list
 			#'(lambda (x)
 			    (setq symbols (delete x symbols :count 1)))
-		    (remove-duplicates symbols))
+			(remove-duplicates symbols))
 		   (remove-duplicates symbols)))
 	       (butnth (list n &optional (n1 nil))
 		 (loop for i fixnum upfrom 0 below (length list)
@@ -1399,7 +1399,7 @@ OutputのShapeは全て共通じゃないとダメ
 		      indices))
 	       (explore-path (operations indices outs)
 		 (if (> (length operations) 2)
-		     ; subscriptions are larger than 2.
+					; subscriptions are larger than 2.
 		     (dotimes (i (length operations))
 		       (let ((rest (afternth operations i))
 			     (rest-i (afternth indices i))
@@ -1423,14 +1423,14 @@ OutputのShapeは全て共通じゃないとダメ
 				     ->
 				     ,next-out)))))))))
 		     (let ((outs (or outs operations)))		       
-		       ; reached AB -> C 
+					; reached AB -> C 
 
-		      (print `(,@operations -> ,@explicts))
-		      (print `(,@indices -> ,@explicts)) ; result
+		       (print `(,@operations -> ,@explicts))
+		       (print `(,@indices -> ,@explicts)) ; result
 
-		      (print indices)
-		      (print outs)
-		      (print (explore-ctime explicts indices outs))
+		       (print indices)
+		       (print outs)
+		       (print (explore-ctime explicts indices outs))
 		       (push (create-path-lambda
 			      (explore-ctime explicts indices outs)
 			      outs
@@ -1442,30 +1442,30 @@ OutputのShapeは全て共通じゃないとダメ
 		      subscripts-indices
 		      nil)
 	#'(lambda (tensors)
-	   (unless (= (length tensors)
-		      (length `,subscripts))
-	     (error "!einsum: The size of subscripts and tensor doesn't match."))
+	    (unless (= (length tensors)
+		       (length `,subscripts))
+	      (error "!einsum: The size of subscripts and tensor doesn't match."))
 
-	   (multiple-value-bind (p code) (funcall (car paths) tensors)
-	     (let ((path p)
-		   (code code))
-	       (dolist (p (cdr paths))
-		 (multiple-value-bind (n1 code1) (funcall p tensors)
-		   (if (< n1 path)
-		       (progn
-			 (setq path n1)
-			 (setq code code1)))))
-	       (let ((outs (nth 0 code))
-		     (top-operation (nth 1 code))
-		     (top-operation-indices (nth 2 code))
-		     (top-explicts (nth 3 code))
-		     (top-iters (nth 4 code)))
-		 (values outs
-			 top-operation
-			 top-operation-indices
-			 top-explicts
-			 top-iters
-			 `,subscripts)))))))))
+	    (multiple-value-bind (p code) (funcall (car paths) tensors)
+	      (let ((path p)
+		    (code code))
+		(dolist (p (cdr paths))
+		  (multiple-value-bind (n1 code1) (funcall p tensors)
+		    (if (< n1 path)
+			(progn
+			  (setq path n1)
+			  (setq code code1)))))
+		(let ((outs (nth 0 code))
+		      (top-operation (nth 1 code))
+		      (top-operation-indices (nth 2 code))
+		      (top-explicts (nth 3 code))
+		      (top-iters (nth 4 code)))
+		  (values outs
+			  top-operation
+			  top-operation-indices
+			  top-explicts
+			  top-iters
+			  `,subscripts)))))))))
 
 (defmacro !einsum1 (&rest description)
   ""
@@ -1479,7 +1479,6 @@ OutputのShapeは全て共通じゃないとダメ
 	   (loop for i fixnum upfrom 0 below (length subscripts)
 		 collect i))
 	 (iter-symbols (get-sum-symbols subscripts)))
-    (print explicts)
     (labels ((get-subscript-index (tensors symbol)
 	       (loop named sloop
 		     for i fixnum upfrom 0 below (length subscripts)
@@ -1500,68 +1499,11 @@ OutputのShapeは全て共通じゃないとダメ
 	     (parse-explicts (indices tensors)
 	       (map 'list #'(lambda (x)
 			      (if (find x iter-symbols)
-				  ; Sum up about x
+					; Sum up about x
 				  (nth (position x (car explicts)) indices)
 				  t))
-		    (car explicts)))
-	     (sumup-next-iter (result result-shape tensors symbols &optional (indices nil))
-	       (loop with symbol = (car symbols)
-		     for i fixnum
-		     upfrom 0
-		       below (get-subscript-index tensors symbol)
-		     unless (null (cddr symbols)) ; remains > 2d
-		       do (sumup-next-iter
-			   result
-			   result-shape
-			   tensors
-			   (cdr symbols)
-			   `(,@indices ,i))
-		     else
-		       do (loop with indices = `(,@indices ,i)
-				with tmp = nil
-				for nth fixnum upfrom 0 below (length tensors)
-				do (let ((aref-args (parse-subscripts (nth nth tensors) nth))
-					 (expl-args (parse-explicts indices tensors)))
-				     ;(print aref-args)
-				     ;(print expl-args)
-				     ;(print indices)
-				     #|
-				     (print (apply
-					     #'!aref
-					     (nth nth tensors)
-					     indices))
-				     (print (!sum (apply
-						   #'!aref
-						   (nth nth tensors)
-						   indices)
-						  1))|#
+		    (car explicts))))
 
-				     (let* ((sumup-mode (= (apply #'* result-shape) 1))
-					    (value
-					      (if sumup-mode
-						 ; Sum up mode
-						  (!sum
-						   (apply
-						    #'!aref
-						    (nth nth tensors)
-						    indices))
-						  (!sum
-						   (apply
-						    #'!aref
-						    (nth nth tensors)
-						    indices)
-						   1 t)))
-					    (ignore-it (null tmp)))
-				       
-				       (if ignore-it
-					   (setq tmp value)
-					   (setq tmp (!mul tmp value)))
-
-				       (when (= nth (1- (length tensors)))
-					 ;reached an last term
-					 (setq result
-					       (!add result tmp)))
-				       ))))))
       #'(lambda (tensors)
 	  (let* ((result-dim (loop for m fixnum
 				   upfrom 0
@@ -1572,13 +1514,45 @@ OutputのShapeは全て共通じゃないとダメ
 						 1
 						 (shape-nth tensors m)))))
 		 (result (!zeros result-dim)))
-	    (print result)
-	    (sumup-next-iter
-	     result
-	     result-dim
-	     tensors
-	     iter-symbols)
-	    result)))))
+	    (labels ((sumup-next-iter (symbols &optional (indices nil))
+		       (loop with symbol = (car symbols)
+			     for i fixnum
+			     upfrom 0
+			       below (get-subscript-index tensors symbol)
+			     unless (null (cddr symbols)) ; remains > 2d
+			       do (sumup-next-iter
+				   (cdr symbols)
+				   `(,@indices ,i))
+			     else
+			       do (loop with indices = `(,@indices ,i)
+					with tmp = nil
+					for nth fixnum upfrom 0 below (length tensors)
+					do (let* ((sumup-mode (= (apply #'* result-dim) 1))
+						  (value (apply
+							  #'!aref
+							  (nth nth tensors)
+							  indices))
+						  (ignore-it (null tmp)))
+					     (print tmp)
+					     
+					     (if ignore-it
+						 (setq tmp value)
+						 (setq tmp (!mul tmp value)))
+
+					     (when (= nth (1- (length tensors)))
+					;reached an last term
+
+					       (print (!sum tmp 1))
+					       (setq result
+						     (!add
+						      result
+						      (if sumup-mode
+							  (!sum tmp 1)
+							  tmp))))
+					     )))))
+	      (sumup-next-iter
+	       iter-symbols)
+	      result))))))
 
 (defun !ravel () "Todo")
 (defun !flatten (tensor)
@@ -1625,11 +1599,11 @@ Example:
     (error "!modify: The instruction ~a is not found. please check the documentation" instruction))
   
   (with-optimized-operation
-      (with-searching-calc-node-optim (gethash instruction *instruction-map*)
-	(data (assure-tensor target))
-	(assure-tensor target)
-        (map 'list (lambda (x)
-		     (declare (type (or waffetensor waffedatatype) x))
-		     (the waffetensor (assure-tensor x)))
-	     args))))
+    (with-searching-calc-node-optim (gethash instruction *instruction-map*)
+      (data (assure-tensor target))
+      (assure-tensor target)
+      (map 'list (lambda (x)
+		   (declare (type (or waffetensor waffedatatype) x))
+		   (the waffetensor (assure-tensor x)))
+	   args))))
 
