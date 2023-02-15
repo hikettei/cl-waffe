@@ -117,7 +117,7 @@ Output: Tensor"
   :parameters ((shape shape))
   :regard-as-node nil
   :forward ((x y)
-	    (const (data (apply #'!write-faref x y (self shape)))))
+	    (apply #'!write-faref x y (self shape)))
   :backward ((dy)
 	     (list dy (apply #'!faref dy (self shape)))))
 

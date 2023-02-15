@@ -45,6 +45,7 @@
       (:sinh (tanh (car args)))
       (:cosh (tanh (car args)))
       (:tanh (tanh (car args)))
+      (:sum (car args))
       (T
        (error "~a is nt yet implemented" ope)))))
 
