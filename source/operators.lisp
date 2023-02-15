@@ -117,7 +117,7 @@
 	    (setf (self prev-shape) (assure-tensor (!shape x)))
 	    (with-searching-calc-node :transpose x (self shape)))
   :backward ((d1)
-	     (list (const (mgl-mat:transpose (data d1))))))
+	     (list (!transpose d1))))
 
 (defnode MeanTensor (axis)
   :optimize t
@@ -1543,7 +1543,7 @@ OutputのShapeは全て共通じゃないとダメ
 					for nth fixnum upfrom 0 below (length tensors)
 					do (let* ((args-sub (parse-subscripts nth))
 						  (exps-sub (parse-explicts args-sub))
-						  (sumup-mode (= (the fixnum (apply #'* result-dim)) 1)) ; loop irekaeru
+						  (sumup-mode (= (the fixnum (apply #'* result-dim)) 1))
 						  (value (apply
 							  #'!aref
 							  (nth nth tensors)
@@ -1556,12 +1556,12 @@ OutputのShapeは全て共通じゃないとダメ
 						  (transpose-point (if (= transpose-point (1+ (length (the list args-sub))))
 								       nil
 								       transpose-point)))
-					     (print transpose-point)
-					     (print args-sub)
-					     (print exps-sub)
-					     (print (car explicts))
-					     (print tmp)
-					     (print value)
+					    ; (print transpose-point)
+					     ;(print args-sub)
+					     ;(print exps-sub)
+					     ;(print (car explicts))
+					     ;(print tmp)
+					     ;(print value)
 
 					     (unless (null transpose-point)
 					       (let ((shape (copy-list exps-sub)))
