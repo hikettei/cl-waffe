@@ -87,19 +87,67 @@ Output: Tensor"
 	    (!softmax-function x :avoid-overflow (self avoid-overflow))))
 
 (defun !softmax (x &key (avoid-overflow t))
-  "Nothing here"
+  "Applying softmax to x. !softmax has three behaviours depending on the number of dimensions.
+
+The number of dims is...
+@begin(deflist)
+@def(1)
+@begin(term)
+Softmax is applied to dim=0
+@begin[lang=lisp](code)
+(setq a (!randn `(10)))
+(!softmax a)
+;#Const((0.910... 0.886... ~ 0.802... 0.616...) :mgl t :shape (10))
+@end[lang=lisp](code)
+@end(term)
+
+@def(2)
+@begin(term)
+Softmax is applied to dim=0
+@begin[lang=lisp](code)
+
+@end[lang=lisp](code)
+@end(term)
+
+@def(3)
+@begin(term)
+Softmax is applied to dim=0
+@begin[lang=lisp](code)
+
+@end[lang=lisp](code)
+@end(term)
+
+@def(4)
+@begin(term)
+Todo: currently, it returns error.
+@begin[lang=lisp](code)
+@end[lang=lisp](code)
+@end(term)
+@end(deflist)"
   (call (SoftMaxNode avoid-overflow) x))
 
 ; Todo :docstring
-(defmodel model-list (model-args)
+(defmodel model-list (model-list)
   :document (with-usage "model-list"
 	      :overview "define model sequentially, (e.g. x = (sequence `((layer1) (layer2))), (call x 1 tensor) => layer1's output)"
 	      :args "model1 model2 ..."
 	      :forward "@cl:param(index) represents the index of models. @cl:param(args) is the arguments for index-th model."
 	      :step-args "index &rest args")
-  :parameters ((mlist model-args))
+  :parameters ((mlist model-list))
   :forward ((index &rest args)
-	    (apply #'call (nth (data index) (self mlist)) args)))
+	    (error "model-list couldn't pass call correctly")))
+
+(defun mlist (&rest models)
+  "define mlist"
+  (model-list models))
+
+(defun mth (index mlist)
+  "Accessor for model-list"
+  (declare (type model-list mlist))
+  (nth (typecase index
+	 (waffetensor (data index))
+	 (T index))
+       (model-list-mlist mlist)))
 
 (defnode ArefTensor (shape)
   :regard-as-node nil

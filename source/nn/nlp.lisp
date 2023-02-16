@@ -65,11 +65,14 @@
 	       (biredical biredical)
 	       (wo (linearlayer hidden-size hidden-size)))
 
-  :forward ((x &optional (hs (const NIL)))
+  :forward ((x &optional (hs nil))
 	    "Input: X = (BatchSize SentenceLength Embedding_Dim)
              Output (values x{t+1} h{t+1})"
 
-	    (let* ((batch-size (!shape x 0))
+	    (let* ((hs (if (null hs)
+			   (const NIL)
+			   hs))
+		   (batch-size (!shape x 0))
 		   (s-len (!shape x 1))
 		   (hs (if (null (data hs))
 			 (!zeros `(,batch-size

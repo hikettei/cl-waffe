@@ -11,17 +11,119 @@
 
 @begin(section)
 @title(Linearlayer)
-@cl:with-package[name="cl-waffe.nn"](
-@cl:doc(struct LinearLayer)
-)
+Applies a linear transformation to the incoming data: @c((setq y (!add (!matmul x weight) bias)))
+
+@begin(section)
+@title(Parameters)
+@begin[lang=lisp](code)
+(LinearLayer in-features out-features &optional (bias T))
+@end[lang=lisp](code)
+@begin(deflist)
+
+@def(in-features (fixnum))
+@term(size of each input sample)
+@def(out-features (fixnum))
+@term(size of each output sample)
+@def(bias (boolean))
+@term(If set to nil, the layer will not learn an additive bias. default:t)
+
+@end(deflist)
 @end(section)
 
 @begin(section)
-@title(Denselayer)
-@cl:with-package[name="cl-waffe.nn"](
-@cl:doc(struct DenseLayer)
-)
+@title(Shape)
+@begin(deflist)
+
+@def(Input)
+@term(x (Tensor) where the x is the shape of (batch-size in-features))
+@def(Output)
+@term(Output: an tensor that applied linearlayer, where the tensor is the shape of (batch-size out-features))
+
+@end(deflist)
 @end(section)
+
+@begin(section)
+@title(Forward)
+@begin[lang=lisp](code)
+(call (LinearLayer 10 1) x)
+@end[lang=lisp](code)
+
+@begin(deflist)
+
+@def(x)
+@term(the input tensor)
+
+@end(deflist)
+@end(section)
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+(call (LinearLayer 10 1) (!randn `(10 10)))
+@end[lang=lisp](code)
+@end(section)
+@end(section)
+
+@begin(section)
+@title(DenseLayer)
+Calling LinearLayer, and activation specified in @cl:param(activation).
+
+@begin(section)
+@title(Parameters)
+@begin[lang=lisp](code)
+(DenseLayer in-features out-features &optional (bias t) (activation :relu))
+@end[lang=lisp](code)
+@begin(deflist)
+
+@def(in-features (fixnum))
+@term(size of each input sample)
+
+@def(out-features (fixnum))
+@term(size of each output sample)
+
+@def(bias (boolean))
+@term(If set to nil, the layer will not learn an additive bias. default:t)
+
+@def(activation (keyword or function))
+@term(activation are following: :relu :sigmoid :tanh, If set to function, that is called as an activation.)
+
+@end(deflist)
+@end(section)
+
+@begin(section)
+@title(Shape)
+@begin(deflist)
+
+@def(Input)
+@term(x (Tensor) where the x is the shape of (batch-size in-features))
+@def(Output)
+@term(Output: an tensor that applied denselayer, where the tensor is the shape of (batch-size out-features))
+
+@end(deflist)
+@end(section)
+
+@begin(section)
+@title(Forward)
+@begin[lang=lisp](code)
+(call (DenseLayer 10 1) x)
+@end[lang=lisp](code)
+
+@begin(deflist)
+
+@def(x)
+@term(the input tensor)
+
+@end(deflist)
+@end(section)
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+(call (DenseLayer 10 1)  (!randn `(10 10)))
+@end[lang=lisp](code)
+@end(section)
+@end(section)
+
 
 @begin(section)
 @title(Dropout)

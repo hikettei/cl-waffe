@@ -71,7 +71,7 @@ Output: An last value of layers."
 	      layers)
      ,input))
 
-(declaim (inline call))
+;(declaim (inline call))
 (declaim (ftype (function (t &rest waffetensor) waffetensor) call))
 (defun call (model &rest args)
   "Calls the forward steps which defined in: defnode, defmodel, defoptimizer.
@@ -104,6 +104,15 @@ Example:
 Output: Waffetensor of list which comprised of waffetensor."
   (declare (optimize (speed 3) (safety 0) (space 0)))
   ; calculating op(x,y) -> result(x, y), state
+
+
+  (when (typep model 'model-list)
+    (return-from call
+      (apply
+       #'call
+       (nth (the fixnum (data (car args)))
+	    (model-list-mlist model))
+       (cdr args))))
   (let* ((result (apply
 		  (the function (call-forward model)) args)))
     (declare (type (or null waffetensor list) result))
@@ -123,7 +132,8 @@ Output: Waffetensor of list which comprised of waffetensor."
       
     (unless *no-grad*
       (if (slot-value model 'hide-from-tree) ;is model defined by defmodel?
-	  (progn
+	  (when (or (typep result 'waffetensor)
+		    (typep result 'list))
 	    (setf (waffetensor-backward result) t)
 	    (setf (waffetensor-state result) model)
 	    (setf (waffetensor-variables result) args)
@@ -343,6 +353,7 @@ Example:
 			      body
 			      hide-from-tree
 			      optimize
+			      object-type
 			      &optional (is-node nil)
 			      &aux (thread (gensym))
 				   (is-top (gensym))
@@ -350,16 +361,30 @@ Example:
   "The macro for defining node method. (:forward :backward in defmodel, defnode, defoptimizers)
   Also, the code for managing caches."
   (let ((f-ident   (gensym (symbol-name name)))
-	(self-heap (gensym (symbol-name name))))
+	(self-heap (gensym (symbol-name name)))
+	(vars (map 'list #'(lambda (x)
+			     (typecase x
+			       (list (car x))
+			       (T x)))
+		   (remove-if #'(lambda (x) (find x `(&optional &key &aux &rest)))
+			      args))))
     `(progn
-         (declaim (ftype (function (,name ,@(map 'list (lambda (x) (declare (ignore x)) `waffetensor) `,args)) (or null waffetensor)) ,f-ident))
+         (declaim (ftype (function (,name ,@(map 'list (lambda (x) (declare (ignore x)) `waffetensor) `,args)) (or null list waffetensor)) ,f-ident))
 	 (defun ,f-ident (,self-heap ,@args)
 	   ,(if optimize
 		`(declare (optimize (speed 3) (space 0) (safety 1))
 			  (type ,name ,self-heap))
 		`(declare (type ,name ,self-heap)))
-	   ,(if hide-from-tree `(declare (type waffetensor ,@args)) nil)
+	   ,(if hide-from-tree `(declare (type waffetensor ,@vars)) nil)
 	   ; Utils that can be used in :forward and :backward
+
+	   (when (not (eql ,object-type :optimizer))
+	       ,@(map 'list #'(lambda (variable)
+				`(setq ,variable (typecase ,variable
+						   (waffetensor ,variable)
+						   (T (const ,variable)))))
+		      `,vars))
+	   
 	   (macrolet ((self (name) `(slot-value ,',self-heap ',name))
 		      (save-for-backward (name value)
 			`(let ((thread-info (waffetensor-thread-data ,value))
@@ -371,7 +396,7 @@ Example:
 				       t)
 			       ; save-for-backward is ignored when 1. in with-no-grad macro. 2. Nodes connected like (Node) -> (Node) ; (in nodes, :forward :backward doesn't create grads.)
 
-			       (when (member t (list ,@',args)
+			       (when (member t (list ,@',vars)
 					     :test
 					     #'(lambda (x y)
 						 (eql x (waffetensor-is-ancestor-param y))))
@@ -389,12 +414,13 @@ Example:
 				      (setf (self ,name) tmp)))
 				   (T (!allow-destruct smaller-value)
 				      (setf (self ,name) smaller-value)))))))))
+	     (self hide-from-tree)
 	     ,(if is-node
 		  ; when method is for models, copy tensors, and caches.
-		  `(let* ((,thread (thread (decide-thread-idx ,@args)))
+		  `(let* ((,thread (thread (decide-thread-idx ,@vars)))
 			  (,is-top (= (waffenodethread-thread-idx ,thread) 0)))
-		     (set-thread-data ,thread ,@args)
-		     (let ((result (locally ,@body)))
+		     (set-thread-data ,thread ,@vars)
+		     (let ((result (progn ,@body)))
 		       ;(declare (type waffetensor &optional result))
 		       (typecase result
 			 (list (prog1
@@ -407,8 +433,8 @@ Example:
 					result)
 				 (free-caches ,thread)
 				 (when ,is-top
-				   (set-thread-data nil ,@args))))
-			 (T
+				   (set-thread-data nil ,@vars))))
+			 (waffetensor
 			  (prog1
 			      (progn
 				(typecase (waffetensor-data result)
@@ -417,15 +443,17 @@ Example:
 				result)
 			    (free-caches ,thread)
 			    (when ,is-top
-			      (set-thread-data nil ,@args)))))))
+			      (set-thread-data nil ,@vars))))
+			 (T
+			  result))))
 		  ; when method is for nodes, or optimizers
 		  
-		  `(let ((,state (enable-node-tensor ,@args)))
+		  `(let ((,state (enable-node-tensor ,@vars)))
 		     (declare (type list ,state))
 		     (with-node-method-mode
 		       (let ((result (progn ,@body))
 			     (result-next-state (find t ,state)))
-			 (uncheck-node-tensor ,state ,@args)
+			 (uncheck-node-tensor ,state ,@vars)
 			 (typecase result
 			   (list
 			    (map 'list #'(lambda (x)
@@ -549,6 +577,7 @@ the object-type indicates the type of document format."
 	     ,(cdr forward)
 	     ,hide-from-tree
 	     ,optimize
+	     ,object-type
 	     ,(not regard-as-node))
 	 (define-node-method
 	     call-backward
@@ -557,6 +586,7 @@ the object-type indicates the type of document format."
 	     ,(cdr backward)
 	     ,hide-from-tree
 	     ,optimize
+	     ,object-type
 	     ,(not regard-as-node))))))
 
 (defun render-simple-model-structure (stream model) ; Todo: More Details

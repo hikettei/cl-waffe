@@ -1,7 +1,6 @@
 
 (in-package :cl-waffe.nn)
 
-
 ; An implementation of Inverted Dropout.
 (defnode Dropout (&optional (dropout-rate 0.5))
   :document (with-usage "Dropout"
@@ -11,9 +10,7 @@
 		(if (and (> dropout-rate 0.0)
 			 (< dropout-rate 1.0))
 		    dropout-rate
-		    (error "cl-waffe.nn: Dropout(x), x must be in the range of 0.0<x<1.0 where x is a single-float."))
-		:type
-		single-float)
+		    (error "cl-waffe.nn: Dropout(x), x must be in the range of 0.0<x<1.0 where x is a single-float.")))
 	       (mask T))
   :forward ((x)
 	    (if (eql (self mask) T) ; is first call?
