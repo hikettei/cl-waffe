@@ -1164,6 +1164,12 @@ Example:
 (defun !<= () "Todo")
 (defun !>= () "Todo")
 
+(defmacro !dotensors ()
+  "")
+
+(defun !displace ()
+  "")
+
 (defun get-sum-symbols (symbols)
   (let ((symbols (flatten symbols)))
     (map 'list

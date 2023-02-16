@@ -138,6 +138,21 @@
 	   #:!repeats
 	   #:!abs
 
+	   #:!sin
+	   #:!cos
+	   #:!tan
+	   #:!asin
+	   #:!acos
+	   #:!atan
+	   #:!sinh
+	   #:!cosh
+	   #:!asinh
+	   #:!acosh
+	   #:!atanh
+
+	   #:!argmin
+	   #:!argmax
+	   
 	   #:!squeeze
 	   #:!unsqueeze
 	   #:!flatten

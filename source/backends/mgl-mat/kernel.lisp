@@ -723,7 +723,7 @@
     (:log     (kernel-log is-first-time-call? destructable-tensor))
     (:exp     (kernel-exp is-first-time-call? destructable-tensor))
     (:sqrt    (kernel-sqrt is-first-time-call? destructable-tensor))
-    (:sin     (kernel-log is-first-time-call? destructable-tensor))
+    (:sin     (kernel-sin is-first-time-call? destructable-tensor))
     (:cos     (kernel-cos is-first-time-call? destructable-tensor))
     (:tan     (kernel-tan is-first-time-call? destructable-tensor))
     (:sinh    (kernel-sinh is-first-time-call? destructable-tensor))

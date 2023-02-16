@@ -28,7 +28,7 @@
 			 do (if (and
 				 result
 				 (~= (aref r i)
-				    (funcall lisp-func (aref x1 i) (aref y1 i))))
+				     (funcall lisp-func (aref x1 i) (aref y1 i))))
 				(setq result t)
 				(setq result nil))))
 		 (format t "~ath Test: ~a~%" nth result)
@@ -97,19 +97,36 @@
 	     (~=1 (expt (data (!mean beta2)) 2) (expt avg2 2)))
 	t
 	nil)))
+#|
+(defun test-einsum ()
+(let ((r1 (-> (!einsum (i j) (i j) -> (i j))
+a
+b)))
+(and
+(= (value r1) (value (!sum (!mul a b)))))))
+|#
 
 (format t "Operating with Default Mode(cache=nil, jit=nil).~%")
 
-(test cl-waffe-test
-  (is (operate-test #'!add #'+))
-  (is (operate-test #'!sub #'-))
-  (is (operate-test #'!mul #'*))
-  (is (operate-test #'!div #'/)) ;coerce single-float?
+(test operator-test
 
-  (is (operate-func #'!exp #'exp))
-  (is (operate-func #'!log #'log))
-  (is (operate-func #'!sqrt #'sqrt))
-  (is (operate-func #'!tanh #'tanh))
-  (is (test-cross-entropy))
-  (is (test-beta)))
+      (is (operate-test #'!add #'+))
+      (is (operate-test #'!sub #'-))
+      (is (operate-test #'!mul #'*))
+      (is (operate-test #'!div #'/)) ;coerce single-float?
+
+      (is (operate-func #'!exp #'exp))
+      (is (operate-func #'!log #'log))
+
+      (is (operate-func #'!sqrt #'sqrt))
+      
+      (is (operate-func #'!sin #'sin))
+      (is (operate-func #'!cos #'cos))
+      (is (operate-func #'!tan #'tan))
+      
+      (is (operate-func #'!sinh #'sinh))
+      (is (operate-func #'!cosh #'cosh))
+      (is (operate-func #'!tanh #'tanh))
+      (is (test-cross-entropy))
+      (is (test-beta)))
 

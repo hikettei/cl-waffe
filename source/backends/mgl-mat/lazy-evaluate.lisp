@@ -64,7 +64,7 @@
   "Lazy eval's format is following: (free-args shape? return-calculated-value?)"
   (declare (optimize (speed 3))
            (type waffetensor last-tensor)
-	   (type symbol list-function)
+	   (type symbol lisp-function)
 	   (type list args))
   (labels ((LazyEvaluatedNodes (tensor-top return-shape? compile-and-step? &optional ignore? return-node-info return-f)
 	     (declare (ignore ignore?))
@@ -112,7 +112,7 @@ args ... must be nil or cons. note that you must ignore the first argument
 When the tensor isn't appropriate, do nothing."
   (declare (type list args))
   `(if (and
-	; force-ignore-jit: avoid kernel -> jit -> kernel -> jit ...
+	; force-ignore-jit, to avoid: kernel -> jit -> kernel -> jit ... err
 	(not (cl-waffe::waffetensor-force-ignore-jit ,tensor))
 	(or (and cl-waffe.caches:*static-node-mode*
 		 (cl-waffe::waffetensor-thread-data ,tensor))
