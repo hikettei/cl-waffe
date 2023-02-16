@@ -1,6 +1,6 @@
 
 @begin(section)
-@title(Reference for cl-waffe)
+@title(cl-waffe)
 @begin(section)
 
 @title(Package: cl-waffe)

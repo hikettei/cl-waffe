@@ -42,21 +42,35 @@ Having not gpus, I can't test my framework on cuda ><. CUDA supporting are a lit
 @link[uri="./using-tensor.html"](The usage of cl-waffe tensor) The basic usage of cl-waffe's tensor, and JIT Compiler etc...
 @end(term)
 
-@def(Documentation)
+@def(Documentation for each packages.)
 @begin(term)
 @link[uri="./cl-waffe.html"](cl-waffe)
 
 
-@link[uri="./cl-waffe.html"](cl-waffe.nn)
+@link[uri="./cl-waffe.nn.html"](cl-waffe.nn)
 
 
-@link[uri="./cl-waffe.html"](cl-waffe.optimizers)
+@link[uri="./cl-waffe.optimizers.html"](cl-waffe.optimizers)
 
 
-@link[uri="./cl-waffe.html"](cl-waffe.io)
+@link[uri="./cl-waffe.io.html"](cl-waffe.io)
 
 
-@link[uri="./cl-waffe.html"](cl-waffe.caches)
+@link[uri="./cl-waffe.caches.html"](cl-waffe.caches)
+
+@end(term)
+
+@def(Storeroom)
+@begin(term)
+
+@link[uri="./tensor-operations.html"](Tensor Operators)
+
+
+@link[uri="./neural-networks.html"](Neural Networks)
+
+
+@link[uri="./optimizers.html"](Optimizers)
+
 
 @end(term)
 
