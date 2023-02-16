@@ -25,6 +25,8 @@ cl-waffe is a deep learning framework for Common Lisp, which is aimed to:
 
 ⚠️ Please note that @b(THIS IS NOT YET PRACTICAL.)
 
+⚠️The Document also contains information on functions that have not yet been implemented or validated.
+
 Having not gpus, I can't test my framework on cuda ><. CUDA supporting are a little further along.
 @end(section)
 
@@ -63,7 +65,7 @@ Having not gpus, I can't test my framework on cuda ><. CUDA supporting are a lit
 @def(Storeroom)
 @begin(term)
 
-@link[uri="./tensor-operations.html"](Tensor Operators)
+@link[uri="./operators.html"](Tensor Operators)
 
 
 @link[uri="./neural-networks.html"](Neural Networks)
