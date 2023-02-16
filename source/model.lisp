@@ -350,15 +350,21 @@ Example:
   "The macro for defining node method. (:forward :backward in defmodel, defnode, defoptimizers)
   Also, the code for managing caches."
   (let ((f-ident   (gensym (symbol-name name)))
-	(self-heap (gensym (symbol-name name))))
+	(self-heap (gensym (symbol-name name)))
+	(vars (map 'list #'(lambda (x)
+			     (typecase x
+			       (list (car x))
+			       (T x)))
+		   (remove-if #'(lambda (x) (find x `(&optional &key &aux &rest)))
+			      args))))
     `(progn
-         (declaim (ftype (function (,name ,@(map 'list (lambda (x) (declare (ignore x)) `waffetensor) `,args)) (or null waffetensor)) ,f-ident))
+         (declaim (ftype (function (,name ,@(map 'list (lambda (x) (declare (ignore x)) `waffetensor) `,args)) (or null list waffetensor)) ,f-ident))
 	 (defun ,f-ident (,self-heap ,@args)
 	   ,(if optimize
 		`(declare (optimize (speed 3) (space 0) (safety 1))
 			  (type ,name ,self-heap))
 		`(declare (type ,name ,self-heap)))
-	   ,(if hide-from-tree `(declare (type waffetensor ,@args)) nil)
+	   ,(if hide-from-tree `(declare (type waffetensor ,@vars)) nil)
 	   ; Utils that can be used in :forward and :backward
 	   (macrolet ((self (name) `(slot-value ,',self-heap ',name))
 		      (save-for-backward (name value)
@@ -371,7 +377,7 @@ Example:
 				       t)
 			       ; save-for-backward is ignored when 1. in with-no-grad macro. 2. Nodes connected like (Node) -> (Node) ; (in nodes, :forward :backward doesn't create grads.)
 
-			       (when (member t (list ,@',args)
+			       (when (member t (list ,@',vars)
 					     :test
 					     #'(lambda (x y)
 						 (eql x (waffetensor-is-ancestor-param y))))
@@ -389,12 +395,13 @@ Example:
 				      (setf (self ,name) tmp)))
 				   (T (!allow-destruct smaller-value)
 				      (setf (self ,name) smaller-value)))))))))
+	     (self hide-from-tree)
 	     ,(if is-node
 		  ; when method is for models, copy tensors, and caches.
-		  `(let* ((,thread (thread (decide-thread-idx ,@args)))
+		  `(let* ((,thread (thread (decide-thread-idx ,@vars)))
 			  (,is-top (= (waffenodethread-thread-idx ,thread) 0)))
-		     (set-thread-data ,thread ,@args)
-		     (let ((result (locally ,@body)))
+		     (set-thread-data ,thread ,@vars)
+		     (let ((result (progn ,@body)))
 		       ;(declare (type waffetensor &optional result))
 		       (typecase result
 			 (list (prog1
@@ -407,7 +414,7 @@ Example:
 					result)
 				 (free-caches ,thread)
 				 (when ,is-top
-				   (set-thread-data nil ,@args))))
+				   (set-thread-data nil ,@vars))))
 			 (T
 			  (prog1
 			      (progn
@@ -417,15 +424,15 @@ Example:
 				result)
 			    (free-caches ,thread)
 			    (when ,is-top
-			      (set-thread-data nil ,@args)))))))
+			      (set-thread-data nil ,@vars)))))))
 		  ; when method is for nodes, or optimizers
 		  
-		  `(let ((,state (enable-node-tensor ,@args)))
+		  `(let ((,state (enable-node-tensor ,@vars)))
 		     (declare (type list ,state))
 		     (with-node-method-mode
 		       (let ((result (progn ,@body))
 			     (result-next-state (find t ,state)))
-			 (uncheck-node-tensor ,state ,@args)
+			 (uncheck-node-tensor ,state ,@vars)
 			 (typecase result
 			   (list
 			    (map 'list #'(lambda (x)
