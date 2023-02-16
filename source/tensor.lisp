@@ -258,7 +258,7 @@ When the argument that you want to insert is a tensor, this function automatical
     (ratio
      (if (eq mgl-mat:*default-mat-ctype* :double) ;...
 	 (coerce content 'double-float)
-	 (coerce content 'float)))
+	 (coerce content 'single-float)))
     (simple-array (mgl-mat:array-to-mat content))
     (T content)))
 
@@ -581,15 +581,12 @@ Example:
 
 (defun (setf !aref) (value tensor &rest dims)
   "Todo: Define it as macro and (setq tensor ~)"
-  (setf tensor (setf (!areflist tensor dims) value)))
+  (setf (!areflist tensor dims) value))
 
 (defun (setf !areflist) (value tensor dims)
   ; For backward, you need to call it like (setq z (setf (!aref x ~) ~))
   ; To solve this problem, i guess i need more macros.
   (setf tensor (call (SetfArefTensor dims) tensor (assure-tensor value))))
-	 
-(defun !where () "Todo")
-(defun !index () "Todo")
 
 (defmacro !row-major-aref (tensor index)
   `(mgl-mat:row-major-mref (data ,tensor) ,index))
@@ -1042,6 +1039,62 @@ Example:
 ;        (0.458... 0.194... ~ 0.902... 0.480...)) :mgl t :shape (10 10))
 @end[lang=lisp](code)"
   `(const (data ,tensor)))
+
+(defun !where (condition tensor then else)
+  "Return a tensor of elements selected from either x or y, depending on condition.
+
+@cl:param(condition) is given as a lambda expression, which called with an value of (aref tensor index).
+
+!where defined as
+
+@c(out = if (condition(tensor[i]), then, else))
+
+Return: A tensor of shape that equal to the condition.
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+(setq a (!random `(10 10) '(-1.0 1.0)))
+;#Const(((0.042... -0.36... ~ 0.250... 0.967...)        
+;                 ...
+;        (-0.21... 0.962... ~ -0.32... 0.215...)) :mgl t :shape (10 10))
+
+(!where #'(lambda (x) (> x 0)) a 1.0 0.0)
+;#Const(((1.0 0.0 ~ 1.0 1.0)        
+;                 ...
+;        (0.0 1.0 ~ 0.0 1.0)) :mgl t :shape (10 10))
+
+; works as ReLU
+
+(!mul a (!where #'(lambda (x) (> x 0)) a 1.0 0.0))
+;#Const(((0.042... 0.0... ~ 0.250... 0.967...)        
+;                 ...
+;        (0.0... 0.962... ~ 0.0... 0.215...)) :mgl t :shape (10 10))
+@end[lang=lisp](code)
+@end(section)"
+  (declare (optimize (speed 3))
+	   (type function condition)
+	   (type waffetensor tensor)
+	   (type single-float then else))
+  (value tensor)	      
+  (let ((result (!zeros (!shape tensor))))
+    (with-facets ((result-array ((data result)
+				 'backing-array
+				 :direction
+				 :output))
+		  (tensor-array ((data tensor)
+				 'backing-array
+				 :direction
+				 :input)))
+      (declare (type (simple-array single-float) result-array tensor-array))
+      (loop for i fixnum upfrom 0 below (!size tensor)
+	    do (setf (aref result-array i)
+		     (if (funcall condition (aref tensor-array i))
+			 then
+			 else))))
+    result))
+
+(defun !index () "Todo")
 
 (defun write-description (res backward backend)
   ; Parameter { ... <= here }

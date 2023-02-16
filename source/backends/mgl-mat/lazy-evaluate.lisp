@@ -62,8 +62,9 @@
 
 (defun step-and-produce-lazy-eval (function-name last-tensor lisp-function args)
   "Lazy eval's format is following: (free-args shape? return-calculated-value?)"
-  (declare (type waffetensor last-tensor)
-	   (type symbol list-function)
+  (declare (optimize (speed 3))
+           (type waffetensor last-tensor)
+	   (type symbol lisp-function)
 	   (type list args))
   (labels ((LazyEvaluatedNodes (tensor-top return-shape? compile-and-step? &optional ignore? return-node-info return-f)
 	     (declare (ignore ignore?))
@@ -84,7 +85,9 @@
 		       (max-pos (position
 				 max-size
 				 `(,first-shape ,@args-shape)
-				 :test #'(lambda (size x) (= size (apply #'* x))))))
+				 :test #'(lambda (size x)
+					   (declare (type fixnum size))
+					   (= size (the fixnum (apply #'* x)))))))
 		  (nth max-pos `(,first-shape ,@args-shape))))
 	       (return-node-info
 		(values :lazy-eval last-tensor lisp-function args))
@@ -109,7 +112,7 @@ args ... must be nil or cons. note that you must ignore the first argument
 When the tensor isn't appropriate, do nothing."
   (declare (type list args))
   `(if (and
-	; force-ignore-jit: avoid kernel -> jit -> kernel -> jit ...
+	; force-ignore-jit, to avoid: kernel -> jit -> kernel -> jit ... err
 	(not (cl-waffe::waffetensor-force-ignore-jit ,tensor))
 	(or (and cl-waffe.caches:*static-node-mode*
 		 (cl-waffe::waffetensor-thread-data ,tensor))
@@ -221,7 +224,7 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 	       (cl-waffe::waffetensor-tensor-ident tensor)
 	       args-table)
 	      (data tensor))
-	(format jit-id "O")
+	(format jit-id "O") ; it could produce type-error, replace with its type name.
 	(cl-waffe::waffetensor-tensor-ident tensor))))))
       
 (defun generate-kernel-code (jit-id args-table mat-dims-table tensor lisp-function args)
@@ -293,11 +296,12 @@ jit-id is a stream"
 
 (defun check-returnable (code)
   "judge whether: (+ tensor tensor) (f tensor)"
+  (declare (optimize (speed 3)))
   (let ((result t))
     (dolist (i (cdr code))
       (if (and (or
 		(typep i 'symbol)
-		(equal (symbol-name (car i)) "AREF"))
+		(string-equal (symbol-name (the symbol (car i))) "AREF"))
 	       result)
 	  (setq result t)
 	  (setq result nil)))
@@ -309,7 +313,6 @@ jit-id is a stream"
 			       code
 			       any-tensor
 			       &aux (jit-ident (gensym "JitFunction")))
-  (declare (optimize (speed 3)))
   "do define-lisp-kernel and execute it.
 Return: compiled-function's id, out"
   (declare (optimize (speed 3) (space 0))

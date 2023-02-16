@@ -1,12 +1,12 @@
 @begin(section)
-@title(Advanced)
+@title(Extend library)
 
-defnode, defoptimizer etc...
+Here's tutorials for defnode, defoptimizer etc...
 
 @begin(section)
 @title(Exported)
 
-Coming soon...
+Todo:
 
 
 @end(section)

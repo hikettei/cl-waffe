@@ -3,38 +3,32 @@
 @title(cl-waffe.optimizers)
 
 @begin(section)
-@title(SGD)
-@cl:with-package[name="cl-waffe.optimizers"](
-@cl:doc(struct SGD)
-)
-@end(section)
+@title(Sections)
 
-@begin(section)
-@title(Momentum)
-@cl:with-package[name="cl-waffe.optimizers"](
-@cl:doc(struct Momentum)
-)
-@end(section)
+@begin(deflist)
+@def(Exported)
+@begin(term)
+@link[uri="./optimizers.html#sgd"](SGD)
 
-@begin(section)
-@title(AdaGrad)
-@cl:with-package[name="cl-waffe.optimizers"](
-@cl:doc(struct AdaGrad)
-)
-@end(section)
 
-@begin(section)
-@title(RMSProp)
-@cl:with-package[name="cl-waffe.optimizers"](
-@cl:doc(struct RMSProp)
-)
-@end(section)
+@link[uri="./optimizers.html#momentum"](Momentum)
 
-@begin(section)
-@title(Adam)
-@cl:with-package[name="cl-waffe.optimizers"](
-@cl:doc(struct Adam)
-)
+
+@link[uri="./optimizers.html#adagrad"](AdaGrad)
+
+
+@link[uri="./optimizers.html#rmsprop"](RMSProp)
+
+
+@link[uri="./optimizers.html#adam"](Adam)
+
+
+@link[uri="./optimizers.html#adamw"](AdamW)
+
+
+@link[uri="./optimizers.html#radam"](RAdam)
+@end(term)
+@end(deflist)
 @end(section)
 
 @end(section)

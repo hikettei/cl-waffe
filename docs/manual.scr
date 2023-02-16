@@ -8,32 +8,84 @@
 
 @b(This package is in development.)
 
-cl-waffe is a deep learning framework, which is aimed to:
+cl-waffe is a deep learning framework for Common Lisp, which is aimed to:
 
 @begin(enum)
-@item(Simple and fast.)
-@item(Integrate environments.)
-@item(Extensible for users.)
+@item(Simple And Fast.)
+@item(Integrate Environments.)
+@item(Extensible For Users.)
 @end(enum)
-
 @end(section)
 
 @begin(section)
-@title(Todo List And Problems)
-@begin(enum)
-@item(Complete this document)
-@item(the other are in Readme.md)
-@end(enum)
+@title(Problems)
+⚠️This framework is under development and contains many bugs.
+
+⚠️ Also, APIs can be changed without notice.
+
+⚠️ Please note that @b(THIS IS NOT YET PRACTICAL.)
+
+⚠️The Document also contains information on functions that have not yet been implemented or validated.
+
+Having not gpus, I can't test my framework on cuda ><. CUDA supporting are a little further along.
+@end(section)
+
+@begin(section)
+@title(Sections)
+@begin(deflist)
+@def(Learn cl-waffe)
+@begin(term)
+@link[uri="./mnist-tutorial.html"](Tutorial With MNIST) Let's get started with MNIST
+
+
+@link[uri="./extend-library.html"](Extend cl-waffe As you wish) cl-waffe's features are exported to users, in order to extend everything.
+
+
+@link[uri="./using-tensor.html"](The usage of cl-waffe tensor) The basic usage of cl-waffe's tensor, and JIT Compiler etc...
+@end(term)
+
+@def(Documentation for each packages.)
+@begin(term)
+@link[uri="./cl-waffe.html"](cl-waffe)
+
+
+@link[uri="./cl-waffe.nn.html"](cl-waffe.nn)
+
+
+@link[uri="./cl-waffe.optimizers.html"](cl-waffe.optimizers)
+
+
+@link[uri="./cl-waffe.io.html"](cl-waffe.io)
+
+
+@link[uri="./cl-waffe.caches.html"](cl-waffe.caches)
+
+@end(term)
+
+@def(Storeroom)
+@begin(term)
+
+@link[uri="./operators.html"](Tensor Operators)
+
+
+@link[uri="./neural-networks.html"](Neural Networks)
+
+
+@link[uri="./optimizers.html"](Optimizers)
+
+
+@end(term)
+
+@end(deflist)
 @end(section)
 
 @begin(section)
 @title(Pull Requests)
 
-Pull requests are welcome at @link[uri="https://github.com/hikettei/cl-waffe"](Original Repository)
+Bug reports and Pull requests are welcome at @link[uri="https://github.com/hikettei/cl-waffe"](Original Repository)
 
-In paticular, additional nodes are welcome, don't worry too much about performance.
 
-To be honest, English is not my cup of tea, so feel free to point out my mistakes in English.
+To be honest, English is not my cup of tea, so please let me know if there are any errors in my English.
 
 @end(section)
 @begin(section)
@@ -65,11 +117,18 @@ your startup script: (e.g.: @c(~/.sbclrc),  @c(~/.roswell/init.lisp) and so on.)
 
 It is better to run this command in advance, since training a model requires a lot of memory.
 
+
+This is because the cl-waffe data loader puts all the training data in memory and the recalculation of gradients has not yet been implemented.
+
+
+I'll implement it when I have time...
+
+
 @begin[lang=shell](code)
 $ ros config set dynamic-space-size 4gb
 @end[lang=shell](code)
 
-In SLIME and SBCL:
+For example, If you're using SBCL with SLIME...
 
 Please add:
 

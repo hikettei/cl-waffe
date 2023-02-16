@@ -132,13 +132,30 @@
 	   #:!log
 	   #:!reshape
 	   #:!transpose
+	   #:!transpose1
 	   #:!exp
 	   #:!matmul
 	   #:!repeats
+	   #:!abs
 
+	   #:!sin
+	   #:!cos
+	   #:!tan
+	   #:!asin
+	   #:!acos
+	   #:!atan
+	   #:!sinh
+	   #:!cosh
+	   #:!asinh
+	   #:!acosh
+	   #:!atanh
+
+	   #:!argmin
+	   #:!argmax
+	   
 	   #:!squeeze
 	   #:!unsqueeze
-
+	   #:!flatten
 	   #:!modify
 	   
 	   #:!relu

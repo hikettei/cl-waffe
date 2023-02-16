@@ -28,7 +28,7 @@
 			 do (if (and
 				 result
 				 (~= (aref r i)
-				    (funcall lisp-func (aref x1 i) (aref y1 i))))
+				     (funcall lisp-func (aref x1 i) (aref y1 i))))
 				(setq result t)
 				(setq result nil))))
 		 (format t "~ath Test: ~a~%" nth result)
@@ -67,6 +67,66 @@
       (and (getacc r1 a)
 	   (getacc r2 b)))))
 
+(defun pow-test ()
+  (let* ((k (!randn `(10 10)))
+	 (r (!pow k 2)))
+    (mgl-mat:M= (value r)
+		(mgl-mat:.expt! (value k) 2))))
+
+(defun dot-test ()
+  (let* ((k (!randn `(10)))
+	 (m (!randn `(10))))
+    (= (data (!dot k m))
+       (mgl-mat:dot (value k) (value m)))))
+
+(defun matmul-test ()
+  (let* ((k (!randn `(12 10)))
+	 (m (!randn `(10 12)))
+	 (l (!randn `(12 10))))
+    (and (mgl-mat:M= (value (!matmul k m))
+		     (mgl-mat:gemm! 1.0
+				    (value k)
+				    (value m)
+				    0.0
+				    (data (!zeros `(12 12)))))
+
+	 (mgl-mat:M= (value (!matmul k (!transpose l)))
+		     (mgl-mat:gemm! 1.0
+				    (value k)
+				    (value l)
+				    0.0
+				    (data (!zeros `(12 12)))
+				    :transpose-b? t)))))
+
+(defun sum-test ()
+  (let ((k (!sum (!ones '(10 10)))))
+    (= (data k) 100.0)))
+
+(defun mean-test ()
+  (let ((k (!mean (!ones '(10 10)))))
+    (= (data k) 1.0)))
+
+(defun squeeze-test ()
+  (let ((t1 (!randn `(10 10))))
+    (and (equal (!shape (!unsqueeze t1)) '(1 10 10))
+	 (equal (!shape (!squeeze (!unsqueeze t1)))
+		'(10 10)))))
+
+(defun repeat-test ()
+  (let ((t1 (!randn `(1 10))))
+    (equal (!shape (!repeats t1 0 10))
+	   '(10 10))))
+
+(defun transpose1-test ()
+  (let ((t1 (!randn `(1 10 12))))
+    (equal (!shape (!transpose1 t1 2 1 0)) '(12 10 1))))
+
+(defun !aref-test ()
+  nil)
+
+(defun !setf-aref-test ()
+  nil)
+
 (defun test-softmax (x)
   (let ((r (!softmax x))
 	(result t))
@@ -97,19 +157,52 @@
 	     (~=1 (expt (data (!mean beta2)) 2) (expt avg2 2)))
 	t
 	nil)))
+#|
+(defun test-einsum ()
+(let ((r1 (-> (!einsum (i j) (i j) -> (i j))
+a
+b)))
+(and
+(= (value r1) (value (!sum (!mul a b)))))))
+|#
 
 (format t "Operating with Default Mode(cache=nil, jit=nil).~%")
 
-(test cl-waffe-test
-  (is (operate-test #'!add #'+))
-  (is (operate-test #'!sub #'-))
-  (is (operate-test #'!mul #'*))
-  (is (operate-test #'!div #'/)) ;coerce single-float?
+(test operator-test
 
-  (is (operate-func #'!exp #'exp))
-  (is (operate-func #'!log #'log))
-  (is (operate-func #'!sqrt #'sqrt))
-  (is (operate-func #'!tanh #'tanh))
-  (is (test-cross-entropy))
-  (is (test-beta)))
+      (is (operate-test #'!add #'+))
+      (is (operate-test #'!sub #'-))
+      (is (operate-test #'!mul #'*))
+      (is (operate-test #'!div #'/)) ;coerce single-float?
+
+      (is (pow-test))
+      (is (dot-test))
+      (is (matmul-test))
+      (is (sum-test))
+      (is (mean-test))
+      (is (squeeze-test))
+      (is (repeat-test))
+      (is (transpose1-test))
+      (is (operate-func #'!exp #'exp))
+      (is (operate-func #'!log #'log))
+
+      (is (operate-func #'!sqrt #'sqrt))
+      
+      (is (operate-func #'!sin #'sin))
+      (is (operate-func #'!cos #'cos))
+      (is (operate-func #'!tan #'tan))
+      
+      (is (operate-func #'!asin #'asin))
+      (is (operate-func #'!acos #'acos))
+      (is (operate-func #'!atan #'atan))
+      
+      (is (operate-func #'!sinh #'sinh))
+      (is (operate-func #'!cosh #'cosh))
+      (is (operate-func #'!tanh #'tanh))
+
+      (is (operate-func #'!asinh #'asinh))
+      (is (operate-func #'!acosh #'acosh))
+      (is (operate-func #'!atanh #'atanh))
+      (is (test-cross-entropy))
+      (is (test-beta)))
 

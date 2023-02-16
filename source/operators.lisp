@@ -1,16 +1,12 @@
 
 (in-package :cl-waffe)
 
-(defgeneric assure-tensor (x))
-
-(defmethod assure-tensor ((x waffetensor)) x)
-(defmethod assure-tensor ((x fixnum))   (const x))
-(defmethod assure-tensor ((x float))    (const x))
-(defmethod assure-tensor ((x null))     (const x))
-(defmethod assure-tensor ((x cons))     (const x))
-(defmethod assure-tensor ((x function)) (const x))
-(defmethod assure-tensor ((x ratio))    (const x))
-(defmethod assure-tensor ((x mgl-mat:mat)) (const x))
+(declaim (ftype (function (t) waffetensor) assure-tensor))
+(defun assure-tensor (x)
+  "This function is used in order to implement this: e.g. (!add 1 1)"
+  (typecase x
+    (waffetensor x)
+    (T (const x))))
 
 (defparameter *instruction-map* (alist-hash-table `((:+= . :add)
 						    (:-= . :sub)
@@ -72,8 +68,8 @@
 	     (list (!mul (!mul dy (self yi))
 			 (!pow (self xi) (- (the single-float (data (self yi))) 1)))
 		   (!mul (!mul
-			     (!log (self xi))
-			     (!pow (self xi) (self yi)))
+			  (!log (self xi))
+			  (!pow (self xi) (self yi)))
 			 dy))))
 
 (defnode SqrtTensor nil
@@ -107,8 +103,8 @@
 		    (save-for-backward yi x2)
 		    (with-searching-calc-node :dot x1 x2))
   :backward ((dy)
-	       (list (!dot dy (!transpose (self yi)))
-		     (!dot (!transpose (self xi)) dy))))
+	     (list (!dot dy (!transpose (self yi)))
+		   (!dot (!transpose (self xi)) dy))))
 
 (defnode TransposeTensor (shape)
   :optimize t
@@ -117,7 +113,17 @@
 	    (setf (self prev-shape) (assure-tensor (!shape x)))
 	    (with-searching-calc-node :transpose x (self shape)))
   :backward ((d1)
-	     (list (const (mgl-mat:transpose (data d1))))))
+	     (list (!transpose d1))))
+
+(defnode TransposeOriginalTensor (shape)
+  :optimize t
+  :parameters ((prev-shape nil) (shape shape))
+  :forward ((x)
+	    (setf (self prev-shape) (!shape x))
+	    (with-facet (array ((value x) 'array :direction :input))
+	      (sysconst (array-to-mat (numcl:transpose array)))))
+  :backward ((dy)
+	     (list (!transpose1 dy (self prev-shape)))))
 
 (defnode MeanTensor (axis)
   :optimize t
@@ -140,9 +146,9 @@
 (defnode SumUpTensor ()
   :parameters ((total-len) (shape))
   :forward ((x) ; only for 2d
-	    (setf (self total-len) (/ (!size x)))
-	    (setf (self shape) (!shape x))
-	    (!sum (!sum x 1) 0))
+		(setf (self total-len) (/ (!size x)))
+		(setf (self shape) (!shape x))
+		(!sum (!sum x 1) 0))
   :backward ((dy)
 	     (list (sysconst (scal! (self total-len)
 				    (make-mat (self shape)
@@ -218,13 +224,26 @@
   :backward ((dy)
 	     (list (!mul dy (!sinh (self x))))))
 
+(defnode AbsTensor ()
+  :optimize t
+  :parameters ((mask nil))
+  :forward ((x)
+	    (let ((mask (!where #'(lambda (x)
+				    (declare (type single-float x))
+				    (> x 0.0))
+				x 1.0 -1.0)))
+	      (save-for-backward mask x)
+	      (!mul x mask)))
+  :backward ((dy)
+	     (list (!mul dy (self mask)))))
+
 (defmacro defope (name node-object tensor args &optional (doc "") &body body)
   (let ((place node-object))
     `(defun ,name ,args
        ,doc
        (declare (optimize (speed 3) (safety 0)))
        (let* ((,tensor (if *no-grad* ,place ,node-object)))
-	,@body))))
+	 ,@body))))
 
 (defope !add (AddTensor) node (x y)
     "Adds x and y.
@@ -265,7 +284,7 @@ It supports:
 @end[lang=lisp](code)
 @end(section)"
   (call node (assure-tensor x) (assure-tensor y)))
-    
+
 (defope !sub (SubTensor) node (x y)
     "Subtract x by y.
 
@@ -350,12 +369,12 @@ It supports:
   (call node (assure-tensor x) (assure-tensor y)))
 
 (defope !div-old (DivTensor) node (x y)
-   "1/x"
-  ; (unless (= x 1) (error "!div-old: x must be 1"))
-  ; x must be 1, cl-waffe.backends.mgl:div has some problems?...
+    "1/x"
+					; (unless (= x 1) (error "!div-old: x must be 1"))
+					; x must be 1, cl-waffe.backends.mgl:div has some problems?...
   (call node (assure-tensor x) (assure-tensor y)))
 
-; its much faster
+					; its much faster
 (defun !div (x y)
   "Divides x by y.
 
@@ -396,7 +415,7 @@ It supports:
 @end(section)
 "
   (!mul x (!div-old 1 y)))
-  
+
 (defope !dot (DotProductTensor) node (x y)
     "Computes the dot product of x and y where x and y are 1d Tensor.
 
@@ -489,7 +508,7 @@ For nd tensors...
 		 do (setq result (!add result (!sum (!aref x i)))))
 	   result)
 	 (let* ((dims (!shape x axis))
-	       ; Note: keepdims is ignored. And May need exclusive kernel for it because its too slow when forward and backward.
+					; Note: keepdims is ignored. And May need exclusive kernel for it because its too slow when forward and backward.
 
 		(sum-dims #'(lambda (n) (loop for i upfrom 0 below (!dims x)
 	 				      collect (if (= i axis)
@@ -650,6 +669,19 @@ Todo: implement 3d, 4d version...
 @end(section)"
   (call (TransposeTensor (assure-tensor result)) (assure-tensor x)))
 
+(defun !transpose1 (x &rest result)
+  "Transpose x but doesn't produce lazy-eval.
+
+Todo: implement it by myself.
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+
+@end[lang=lisp](code)
+@end(section)"
+  (call (TransposeOriginalTensor (assure-tensor result)) (assure-tensor x)))
+
 (defope !matmul (MatmulTensor) node (x y)
     "Multiplying matrices @cl:param(x) and @cl:param(y).
 
@@ -728,7 +760,7 @@ The matrix and x's each matrix are multiplied and is returned.
 	  (= (the fixnum (!dims y)) 1))
      (!dot x y))
     (T (call node (assure-tensor x) (assure-tensor y)))))
-	
+
 (defun !unsqueeze (x &optional (dim 0))
   "Returns a new tensor with a dimension of size one inserted at the specified position.
 
@@ -761,7 +793,7 @@ dim indicates the position, when dim=-1, it indicates a last dimension of @cl:pa
 ;        (0.802... 0.571... ~ 0.207... 0.283...)) :mgl t :shape (10 10 1 1))
 @end[lang=lisp](code)
 @end(section)"
-  ; display error when (!dims x) >= dim
+					; display error when (!dims x) >= dim
   (let ((s (!shape x)))
     (case dim
       (0  (setq s `(1 ,@s)))
@@ -809,11 +841,11 @@ If the specified position of a tensor isn't one, !squeeze is skipped.
       (cond
 	((null dim) (setq s (remove 1 s)))
 	((eq dim 0) (setq s (if (= (car s) 1)
-		       (cdr s)
-		       s)))
+				(cdr s)
+				s)))
 	((eq dim -1) (setq s (if (= (car (last s)) 1)
-			(butlast s)
-			s)))
+				 (butlast s)
+				 s)))
 	(T (setq s (if (= (nth dim s) 1)
 		       (remove-nth dim s)
 		       s))))
@@ -913,7 +945,6 @@ If the specified position of a tensor isn't one, !squeeze is skipped.
 
   (call node (assure-tensor x)))
 
-
 (defun !asin (x)
   "Applying asin to each element
 
@@ -950,26 +981,6 @@ acosh(x) = 1/cosh(x)"
 atanh(x) = 1/tanh(x)"
   (!div 1 (!tanh x)))
 
-(defmacro maxlist (list)
-  `(let ((max-item (apply #'max ,list)))
-     (if (<= max-item 1.0) 1.0 max-item)))
-
-(defun max-position-column (arr)
-  (declare (optimize (speed 3) (space 0) (safety 0) (debug 0))
-           (type (array single-float) arr))
-  (let ((max-arr (make-array (array-dimension arr 0)
-                             :element-type 'single-float
-                             :initial-element most-negative-single-float))
-        (pos-arr (make-array (array-dimension arr 0)
-                             :element-type 'fixnum
-                             :initial-element 0)))
-    (loop for i fixnum from 0 below (array-dimension arr 0) do
-      (loop for j fixnum from 0 below (array-dimension arr 1) do
-        (when (> (aref arr i j) (aref max-arr i))
-          (setf (aref max-arr i) (aref arr i j)
-                (aref pos-arr i) j))))
-    pos-arr))
-
 (defun !argmaxmin (tensor max-or-min &key (dim nil))
   "Todo: For GPU"
   (declare (optimize (speed 3))
@@ -979,11 +990,11 @@ atanh(x) = 1/tanh(x)"
 				 (the fixnum dim)))
 		  dim))
 	 (result (!zeros (if (null dim)
-			    '(1)
-			    (or (loop for i fixnum upfrom 0 below (!dims tensor)
-				      while (< i (the fixnum dim))
-				      collect (!shape tensor i))
-				`(1)))))
+			     '(1)
+			     (or (loop for i fixnum upfrom 0 below (!dims tensor)
+				       while (< i (the fixnum dim))
+				       collect (!shape tensor i))
+				 `(1)))))
 	 (iter-num (/ (the fixnum (!size tensor))
 		      (the fixnum (!size result))))
 	 (dim (or dim 0)))
@@ -999,7 +1010,7 @@ atanh(x) = 1/tanh(x)"
       (labels ((apply-tensor (rest-dims apply-dims)
 		 (loop for i fixnum upfrom 0 below (car rest-dims)
 		       do (if (= (length rest-dims) 1)
-			      ; the tensor now referring is the last.
+					; the tensor now referring is the last.
 			      (let* ((m-val nil)
 				     (m-pos nil)
 				     (ts (loop for i fixnum upfrom 0 below dim
@@ -1037,12 +1048,12 @@ atanh(x) = 1/tanh(x)"
 						 (setq m-pos (+ 0.0 m)))))
 					     (T (error "!argmaxmin, max-or-min is :max or :min."))))
 				  
-				(apply
-				 #'(setf aref)
-				 m-pos
-				 return-array
-				 result-dim)))
-			      ;else			      
+				  (apply
+				   #'(setf aref)
+				   m-pos
+				   return-array
+				   result-dim)))
+					;else			      
 			      (apply-tensor (cdr rest-dims)
 					    `(,@apply-dims ,i))))))
 	(apply-tensor (!shape result)
@@ -1135,15 +1146,190 @@ atanh(x) = 1/tanh(x)"
 		dim
 		(!shape tensor dim))))
 
-(defun !abs () "Todo")
+(defope !abs (AbsTensor) node (x)
+    "Computes the absolute value of each element in @cl:param(x).
+
+Example:
+@begin[lang=lisp](code)
+(setq a (!random `(10 10) '(-1.0 1.0)))
+;#Const(((0.048... 0.805... ~ 0.769... 0.252...)        
+;                 ...
+;        (0.159... -0.66... ~ -0.55... -0.23...)) :mgl t :shape (10 10))
+(!abs a)
+;#Const(((0.048... 0.805... ~ 0.769... 0.252...)        
+;                 ...
+;        (0.159... 0.667... ~ 0.553... 0.239...)) :mgl t :shape (10 10))
+@end[lang=lisp](code)"
+  (call node (assure-tensor x)))
 
 (defun != () "Todo")
 (defun !<= () "Todo")
 (defun !>= () "Todo")
 
-(defun !einsum () "Todo")
+(defmacro !dotensors ()
+  "")
+
+(defun !displace ()
+  "")
+
+(defun get-sum-symbols (symbols)
+  (let ((symbols (flatten symbols)))
+    (map 'list
+	 #'(lambda (x)
+	     (setq symbols (delete x symbols :count 1)))
+	 (remove-duplicates symbols))
+    (remove-duplicates symbols)))
+
+(defmacro -> (einsum &rest args)
+  "do not use this."
+  (declare (optimize (speed 3)))
+  `(let ((einsum ,einsum)
+	 ,@(map 'list #'(lambda (x) `(,x ,x)) args))
+     (funcall einsum (list ,@args))))
+
+(defmacro !einsum (&rest description)
+  "do not use this."
+  (declare (optimize (speed 3))
+	   (type list description))
+  (let* ((subscripts (loop for i fixnum upfrom 0 below (length `,description)
+			   until (equal '-> (nth i `,description))
+			   collect (nth i `,description)))
+	 (explicts   (loop for i fixnum upfrom (1+ (position '-> `,description))
+			   until (null (nth i `,description))
+			   collect (nth i `,description)))
+	 (iter-symbols (get-sum-symbols subscripts)))
+    (declare (type list subscripts iter-symbols))
+    (labels ((get-subscript-index (tensors symbol)
+	       (declare (type list tensors)
+			(type symbol symbol))
+	       (loop named sloop
+		     for i fixnum upfrom 0 below (length subscripts)
+		     do (loop with ith-tensor = (nth i tensors)
+			      for m fixnum
+			      upfrom 0
+				below (length (the list (nth i subscripts)))
+			      do (let ((mth-symbol (nth m (nth i subscripts))))
+				   (if (eql symbol mth-symbol)
+				       (let ((size (!shape ith-tensor m)))
+					 (declare (type fixnum size))
+					 (return-from
+					  sloop size)))))))
+	     (get-subscript-index-iter (tensors symbol nth)
+	       (declare (type symbol symbol))
+	       (if (find symbol iter-symbols)
+		   1
+		   (or (get-subscript-index tensors symbol)
+		       (shape-nth tensors nth))))
+	     (shape-nth (tensors n)
+	       (declare (type fixnum n))
+	       (loop for i fixnum upfrom 0 below n
+		     maximize (let ((res (!shape (nth i tensors) n)))
+				(declare (type fixnum res))
+				res)))
+	     (parse-subscripts (n)
+	       (nth n subscripts))
+	     (parse-explicts (indices)
+	       (map 'list #'(lambda (x)
+			      (declare (type symbol x))
+			      (if (find x iter-symbols)
+					; Sum up about x
+				  (nth (position x (the list (car explicts))) indices)
+				  t))
+		    (car explicts))))
+
+      #'(lambda (tensors)
+	  (declare (optimize (speed 3))
+		   (type list tensors))
+	  (let* ((result-dim (loop for m fixnum
+				   upfrom 0
+				     below (length
+					    (the list (car explicts)))
+				   collect (get-subscript-index-iter tensors (nth m (car explicts)) m)))
+		 (result (!zeros result-dim)))
+	    (labels ((sumup-next-iter (symbols &optional (indices nil))
+		       (declare (optimize (speed 3)))
+		       (loop with symbol = (car symbols)
+			     for i fixnum
+			     upfrom 0
+			       below (get-subscript-index tensors symbol)
+			     unless (null (cddr symbols)) ; remains > 2d
+			       do  (sumup-next-iter
+				    (cdr symbols)
+				    `(,@indices ,i))
+			     else
+			       do (loop with indices = `(,@indices ,i)
+					with tmp = nil
+					for nth fixnum upfrom 0 below (length tensors)
+					do (let* ((args-sub (parse-subscripts nth))
+						  (exps-sub (parse-explicts args-sub))
+						  (sumup-mode (= (the fixnum (apply #'* result-dim)) 1))
+						  (value (apply
+							  #'!aref
+							  (nth nth tensors)
+							  indices))
+						  (init-it (= nth 0))
+						  (transpose-point (loop for s fixnum upfrom 0 below (length (the list args-sub))
+									 minimize (if (eql (the symbol (nth s args-sub)) (the symbol (nth s (car explicts))))
+										      (1+ (length (the list args-sub)))
+										      s)))
+						  (transpose-point (if (= transpose-point (1+ (length (the list args-sub))))
+								       nil
+								       transpose-point)))
+					    ; (print transpose-point)
+					     ;(print args-sub)
+					     ;(print exps-sub)
+					     ;(print (car explicts))
+					     ;(print tmp)
+					     ;(print value)
+
+					     (unless (null transpose-point)
+					       (let ((shape (copy-list exps-sub)))
+						 (setf (nth transpose-point shape) (!size value))
+						 (setq value
+						       (!reshape value shape))))
+
+					     (setf (nth (case transpose-point
+							  (0 1)
+							  (1 0)
+							  (T 0))
+							exps-sub)
+						   i)
+					     (if init-it
+						 (setq tmp value)
+						 (setq tmp (!mul tmp value)))
+
+					     (when (= nth (1- (length tensors))) ;reached an last term
+					       (if sumup-mode
+						   (setq result (!sum tmp))
+						   (apply
+						    #'(setf !aref)
+						    tmp
+						    result
+						    exps-sub)
+						  )))))))
+	      (sumup-next-iter
+	       (or iter-symbols
+		   (car subscripts)))
+	      result))))))
+
 (defun !ravel () "Todo")
-(defun !flatten () "Todo")
+(defun !flatten (tensor)
+  "Flattens input by reshaping it into a one-dimensional tensor.
+
+The operation is the same as @c((!reshape tensor '(t)))
+
+Example:
+@begin[lang=lisp](code)
+
+(setq a (!randn `(10 10)))
+;#Const(((0.688... 0.580... ~ 0.013... 0.461...)        
+;                 ...
+;        (0.214... 0.248... ~ 0.540... 0.416...)) :mgl t :shape (10 10))
+
+(!flatten a)
+;#Const((0.688... 0.580... ~ 0.540... 0.416...) :mgl t :shape (100))
+@end[lang=lisp](code)"
+  (!reshape tensor '(t)))
 
 (declaim (ftype (function ((or mgl-mat:mat waffetensor) keyword &rest (or waffedatatype waffetensor)) waffetensor) !modify))
 (defun !modify (target instruction &rest args)
@@ -1171,11 +1357,11 @@ Example:
     (error "!modify: The instruction ~a is not found. please check the documentation" instruction))
   
   (with-optimized-operation
-      (with-searching-calc-node-optim (gethash instruction *instruction-map*)
-	(data (assure-tensor target))
-	(assure-tensor target)
-        (map 'list (lambda (x)
-		     (declare (type (or waffetensor waffedatatype) x))
-		     (the waffetensor (assure-tensor x)))
-	     args))))
+    (with-searching-calc-node-optim (gethash instruction *instruction-map*)
+      (data (assure-tensor target))
+      (assure-tensor target)
+      (map 'list (lambda (x)
+		   (declare (type (or waffetensor waffedatatype) x))
+		   (the waffetensor (assure-tensor x)))
+	   args))))
 

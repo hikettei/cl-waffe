@@ -1,5 +1,5 @@
 @begin(section)
-@title(Basics)
+@title(MNIST Tutorial)
 
 @begin(section)
 @title(First)
@@ -9,7 +9,22 @@ In this section, we define Simple MLP with cl-waffe, and train MNIST.
 
 Let's get started!
 
+All the codes below is in @link[uri="https://github.com/hikettei/cl-waffe/blob/develop1/examples/mnist.lisp"](Official Repository)
+
+After you cloned cl-waffe repos, please run this command:
+
+@begin[lang=shell](code)
+$ cd ./examples
+$ sh ./install.sh ; scripts for downloading training datum.
+$ cd ..
+
+$ ./run-test-model.ros mnist
+@end[lang=shell](code)
+
+And you can try cl-waffe quickly!
+
 @end(section)
+
 @begin(section)
 @title(Define Your Model)
 

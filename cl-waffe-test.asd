@@ -15,6 +15,7 @@
 					 (:file "utils")
 					 (:file "deriv")
 					 (:file "tensor-operate")
+					 (:file "network")
 					 (:file "operators")
 					 (:file "optimizers")
 					 )))

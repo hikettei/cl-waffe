@@ -10,13 +10,15 @@
 (defgeneric call-backward (self))
 
 (defmacro with-no-grad (&body body &aux (no-grad-first (gensym)))
-  "This macro is like with-predict-mode
+  "This macro is used in order to implict that codes below is ignored:
+save-for-backward, creating new node object, using backward and processes for it.
 
-When you predicting your models, copying values for backward is waste.
+For tasks in which grads are not required, using it helps better performance.
 
-In this macro, *no-grad* become t, and won't make computation nodes.
-
-macro (save-for-backward) is ignored and they will be faster."
+@begin[lang=lisp](code)
+(with-no-grad
+  (call (model) x))
+@end[lang=lisp](code)"
   `(let ((,no-grad-first *no-grad*))
      (setq *no-grad* t)
      (prog1 (progn ,@body)
@@ -34,6 +36,8 @@ macro (save-for-backward) is ignored and they will be faster."
 the argument @cl:param(input) must be a tensor.
 
 Refering each layers from (self) macro, destructively modifying x with the returned value.
+
+Note: This macro supposes models to be returned a single tensor, not a list.
 
 @begin[lang=lisp](code)
 
@@ -70,18 +74,34 @@ Output: An last value of layers."
 (declaim (inline call))
 (declaim (ftype (function (t &rest waffetensor) waffetensor) call))
 (defun call (model &rest args)
-  "Calling Forward Step defined by defmodel, defnode, defoptimizer.
+  "Calls the forward steps which defined in: defnode, defmodel, defoptimizer.
 
-And building computation node as long as *no-grad* is nil.
+All forward steps must be called through this function, otherwise the returned tensor doesn't have: computation nodes, thread-datum which supports performance.
+
+Building computation nodes is ignored when *no-grad* is t.
 
 @begin(deflist)
 @term(model)
 @def(Your initialized model/node/optimizer objects)
 @term(args)
-@def(The args :forward needs)
+@def(Arguments :forward needs)
 @end(deflist)
 
-Output: => @cl:param(tensor) produced by :forward"
+Example:
+@begin[lang=lisp](code)
+(defnode Add nil
+  :optimize t
+  :parameters nil
+  :forward  ((x y)
+	     (+ x y))
+  :backward ((dy) (list dy dy)))
+
+(call (Add) (const 1.0) (const 1.0))
+;=>Const(2.0)
+
+@end[lang=lisp](code)
+
+Output: Waffetensor of list which comprised of waffetensor."
   (declare (optimize (speed 3) (safety 0) (space 0)))
   ; calculating op(x,y) -> result(x, y), state
   (let* ((result (apply
@@ -117,7 +137,6 @@ Output: => @cl:param(tensor) produced by :forward"
 
 (defmacro with-model-list (&rest models)
   "Applying model-list.
-
 
 Input: models an list of models
 
