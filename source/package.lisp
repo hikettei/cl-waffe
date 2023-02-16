@@ -164,6 +164,8 @@
 	   #:!softmax
 
 	   #:with-usage
+	   #:mlist
+	   #:mth
 	   ))
 
 (defparameter *cl-waffe-object-types* `(:model

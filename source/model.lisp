@@ -378,6 +378,7 @@ Example:
 	   ,(if hide-from-tree `(declare (type waffetensor ,@vars)) nil)
 	   ; Utils that can be used in :forward and :backward
 
+	   ; Optimizer is required to use model in arguments
 	   (when (not (eql ,object-type :optimizer))
 	       ,@(map 'list #'(lambda (variable)
 				`(setq ,variable (typecase ,variable
