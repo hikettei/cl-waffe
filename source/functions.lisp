@@ -87,7 +87,43 @@ Output: Tensor"
 	    (!softmax-function x :avoid-overflow (self avoid-overflow))))
 
 (defun !softmax (x &key (avoid-overflow t))
-  "Nothing here"
+  "Applying softmax to x. !softmax has three behaviours depending on the number of dimensions.
+
+The number of dims is...
+@begin(deflist)
+@def(1)
+@begin(term)
+Softmax is applied to dim=0
+@begin[lang=lisp](code)
+(setq a (!randn `(10)))
+(!softmax a)
+;#Const((0.910... 0.886... ~ 0.802... 0.616...) :mgl t :shape (10))
+@end[lang=lisp](code)
+@end(term)
+
+@def(2)
+@begin(term)
+Softmax is applied to dim=0
+@begin[lang=lisp](code)
+
+@end[lang=lisp](code)
+@end(term)
+
+@def(3)
+@begin(term)
+Softmax is applied to dim=0
+@begin[lang=lisp](code)
+
+@end[lang=lisp](code)
+@end(term)
+
+@def(4)
+@begin(term)
+Todo: currently, it returns error.
+@begin[lang=lisp](code)
+@end[lang=lisp](code)
+@end(term)
+@end(deflist)"
   (call (SoftMaxNode avoid-overflow) x))
 
 ; Todo :docstring

@@ -698,7 +698,7 @@ Example:
 ;                 ...
 ;        (0.063... 0.607... ~ 0.460... 0.730...)) :mgl t :shape (10 10))
 @end[lang=lisp](code)"
-  (const (uniform-random! (make-mat dims))))
+  (!normal dims 0 1))
 
 (defun !beta (dims alpha beta)
   "Initializes tensor with samples of beta distribution in a faster way.
