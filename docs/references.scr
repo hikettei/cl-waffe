@@ -1,6 +1,6 @@
 
 @begin(section)
-@title(cl-waffe)
+@title(Reference for cl-waffe)
 @begin(section)
 
 @title(Package: cl-waffe)
@@ -9,7 +9,235 @@ This package is under development and APIs can be changed without notice.
 
 @begin(section)
 @title(Sections)
-Put table here
+
+@begin(deflist)
+@def(Four Arithmetic Operations)
+@begin(term)
+@link[uri="./operators.html#!add"](!add) Applying two tensors +
+
+
+@link[uri="./operators.html#!sub"](!sub) Applying two tensors -
+
+
+@link[uri="./operators.html#!mul"](!mul) Applying two tensors *
+
+
+@link[uri="./operators.html#!div"](!div)   Applying two tensors /
+@end(term)
+
+@def(Sum up and obtain a average)
+@begin(term)
+@link[uri="./operators.html#!sum"](!sum)    Sum up the given tensor in specified dims, and if needed, repeat it.
+
+
+@link[uri="./operators.html#!mean"](!mean) Find the average of a specified dimension.
+@end(term)
+
+@def(Multiplying matrices)
+@begin(term)
+@link[uri="./operators.html#!dot"](!dot)        Returns the dot product of two tensors which are 1D.
+
+
+@link[uri="./operators.html#!matmul"](!matmul)  Multiplying matrices x and y. The returned value depends on the dimension of x and y.
+
+
+@link[uri="./operators.html#!einsum"](!einsum)
+@end(term)
+
+@def(Shaping)
+@begin(term)
+@link[uri="./operators.html#!squeeze"](!squeeze) Returns a new tensor with a dimension of size one removed at the specified position.
+
+
+@link[uri="./operators.html#!unsqueeze"](!unsqueeze) Returns a new tensor with a dimension of size one inserted at the specified position.
+
+
+@link[uri="./operators.html#!transpose"](!transpose) transpose a tensor for !matmul
+
+
+@link[uri="./operators.html#!transpose1"](!transpose1) transpose a tensor but doens't produce an lazy-evaluated tensor.
+
+
+@link[uri="./operators.html#!reshape"](!reshape)
+
+
+@link[uri="./operators.html#!repeats"](!repeats)
+
+
+@link[uri="./operators.html#!flatten"](!flatten)
+
+
+@link[uri="./operators.html#!ravel"](!ravel)
+
+
+@link[uri="./operators.html#!shape"](!shape)
+
+
+@link[uri="./operators.html#!dims"](!dims)
+
+
+@link[uri="./operators.html#!size"](!size) 
+@end(term)
+
+@def(Trigonometric Functions)
+@begin(term)
+@link[uri="./operators.html#!sin"](!sin)
+
+
+@link[uri="./operators.html#!cos"](!cos)
+
+
+@link[uri="./operators.html#!tan"](!tan)
+
+
+@link[uri="./operators.html#!asin"](!asin)
+
+
+@link[uri="./operators.html#!acos"](!acos)
+
+
+@link[uri="./operators.html#!atan"](!atan)
+
+
+@link[uri="./operators.html#!sinh"](!sinh)
+
+
+@link[uri="./operators.html#!cosh"](!cosh)
+
+
+@link[uri="./operators.html#!tanh"](!tanh)
+
+
+@link[uri="./operators.html#!asinh"](!asinh)
+
+
+@link[uri="./operators.html#!acosh"](!acosh)
+
+
+@link[uri="./operators.html#!atanh"](!atanh)
+@end(term)
+
+@def(Math Functions)
+@begin(term)
+@link[uri="./operators.html#!abs"](!abs)
+
+
+@link[uri="./operators.html#!log"](!log)
+
+
+@link[uri="./operators.html#!exp"](!exp)
+
+
+@link[uri="./operators.html#!pow"](!pow)
+
+
+@link[uri="./operators.html#!sqrt"](!sqrt)
+@end(term)
+
+@def(Activations)
+@begin(term)
+@link[uri="./operators.html#!tanh"](!tanh)
+
+
+@link[uri="./operators.html#!sigmoid"](!sigmoid)
+
+
+@link[uri="./operators.html#!relu"](!relu)
+
+
+@link[uri="./operators.html#!gelu"](!gelu)
+
+
+@link[uri="./operators.html#!leakey-relu"](!leakey-relu)
+
+
+@link[uri="./operators.html#!swish"](!swish)
+
+
+@link[uri="./operators.html#!softmax"](!softmax)
+@end(term)
+
+
+@def(Handling Multidimensional Tensors)
+@begin(term)
+@link[uri="./operators.html#!aref"](!aref)
+
+
+@link[uri="./operators.html#!dotensors"](!dotensors)
+
+
+@link[uri="./operators.html#!set-batch"](!set-batch)
+
+
+@link[uri="./operators.html#!where"](!where)
+
+
+@link[uri="./operators.html#!index"](!index)
+@end(term)
+
+
+@def(Initialize A Tensor With Specified Elements)
+@begin(term)
+@link[uri="./operators.html#!zeros"](!zeros)
+
+
+@link[uri="./operators.html#!zeros"](!ones)
+
+
+@link[uri="./operators.html#!zeros"](!fill) fill a tensor with specified value
+
+
+@link[uri="./operators.html#!zeros"](!zeros-like)
+
+
+@link[uri="./operators.html#!zeros"](!ones-like)
+
+
+@link[uri="./operators.html#!zeros"](!full-like)
+
+
+@link[uri="./operators.html#!arange"](!arange)
+
+
+@link[uri="./operators.html#!init-with"](!init-with)
+@end(term)
+
+
+@def(Random)
+@begin(term)
+@link[uri="./operators.html#!random"](!random)
+
+
+@link[uri="./operators.html#!random-with"](!random-with)
+
+
+@link[uri="./operators.html#!normal"](!normal)
+
+
+@link[uri="./operators.html#!randn"](!randn)
+
+@end(term)
+
+
+@def(Samplign Probability Distributions)
+@begin(term)
+@link[uri="./operators.html#!randn"](!randn)
+
+
+@link[uri="./operators.html#!beta"](!beta)
+
+
+@link[uri="./operators.html#!gamma"](!gamma)
+
+
+@link[uri="./operators.html#!chisquare"](!chisquare)
+
+
+@link[uri="./operators.html#!bernoulli"](!bernoulli)
+@end(term)
+@end(deflist)
+
+
 @end(section)
 
 @begin(section)

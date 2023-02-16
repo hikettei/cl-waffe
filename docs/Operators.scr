@@ -1,6 +1,26 @@
 @begin(section)
-@title(Operators)
+@title(operators)
 
+@begin(section)
+@title(!shape)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !shape)
+)
+@end(section)
+
+@begin(section)
+@title(!dims)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !dims)
+)
+@end(section)
+
+@begin(section)
+@title(!size)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !size)
+)
+@end(section)
 
 @begin(section)
 @title(!zeros)
@@ -48,7 +68,7 @@
 @end(section)
 
 @begin(section)
-@title(!random-with)
+@title(!init-with)
 @cl:with-package[name="cl-waffe"](
 @cl:doc(function !init-with)
 )
@@ -346,6 +366,13 @@
 @title(!transpose)
 @cl:with-package[name="cl-waffe"](
 @cl:doc(function !transpose)
+)
+@end(section)
+
+@begin(section)
+@title(!transpose1)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !transpose1)
 )
 @end(section)
 
