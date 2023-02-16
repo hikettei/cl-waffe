@@ -669,8 +669,10 @@ Todo: implement 3d, 4d version...
 @end(section)"
   (call (TransposeTensor (assure-tensor result)) (assure-tensor x)))
 
-(defun !transpose1 (x &optional result)
+(defun !transpose1 (x &rest result)
   "Transpose x but doesn't produce lazy-eval.
+
+Todo: implement it by myself.
 
 @begin(section)
 @title(Example)
