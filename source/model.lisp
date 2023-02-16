@@ -353,6 +353,7 @@ Example:
 			      body
 			      hide-from-tree
 			      optimize
+			      object-type
 			      &optional (is-node nil)
 			      &aux (thread (gensym))
 				   (is-top (gensym))
@@ -377,11 +378,13 @@ Example:
 	   ,(if hide-from-tree `(declare (type waffetensor ,@vars)) nil)
 	   ; Utils that can be used in :forward and :backward
 
-	   ,@(map 'list #'(lambda (variable)
-			    `(setq ,variable (typecase ,variable
-					       (waffetensor ,variable)
-					       (T (const ,variable)))))
-		  `,vars)
+	   (when (not (eql ,object-type :optimizer))
+	       ,@(map 'list #'(lambda (variable)
+				`(setq ,variable (typecase ,variable
+						   (waffetensor ,variable)
+						   (T (const ,variable)))))
+		      `,vars))
+	   
 	   (macrolet ((self (name) `(slot-value ,',self-heap ',name))
 		      (save-for-backward (name value)
 			`(let ((thread-info (waffetensor-thread-data ,value))
@@ -574,6 +577,7 @@ the object-type indicates the type of document format."
 	     ,(cdr forward)
 	     ,hide-from-tree
 	     ,optimize
+	     ,object-type
 	     ,(not regard-as-node))
 	 (define-node-method
 	     call-backward
@@ -582,6 +586,7 @@ the object-type indicates the type of document format."
 	     ,(cdr backward)
 	     ,hide-from-tree
 	     ,optimize
+	     ,object-type
 	     ,(not regard-as-node))))))
 
 (defun render-simple-model-structure (stream model) ; Todo: More Details
