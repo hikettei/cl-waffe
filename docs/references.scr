@@ -3,8 +3,16 @@
 @title(cl-waffe)
 @begin(section)
 
-@title(Package: cl-waffe)
-This package is under development and APIs can be changed without notice.
+@title(Package :cl-waffe)
+⚠️This package is under development and APIs can be changed without notice.
+
+This package has:
+@begin(enum)
+@item(WaffeTensor)
+@item(Basic Tensor Operators)
+@item(Utils for define extensions (e.g.: defmodel))
+@item(Utils for training and validating (e.g.: deftrainer))
+@end(enum)
 @end(section)
 
 @begin(section)
@@ -235,280 +243,147 @@ This package is under development and APIs can be changed without notice.
 
 @link[uri="./operators.html#!bernoulli"](!bernoulli)
 @end(term)
-@end(deflist)
 
+@def(The usage of Model And Node)
+@begin(term)
+@link[uri="./cl-waffe.html#model-and-node"](Model And Node)
+
+
+@link[uri="./cl-waffe.html#defmodel"](Define Model And Use it)
+
+
+@link[uri="./cl-waffe.html#defnode"](Define Node And Use it)
+@end(term)
+
+
+@def(The usage of Trainers)
+@begin(term)
+@link[uri="./cl-waffe.html#trainer"](Trainer)
+
+
+@link[uri="./cl-waffe.html#deftrainer"](Define Trainer)
+@end(term)
+
+@def(The usage of Optimizers)
+@begin(term)
+@link[uri="./cl-waffe.html#optimizer"](Optimizer)
+
+
+@link[uri="./cl-waffe.html#defoptimizer"](Define Optimizer)
+@end(term)
+
+
+@def(The usage of Datasets)
+@begin(term)
+@link[uri="./cl-waffe.html#datasets"](Datasets)
+
+
+@link[uri="./cl-waffe.html#defdataset"](Define Datasets)
+@end(term)
+
+@def(Describe Docstrign in the template)
+@begin(term)
+@link[uri="./cl-waffe.html#documentation-template"](with-usage)
+@end(term)
+
+
+@end(deflist)
+@end(section)
+
+@begin(section)
+@title(Model And Node)
+
+Todo: tutorial
 
 @end(section)
 
 @begin(section)
-@title(Defining objects)
-
+@title(defmodel)
 @cl:with-package[name="cl-waffe"](
 
 @cl:doc(macro defmodel)
-@cl:doc(macro defnode)
-@cl:doc(macro defoptimizer)
+@cl:doc(function call)
+@cl:doc(function backward)
+@cl:doc(macro with-calling-layers)
+)
+@end(section)
 
-@cl:doc(macro defdataset)
-@cl:doc(function get-dataset)
-@cl:doc(function get-dataset-length)
+@begin(section)
+@title(defnode)
+@cl:with-package[name="cl-waffe"](
+
+@cl:doc(macro defnode)
+@cl:doc(function call)
+@cl:doc(function backward)
+
+@cl:doc(function warranty)
+@cl:doc(macro with-kernel-case)
+@cl:doc(macro call-and-dispatch-kernel)
+
+)
+@end(section)
+
+@begin(section)
+@title(Trainer)
+
+Todo: tutorials
+
+@end(section)
+
+@begin(section)
+@title(deftrainer)
+
+@cl:with-package[name="cl-waffe"](
 
 @cl:doc(macro deftrainer)
 @cl:doc(function step-model)
 @cl:doc(function predict)
+
+@cl:doc(function train)
+@cl:doc(function valid)
 )
 
 @end(section)
 
 @begin(section)
-@title(Documents in cl-waffe's object)
+@title(Datasets)
+
+Todo: tutorials here
+
+@end(section)
+
+@begin(section)
+@title(defdataset)
+
+@cl:with-package[name="cl-waffe"](
+
+@cl:doc(macro defdataset)
+@cl:doc(function get-dataset)
+@cl:doc(function get-dataset-length)
+
+)
+
+@end(section)
+
+@begin(section)
+@title(optimizer)
+Tutorials here
+@end(section)
+
+@begin(section)
+@title(defoptimizer)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(macro defoptimizer)
+)
+@end(section)
+
+@begin(section)
+@title(Documentation Template)
 @cl:with-package[name="cl-waffe"](
 @cl:doc(macro with-usage)
 @cl:doc(function build-docstring)
 )
 @end(section)
 
-@begin(section)
-@title(Tensor)
-
-@begin(section)
-@title(Basic of Tensor and backward)
-
-@begin(section)
-@title(Initialize Tensor)
-Choose your data structure as follows:
-
-@begin(deflist)
-@term(use grads)
-@def(=> Initialize with (tensor ) or (parameter ))
-@term(don't use grads)
-@def(=> Initialize with (const ))
-@end(deflist)
-
-@begin(section)
-@title(Parameters)
-
-@begin[lang=lisp](code)
-(tensor 0) ; => #Parameter{0 :device :MGL :backward NIL}
-(parameter (!zeros '(10 10)))
-; => #Parameter{((0.0 0.0 ~ 0.0 0.0)            
-;                         ...
-;            (0.0 0.0 ~ 0.0 0.0)) :mgl t :shape (10 10) :device :MGL :backward NIL}
-
-(setq mat (make-mat '(10 10)))
-(tensor mat) ;the save as above
-@end[lang=lisp](code)
-
-@end(section)
-
-@begin(section)
-@title(Constants)
-
-@begin[lang=lisp](code)
-(const 0) ; => #Const(0)
-(!zeros '(10 10)) ; =>
-;#Const(((0.0 0.0 ~ 0.0 0.0)        
-;                 ...
-;        (0.0 0.0 ~ 0.0 0.0)) :mgl t :shape (10 10))
-
-(setq mat (make-mat '(10 10)))
-(const mat) ; the same as above
-@end[lang=lisp](code)
-
-@end(section)
-
-@begin(section)
-@title(Tensor vs Const)
-The differences between Tensor and Const are as follows
-@begin(enum)
-@item(Calling (backward out) function, and (grad tensor) get new grads-value while (grad const) doesn't)
-@item(Calling optimizers will modify the model's parameters where param is a tensor, while const isn't.)
-@end(enum)
-@end(section)
-@end(section)
-
-In order to make constants an parameter, use this:
-
-@cl:with-package[name="cl-waffe"](
-@cl:doc(macro parameter)
-@cl:doc(macro detach)
-)
-
-Here's structure of waffetensor
-
-@cl:with-package[name="cl-waffe"](
-@cl:doc(struct WaffeTensor)
-)
-
-@cl:with-package[name="cl-waffe"](
-@cl:doc(function backward)
-@cl:doc(variable *no-grad*)
-@cl:doc(macro with-no-grad)
-)
-
-@end(section)
-@begin(section)
-@title(Forward Nodes)
-@cl:with-package[name="cl-waffe"](
-@cl:doc(function call)
-@cl:doc(macro with-calling-layers)
-)
-@end(section)
-@begin(section)
-@title(Exported Parameters)
-
-@cl:with-package[name="cl-waffe"](
-@cl:doc(variable *default-backend*)
-
-Configs when printing tensor.
-
-@cl:doc(variable *print-char-max-len*)
-@cl:doc(variable *print-arr-max-size*)
-@cl:doc(variable *print-mat-max-size*)
-)
-
-@end(section)
-
-@begin(section)
-@title(Types)
-
-@cl:with-package[name="cl-waffe"](
-@cl:doc(type WaffeTensorContentType)
-@cl:doc(type WaffeSupportedDataType)
-)
-@end(section)
-
-@begin(section)
-@title(Accessor)
-
-@cl:with-package[name="cl-waffe"](
-@cl:doc(function data)
-@cl:doc(macro grad)
-)
-
-
-@end(section)
-@end(section)
-
-@begin(section)
-@title(Initialize Constants)
-
-@cl:with-package[name="cl-waffe"](
-@cl:doc(function !zeros)
-@cl:doc(function !ones)
-@cl:doc(function !fill)
-@cl:doc(macro !arange)
-@cl:doc(function !random)
-@cl:doc(function !random-with)
-@cl:doc(function !normal)
-@cl:doc(macro !randn)
-@cl:doc(function !beta)
-@cl:doc(function !gamma)
-@cl:doc(function !chisquare)
-@cl:doc(function !bernoulli)
-@cl:doc(function !zeros-like)
-@cl:doc(function !ones-like)
-@cl:doc(function !full-like)
-)
-
-@end(section)
-
-
-@begin(section)
-@title(Cut and Displace Tensor)
-@cl:with-package[name="cl-waffe"](
-@cl:doc(function !set-batch)
-@cl:doc(function !reset-batch)
-
-@cl:doc(function !aref)
-)
-@end(section)
-
-@begin(section)
-@title(Shaping)
-@cl:with-package[name="cl-waffe"](
-@cl:doc(function !shape)
-@cl:doc(function !dims)
-@cl:doc(function !size)
-)
-@end(section)
-
-@begin(section)
-@title(Operations)
-
-@cl:with-package[name="cl-waffe"](
-@cl:doc(function !add)
-@cl:doc(function !sub)
-@cl:doc(function !mul)
-@cl:doc(function !div)
-
-@cl:doc(function !matmul)
-@cl:doc(function !dot)
-
-@cl:doc(function !pow)
-@cl:doc(function !sqrt)
-@cl:doc(function !log)
-@cl:doc(function !exp)
-
-@cl:doc(function !sum)
-@cl:doc(function !mean)
-
-@cl:doc(function !modify)
-
-
-@cl:doc(function !squeeze)
-@cl:doc(function !unsqueeze)
-@cl:doc(function !repeats)
-@cl:doc(function !reshape)
-@cl:doc(function !transpose)
-@cl:doc(function !aref)
-
-@cl:doc(function !modify)
-)
-
-@end(section)
-
-@begin(section)
-@title(Math Functions)
-@cl:with-package[name="cl-waffe"](
-@cl:doc(function !tanh)
-)
-@end(section)
-
-@begin(section)
-@title(Activations)
-@cl:with-package[name="cl-waffe"](
-@cl:doc(function !relu)
-@cl:doc(function !sigmoid)
-@cl:doc(function !tanh)
-@cl:doc(function !softmax)
-)
-@end(section)
-
-@begin(section)
-@title(Utils for defnode)
-These features for advanced.
-
-@cl:with-package[name="cl-waffe"](
-@cl:doc(macro warranty)
-@cl:doc(macro with-kernel-case)
-@cl:doc(macro call-and-dispatch-kernel)
-)
-@end(section)
-
-@begin(section)
-@title(Train And Valid)
-@cl:with-package[name="cl-waffe"](
-@cl:doc(function train)
-@cl:doc(function valid)
-)
-@end(section)
-
-@begin(section)
-@title(Datasets)
-@cl:with-package[name="cl-waffe"](
-@cl:doc(struct Waffedataset)
-)
-@end(section)
 
 @end(section)
