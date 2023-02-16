@@ -71,7 +71,7 @@ Output: An last value of layers."
 	      layers)
      ,input))
 
-(declaim (inline call))
+;(declaim (inline call))
 (declaim (ftype (function (t &rest waffetensor) waffetensor) call))
 (defun call (model &rest args)
   "Calls the forward steps which defined in: defnode, defmodel, defoptimizer.
@@ -104,6 +104,15 @@ Example:
 Output: Waffetensor of list which comprised of waffetensor."
   (declare (optimize (speed 3) (safety 0) (space 0)))
   ; calculating op(x,y) -> result(x, y), state
+
+
+  (when (typep model 'model-list)
+    (return-from call
+      (apply
+       #'call
+       (nth (the fixnum (data (car args)))
+	    (model-list-mlist model))
+       (cdr args))))
   (let* ((result (apply
 		  (the function (call-forward model)) args)))
     (declare (type (or null waffetensor list) result))
@@ -123,7 +132,8 @@ Output: Waffetensor of list which comprised of waffetensor."
       
     (unless *no-grad*
       (if (slot-value model 'hide-from-tree) ;is model defined by defmodel?
-	  (progn
+	  (when (or (typep result 'waffetensor)
+		    (typep result 'list))
 	    (setf (waffetensor-backward result) t)
 	    (setf (waffetensor-state result) model)
 	    (setf (waffetensor-variables result) args)
@@ -366,6 +376,12 @@ Example:
 		`(declare (type ,name ,self-heap)))
 	   ,(if hide-from-tree `(declare (type waffetensor ,@vars)) nil)
 	   ; Utils that can be used in :forward and :backward
+
+	   ,@(map 'list #'(lambda (variable)
+			    `(setq ,variable (typecase ,variable
+					       (waffetensor ,variable)
+					       (T (const ,variable)))))
+		  `,vars)
 	   (macrolet ((self (name) `(slot-value ,',self-heap ',name))
 		      (save-for-backward (name value)
 			`(let ((thread-info (waffetensor-thread-data ,value))
@@ -415,7 +431,7 @@ Example:
 				 (free-caches ,thread)
 				 (when ,is-top
 				   (set-thread-data nil ,@vars))))
-			 (T
+			 (waffetensor
 			  (prog1
 			      (progn
 				(typecase (waffetensor-data result)
@@ -424,7 +440,9 @@ Example:
 				result)
 			    (free-caches ,thread)
 			    (when ,is-top
-			      (set-thread-data nil ,@vars)))))))
+			      (set-thread-data nil ,@vars))))
+			 (T
+			  result))))
 		  ; when method is for nodes, or optimizers
 		  
 		  `(let ((,state (enable-node-tensor ,@vars)))

@@ -127,26 +127,27 @@ Todo: currently, it returns error.
   (call (SoftMaxNode avoid-overflow) x))
 
 ; Todo :docstring
-(defmodel model-list (model-list &key (return-model? nil))
+(defmodel model-list (model-list)
   :document (with-usage "model-list"
 	      :overview "define model sequentially, (e.g. x = (sequence `((layer1) (layer2))), (call x 1 tensor) => layer1's output)"
 	      :args "model1 model2 ..."
 	      :forward "@cl:param(index) represents the index of models. @cl:param(args) is the arguments for index-th model."
 	      :step-args "index &rest args")
-  :parameters ((mlist model-list)
-	       (return-model? return-model?))
+  :parameters ((mlist model-list))
   :forward ((index &rest args)
-	    (if (self return-model?)
-		(nth (data index) (self mlist))
-		(apply #'call (nth (data index) (self mlist)) args))))
+	    (error "model-list couldn't pass call correctly")))
 
 (defun mlist (&rest models)
-  (model-list models :return-model? t))
+  "define mlist"
+  (model-list models))
 
 (defun mth (index mlist)
-  (call mlist (typecase index
-		(waffetensor index)
-		(T (const index)))))
+  "Accessor for model-list"
+  (declare (type model-list mlist))
+  (nth (typecase index
+	 (waffetensor (data index))
+	 (T index))
+       (model-list-mlist mlist)))
 
 (defnode ArefTensor (shape)
   :regard-as-node nil
