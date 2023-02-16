@@ -27,11 +27,11 @@
     result))
 
 (defun mse (p y)
-  "MSE"
+  "MSE Loss"
   (!mean (!pow (!sub p y) 2) 1))
 
 (defun cross-entropy (x y &optional (delta 1e-7) (epsilon 0.0))
-  "CrossEntropy"
+  "CrossEntropy Loss"
   ; epsilon ... an parameter for label smoothing
   ; Regards Correct=1-epsilon, Incorrect=epsilon
   ; x...
@@ -65,7 +65,7 @@
 	       (list dx dx))))
 
 (defun softmax-cross-entropy (x y &key (avoid-overflow t) (delta 1e-7) (epsilon 0.0))
-  "Softmax-Cross-Entropy"
+  "Softmax-Cross-Entropy Loss"
   (if (> (!dims x) (!dims y))
       (call
        (SoftMaxCrossEntropy :avoid-overflow avoid-overflow :delta delta)
