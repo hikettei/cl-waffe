@@ -19,8 +19,12 @@
 (defparameter model-list (model-list (list (linearlayer 10 1)
 					   (linearlayer 10 1))))
 
+(defparameter model-list1 (mlist  (linearlayer 10 1)
+				  (linearlayer 10 1)))
+
 (defun test-model-list ()
   (call model-list (const 0) (!randn `(10 10)))
+  (call (mth 1 model-list1) (!randn `(10 10)))
   t)
 
 (defun test-model (model x)
