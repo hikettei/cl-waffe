@@ -103,11 +103,14 @@
 (defun all-the-same-shapes (tensor args)
   (declare (optimize (speed 3)))
   (and
-   (not (apply #'equal `(,tensor ,@args))) ; Ignore like... (+ A A)
-   (apply #'equal (remove-if #'null (map 'list #'(lambda (x)
-						   (typecase x
-						     (waffetensor (!shape x))))
-					 `(,tensor ,@args))))))
+   (or (= 1 (length `(,tensor ,@args)))
+       (not (apply #'equal `(,tensor ,@args)))) ; Ignore like... (+ A A)
+   (or
+    (= 1 (length `(,tensor ,@args)))
+    (apply #'equal (remove-if #'null (map 'list #'(lambda (x)
+						    (typecase x
+						      (waffetensor (!shape x))))
+					  `(,tensor ,@args)))))))
 
 (defmacro return-and-lazy-eval
     (function-name
