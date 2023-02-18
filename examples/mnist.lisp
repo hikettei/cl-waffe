@@ -8,9 +8,6 @@
 ; this file is excluded from cl-waffe-test
 ; here's mnist example codes and benchmark
 
-(setf cl-waffe.backends.mgl:*verbose* nil)
-(setf cl-waffe.backends.mgl:*static-node-mode* t)
-
 (defmodel MLP (activation)
   :parameters ((layer1   (denselayer (* 28 28) 512 t activation))
 	       (layer2   (denselayer 512 256 t activation))
