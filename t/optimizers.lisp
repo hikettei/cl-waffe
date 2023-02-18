@@ -59,6 +59,11 @@
 (define-test-trainer Trainer2 cl-waffe.optimizers:AdaGrad 1e-4 :relu)
 (define-test-trainer Trainer3 cl-waffe.optimizers:RMSProp 1e-4 :relu)
 (define-test-trainer Trainer4 cl-waffe.optimizers:Adam 1e-3 :relu)
+(define-test-trainer Trainer5 cl-waffe.optimizers:Adam 1e-3 :tanh)
+(define-test-trainer Trainer6 cl-waffe.optimizers:Adam 1e-3 :sigmoid)
+(define-test-trainer Trainer7 cl-waffe.optimizers:Adam 1e-3 #'!leakey-relu)
+(define-test-trainer Trainer8 cl-waffe.optimizers:Adam 1e-3 #'!gelu)
+(define-test-trainer Trainer9 cl-waffe.optimizers:Adam 1e-3 #'!swish)
 
 (test test-training
       (is (test-for (Trainer0)))
@@ -66,4 +71,9 @@
       (is (test-for (Trainer2)))
       (is (test-for (Trainer3)))
       (is (test-for (Trainer4)))
+      (is (test-for (Trainer5)))
+      (is (test-for (Trainer6)))
+      (is (test-for (Trainer7)))
+      (is (test-for (Trainer8)))
+      (is (test-for (Trainer9)))
       )
