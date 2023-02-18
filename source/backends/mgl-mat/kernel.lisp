@@ -136,7 +136,7 @@
   (declare (optimize (speed 3) (safety 0))
 	   (type symbol function)
 	   (type waffetensor x y))
-  ; assume that (!dims x) == (!dims y)
+					; assume that (!dims x) == (!dims y)
 
   (unless (= (!dims x) (!dims y))
     (error "KernelError: Can't broadcasting ~a and ~a" x y))
@@ -154,7 +154,7 @@
 					  (!shape y i))))))
 	 (out (!zeros result-shape)))
     (declare (type list dims))
-    ; Todo: CUDA Support
+					; Todo: CUDA Support
     (with-facets ((o  ((data out) 'backing-array :direction :output))
 		  (x1 ((data x) 'backing-array :direction :input))
 		  (y1 ((data y) 'backing-array :direction :input)))
@@ -184,7 +184,7 @@
 		       (by (second (nth index dims))))
 		   
 		   (when (= index (1- (length dims)))
-		     ; dif=1
+					; dif=1
 		     (cond
 		       ((and (null bx) (null by))
 			(loop for i fixnum upfrom 0 below (!shape x index)
@@ -213,7 +213,7 @@
 		   (cond
 		     ((and (null bx) (null by))
 		      (loop with x-dif fixnum = (if (= (1+ index) (1- (length dims)))
-								      
+						    
 						    (get-index `(,@aref-args1 1) x) 0)
 			    with y-dif fixnum = (if (= (1+ index) (1- (length dims)))
 						    (get-index `(,@aref-args2 1) y)
@@ -224,13 +224,13 @@
 			    for i fixnum upfrom 0 below (!shape x index)
 			    do  (progn
 				  (next
-				 (1+ index)
-				 `(,@aref-args1 ,i)
-				 `(,@aref-args2 ,i)
-				 `(,@aref-args3 ,i)
-				 (* i x-dif)
-				 (* i y-dif)
-				 (* i o-dif)))))
+				   (1+ index)
+				   `(,@aref-args1 ,i)
+				   `(,@aref-args2 ,i)
+				   `(,@aref-args3 ,i)
+				   (* i x-dif)
+				   (* i y-dif)
+				   (* i o-dif)))))
 		     ((null bx)
 		      (loop with x-dif fixnum = (if (= (1+ index) (1- (length dims)))
 						    (get-index `(,@aref-args1 1) x)
@@ -242,30 +242,30 @@
 			    do  
 
 			       (next
-				 (1+ index)
-				 `(,@aref-args1 ,i)
-				 `(,@aref-args2 0)
-				 `(,@aref-args3 ,i)
-				 (* i x-dif)
-				 0;(* i y-dif)
-				 (* i o-dif))))
+				(1+ index)
+				`(,@aref-args1 ,i)
+				`(,@aref-args2 0)
+				`(,@aref-args3 ,i)
+				(* i x-dif)
+				first-index-y
+				(* i o-dif))))
 		     ((null by)
-		       (loop with y-dif fixnum = (if (= (1+ index) (1- (length dims)))
-						     (get-index `(,@aref-args2 1) y)
-						     0)
+		      (loop with y-dif fixnum = (if (= (1+ index) (1- (length dims)))
+						    (get-index `(,@aref-args2 1) y)
+						    0)
 			    with o-dif fixnum = (if (= (1+ index) (1- (length dims)))
 						    (get-index `(,@aref-args3 1) out)
 						    0)
 			    for i fixnum upfrom 0 below (!shape y index)
 			    do  
-				  (next
-				 (1+ index)
-				 `(,@aref-args1 ,0)
-				 `(,@aref-args2 ,i)
-				 `(,@aref-args3 ,i)
-				 0;(* i x-dif)
-				 (* i y-dif)
-				 (* i o-dif))))
+			       (next
+				(1+ index)
+				`(,@aref-args1 ,0)
+				`(,@aref-args2 ,i)
+				`(,@aref-args3 ,i)
+				first-index-x
+				(* i y-dif)
+				(* i o-dif))))
 		     (T nil)))
 		 nil))
 	(next 0))
