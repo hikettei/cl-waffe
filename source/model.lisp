@@ -559,7 +559,8 @@ the object-type indicates the type of document format."
 			(waffeobjectusage
 			 (build-docstring document object-type))
 			(T "None"))))
-      `(prog1
+
+      `(progn
 	   (defstruct (,name
 		       (:print-function (lambda (m stream k)
 					  (declare (ignore k))
@@ -588,7 +589,8 @@ the object-type indicates the type of document format."
 	     ,hide-from-tree
 	     ,optimize
 	     ,object-type
-	     ,(not regard-as-node))))))
+	     ,(not regard-as-node))
+	 nil))))
 
 (defun render-simple-model-structure (stream model) ; Todo: More Details
   (format stream "[~a: ~a]" (if (slot-value model 'hide-from-tree)
