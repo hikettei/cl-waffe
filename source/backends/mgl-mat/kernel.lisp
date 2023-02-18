@@ -159,6 +159,7 @@
 		  (x1 ((data x) 'backing-array :direction :input))
 		  (y1 ((data y) 'backing-array :direction :input)))
       (declare (type (simple-array single-float) o x1 y1))
+      
       (labels ((get-index (tensor index)
 		 (declare (optimize (speed 3) (safety 0))
 			  (inline get-difference))
@@ -233,7 +234,7 @@
 				(+ first-index-y (if (= index 0)
 						     index
 						     y-dif))
-				(+ first-index-y (the fixnum (* i o-dif))))))
+				(+ first-index-o (the fixnum (* i o-dif))))))
 		     ((null by)
 		      (loop with x-dif fixnum = (get-index x index)
 			    with y-dif fixnum = (get-index y index)
