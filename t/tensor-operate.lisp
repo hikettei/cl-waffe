@@ -72,13 +72,37 @@
   (time (operate-afunc1 fname lisp-func)))
 
 (defun operate-afunc1 (fname lisp-func)
-  (let* ((ones (!ones `(10 10)))
+  (let* ((ones (!fill `(10 10) 0.10134))
 	 (r1 (funcall fname ones))
  	 (r2 (funcall fname ones)))
-    (labels ((getacc (res x)
+    (labels ((getacc (res l)
 	       (let ((result t))
 		 (with-facets ((r  ((value res) 'backing-array :direction :input))
-			       (x1 ((value x) 'backing-array)))
+			       (x1 ((value l) 'backing-array)))
+		   (loop for i fixnum upfrom 0 below 100
+			 do (if (and
+				 result
+				 (= (aref r i)
+				    (funcall lisp-func (aref x1 i))))
+				(setq result t)
+				(setq result nil))))
+		 result)))
+
+      (and (getacc r1 ones)
+	   (getacc r2 ones)))))
+
+(defun operate-afunc-cos (fname lisp-func)
+  (format t "Running Test of ~a~%" fname)
+  (time (operate-afunc1-cos fname lisp-func)))
+
+(defun operate-afunc1-cos (fname lisp-func)
+  (let* ((ones (!fill `(10 10) 1.0134))
+	 (r1 (funcall fname ones))
+ 	 (r2 (funcall fname ones)))
+    (labels ((getacc (res l)
+	       (let ((result t))
+		 (with-facets ((r  ((value res) 'backing-array :direction :input))
+			       (x1 ((value l) 'backing-array)))
 		   (loop for i fixnum upfrom 0 below 100
 			 do (if (and
 				 result
@@ -185,7 +209,7 @@
 
 (defun test-filter ()
   (let ((x (!randn `(100 100))))
-    (= 0.0 (data (!sum (!filter x #'(lambda (x) (declare (ignore x)) 0.0)))))))
+    (= 0.0 (data (!sum (!filter x #'(lambda (s) (declare (ignore s)) 0.0)))))))
 
 (defun test-activations ()
   (let ((x (!randn `(10 10))))
@@ -209,7 +233,6 @@ b)))
 (format t "Operating with Default Mode(cache=nil, jit=nil).~%")
 
 (test operator-test
-
       (is (operate-test #'!add #'+))
       (is (operate-test #'!sub #'-))
       (is (operate-test #'!mul #'*))
@@ -241,11 +264,13 @@ b)))
       (is (operate-func #'!tanh #'tanh))
 
       (is (operate-afunc #'!asinh #'asinh))
-      (is (operate-afunc #'!acosh #'acosh))
-      ;(is (operate-afunc #'!atanh #'atanh))
+      (is (operate-afunc-cos #'!acosh #'acosh))
+      (is (operate-afunc #'!atanh #'atanh))
       
       (is (test-cross-entropy))
       (is (test-activations))
       (is (test-filter))
-      (is (test-beta)))
+      (is (test-beta))
+     
+      )
 

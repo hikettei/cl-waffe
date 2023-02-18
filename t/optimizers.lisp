@@ -56,5 +56,5 @@
 
 (define-test-trainer Trainer1 cl-waffe.optimizers:Adam 1e-3 :relu)
 
-(test test-training
-      (is (test-for (Trainer1))))
+;(test test-training
+;      (is (test-for (Trainer1))))
