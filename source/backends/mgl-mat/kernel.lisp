@@ -121,7 +121,7 @@
     (make-mat (reverse dims) :initial-element value)))
 
 (defun broadcasting-apply (function x y)
-  (declare (optimize (speed 3))
+  (declare (optimize (speed 3) (safety 0) (space 0) (debug 0))
 	   (type symbol function)
 	   (type waffetensor x y))
   ; assume that (!dims x) == (!dims y)
@@ -154,7 +154,7 @@
 		   (:+ (+ a b))
 		   (:- (- a b))
 		   (:* (* a b))))
-	       (next (index &optional (aref-args1 nil) (aref-args2 nil))
+	       (next (index &optional (aref-args1 nil) (aref-args2 nil) (aref-args3 nil))
 		 (declare (type fixnum index))
 		 (let ((bx (car (nth index dims)))
 		       (by (second (nth index dims))))
@@ -168,7 +168,7 @@
 					 (apply #'aref x1 `(,@aref-args1 ,i))
 					 (apply #'aref y1 `(,@aref-args2 ,i)))
 					o
-					`(,@aref-args1 ,i))))
+					`(,@aref-args3 ,i))))
 		       ((null bx)
 			(loop for i fixnum upfrom 0 below (!shape x index)
 			      do (apply #'(setf aref)
@@ -176,7 +176,7 @@
 					 (apply #'aref x1 `(,@aref-args1 ,i))
 					 (apply #'aref y1 `(,@aref-args2 0)))
 					o
-					`(,@aref-args1 ,i))))
+					`(,@aref-args3 ,i))))
 
 		       ((null by)
 			(loop for i fixnum upfrom 0 below (!shape y index)
@@ -185,18 +185,30 @@
 					 (apply #'aref x1 `(,@aref-args1 0))
 					 (apply #'aref y1 `(,@aref-args2 ,i)))
 					o
-					`(,@aref-args1 ,i)))))
+					`(,@aref-args3 ,i)))))
 		     (return-from next nil))
 		   (cond
 		     ((and (null bx) (null by))
 		      (loop for i fixnum upfrom 0 below (!shape x index)
-			    do (next (1+ index) `(,@aref-args1 ,i) `(,@aref-args2 ,i))))
+			    do (next
+				(1+ index)
+				`(,@aref-args1 ,i)
+				`(,@aref-args2 ,i)
+				`(,@aref-args3 ,i))))
 		     ((null bx)
 		      (loop for i fixnum upfrom 0 below (!shape x index)
-			    do (next (1+ index) `(,@aref-args1 ,i) `(,@aref-args2 0))))
+			    do (next
+				(1+ index)
+				`(,@aref-args1 ,i)
+				`(,@aref-args2 0)
+				`(,@aref-args3 ,i))))
 		     ((null by)
 		      (loop for i fixnum upfrom 0 below (!shape y index)
-			    do (next (1+ index) `(,@aref-args1 0) `(,@aref-args2 ,i))))))))
+			    do (next
+				(1+ index)
+				`(,@aref-args1 0)
+				`(,@aref-args2 ,i)
+				`(,@aref-args3 ,i))))))))
 	(next 0))
       out)))
 
