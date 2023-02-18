@@ -316,7 +316,7 @@
      ; if jit triggered, the form below never called.
 
      (macrolet ((get-out-buffer (tensor &key (copy nil))
-		  `(if (and output (typep output 'waffetensor))
+		  `(if output
 		       (if ,copy
 		 	   (copy! (value ,tensor) output)
 			   output)
