@@ -295,6 +295,9 @@ Example:
 
 (call (AddTensor) tensor1 tensor2)
 @end[lang=lisp](code)"
+
+  (if (null backward)
+    (error "cl-waffe.defnode: backward slot must be fullfilled."))
   
   `(defobject ,name ,args
      :parameters ,parameters

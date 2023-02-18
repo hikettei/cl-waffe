@@ -1095,6 +1095,41 @@ Return: A tensor of shape that equal to the condition.
     result))
 
 (defun !index () "Todo")
+(defun !filter (tensor lambda)
+  "Applying every tensor's element @cl:param(lambda), it returns an tensor which comprised of the @cl:param(lambda)'s returned values.
+
+@begin(deflist)
+@def(tensor)
+@term(an tensor that to be refered to)
+@def(lambda)
+@term(an function that returns elements at position @cl:param(x))
+@end(deflist)
+@begin[lang=lisp](code)
+(setq tensor (!randn `(10 10)))
+(!filter tensor #'(lambda (x) (if (> x 0) x 1.0)))
+;#Const(((0.802... 1.331... ~ 0.998... 1.994...)        
+;                 ...
+;        (1.0 0.005... ~ 0.296... 0.358...)) :mgl t :shape (10 10))
+@end[lang=lisp](code)"
+
+  (declare (optimize (speed 3))
+	   (type function lambda)
+	   (type waffetensor tensor))
+  (value tensor)	      
+  (let ((result (!zeros (!shape tensor))))
+    (with-facets ((result-array ((data result)
+				 'backing-array
+				 :direction
+				 :output))
+		  (tensor-array ((data tensor)
+				 'backing-array
+				 :direction
+				 :input)))
+      (declare (type (simple-array single-float) result-array tensor-array))
+      (loop for i fixnum upfrom 0 below (!size tensor)
+	    do (setf (aref result-array i)
+		     (funcall lambda (aref tensor-array i))))
+    result)))
 
 (defun write-description (res backward backend)
   ; Parameter { ... <= here }

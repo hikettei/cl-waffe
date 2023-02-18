@@ -54,9 +54,70 @@ Output: Tensor"
   "Applying tanh to x, return a new sysconst with making nodes."
   (call (TanhTensor) (assure-tensor x)))
 
-(defun !gelu () "Todo")
-(defun !leakey-relu () "Todo")
-(defun !swish () "Todo")
+(defun !gelu (x &optional (alpha 0.01))
+  "Applying gelu to x, returning a new sysconst.
+
+GeLU is defined as out = {alpha (x < 0), x (x >= 0)}"
+
+  )
+
+(defun !leakey-relu (x &optional (alpha 0.01))
+  "Applying Leakey-relu to x, returning a new sysconst.
+
+Leakey-ReLU is defined as out = {alpha (x < 0), x (x >= 0)}
+
+Example:
+
+@begin[lang=lisp](code)
+(setq x (!randn `(10 10)))
+#Const(((0.635... -0.56... ~ -1.15... -1.50...)        
+                 ...
+        (0.775... 1.258... ~ -1.29... 0.240...)) :mgl t :shape (10 10))
+
+(!leakey-relu x)
+#Const(((0.635... 0.003... ~ 0.013... 0.022...)        
+                 ...
+        (0.775... 1.258... ~ 0.016... 0.240...)) :mgl t :shape (10 10))
+@end[lang=lisp](code)"
+  (!mul x (!filter x #'(lambda (x)
+			 (if (>= x 0)
+			     1.0
+			     (* alpha x))))))
+
+(defmodel Swish (&key (beta 1.0)
+		      (trainable t))
+  :parameters ((beta (if trainable
+			 (tensor beta)
+			 (const beta))))
+  :forward ((x)
+	    (!swish x :beta (self beta))))
+
+(defun !swish (x &key (beta (const 1.0)))
+  "Applying swish to each element of x
+
+Swish is defined as out = (/ 1 (+ 1 (exp (* beta -1 x))))
+
+In default beta is 1.0, if you want to use trainable one, @cl:param(Swish) is available as a waffe model.
+
+Note that beta must begin given as a waffetensor.
+
+@begin[lang=lisp](code)
+(setq x (!randn `(10 10)))
+#Const(((0.635... -0.56... ~ -1.15... -1.50...)        
+                 ...
+        (0.775... 1.258... ~ -1.29... 0.240...)) :mgl t :shape (10 10))
+
+(!swish x)
+;#Const(((0.415... -0.20... ~ -0.27... -0.27...)        
+;                 ...
+;        (0.531... 0.980... ~ -0.27... 0.134...)) :mgl t :shape (10 10))
+
+(call (Swish :beta 1.0) x) ;trainable
+;#Const(((0.415... -0.20... ~ -0.27... -0.27...)        
+;                 ...
+;        (0.531... 0.980... ~ -0.27... 0.134...)) :mgl t :shape (10 10))
+@end[lang=lisp](code)"
+  (!div x (!add 1 (!exp (!mul (!mul -1 beta) x)))))
 
 (defun !average (x)
   (let ((z (!sum x 1))

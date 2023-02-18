@@ -3,3 +3,6 @@
 
 (in-suite :test)
 
+; here's tests for several activation, several optimizers
+
+

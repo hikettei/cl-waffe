@@ -157,6 +157,20 @@
 	     (~=1 (expt (data (!mean beta2)) 2) (expt avg2 2)))
 	t
 	nil)))
+
+(defun test-filter ()
+  (let ((x (!randn `(100 100))))
+    (= 0.0 (data (!sum (!filter x #'(lambda (x) (declare (ignore x)) 0.0)))))))
+
+(defun test-activations ()
+  (let ((x (!randn `(10 10))))
+    (and (!relu x)
+	 (!tanh x)
+	 (!sigmoid x)
+	 (!leakey-relu x)
+	 (!swish x)
+	 (call (Swish :beta 1.0) x))))
+
 #|
 (defun test-einsum ()
 (let ((r1 (-> (!einsum (i j) (i j) -> (i j))
@@ -204,5 +218,7 @@ b)))
       (is (operate-func #'!acosh #'acosh))
       (is (operate-func #'!atanh #'atanh))
       (is (test-cross-entropy))
+      (is (test-activations))
+      (is (test-filter))
       (is (test-beta)))
 

@@ -115,6 +115,7 @@
 	   #:!ones-like
 	   #:!full-like
 
+	   #:!filter
 	   #:with-calling-layers
 
 	   #:!add
@@ -162,10 +163,15 @@
 	   #:!sigmoid
 	   #:!tanh
 	   #:!softmax
+	   #:!leakey-relu
+	   #:!swish
+	   #:Swish
+	   #:!gelu
 
 	   #:with-usage
 	   #:mlist
 	   #:mth
+
 	   ))
 
 (defparameter *cl-waffe-object-types* `(:model
