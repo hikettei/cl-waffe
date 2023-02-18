@@ -39,12 +39,23 @@
       (:pow (expt (car args) (second args)))
       (:repeat (repeat (car args) (third args) :axis (second args)))
       (:transpose (car args))
+      
       (:sin (sin (car args)))
       (:cos (cos (car args)))
       (:tan (tan (car args)))
-      (:sinh (tanh (car args)))
-      (:cosh (tanh (car args)))
+      
+      (:asin (asin (car args)))
+      (:acos (acos (car args)))
+      (:atan (atan (car args)))
+      
+      (:sinh (sinh (car args)))
+      (:cosh (cosh (car args)))
       (:tanh (tanh (car args)))
+      
+      (:asinh (asinh (car args)))
+      (:acosh (acosh (car args)))
+      (:atanh (atanh (car args)))
+      
       (:sum (car args))
       (T
        (error "~a is nt yet implemented" ope)))))

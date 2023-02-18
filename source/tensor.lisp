@@ -1,6 +1,8 @@
 
 (in-package :cl-waffe)
 
+(defparameter *no-grad* nil
+  "When t, some node will be ignored. see references below for details. default: nil")
 
 (defparameter *print-char-max-len* 5
   "When printing tensor, the character displayed following this param.
@@ -296,7 +298,7 @@ Note: grad is @b(not) setfable"
        (error "The tensor is not a waffetensor."))
      
      (unless (waffetensor-grad ,tensor)
-       (error "The tensor is not a parameter. Constants doesn't have a grad. If you need grad, please define it with (parameter (const ~~~))"))
+       (error "The tensor is not a parameter. Constants doesn't have a grad. If you need grad, please define it with (parameter (const XXX))"))
 
      (if (typep (waffetensor-grad ,tensor) 'cons)
 	 (error "A grad is nil. Please remain you need to call (backward out) before using a grad. Or, If you need grad, please define it with (parameter (const ~~~)). When using ~%~a" ,tensor))
@@ -700,6 +702,7 @@ Example:
 @end[lang=lisp](code)"
   (!normal dims 0 1))
 
+; To fix: Zero-division error.
 (defun !beta (dims alpha beta)
   "Initializes tensor with samples of beta distribution in a faster way.
 
@@ -735,7 +738,7 @@ where B(a,b)=∫1,0{x^a−1(1−x)^b−1}dx
 	 (result (!zeros dims))
 	 (size (!size result)))
     (declare (type fixnum size))
-    (with-facet (array ((data result) 'backing-array :direction :io))
+    (with-facet (array ((data result) 'backing-array :direction :output))
       (declare (type (simple-array single-float) array))
       ; Todo For GPU.
       (loop for i fixnum upfrom 0 below size
@@ -757,7 +760,6 @@ Algorithm: https://dl.acm.org/doi/pdf/10.1145/359460.359482
 
 Note: !beta excepts that @c((min a b) > 1)"
   (declare (optimize (speed 3) (safety 0) (debug 0))
-	   (type cons dims)
 	   (type single-float a0)
 	   (type (single-float 0e0) a b))
 
@@ -810,7 +812,6 @@ Algorithm: https://dl.acm.org/doi/pdf/10.1145/359460.359482
 
 Note: !beta excepts that @c((min a b) <= 1)"
   (declare (optimize (speed 3) (safety 0) (debug 0))
-	   (type cons dims)
 	   (type single-float a0)
 	   (type (single-float 0e0) a b))
 
@@ -885,8 +886,7 @@ Example:
 ;        (0.194... 0.081... ~ 0.816... 0.209...)) :mgl t :shape (10 10))
 @end[lang=lisp](code)"
   (declare ;(optimize (speed 3))
-	   (type cons dims)
-	   (type single-float scale))
+	   (type cons dims))
   
   ; ↓やる気無くした人 適当な早いアルゴリズム実装してぇ~~
   (const (make-mat dims
@@ -1095,6 +1095,41 @@ Return: A tensor of shape that equal to the condition.
     result))
 
 (defun !index () "Todo")
+(defun !filter (tensor lambda)
+  "Applying every tensor's element @cl:param(lambda), it returns an tensor which comprised of the @cl:param(lambda)'s returned values.
+
+@begin(deflist)
+@def(tensor)
+@term(an tensor that to be refered to)
+@def(lambda)
+@term(an function that returns elements at position @cl:param(x))
+@end(deflist)
+@begin[lang=lisp](code)
+(setq tensor (!randn `(10 10)))
+(!filter tensor #'(lambda (x) (if (> x 0) x 1.0)))
+;#Const(((0.802... 1.331... ~ 0.998... 1.994...)        
+;                 ...
+;        (1.0 0.005... ~ 0.296... 0.358...)) :mgl t :shape (10 10))
+@end[lang=lisp](code)"
+
+  (declare (optimize (speed 3))
+	   (type function lambda)
+	   (type waffetensor tensor))
+  (value tensor)	      
+  (let ((result (!zeros (!shape tensor))))
+    (with-facets ((result-array ((data result)
+				 'backing-array
+				 :direction
+				 :output))
+		  (tensor-array ((data tensor)
+				 'backing-array
+				 :direction
+				 :input)))
+      (declare (type (simple-array single-float) result-array tensor-array))
+      (loop for i fixnum upfrom 0 below (!size tensor)
+	    do (setf (aref result-array i)
+		     (funcall lambda (aref tensor-array i))))
+    result)))
 
 (defun write-description (res backward backend)
   ; Parameter { ... <= here }

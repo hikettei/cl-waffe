@@ -13,7 +13,9 @@
 	   (dotimes (i (hash-table-count (self params)))
 	     ; W(n+1) = W(n) - n * grad
              (!modify (gethash i (self params)) :-=
-		      (!mul (grad (gethash i (self params))) (self lr))))))
+		      (!mul (grad (gethash i (self params))) (self lr)))
+
+	     )))
 
 ; not optimized
 (defoptimizer Momentum (params &key (momentum 0.9) (lr 1e-3))

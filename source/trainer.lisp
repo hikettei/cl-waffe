@@ -140,7 +140,7 @@ Example:
        (error "deftrainer: the slot :predict is nil. Please fill here"))
     
      (progn
-	`(prog1
+	`(progn
 	  (defstruct (,name
 		      (:print-function (lambda (trainer stream _)
 					 (declare (ignore trainer _))
@@ -157,7 +157,8 @@ Example:
 		     (predict    ,(if predict t nil))
 		     (step-model ,(if step-model t nil)))
 	   (define-trainer-method trainer-step-model ,name ,(car step-model) ,(cdr step-model))
-	   (define-trainer-method trainer-predict    ,name ,(car predict)    ,(cdr predict))))))
+	   (define-trainer-method trainer-predict    ,name ,(car predict)    ,(cdr predict))
+	   nil))))
 
 (defun step-model (trainer &rest args)
   "An function for calling trainer object defined by deftrainer
@@ -236,7 +237,7 @@ So, please manage batch-sizes in args and :next slots."
 			 (waffeobjectusage
 			  (build-docstring document :dataset))
 			 (T "None"))))
-       `(prog1
+       `(progn
 	    (defstruct (,name
 			(:print-function print-dataset)
 			(:constructor ,name (,@args &aux ,@(map 'list (lambda (x) `(,(car x) ,(second x))) parameters))))
@@ -245,7 +246,8 @@ So, please manage batch-sizes in args and :next slots."
 	    (length       t :type boolean)
 	    (dataset-next t :type boolean))
 	  (define-dataset-method dataset-next   ,name ,(car next)   ,(cdr next))
-	  (define-dataset-method dataset-length ,name ,(car length) ,(cdr length))))))
+	  (define-dataset-method dataset-length ,name ,(car length) ,(cdr length))
+	  nil))))
 
 (defun get-dataset (dataset index)
   "Get datum of the index from dataset.

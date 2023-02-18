@@ -1,9 +1,6 @@
 
 (in-package :cl-waffe)
 
-(defparameter *no-grad* nil
-  "When t, some node will be ignored. see references below for details. default: nil")
-
 (defparameter *in-node-method* nil)
 
 (defgeneric call-forward  (self))
@@ -295,6 +292,9 @@ Example:
 
 (call (AddTensor) tensor1 tensor2)
 @end[lang=lisp](code)"
+
+  (if (null backward)
+      (error "cl-waffe.defnode: backward slot must be fullfilled."))
   
   `(defobject ,name ,args
      :parameters ,parameters
@@ -378,6 +378,7 @@ Example:
 	   ,(if hide-from-tree `(declare (type waffetensor ,@vars)) nil)
 	   ; Utils that can be used in :forward and :backward
 
+	   ; Optimizer is required to use model in arguments
 	   (when (not (eql ,object-type :optimizer))
 	       ,@(map 'list #'(lambda (variable)
 				`(setq ,variable (typecase ,variable
@@ -558,7 +559,8 @@ the object-type indicates the type of document format."
 			(waffeobjectusage
 			 (build-docstring document object-type))
 			(T "None"))))
-      `(prog1
+
+      `(progn
 	   (defstruct (,name
 		       (:print-function (lambda (m stream k)
 					  (declare (ignore k))
@@ -587,7 +589,8 @@ the object-type indicates the type of document format."
 	     ,hide-from-tree
 	     ,optimize
 	     ,object-type
-	     ,(not regard-as-node))))))
+	     ,(not regard-as-node))
+	 nil))))
 
 (defun render-simple-model-structure (stream model) ; Todo: More Details
   (format stream "[~a: ~a]" (if (slot-value model 'hide-from-tree)

@@ -22,6 +22,53 @@
 						    (:bernoulli . :bernoulli))))
 (declaim (inline !div !transpose))
 
+(defun broadcasting (x y)
+  (declare (type waffetensor x y))
+  (map 'list #'(lambda (xi yi)
+		 (declare (type fixnum xi yi))
+		 (if (and (or (= xi 1) (= yi 1))
+			  (not (= xi yi)))
+		     (if (= xi 1)
+			 `(,(max xi yi) nil)
+			 `(nil ,(max xi yi)))
+		     (if (= xi yi)
+			 `(nil nil)
+			 (error "cl-waffe.broadcasting: can't broadcast two tensors ~a and ~a." x y))))
+       (!shape x) (!shape y)))
+
+(defun sumup-broadcasted (list x y)
+  (let ((x x)
+	(y y))
+    (loop for dim fixnum upfrom 0 below (!dims x)
+	  do (let ((b (nth dim list)))
+	       (unless (null (car b))
+		 (setq x (!mean x dim)))
+	       (unless (null (second b))
+		 (setq y (!mean y dim)))))
+  (list x y)))
+
+(defun straighten-up (x y)
+  "Straigthen up the dims of x and y"
+  (let ((dims-x (!dims x))
+	(dims-y (!dims y)))
+    (cond
+      ((= dims-x dims-y)
+       (values x y))
+      ((> dims-x dims-y)
+       (let ((count (- dims-x dims-y)))
+	 (values x (!unsqueeze y 0 count))))
+      ((> dims-y dims-x)
+       (let ((count (- dims-y dims-x)))
+	 (values (!unsqueeze x 0 count) y))))))
+
+(defun same-shape-p (x y)
+  (declare (optimize (speed 3))
+	   (type waffetensor x y))
+  (or
+   (or (not (typep (data x) 'mat))
+       (not (typep (data y) 'mat)))
+   (equal (the list (!shape x)) (the list (!shape y)))))
+
 (defnode AddTensor nil
   :optimize t
   :parameters nil
@@ -32,7 +79,8 @@
 (defnode SubTensor nil
   :optimize t
   :parameters ()
-  :forward ((x y) (with-searching-calc-node :sub x y))
+  :forward ((x y)
+	    (with-searching-calc-node :sub x y))
   :backward ((dy) (list dy (!mul dy (const -1)))))
 
 (defnode MulTensor nil
@@ -44,6 +92,37 @@
 	    (with-searching-calc-node :mul x y))
   :backward ((dy) (list (!mul (self yi) dy)
 			(!mul (self xi) dy))))
+
+(defnode BroadCastingAddTensor nil
+  :optimize t
+  :parameters ((dims-to-sum nil))
+  :forward  ((x y)
+	     (let ((dims-to-sum (broadcasting x y)))
+	       (setf (self dims-to-sum) dims-to-sum)
+	       (with-searching-calc-node :add x y)))
+  :backward ((dy) (sumup-broadcasted (self dims-to-sum) dy dy)))
+
+(defnode BroadCastingSubTensor nil
+  :optimize t
+  :parameters ((dims-to-sum nil))
+  :forward ((x y)
+	    (let ((dims-to-sum (broadcasting x y)))
+	      (setf (self dims-to-sum) dims-to-sum)
+	      (with-searching-calc-node :sub x y)))
+  :backward ((dy) (sumup-broadcasted (self dims-to-sum) dy (!mul dy (const -1)))))
+
+(defnode BroadCastingMulTensor nil
+  :optimize t
+  :parameters ((xi T) (yi T) (dims-to-sum nil))
+  :forward ((x y)
+	    (let ((dims-to-sum (broadcasting x y)))
+	      (setf (self dims-to-sum) dims-to-sum)
+	      (save-for-backward xi x)
+	      (save-for-backward yi y)
+	      (with-searching-calc-node :mul x y)))
+  :backward ((dy) (sumup-broadcasted (self dims-to-sum)
+				     (!mul (self yi) dy)
+				     (!mul (self xi) dy))))
 
 (defnode DivTensor nil
   :optimize t
@@ -206,6 +285,54 @@
   :backward ((dy)
 	     (list (!mul dy (!div 1 (!pow (!cos (self x)) 2))))))
 
+(defnode ASinTensor ()
+  :parameters ((xi nil))
+  :forward ((x)
+	    (save-for-backward xi x)
+	    (with-searching-calc-node :asin x))
+  :backward ((dy)
+	     (list (!mul dy (!acos (self x))))))
+
+(defnode ACosTensor ()
+  :parameters ((xi nil))
+  :forward ((x)
+	    (save-for-backward xi x)
+	    (with-searching-calc-node :acos x))
+  :backward ((dy)
+	     (list (!mul dy (!mul -1.0 (!asin (self x)))))))
+
+(defnode ATanTensor ()
+  :parameters ((xi nil))
+  :forward ((x)
+	    (save-for-backward xi x)
+	    (with-searching-calc-node :atan x))
+  :backward ((dy)
+	     (list (!mul dy (!div 1 (!pow (!acos (self x)) 2))))))
+
+(defnode ASinhTensor ()
+  :parameters ((xi nil))
+  :forward ((x)
+	    (save-for-backward xi x)
+	    (with-searching-calc-node :asinh x))
+  :backward ((dy)
+	     (list (!mul dy (!acosh (self x))))))
+
+(defnode ACoshTensor ()
+  :parameters ((xi nil))
+  :forward ((x)
+	    (save-for-backward xi x)
+	    (with-searching-calc-node :acosh x))
+  :backward ((dy)
+	     (list (!mul dy (!mul -1.0 (!asinh (self x)))))))
+
+(defnode ATanhTensor ()
+  :parameters ((xi nil))
+  :forward ((x)
+	    (save-for-backward xi x)
+	    (with-searching-calc-node :atanh x))
+  :backward ((dy)
+	     (list (!mul dy (!div 1 (!pow (!acosh (self x)) 2))))))
+
 (defnode HyperbolicSinTensor ()
   :optimize t
   :parameters ((xi nil))
@@ -283,7 +410,12 @@ It supports:
 
 @end[lang=lisp](code)
 @end(section)"
-  (call node (assure-tensor x) (assure-tensor y)))
+  (let ((x (assure-tensor x))
+	(y (assure-tensor y)))
+    (if (same-shape-p x y)
+	(call node x y)
+	(multiple-value-bind (x y) (straighten-up x y)
+	  (call (BroadCastingAddTensor) x y)))))
 
 (defope !sub (SubTensor) node (x y)
     "Subtract x by y.
@@ -324,8 +456,12 @@ It supports:
 @end[lang=lisp](code)
 @end(section)
 "
-
-  (call node (assure-tensor x) (assure-tensor y)))
+  (let ((x (assure-tensor x))
+	(y (assure-tensor y)))
+    (if (same-shape-p x y)
+	(call node x y)
+	(multiple-value-bind (x y) (straighten-up x y)
+	  (call (BroadCastingSubTensor) x y)))))
 
 (defope !mul (MulTensor) node (x y)
     "Multiply x and y with element-wise.
@@ -366,7 +502,12 @@ It supports:
 @end[lang=lisp](code)
 @end(section)
 "
-  (call node (assure-tensor x) (assure-tensor y)))
+  (let ((x (assure-tensor x))
+	(y (assure-tensor y)))
+    (if (same-shape-p x y)
+	(call node x y)
+	(multiple-value-bind (x y) (straighten-up x y)
+	  (call (BroadCastingMulTensor) x y)))))
 
 (defope !div-old (DivTensor) node (x y)
     "1/x"
@@ -761,7 +902,7 @@ The matrix and x's each matrix are multiplied and is returned.
      (!dot x y))
     (T (call node (assure-tensor x) (assure-tensor y)))))
 
-(defun !unsqueeze (x &optional (dim 0))
+(defun !unsqueeze (x &optional (dim 0) (count 1))
   "Returns a new tensor with a dimension of size one inserted at the specified position.
 
 dim indicates the position, when dim=-1, it indicates a last dimension of @cl:param(x).
@@ -795,10 +936,11 @@ dim indicates the position, when dim=-1, it indicates a last dimension of @cl:pa
 @end(section)"
 					; display error when (!dims x) >= dim
   (let ((s (!shape x)))
-    (case dim
-      (0  (setq s `(1 ,@s)))
-      (-1 (push 1 (cdr (nthcdr (1- (length s)) s))))
-      (T  (push 1 (cdr (nthcdr (1- dim) s)))))
+    (dotimes (_ count)
+      (case dim
+	(0  (setq s `(1 ,@s)))
+	(-1 (push 1 (cdr (nthcdr (1- (length s)) s))))
+	(T  (push 1 (cdr (nthcdr (1- dim) s))))))
     (!reshape x s)))
 
 (defun !squeeze (x &optional (dim nil))
@@ -946,40 +1088,29 @@ If the specified position of a tensor isn't one, !squeeze is skipped.
   (call node (assure-tensor x)))
 
 (defun !asin (x)
-  "Applying asin to each element
-
-asin(x) = 1/sin(x)"
-  (!div 1 (!sin x)))
+  "Applying asin to each element"
+  (call (ASinTensor) (assure-tensor x)))
 
 (defun !acos (x)
-  "Applying acos to each element
-
-acos(x) = 1/cos(x)"
-  (!div 1 (!cos x)))
+  "Applying acos to each element"
+  (call (ACosTensor) (assure-tensor x)))
 
 (defun !atan (x)
-  "Applying atan to each element
-
-atan(x) = 1/tan(x)"
-  (!div 1 (!tan x)))
+  "Applying atan to each element"
+  (call (ATanTensor) (assure-tensor x)))
 
 (defun !asinh (x)
-  "Applying asinh to each element
-
-asinh(x) = 1/sinh(x)"
-  (!div 1 (!sinh x)))
+  "Applying asinh to each element"
+  (call (ASinhTensor) (assure-tensor x)))
 
 (defun !acosh (x)
-  "Applying acosh to each element
-
-acosh(x) = 1/cosh(x)"
-  (!div 1 (!cosh x)))
+  "Applying acosh to each element"
+  (call (ACoshTensor) (assure-tensor x)))
 
 (defun !atanh (x)
-  "Applying atanh to each element
+  "Applying atanh to each element"
+  (call (ATanhTensor) (assure-tensor x)))
 
-atanh(x) = 1/tanh(x)"
-  (!div 1 (!tanh x)))
 
 (defun !argmaxmin (tensor max-or-min &key (dim nil))
   "Todo: For GPU"
