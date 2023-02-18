@@ -178,7 +178,6 @@
 		  (inline aref applying))
 		 (let ((bx (car (nth index dims)))
 		       (by (second (nth index dims))))
-		   
 		   (when (= index (1- (length dims)))
 					; dif=1
 		     (cond
@@ -201,7 +200,7 @@
 			      do (setf (aref o (+ first-index-o i))
 				       (applying
 					(aref x1 first-index-x)
-					(aref y1 (+ first-index-y 1))
+					(aref y1 (+ first-index-y i))
 					function))))
 		       (T nil))
 		     (return-from next nil))
@@ -240,7 +239,7 @@
 			    for i fixnum upfrom 0 below bx
 			    do (next
 				(1+ index)
-				`(,@aref-args1 ,0)
+				`(,@aref-args1 0)
 				`(,@aref-args2 ,i)
 				`(,@aref-args3 ,i)
 				first-index-x
