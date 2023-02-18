@@ -133,7 +133,7 @@
     (T (error "applying: function is following :+ :- :* ~a" function))))
 
 (defun broadcasting-apply (function x y)
-  (declare (optimize (speed 3) (safety 0))
+  (declare (optimize (speed 3)); (safety 0))
 	   (type symbol function)
 	   (type waffetensor x y))
 					; assume that (!dims x) == (!dims y)
@@ -159,15 +159,10 @@
 		  (x1 ((data x) 'backing-array :direction :input))
 		  (y1 ((data y) 'backing-array :direction :input)))
       (declare (type (simple-array single-float) o x1 y1))
-      (labels ((get-index (shapes tensor)
-		 (declare (optimize (speed 3) (safety 0)))
-		 (apply #'+ (maplist #'(lambda (x y)
-					 (declare (type list x y))
-					 (the fixnum
-					      (* (the fixnum (car x))
-						 (the fixnum (apply #'* (cdr y))))))
-				     shapes
-				     (!shape tensor))))
+      (labels ((get-index (tensor index)
+		 (declare (optimize (speed 3) (safety 0))
+			  (inline get-difference))
+		 (the fixnum (get-difference (data tensor) index)))
 	       (next (index
 		      &optional
 			(aref-args1 nil)
@@ -187,85 +182,73 @@
 					; dif=1
 		     (cond
 		       ((and (null bx) (null by))
-			(loop for i fixnum upfrom 0 below (!shape x index)
+			(loop for i fixnum upfrom 0 below (the fixnum (!shape x index))
 			      do (setf (aref o (+ first-index-o i))
 				       (applying
 					(aref x1 (+ first-index-x i))
 					(aref y1 (+ first-index-y i))
 					function))))
 		       ((null bx)
-			(loop for i fixnum upfrom 0 below (!shape x index)
+			(loop for i fixnum upfrom 0 below (the fixnum (!shape x index))
 			      do (setf (aref o (+ first-index-o i))
 				       (applying
 					(aref x1 (+ first-index-x i))
-					(aref y1 first-index-y)
+					(aref y1 (1- first-index-y))
 					function))))
-
 		       ((null by)
-			(loop for i fixnum upfrom 0 below (!shape y index)
+			(loop for i fixnum upfrom 0 below (the fixnum (!shape y index))
 			      do (setf (aref o (+ first-index-o i))
 				       (applying
-					(aref x1 first-index-x)
-					(aref y1 (+ first-index-y i))
+					(aref x1 (1- first-index-x))
+					(aref y1 (+ first-index-y 1))
 					function))))
 		       (T nil))
 		     (return-from next nil))
+		   
 		   (cond
 		     ((and (null bx) (null by))
-		      (loop with x-dif fixnum = (if (= (1+ index) (1- (length dims)))
-						    
-						    (get-index `(,@aref-args1 1) x) 0)
-			    with y-dif fixnum = (if (= (1+ index) (1- (length dims)))
-						    (get-index `(,@aref-args2 1) y)
-						    0)
-			    with o-dif fixnum = (if (= (1+ index) (1- (length dims)))
-						    (get-index `(,@aref-args3 1) out)
-						    0)
+		      (loop with x-dif fixnum = (get-index x index)
+			    with y-dif fixnum = (get-index y index)
+			    with o-dif fixnum = (get-index out index)
 			    for i fixnum upfrom 0 below (!shape x index)
-			    do  (progn
-				  (next
+			    do (next
 				   (1+ index)
 				   `(,@aref-args1 ,i)
 				   `(,@aref-args2 ,i)
 				   `(,@aref-args3 ,i)
-				   (* i x-dif)
-				   (* i y-dif)
-				   (* i o-dif)))))
+				   (+ first-index-x (the fixnum (* i x-dif)))
+				   (+ first-index-y (the fixnum (* i y-dif)))
+				   (+ first-index-o (the fixnum (* i o-dif))))))
 		     ((null bx)
-		      (loop with x-dif fixnum = (if (= (1+ index) (1- (length dims)))
-						    (get-index `(,@aref-args1 1) x)
-						    0)
-			    with o-dif fixnum = (if (= (1+ index) (1- (length dims)))
-						    (get-index `(,@aref-args3 1) out)
-						    0)
-			    for i fixnum upfrom 0 below (!shape x index)
-			    do  
-
-			       (next
+		      (loop with x-dif fixnum = (get-index x index)
+			    with y-dif fixnum = (get-index y index)
+			    with o-dif fixnum = (get-index out index)
+			    for i fixnum upfrom 0 below by
+			    do (next
 				(1+ index)
 				`(,@aref-args1 ,i)
 				`(,@aref-args2 0)
 				`(,@aref-args3 ,i)
-				(* i x-dif)
-				first-index-y
-				(* i o-dif))))
+				(+ first-index-x (the fixnum (* i x-dif)))
+				(+ first-index-y (if (= index 0)
+						     index
+						     y-dif))
+				(+ first-index-y (the fixnum (* i o-dif))))))
 		     ((null by)
-		      (loop with y-dif fixnum = (if (= (1+ index) (1- (length dims)))
-						    (get-index `(,@aref-args2 1) y)
-						    0)
-			    with o-dif fixnum = (if (= (1+ index) (1- (length dims)))
-						    (get-index `(,@aref-args3 1) out)
-						    0)
-			    for i fixnum upfrom 0 below (!shape y index)
-			    do  
-			       (next
+		      (loop with x-dif fixnum = (get-index x index)
+			    with y-dif fixnum = (get-index y index)
+			    with o-dif fixnum = (get-index out index)
+			    for i fixnum upfrom 0 below bx
+			    do (next
 				(1+ index)
 				`(,@aref-args1 ,0)
 				`(,@aref-args2 ,i)
 				`(,@aref-args3 ,i)
-				first-index-x
-				(* i y-dif)
-				(* i o-dif))))
+				(+ first-index-x (if (= index 0)
+						     index
+						     x-dif))
+				(+ first-index-y (the fixnum (* i y-dif)))
+				(+ first-index-o (the fixnum (* i o-dif))))))
 		     (T nil)))
 		 nil))
 	(next 0))
