@@ -155,7 +155,9 @@
 		   (:- (- a b))
 		   (:* (* a b))))
 	       (next (index &optional (aref-args1 nil) (aref-args2 nil) (aref-args3 nil))
-		 (declare (type fixnum index))
+		 (declare
+		  (optimize (speed 3))
+		  (type fixnum index))
 		 (let ((bx (car (nth index dims)))
 		       (by (second (nth index dims))))
 		   
