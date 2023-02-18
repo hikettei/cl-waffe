@@ -470,7 +470,6 @@
   :jit pow
   :mat-mat ((.expt! (get-out-buffer x :copy t) n1)))
 
-
 (define-waffe-kernel kernel-sin (x) (x1)
   :jit sin
   :mat-mat ((.sin! (get-out-buffer x :copy t))))
@@ -643,25 +642,26 @@
 		  (setf (aref mask mi) 1.0)))))
 
 ; having not cuda gpus, i can't test this code lol T_T
-(define-cuda-kernel (bernoulli-cuda)
-    (void ((mask :mat :io) (n int) (p float)))
-  (let ((i (+ (* block-dim-mask block-idx-mask) thread-idx-mask)))
-    (when (< i n)
-      (if (< (aref x i) p)
-	  (set (aref x i) 0.0)
-          (set (aref x i) 1.0)))))
+;(define-cuda-kernel (bernoulli-cuda)
+;    (void ((mask :mat :io) (x :mat :io) (n int) (p float)))
+;  (let ((i (+ (* block-dim-mask block-idx-mask) thread-idx-mask)))
+;    (when (< i n)
+;      (if (< (aref x i) p)
+;	  (set (aref x i) 0.0)
+;          (set (aref x i) 1.0)))))
 
 (defun bernoulli-tensor (enable-optimize out return-tensor rate)
   (declare (type boolean enable-optimize)
-	   (type waffetensor return-tensor x rate))
+	   (type waffetensor return-tensor rate))
   (let ((o (decide-out-buffer out return-tensor enable-optimize nil)))
     (mgl-mat:uniform-random! o)
     (if (use-cuda-p (data return-tensor))
 	(progn
-	  (print "having not gpus, i've not tested cl-waffe.backends.mgl:bernoulli-tensor yet in cuda.")
-	(bernoulli-cuda o (mat-size o) (data rate)
-			:grid-dim (list (ceiling (mat-size o) 256) 1 1)
-			:block-dim (list 256 1 1)))
+	  (error "having not gpus, i've not tested cl-waffe.backends.mgl:bernoulli-tensor yet in cuda.")
+	;(bernoulli-cuda o (mat-size o) (data rate)
+	;		:grid-dim (list (ceiling (mat-size o) 256) 1 1)
+	;		:block-dim (list 256 1 1))
+	)
 	(bernoulli-lisp o (mat-displacement o) (mat-size o) (data rate)))))
 
 
@@ -695,7 +695,7 @@
 (defun embedding-forward (enable-optimize x weights pad-idx)
   "(with-searching-calc-node :embedding-forward x weights pad-idx) -> embeddings"
   (declare (type boolean enable-optimize)
-	   (type waffetensor out x weights pad-idx)
+	   (type waffetensor x weights pad-idx)
 	   (ignore enable-optimize))
   (let* ((batch-size (mat-dimension (data x) 0))
 	 (total-size (mat-dimension (data x) 1))
@@ -786,15 +786,19 @@
     (:sin     (kernel-sin is-first-time-call? destructable-tensor))
     (:cos     (kernel-cos is-first-time-call? destructable-tensor))
     (:tan     (kernel-tan is-first-time-call? destructable-tensor))
+    
     (:asin    (kernel-asin is-first-time-call? destructable-tensor))
     (:acos    (kernel-acos is-first-time-call? destructable-tensor))
     (:atan    (kernel-atan is-first-time-call? destructable-tensor))
+    
     (:sinh    (kernel-sinh is-first-time-call? destructable-tensor))
     (:cosh    (kernel-cosh is-first-time-call? destructable-tensor))
     (:tanh    (kernel-tanh is-first-time-call? destructable-tensor))
+    
     (:asinh   (kernel-asinh is-first-time-call? destructable-tensor))
     (:acosh   (kernel-acosh is-first-time-call? destructable-tensor))
     (:atanh   (kernel-atanh is-first-time-call? destructable-tensor))
+    
     (:pow     (kernel-pow
 	       is-first-time-call?
 	       destructable-tensor

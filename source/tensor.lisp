@@ -1,6 +1,8 @@
 
 (in-package :cl-waffe)
 
+(defparameter *no-grad* nil
+  "When t, some node will be ignored. see references below for details. default: nil")
 
 (defparameter *print-char-max-len* 5
   "When printing tensor, the character displayed following this param.
@@ -736,7 +738,7 @@ where B(a,b)=∫1,0{x^a−1(1−x)^b−1}dx
 	 (result (!zeros dims))
 	 (size (!size result)))
     (declare (type fixnum size))
-    (with-facet (array ((data result) 'backing-array :direction :io))
+    (with-facet (array ((data result) 'backing-array :direction :output))
       (declare (type (simple-array single-float) array))
       ; Todo For GPU.
       (loop for i fixnum upfrom 0 below size
@@ -758,7 +760,6 @@ Algorithm: https://dl.acm.org/doi/pdf/10.1145/359460.359482
 
 Note: !beta excepts that @c((min a b) > 1)"
   (declare (optimize (speed 3) (safety 0) (debug 0))
-	   (type cons dims)
 	   (type single-float a0)
 	   (type (single-float 0e0) a b))
 
@@ -811,7 +812,6 @@ Algorithm: https://dl.acm.org/doi/pdf/10.1145/359460.359482
 
 Note: !beta excepts that @c((min a b) <= 1)"
   (declare (optimize (speed 3) (safety 0) (debug 0))
-	   (type cons dims)
 	   (type single-float a0)
 	   (type (single-float 0e0) a b))
 
@@ -886,8 +886,7 @@ Example:
 ;        (0.194... 0.081... ~ 0.816... 0.209...)) :mgl t :shape (10 10))
 @end[lang=lisp](code)"
   (declare ;(optimize (speed 3))
-	   (type cons dims)
-	   (type single-float scale))
+	   (type cons dims))
   
   ; ↓やる気無くした人 適当な早いアルゴリズム実装してぇ~~
   (const (make-mat dims

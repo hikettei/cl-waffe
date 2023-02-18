@@ -1,9 +1,6 @@
 
 (in-package :cl-waffe)
 
-(defparameter *no-grad* nil
-  "When t, some node will be ignored. see references below for details. default: nil")
-
 (defparameter *in-node-method* nil)
 
 (defgeneric call-forward  (self))
