@@ -120,6 +120,86 @@
     (declare (type cons dims))
     (make-mat (reverse dims) :initial-element value)))
 
+(defun broadcasting-apply (function x y)
+  (declare (optimize (speed 3))
+	   (type symbol function)
+	   (type waffetensor x y))
+  ; assume that (!dims x) == (!dims y)
+
+  (unless (= (!dims x) (!dims y))
+    (error "KernelError: Can't broadcasting ~a and ~a" x y))
+
+  (let* ((dims (cl-waffe::broadcasting x y))
+	 (result-shape (loop for i fixnum upfrom 0 below (!dims x)
+			     collect (let ((dim (nth i dims)))
+				       (cond
+					 ((and (null (car dim))
+					       (null (second dim)))
+					  (!shape x i))
+					 ((null (car dim))
+					  (!shape x i))
+					 ((null (second dim))
+					  (!shape y i))))))
+	 (out (make-mat result-shape)))
+    (declare (type list dims))
+        ; Todo: CUDA Support
+
+    (with-facets ((o (out 'array :direction :output))
+		  (x1 ((data x) 'array :direction :input))
+		  (y1 ((data y) 'array :direction :input)))
+;      (declare (type (simple-array single-float) o x1 y1))
+      (labels ((applying (a b)
+		 (declare (type single-float a b))
+		 (case function
+		   (:+ (+ a b))
+		   (:- (- a b))
+		   (:* (* a b))))
+	       (next (index &optional (aref-args1 nil) (aref-args2 nil))
+		 (declare (type fixnum index))
+		 (let ((bx (car (nth index dims)))
+		       (by (second (nth index dims))))
+		   
+		   (when (= index (1- (length dims)))
+		     (cond
+		       ((and (null bx) (null by))
+			(loop for i fixnum upfrom 0 below (!shape x index)
+			      do (apply #'(setf aref)
+					(applying
+					 (apply #'aref x1 `(,@aref-args1 ,i))
+					 (apply #'aref y1 `(,@aref-args2 ,i)))
+					o
+					`(,@aref-args1 ,i))))
+		       ((null bx)
+			(loop for i fixnum upfrom 0 below (!shape x index)
+			      do (apply #'(setf aref)
+					(applying
+					 (apply #'aref x1 `(,@aref-args1 ,i))
+					 (apply #'aref y1 `(,@aref-args2 0)))
+					o
+					`(,@aref-args1 ,i))))
+
+		       ((null by)
+			(loop for i fixnum upfrom 0 below (!shape y index)
+			      do (apply #'(setf aref)
+					(applying
+					 (apply #'aref x1 `(,@aref-args1 0))
+					 (apply #'aref y1 `(,@aref-args2 ,i)))
+					o
+					`(,@aref-args1 ,i)))))
+		     (return-from next nil))
+		   (cond
+		     ((and (null bx) (null by))
+		      (loop for i fixnum upfrom 0 below (!shape x index)
+			    do (next (1+ index) `(,@aref-args1 ,i) `(,@aref-args2 ,i))))
+		     ((null bx)
+		      (loop for i fixnum upfrom 0 below (!shape x index)
+			    do (next (1+ index) `(,@aref-args1 ,i) `(,@aref-args2 0))))
+		     ((null by)
+		      (loop for i fixnum upfrom 0 below (!shape y index)
+			    do (next (1+ index) `(,@aref-args1 0) `(,@aref-args2 ,i))))))))
+	(next 0))
+      out)))
+
 (defparameter *v2v-operations* `(:add :sub :mul :div :dot :matmul))
 (defparameter *abort-delay-instruction* :matmul)
 
@@ -265,13 +345,15 @@
 	       (.+! y1 o)))
   :scal-mat ((let ((o (get-out-buffer y :copy t)))
 	       (.+! x1 o)))
-  :mat-mat ((cond
-	      ((will-be-destructed x)
-	       (let ((o (get-out-buffer x :copy t)))
-		 (axpy! 1.0 y1 o)))
-	      ((will-be-destructed y)
-	       (axpy! 1.0 x1 (get-out-buffer y :copy t)))
-	      (T (axpy! 1.0 y1 (get-out-buffer x :copy t))))))
+  :mat-mat ((if (equal (!shape x) (!shape y))
+	     (cond
+	       ((will-be-destructed x)
+		(let ((o (get-out-buffer x :copy t)))
+		  (axpy! 1.0 y1 o)))
+	       ((will-be-destructed y)
+		(axpy! 1.0 x1 (get-out-buffer y :copy t)))
+	       (T (axpy! 1.0 y1 (get-out-buffer x :copy t))))
+	     (broadcasting-apply :+ x y))))
 
 (define-waffe-kernel kernel-sub (x y) (x1 y1)
   :jit -
@@ -281,13 +363,15 @@
   :scal-mat ((let ((o (get-out-buffer y :copy t)))
 	       (.+! x1
 		    (scal! -1.0 o))))
-  :mat-mat ((cond
+  :mat-mat ((if (equal (!shape x) (!shape y))
+		(cond
 	      ((will-be-destructed x)
 	       (let ((o (get-out-buffer x :copy t)))
 		 (axpy! -1.0 y1 o)))
 	      ((will-be-destructed y)
 	       (axpy! 1.0 x1 (scal! -1.0 (get-out-buffer y :copy t))))
-	      (T (axpy! -1.0 y1 (get-out-buffer x :copy t))))))
+	      (T (axpy! -1.0 y1 (get-out-buffer x :copy t))))
+		(broadcasting-apply :- x y))))
 
 (define-waffe-kernel kernel-mul (x y) (x1 y1)
   :jit *
@@ -295,13 +379,15 @@
 	       (scal! y1 o)))
   :scal-mat ((let ((o (get-out-buffer y :copy t)))
 	       (scal! x1 o)))
-  :mat-mat ((cond
+  :mat-mat ((if (equal (!shape x) (!shape y))
+		(cond
 	      ((will-be-destructed x)
 	       (let ((o (get-out-buffer x :copy nil)))
 		 (geem! 1.0 x1 y1 0.0 o)))
 	      ((will-be-destructed y)
 	       (geem! 1.0 x1 y1 0.0 (get-out-buffer y :copy nil)))
-	      (T (geem! 1.0 x1 y1 0.0 (get-out-buffer x :copy nil))))))
+	      (T (geem! 1.0 x1 y1 0.0 (get-out-buffer x :copy nil))))
+		(broadcasting-apply :* x y))))
 
 (define-waffe-kernel kernel-inv (x) (x1)
   :jit /
@@ -314,11 +400,7 @@
   :scal-mat ((unless (= x1 1)
 	       (error "cl-waffe.backends.mgl:kernel-inv excepts x1 to be 1"))
 	     (let ((o (get-out-buffer y :copy t)))
-	       (.inv! o)))
-  :mat-mat ((geem! 1.0 x1 (kernel-inv
-			   enable-optimize?
-			   y)
-		   0.0 (get-out-buffer x :copy nil))))
+	       (.inv! o))))
 
 (defun dot-tensor (enable-optimize? out x y)
   (declare (ignore enable-optimize? out))

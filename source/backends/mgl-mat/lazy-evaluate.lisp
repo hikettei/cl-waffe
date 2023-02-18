@@ -100,6 +100,13 @@
 		 args)))))
     #'LazyEvaluatedNodes))
 
+(defun all-the-same-shapes (tensor args)
+  (declare (optimize (speed 3)))
+  (apply #'equal (remove-if #'null (map 'list #'(lambda (x)
+						  (typecase x
+						    (waffetensor (!shape x))))
+					`(,tensor ,@args)))))
+
 (defmacro return-and-lazy-eval
     (function-name
      lisp-function
@@ -116,7 +123,8 @@ When the tensor isn't appropriate, do nothing."
 	(not (cl-waffe::waffetensor-force-ignore-jit ,tensor))
 	(or (and cl-waffe.caches:*static-node-mode*
 		 (cl-waffe::waffetensor-thread-data ,tensor))
-	    (or *force-lazy-eval*)))
+	    (or *force-lazy-eval*))
+	(all-the-same-shapes ,tensor ,args))
        ; Judge if the Tensor is in the Model's Iteration or in thread-data.
        (return-from
 	,function-name
