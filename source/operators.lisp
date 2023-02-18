@@ -36,8 +36,16 @@
 			 (error "cl-waffe.broadcasting: can't broadcast two tensors ~a and ~a." x y))))
        (!shape x) (!shape y)))
 
-(defun sumup-broadcasts (list x y)
-  )
+(defun sumup-broadcasted (list x y)
+  (let ((x x)
+	(y y))
+    (loop for dim fixnum upfrom 0 below (!dims x)
+	  do (let ((b (nth dim list)))
+	       (unless (null (car b))
+		 (setq x (!mean x dim)))
+	       (unless (null (second b))
+		 (setq y (!mean y dim)))))
+  (list x y)))
 
 (defun straighten-up (x y)
   "Straigthen up the dims of x and y"
@@ -56,7 +64,10 @@
 (defun same-shape-p (x y)
   (declare (optimize (speed 3))
 	   (type waffetensor x y))
-  (equal (the list (!shape x)) (the list (!shape y))))
+  (or
+   (or (not (typep (data x) 'mat))
+       (not (typep (data y) 'mat)))
+   (equal (the list (!shape x)) (the list (!shape y)))))
 
 (defnode AddTensor nil
   :optimize t

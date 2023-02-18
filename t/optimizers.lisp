@@ -54,7 +54,16 @@
 
     (< (data (car losses)) (data (car (last losses))))))
 
-(define-test-trainer Trainer1 cl-waffe.optimizers:Adam 1e-3 :relu)
+(define-test-trainer Trainer0 cl-waffe.optimizers:SGD 1e-2 :relu)
+(define-test-trainer Trainer1 cl-waffe.optimizers:Momentum 1e-2 :relu)
+(define-test-trainer Trainer2 cl-waffe.optimizers:AdaGrad 1e-4 :relu)
+(define-test-trainer Trainer3 cl-waffe.optimizers:RMSProp 1e-4 :relu)
+(define-test-trainer Trainer4 cl-waffe.optimizers:Adam 1e-3 :relu)
 
 (test test-training
-      (is (test-for (Trainer1))))
+      (is (test-for (Trainer0)))
+      (is (test-for (Trainer1)))
+      (is (test-for (Trainer2)))
+      (is (test-for (Trainer3)))
+      (is (test-for (Trainer4)))
+      )
