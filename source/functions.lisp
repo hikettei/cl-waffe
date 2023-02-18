@@ -25,6 +25,9 @@ Input: x where x is waffe supported data type.
 Output: Tensor"
   (call (ReLUTensor) (assure-tensor x)))
 
+;(defun !relu1 (x)
+;  (!mul x (!where #'(lambda (v) (>= v 0.0)) x 1.0 0.0)))
+
 (defnode SigmoidTensor nil
   :optimize t
   :parameters ((xi T))
@@ -61,7 +64,7 @@ Output: Tensor"
 
 Paper: https://arxiv.org/abs/1606.08415.
 
-Reference: https://marui.hatenablog.com/entry/2023/01/23/194507
+TOOD: Improve its performance
 
 GeLU(x) = x * s(x)
 
@@ -97,7 +100,7 @@ Not implemented (TODO)
 					       (+ el
 						  (* 0.044715
 						     (expt el 3))))))
-				    (+ 1.0 (tanh n))))))
+				    (the single-float (+ 1.0 (tanh n)))))))
 	       (error "no implemented yet"))))
     (!mul x s)))
 
@@ -162,8 +165,7 @@ Note that beta must begin given as a waffetensor.
 @end[lang=lisp](code)"
   (!div x (!add 1 (!exp (!mul (!mul -1 beta) x)))))
 
-(defun !mish (x)
-  "")
+(defun !mish () "Todo")
 
 (defun !average (x)
   (let ((z (!sum x 1))

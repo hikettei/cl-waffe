@@ -297,7 +297,7 @@ Example:
 @end[lang=lisp](code)"
 
   (if (null backward)
-    (error "cl-waffe.defnode: backward slot must be fullfilled."))
+      (error "cl-waffe.defnode: backward slot must be fullfilled."))
   
   `(defobject ,name ,args
      :parameters ,parameters

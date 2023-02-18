@@ -296,7 +296,7 @@ Note: grad is @b(not) setfable"
        (error "The tensor is not a waffetensor."))
      
      (unless (waffetensor-grad ,tensor)
-       (error "The tensor is not a parameter. Constants doesn't have a grad. If you need grad, please define it with (parameter (const ~~~))"))
+       (error "The tensor is not a parameter. Constants doesn't have a grad. If you need grad, please define it with (parameter (const XXX))"))
 
      (if (typep (waffetensor-grad ,tensor) 'cons)
 	 (error "A grad is nil. Please remain you need to call (backward out) before using a grad. Or, If you need grad, please define it with (parameter (const ~~~)). When using ~%~a" ,tensor))
@@ -700,6 +700,7 @@ Example:
 @end[lang=lisp](code)"
   (!normal dims 0 1))
 
+; To fix: Zero-division error.
 (defun !beta (dims alpha beta)
   "Initializes tensor with samples of beta distribution in a faster way.
 

@@ -206,6 +206,54 @@
   :backward ((dy)
 	     (list (!mul dy (!div 1 (!pow (!cos (self x)) 2))))))
 
+(defnode ASinTensor ()
+  :parameters ((xi nil))
+  :forward ((x)
+	    (save-for-backward xi x)
+	    (with-searching-calc-node :asin x))
+  :backward ((dy)
+	     (list (!mul dy (!acos (self x))))))
+
+(defnode ACosTensor ()
+  :parameters ((xi nil))
+  :forward ((x)
+	    (save-for-backward xi x)
+	    (with-searching-calc-node :acos x))
+  :backward ((dy)
+	     (list (!mul dy (!mul -1.0 (!asin (self x)))))))
+
+(defnode ATanTensor ()
+  :parameters ((xi nil))
+  :forward ((x)
+	    (save-for-backward xi x)
+	    (with-searching-calc-node :atan x))
+  :backward ((dy)
+	     (list (!mul dy (!div 1 (!pow (!acos (self x)) 2))))))
+
+(defnode ASinhTensor ()
+  :parameters ((xi nil))
+  :forward ((x)
+	    (save-for-backward xi x)
+	    (with-searching-calc-node :asinh x))
+  :backward ((dy)
+	     (list (!mul dy (!acosh (self x))))))
+
+(defnode ACoshTensor ()
+  :parameters ((xi nil))
+  :forward ((x)
+	    (save-for-backward xi x)
+	    (with-searching-calc-node :acosh x))
+  :backward ((dy)
+	     (list (!mul dy (!mul -1.0 (!asinh (self x)))))))
+
+(defnode ATanhTensor ()
+  :parameters ((xi nil))
+  :forward ((x)
+	    (save-for-backward xi x)
+	    (with-searching-calc-node :atanh x))
+  :backward ((dy)
+	     (list (!mul dy (!div 1 (!pow (!acosh (self x)) 2))))))
+
 (defnode HyperbolicSinTensor ()
   :optimize t
   :parameters ((xi nil))
@@ -946,40 +994,29 @@ If the specified position of a tensor isn't one, !squeeze is skipped.
   (call node (assure-tensor x)))
 
 (defun !asin (x)
-  "Applying asin to each element
-
-asin(x) = 1/sin(x)"
-  (!div 1 (!sin x)))
+  "Applying asin to each element"
+  (call (ASinTensor) (assure-tensor x)))
 
 (defun !acos (x)
-  "Applying acos to each element
-
-acos(x) = 1/cos(x)"
-  (!div 1 (!cos x)))
+  "Applying acos to each element"
+  (call (ACosTensor) (assure-tensor x)))
 
 (defun !atan (x)
-  "Applying atan to each element
-
-atan(x) = 1/tan(x)"
-  (!div 1 (!tan x)))
+  "Applying atan to each element"
+  (call (ATanTensor) (assure-tensor x)))
 
 (defun !asinh (x)
-  "Applying asinh to each element
-
-asinh(x) = 1/sinh(x)"
-  (!div 1 (!sinh x)))
+  "Applying asinh to each element"
+  (call (ASinhTensor) (assure-tensor x)))
 
 (defun !acosh (x)
-  "Applying acosh to each element
-
-acosh(x) = 1/cosh(x)"
-  (!div 1 (!cosh x)))
+  "Applying acosh to each element"
+  (call (ACoshTensor) (assure-tensor x)))
 
 (defun !atanh (x)
-  "Applying atanh to each element
+  "Applying atanh to each element"
+  (call (ATanhTensor) (assure-tensor x)))
 
-atanh(x) = 1/tanh(x)"
-  (!div 1 (!tanh x)))
 
 (defun !argmaxmin (tensor max-or-min &key (dim nil))
   "Todo: For GPU"

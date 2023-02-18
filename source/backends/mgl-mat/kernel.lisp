@@ -198,6 +198,7 @@
 			       args
 			       args-mat
 			       &key
+				 (ignore-optimize nil)
 				 (jit nil)
 				 (mat-mat nil)
 				 (scal-mat nil)
@@ -208,9 +209,10 @@
       :scal-mat ~
       :mat-scal ~"
   `(defun ,name (enable-optimize? ,@args &key (output nil))
-     (declare (optimize (speed 3) (space 0))
-	      (type boolean enable-optimize?)
-	      (type waffetensor ,@args))
+     ,(unless ignore-optimize
+	`(declare (optimize (speed 3) (space 0))
+		  (type boolean enable-optimize?)
+		  (type waffetensor ,@args)))
      ,(unless (null jit)
 	; place jit trigger.
 	`(return-and-lazy-eval
@@ -468,6 +470,7 @@
   :jit pow
   :mat-mat ((.expt! (get-out-buffer x :copy t) n1)))
 
+
 (define-waffe-kernel kernel-sin (x) (x1)
   :jit sin
   :mat-mat ((.sin! (get-out-buffer x :copy t))))
@@ -480,6 +483,7 @@
   :jit tan
   :mat-mat ((.tan! (get-out-buffer x :copy t))))
 
+
 (define-waffe-kernel kernel-sinh (x) (x1)
   :jit sinh
   :mat-mat ((.sinh! (get-out-buffer x :copy t))))
@@ -491,6 +495,62 @@
 (define-waffe-kernel kernel-tanh (x) (x1)
   :jit tanh
   :mat-mat ((.tanh! (get-out-buffer x :copy t))))
+
+
+(define-waffe-kernel kernel-asin (x) (x1)
+  :ignore-optimize t
+  :jit asin
+  :mat-mat ((with-facet (r ((get-out-buffer x :copy t) 'backing-array))
+	      (declare (type (simple-array single-float) r))
+	      (loop for i fixnum upfrom 0 below (!size x)
+		    do (setf (aref r i) (asin (aref r i))))
+	      r)))
+
+(define-waffe-kernel kernel-acos (x) (x1)
+  :ignore-optimize t
+  :jit acos
+  :mat-mat ((with-facet (r ((get-out-buffer x :copy t) 'backing-array))
+	      (declare (type (simple-array single-float) r))
+	      (loop for i fixnum upfrom 0 below (!size x)
+		    do (setf (aref r i) (acos (aref r i))))
+	      r)))
+
+(define-waffe-kernel kernel-atan (x) (x1)
+  :ignore-optimize t
+  :jit atan
+  :mat-mat ((with-facet (r ((get-out-buffer x :copy t) 'backing-array))
+	      (declare (type (simple-array single-float) r))
+	      (loop for i fixnum upfrom 0 below (!size x)
+		    do (setf (aref r i) (atan (aref r i))))
+	      r)))
+
+(define-waffe-kernel kernel-asinh (x) (x1)
+  :ignore-optimize t
+  :jit asinh
+  :mat-mat ((with-facet (r ((get-out-buffer x :copy t) 'backing-array))
+	      (declare (type (simple-array single-float) r))
+	      (loop for i fixnum upfrom 0 below (!size x)
+		    do (setf (aref r i) (asinh (aref r i))))
+	      r)))
+
+(define-waffe-kernel kernel-acosh (x) (x1)
+  :ignore-optimize t
+  :jit acosh
+  :mat-mat ((with-facet (r ((get-out-buffer x :copy t) 'backing-array))
+	      (declare (type (simple-array single-float) r))
+	      (loop for i fixnum upfrom 0 below (!size x)
+		    do (setf (aref r i) (acosh (aref r i))))
+	      r)))
+
+(define-waffe-kernel kernel-atanh (x) (x1)
+  :ignore-optimize t
+  :jit atanh
+  :mat-mat ((with-facet (r ((get-out-buffer x :copy t) 'backing-array))
+	      (declare (type (simple-array single-float) r))
+	      (loop for i fixnum upfrom 0 below (!size x)
+		    do (setf (aref r i) (atanh (aref r i))))
+	      r)))
+
 
 (defun compare-tensor (enable-optim out x y)
   (declare (optimize (speed 3) (space 0) (safety 1))
@@ -726,9 +786,15 @@
     (:sin     (kernel-sin is-first-time-call? destructable-tensor))
     (:cos     (kernel-cos is-first-time-call? destructable-tensor))
     (:tan     (kernel-tan is-first-time-call? destructable-tensor))
+    (:asin    (kernel-asin is-first-time-call? destructable-tensor))
+    (:acos    (kernel-acos is-first-time-call? destructable-tensor))
+    (:atan    (kernel-atan is-first-time-call? destructable-tensor))
     (:sinh    (kernel-sinh is-first-time-call? destructable-tensor))
     (:cosh    (kernel-cosh is-first-time-call? destructable-tensor))
     (:tanh    (kernel-tanh is-first-time-call? destructable-tensor))
+    (:asinh   (kernel-asinh is-first-time-call? destructable-tensor))
+    (:acosh   (kernel-acosh is-first-time-call? destructable-tensor))
+    (:atanh   (kernel-atanh is-first-time-call? destructable-tensor))
     (:pow     (kernel-pow
 	       is-first-time-call?
 	       destructable-tensor

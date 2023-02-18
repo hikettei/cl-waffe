@@ -27,8 +27,8 @@
   (call (mth 1 model-list1) (!randn `(10 10)))
   t)
 
-(defun test-model (model x)
-  (let ((out (call model x)))
+(defun test-model (model input)
+  (let ((out (call model input)))
     (backward (!sum out))
     t))
 
