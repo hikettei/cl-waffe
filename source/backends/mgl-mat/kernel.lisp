@@ -194,13 +194,13 @@
 			      do (setf (aref o (+ first-index-o i))
 				       (applying
 					(aref x1 (+ first-index-x i))
-					(aref y1 (1- first-index-y))
+					(aref y1 first-index-y)
 					function))))
 		       ((null by)
 			(loop for i fixnum upfrom 0 below (the fixnum (!shape y index))
 			      do (setf (aref o (+ first-index-o i))
 				       (applying
-					(aref x1 (1- first-index-x))
+					(aref x1 first-index-x)
 					(aref y1 (+ first-index-y 1))
 					function))))
 		       (T nil))
@@ -231,9 +231,7 @@
 				`(,@aref-args2 0)
 				`(,@aref-args3 ,i)
 				(+ first-index-x (the fixnum (* i x-dif)))
-				(+ first-index-y (if (= index 0)
-						     index
-						     y-dif))
+				first-index-y
 				(+ first-index-o (the fixnum (* i o-dif))))))
 		     ((null by)
 		      (loop with x-dif fixnum = (get-index x index)
@@ -245,9 +243,7 @@
 				`(,@aref-args1 ,0)
 				`(,@aref-args2 ,i)
 				`(,@aref-args3 ,i)
-				(+ first-index-x (if (= index 0)
-						     index
-						     x-dif))
+				first-index-x
 				(+ first-index-y (the fixnum (* i y-dif)))
 				(+ first-index-o (the fixnum (* i o-dif))))))
 		     (T nil)))
