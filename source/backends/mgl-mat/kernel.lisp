@@ -1,7 +1,7 @@
 
 (in-package :cl-waffe.backends.mgl)
 
-; Todo Rewrite with define-lisp-kernel
+					; Todo Rewrite with define-lisp-kernel
 
 (defmacro will-be-destructed (tensor)
   `(waffetensor-thread-data ,tensor))
@@ -54,7 +54,7 @@
 	    (incf (cl-waffe::waffenodethread-cache-n thread-info) 1)
 	    result))
 	(decide-out-buffer nil args enable-optim copy?))))
-      
+
 (defmethod decide-out-buffer ((out null)
 			      (args waffetensor)
 			      enable-optim
@@ -94,17 +94,17 @@
       (if (>= (length (the list
 			   (mat-dimensions tensor)))
 	      2)
-	     (mgl-mat:stack
-	      axis
-	      (loop for i below n collect tensor))
-	  ; when dims=1
+	  (mgl-mat:stack
+	   axis
+	   (loop for i below n collect tensor))
+					; when dims=1
 	  (mgl-repeat (mgl-mat:reshape
 		       tensor
 		       `(,@(mgl-mat:mat-dimensions tensor) 1))
- 		       n :axis axis))
+ 		      n :axis axis))
       (error "axis=-1")))
 
-;(declaim (ftype (function (mgl-mat:mat waffesupporteddatatype) mgl-mat:mat) trasposedmgl-full-like mgl-full-like))
+					;(declaim (ftype (function (mgl-mat:mat waffesupporteddatatype) mgl-mat:mat) trasposedmgl-full-like mgl-full-like))
 (defun mgl-full-like (tensor value)
   (declare (optimize (speed 3) (safety 0) (debug 0))
 	   (type mat tensor))
@@ -120,8 +120,20 @@
     (declare (type cons dims))
     (make-mat (reverse dims) :initial-element value)))
 
+(declaim (ftype (function (single-float single-float symbol) single-float) applying))
+(defun applying (a b function)
+  (declare
+   (optimize (speed 3) (safety 0))
+   (type symbol function)
+   (type single-float a b))
+  (case function
+    (:+ (+ a b))
+    (:- (- a b))
+    (:* (* a b))
+    (T (error "applying: function is following :+ :- :* ~a" function))))
+
 (defun broadcasting-apply (function x y)
-  (declare (optimize (speed 3) (safety 0) (space 0) (debug 0))
+  (declare (optimize (speed 3) (safety 0))
 	   (type symbol function)
 	   (type waffetensor x y))
   ; assume that (!dims x) == (!dims y)
@@ -140,79 +152,124 @@
 					  (!shape x i))
 					 ((null (second dim))
 					  (!shape y i))))))
-	 (out (make-mat result-shape)))
+	 (out (!zeros result-shape)))
     (declare (type list dims))
-        ; Todo: CUDA Support
-
-    (with-facets ((o (out 'array :direction :output))
-		  (x1 ((data x) 'array :direction :input))
-		  (y1 ((data y) 'array :direction :input)))
-;      (declare (type (simple-array single-float) o x1 y1))
-      (labels ((applying (a b)
-		 (declare (type single-float a b))
-		 (case function
-		   (:+ (+ a b))
-		   (:- (- a b))
-		   (:* (* a b))))
-	       (next (index &optional (aref-args1 nil) (aref-args2 nil) (aref-args3 nil))
+    ; Todo: CUDA Support
+    (with-facets ((o  ((data out) 'backing-array :direction :output))
+		  (x1 ((data x) 'backing-array :direction :input))
+		  (y1 ((data y) 'backing-array :direction :input)))
+      (declare (type (simple-array single-float) o x1 y1))
+      (labels ((get-index (shapes tensor)
+		 (declare (optimize (speed 3) (safety 0)))
+		 (apply #'+ (maplist #'(lambda (x y)
+					 (declare (type list x y))
+					 (the fixnum
+					      (* (the fixnum (car x))
+						 (the fixnum (apply #'* (cdr y))))))
+				     shapes
+				     (!shape tensor))))
+	       (next (index
+		      &optional
+			(aref-args1 nil)
+			(aref-args2 nil)
+			(aref-args3 nil)
+			(first-index-x 0)
+			(first-index-y 0)
+			(first-index-o 0))
 		 (declare
 		  (optimize (speed 3))
-		  (type fixnum index))
+		  (type fixnum index first-index-x first-index-y first-index-o)
+		  (inline aref applying))
 		 (let ((bx (car (nth index dims)))
 		       (by (second (nth index dims))))
 		   
 		   (when (= index (1- (length dims)))
+		     ; dif=1
 		     (cond
 		       ((and (null bx) (null by))
 			(loop for i fixnum upfrom 0 below (!shape x index)
-			      do (apply #'(setf aref)
-					(applying
-					 (apply #'aref x1 `(,@aref-args1 ,i))
-					 (apply #'aref y1 `(,@aref-args2 ,i)))
-					o
-					`(,@aref-args3 ,i))))
+			      do (setf (aref o (+ first-index-o i))
+				       (applying
+					(aref x1 (+ first-index-x i))
+					(aref y1 (+ first-index-y i))
+					function))))
 		       ((null bx)
 			(loop for i fixnum upfrom 0 below (!shape x index)
-			      do (apply #'(setf aref)
-					(applying
-					 (apply #'aref x1 `(,@aref-args1 ,i))
-					 (apply #'aref y1 `(,@aref-args2 0)))
-					o
-					`(,@aref-args3 ,i))))
+			      do (setf (aref o (+ first-index-o i))
+				       (applying
+					(aref x1 (+ first-index-x i))
+					(aref y1 first-index-y)
+					function))))
 
 		       ((null by)
 			(loop for i fixnum upfrom 0 below (!shape y index)
-			      do (apply #'(setf aref)
-					(applying
-					 (apply #'aref x1 `(,@aref-args1 0))
-					 (apply #'aref y1 `(,@aref-args2 ,i)))
-					o
-					`(,@aref-args3 ,i)))))
+			      do (setf (aref o (+ first-index-o i))
+				       (applying
+					(aref x1 first-index-x)
+					(aref y1 (+ first-index-y i))
+					function))))
+		       (T nil))
 		     (return-from next nil))
 		   (cond
 		     ((and (null bx) (null by))
-		      (loop for i fixnum upfrom 0 below (!shape x index)
-			    do (next
-				(1+ index)
-				`(,@aref-args1 ,i)
-				`(,@aref-args2 ,i)
-				`(,@aref-args3 ,i))))
+		      (loop with x-dif fixnum = (if (= (1+ index) (1- (length dims)))
+								      
+						    (get-index `(,@aref-args1 1) x) 0)
+			    with y-dif fixnum = (if (= (1+ index) (1- (length dims)))
+						    (get-index `(,@aref-args2 1) y)
+						    0)
+			    with o-dif fixnum = (if (= (1+ index) (1- (length dims)))
+						    (get-index `(,@aref-args3 1) out)
+						    0)
+			    for i fixnum upfrom 0 below (!shape x index)
+			    do  (progn
+				  (next
+				 (1+ index)
+				 `(,@aref-args1 ,i)
+				 `(,@aref-args2 ,i)
+				 `(,@aref-args3 ,i)
+				 (* i x-dif)
+				 (* i y-dif)
+				 (* i o-dif)))))
 		     ((null bx)
-		      (loop for i fixnum upfrom 0 below (!shape x index)
-			    do (next
-				(1+ index)
-				`(,@aref-args1 ,i)
-				`(,@aref-args2 0)
-				`(,@aref-args3 ,i))))
+		      (loop with x-dif fixnum = (if (= (1+ index) (1- (length dims)))
+						    (get-index `(,@aref-args1 1) x)
+						    0)
+			    with o-dif fixnum = (if (= (1+ index) (1- (length dims)))
+						    (get-index `(,@aref-args3 1) out)
+						    0)
+			    for i fixnum upfrom 0 below (!shape x index)
+			    do  
+
+			       (next
+				 (1+ index)
+				 `(,@aref-args1 ,i)
+				 `(,@aref-args2 0)
+				 `(,@aref-args3 ,i)
+				 (* i x-dif)
+				 0;(* i y-dif)
+				 (* i o-dif))))
 		     ((null by)
-		      (loop for i fixnum upfrom 0 below (!shape y index)
-			    do (next
-				(1+ index)
-				`(,@aref-args1 0)
-				`(,@aref-args2 ,i)
-				`(,@aref-args3 ,i))))))))
+		       (loop with y-dif fixnum = (if (= (1+ index) (1- (length dims)))
+						     (get-index `(,@aref-args2 1) y)
+						     0)
+			    with o-dif fixnum = (if (= (1+ index) (1- (length dims)))
+						    (get-index `(,@aref-args3 1) out)
+						    0)
+			    for i fixnum upfrom 0 below (!shape y index)
+			    do  
+				  (next
+				 (1+ index)
+				 `(,@aref-args1 ,0)
+				 `(,@aref-args2 ,i)
+				 `(,@aref-args3 ,i)
+				 0;(* i x-dif)
+				 (* i y-dif)
+				 (* i o-dif))))
+		     (T nil)))
+		 nil))
 	(next 0))
-      out)))
+      (data out))))
 
 (defparameter *v2v-operations* `(:add :sub :mul :div :dot :matmul))
 (defparameter *abort-delay-instruction* :matmul)
@@ -229,22 +286,22 @@
 			     ignore?
 			     return-node-info)
 	     (declare (ignore given-tensor))
-	     ; given-tensor is always lazytranspsoed.
+					; given-tensor is always lazytranspsoed.
 	     (cond
 	       (ignore?
 		nil)
 	       (return-shape?
-		; Return transposed dims (for 2d only) for 3d is todo.
+					; Return transposed dims (for 2d only) for 3d is todo.
 		(reverse (!shape (sysconst tensor))))
 	       (return-node-info
 		(values :lazy-transpose nil nil nil))
 	       (compile-and-step?
-		; Transpose is evaluated (its slow)
+					; Transpose is evaluated (its slow)
 		(transpose (compile-and-run-lazy (sysconst tensor))))
 	       (T
-		; The Last Transpose is skipped, returning untransposed tensor
-                ; this block will be called by (value ~ :ignore-transpose t)
-                ; so, if tensor should function, this will be evaluated.
+					; The Last Transpose is skipped, returning untransposed tensor
+					; this block will be called by (value ~ :ignore-transpose t)
+					; so, if tensor should function, this will be evaluated.
 		(value (sysconst tensor))))))
     #'LazyTranspose))
 
@@ -283,10 +340,10 @@
 		tanh-tensor
 		exp-tensor))
 
-; kernel function must be following:
-; fname (enable-optimize? args-tensor1 args-tensor2 ... mat1 mat2 ....)
-; Otherwise ignore jit can't return correctly.
-; Todo: Write macro in order to define this.
+					; kernel function must be following:
+					; fname (enable-optimize? args-tensor1 args-tensor2 ... mat1 mat2 ....)
+					; Otherwise ignore jit can't return correctly.
+					; Todo: Write macro in order to define this.
 
 (defmacro define-waffe-kernel (name
 			       args
@@ -308,14 +365,14 @@
 		  (type boolean enable-optimize?)
 		  (type waffetensor ,@args)))
      ,(unless (null jit)
-	; place jit trigger.
+					; place jit trigger.
 	`(return-and-lazy-eval
 	  ,name
 	  ',jit
 	  ,(car args)
 	  (list ,@(cdr args))))
      
-     ; if jit triggered, the form below never called.
+					; if jit triggered, the form below never called.
 
      (macrolet ((get-out-buffer (tensor &key (copy nil))
 		  `(if output
@@ -331,8 +388,8 @@
 	 (cond
 	   ((or (= (length ',args) 1)
 		(and (= (length ',args) 2)
-		   (and (typep ,(car args-mat) 'mat)
-			(typep ,(second args-mat) 'mat)))
+		     (and (typep ,(car args-mat) 'mat)
+			  (typep ,(second args-mat) 'mat)))
 		(and (>= (length ',args) 3)))
 	    ,@mat-mat)
 	   ((or (= (length ',args) 1)
@@ -349,8 +406,8 @@
 			  (not (typep ,(second args-mat) 'mat))))
 		(and (>= (length ',args) 3)))
 	    ,(if (null mat-scal)
-		`(progn ,@mat-mat)
-		`(progn ,@mat-scal)))
+		 `(progn ,@mat-mat)
+		 `(progn ,@mat-scal)))
 	   (T (error "define-waffe-kernel: arguments didn't hit.")))))))
 
 (define-waffe-kernel kernel-add (x y) (x1 y1)
@@ -360,14 +417,14 @@
   :scal-mat ((let ((o (get-out-buffer y :copy t)))
 	       (.+! x1 o)))
   :mat-mat ((if (equal (!shape x) (!shape y))
-	     (cond
-	       ((will-be-destructed x)
-		(let ((o (get-out-buffer x :copy t)))
-		  (axpy! 1.0 y1 o)))
-	       ((will-be-destructed y)
-		(axpy! 1.0 x1 (get-out-buffer y :copy t)))
-	       (T (axpy! 1.0 y1 (get-out-buffer x :copy t))))
-	     (broadcasting-apply :+ x y))))
+		(cond
+		  ((will-be-destructed x)
+		   (let ((o (get-out-buffer x :copy t)))
+		     (axpy! 1.0 y1 o)))
+		  ((will-be-destructed y)
+		   (axpy! 1.0 x1 (get-out-buffer y :copy t)))
+		  (T (axpy! 1.0 y1 (get-out-buffer x :copy t))))
+		(broadcasting-apply :+ x y))))
 
 (define-waffe-kernel kernel-sub (x y) (x1 y1)
   :jit -
@@ -379,12 +436,12 @@
 		    (scal! -1.0 o))))
   :mat-mat ((if (equal (!shape x) (!shape y))
 		(cond
-	      ((will-be-destructed x)
-	       (let ((o (get-out-buffer x :copy t)))
-		 (axpy! -1.0 y1 o)))
-	      ((will-be-destructed y)
-	       (axpy! 1.0 x1 (scal! -1.0 (get-out-buffer y :copy t))))
-	      (T (axpy! -1.0 y1 (get-out-buffer x :copy t))))
+		  ((will-be-destructed x)
+		   (let ((o (get-out-buffer x :copy t)))
+		     (axpy! -1.0 y1 o)))
+		  ((will-be-destructed y)
+		   (axpy! 1.0 x1 (scal! -1.0 (get-out-buffer y :copy t))))
+		  (T (axpy! -1.0 y1 (get-out-buffer x :copy t))))
 		(broadcasting-apply :- x y))))
 
 (define-waffe-kernel kernel-mul (x y) (x1 y1)
@@ -395,12 +452,12 @@
 	       (scal! x1 o)))
   :mat-mat ((if (equal (!shape x) (!shape y))
 		(cond
-	      ((will-be-destructed x)
-	       (let ((o (get-out-buffer x :copy nil)))
-		 (geem! 1.0 x1 y1 0.0 o)))
-	      ((will-be-destructed y)
-	       (geem! 1.0 x1 y1 0.0 (get-out-buffer y :copy nil)))
-	      (T (geem! 1.0 x1 y1 0.0 (get-out-buffer x :copy nil))))
+		  ((will-be-destructed x)
+		   (let ((o (get-out-buffer x :copy nil)))
+		     (geem! 1.0 x1 y1 0.0 o)))
+		  ((will-be-destructed y)
+		   (geem! 1.0 x1 y1 0.0 (get-out-buffer y :copy nil)))
+		  (T (geem! 1.0 x1 y1 0.0 (get-out-buffer x :copy nil))))
 		(broadcasting-apply :* x y))))
 
 (define-waffe-kernel kernel-inv (x) (x1)
@@ -429,7 +486,7 @@
 	 (funcall (data tensor) nil nil nil nil t)
        (eql node-type :lazy-transpose)))
     (T nil)))
-				   
+
 (declaim (ftype (function (boolean waffetensor waffetensor waffetensor) mgl-mat:mat)
 		matmul-tensor
 		pow-tensor
@@ -458,7 +515,7 @@
 	((and (= (length x-dims) 2)
 	      (= (length y-dims) 2))
 
-	 ; Todo: check shapes
+					; Todo: check shapes
 
 	 (let ((out-dim `(,(if (car transpose-map)
 			       (car (reverse (mat-dimensions x1)))
@@ -468,11 +525,11 @@
 			       (second (mat-dimensions y1))))))
 	   (let ((out (make-mat out-dim)))
 	     (matmul-tensor-2d
-	       out
-	       x1
-	       y1
-	       (car transpose-map)
-	       (second transpose-map))
+	      out
+	      x1
+	      y1
+	      (car transpose-map)
+	      (second transpose-map))
 	     out)))
 	((and (= (length x-dims) 3)
 	      (= (length y-dims) 2))
@@ -492,7 +549,7 @@
 				      (the fixnum (* i
 						     (the fixnum (nth 1 out-dim))
 						     (the fixnum (nth 2 out-dim)))))
-	      
+	       
 	       (reshape-and-displace!
 		x1
 		(cdr shape-first)
@@ -651,9 +708,9 @@
   (declare (optimize (speed 3) (space 0) (safety 1))
 	   (type boolean enable-optim)
            (type waffetensor out x y))
-  ; Todo do lazy
+					; Todo do lazy
   (let ((o (decide-out-buffer out x enable-optim t)))
-           (mgl-mat:.<! (value y) o)))
+    (mgl-mat:.<! (value y) o)))
 
 (defun sum-tensor (is-first-time-call? out x y)
   (declare (optimize (speed 3) (space 0) (safety 1))
@@ -661,7 +718,7 @@
            (type waffetensor out x y)
 	   (ignore is-first-time-call? out))
 
-  ; Todo Optimize 
+					; Todo Optimize 
 
   (warranty x)
   (warranty y)
@@ -737,14 +794,14 @@
 		 (t
 		  (setf (aref mask mi) 1.0)))))
 
-; having not cuda gpus, i can't test this code lol T_T
-;(define-cuda-kernel (bernoulli-cuda)
-;    (void ((mask :mat :io) (x :mat :io) (n int) (p float)))
-;  (let ((i (+ (* block-dim-mask block-idx-mask) thread-idx-mask)))
-;    (when (< i n)
-;      (if (< (aref x i) p)
-;	  (set (aref x i) 0.0)
-;          (set (aref x i) 1.0)))))
+					; having not cuda gpus, i can't test this code lol T_T
+					;(define-cuda-kernel (bernoulli-cuda)
+					;    (void ((mask :mat :io) (x :mat :io) (n int) (p float)))
+					;  (let ((i (+ (* block-dim-mask block-idx-mask) thread-idx-mask)))
+					;    (when (< i n)
+					;      (if (< (aref x i) p)
+					;	  (set (aref x i) 0.0)
+					;          (set (aref x i) 1.0)))))
 
 (defun bernoulli-tensor (enable-optimize out return-tensor rate)
   (declare (type boolean enable-optimize)
@@ -754,14 +811,14 @@
     (if (use-cuda-p (data return-tensor))
 	(progn
 	  (error "having not gpus, i've not tested cl-waffe.backends.mgl:bernoulli-tensor yet in cuda.")
-	;(bernoulli-cuda o (mat-size o) (data rate)
-	;		:grid-dim (list (ceiling (mat-size o) 256) 1 1)
-	;		:block-dim (list 256 1 1))
-	)
+					;(bernoulli-cuda o (mat-size o) (data rate)
+					;		:grid-dim (list (ceiling (mat-size o) 256) 1 1)
+					;		:block-dim (list 256 1 1))
+	  )
 	(bernoulli-lisp o (mat-displacement o) (mat-size o) (data rate)))))
 
 
-;optimize is failed.
+					;optimize is failed.
 (define-lisp-kernel (embedding-forward-lisp)
     ((out :mat :output)
      (x :mat :input)
@@ -783,10 +840,10 @@
 			     (aref weights
 				   (the fixnum
 					(+ ei
-				      (the fixnum
-					   (* (the fixnum
-						   (round (aref x xi)))
-					      embedding-dim)))))))))))
+					   (the fixnum
+						(* (the fixnum
+							(round (aref x xi)))
+						   embedding-dim)))))))))))
 
 (defun embedding-forward (enable-optimize x weights pad-idx)
   "(with-searching-calc-node :embedding-forward x weights pad-idx) -> embeddings"
@@ -797,7 +854,7 @@
 	 (total-size (mat-dimension (data x) 1))
 	 (out (mgl-mat:make-mat `(,batch-size ,total-size ,(!shape weights 1))
 				:initial-element 0.0)))
-    ; there's no cuda ver...
+					; there's no cuda ver...
     (embedding-forward-lisp
      out
      (data x)
@@ -824,7 +881,7 @@
 				   (+ ei
 				      (the fixnum
 					   (* embedding-dim
-					    (round (aref x xi))))))
+					      (round (aref x xi))))))
 			     (+ (aref out
 				      (+ ei
 					 (the fixnum
