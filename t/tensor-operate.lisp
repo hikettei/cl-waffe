@@ -169,6 +169,7 @@
 	 (!sigmoid x)
 	 (!leakey-relu x)
 	 (!swish x)
+	 (!gelu x)
 	 (call (Swish :beta 1.0) x))))
 
 #|
