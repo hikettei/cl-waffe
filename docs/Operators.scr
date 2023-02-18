@@ -412,6 +412,13 @@
 @end(section)
 
 @begin(section)
+@title(!filter)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !filter)
+)
+@end(section)
+
+@begin(section)
 @title(!argmax)
 @cl:with-package[name="cl-waffe"](
 @cl:doc(function !argmax)
