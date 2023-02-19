@@ -368,7 +368,17 @@ Example:
 		   (remove-if #'(lambda (x) (find x `(&optional &key &aux &rest)))
 			      args))))
     `(progn
-         (declaim (ftype (function (,name ,@(map 'list (lambda (x) (declare (ignore x)) `waffetensor) `,args)) (or null list waffetensor)) ,f-ident))
+       (declaim (ftype
+		 (function
+		  (,name
+		   ,@(map 'list (lambda (x)
+				  (cond
+				    ((find x `(&optional &key &aux &rest))
+				     x)
+				    (T `waffetensor)))
+			  `,args))
+		  (or null list waffetensor))
+		 ,f-ident))
 	 (defun ,f-ident (,self-heap ,@args)
 	   ,(if optimize
 		`(declare (optimize (speed 3) (space 0) (safety 1))
