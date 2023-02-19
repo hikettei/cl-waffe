@@ -128,13 +128,11 @@ Note: this is not setfable"
 				  (first-argument T)
 				  (i fixnum))
   (declare (type fixnum i))
-  (if (= i 0)
+  (if (and (= i 0) (not (= 1 (length variables))))
       (invoke-kernel-inlined
        kernel-function
        variables
-       (unless (null (second variables))
-	 (data (second variables))
-	 nil)
+       (data (second variables))
        (+ i 1))
       (invoke-cpu-kernel kernel-function variables)))
 
