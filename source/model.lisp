@@ -110,6 +110,7 @@ Output: Waffetensor of list which comprised of waffetensor."
        (nth (the fixnum (data (car args)))
 	    (model-list-mlist model))
        (cdr args))))
+  
   (let* ((result (apply
 		  (the function (call-forward model)) args)))
     (declare (type (or null waffetensor list) result))
@@ -135,9 +136,7 @@ Output: Waffetensor of list which comprised of waffetensor."
 	    (setf (waffetensor-state result) model)
 	    (setf (waffetensor-variables result) args)
 	    (setf (waffetensor-is-ancestor-param result)
-		  (if (member-if #'(lambda (x)
-		                     (waffetensor-is-ancestor-param x))
-				 args)
+		  (if (member-if #'waffetensor-is-ancestor-param args)
 		      t
 		      nil)))))
     result))
@@ -412,7 +411,7 @@ Example:
 					  thread-info)
 					 :copy t)
 				      (incf (waffenodethread-cache-n thread-info) 1)
-				      (setf (self ,name) tmp)))
+				      (setf (self ,name) (const tmp))))
 				   (T (!allow-destruct smaller-value)
 				      (setf (self ,name) smaller-value)))))))))
 	     (self hide-from-tree)

@@ -49,11 +49,16 @@
       (is (test-model denselayer2 x))
       (is (test-model denselayer3 x))
       (is (test-model denselayer4 x))
-      (is (test-model dropout x))
-      (is (test-model batchnorm2d x))
-      ;(is (test-model embedding (parameter (!ones `(10 10)))))
+      (is (test-model dropout x)))
+
+(test batchnorm-test
+      (is (test-model batchnorm2d x)))
+
+(test nlp-test
+      (is (test-model embedding (parameter (!ones `(10 10))))))
       ;(is (test-model rnn1 words))
       ;(is (test-model rnn2 words))
-      (is (test-model-list))
-      )
+
+(test model-list-test
+      (is (test-model-list)))
 
