@@ -298,11 +298,11 @@ Note: grad is @b(not) setfable"
        (error "The tensor is not a waffetensor."))
      
      (unless (waffetensor-grad ,tensor)
-       (error "The tensor is not a parameter. Constants doesn't have a grad. If you need grad, please define it with (parameter (const XXX))"))
+       (error "The tensor is not a parameter. Constants doesn't have a grad. If you need grad, please define it with (parameter (const XXX)). When using ~a~%" ,tensor))
 
      (if (typep (waffetensor-grad ,tensor) 'cons)
-	 (error "A grad is nil. Please remain you need to call (backward out) before using a grad. Or, If you need grad, please define it with (parameter (const ~~~)). When using ~%~a" ,tensor))
-
+	 (error "Refering the tensor's grad, cl-waffe got nil.~%This is because (backward out) weren't called after using (zero-grad), otherwise the computation nodes aren't continuous. ~%See also: Documentation of defnode/defmodel. ~%When using ~%~a~%" ,tensor))
+	 
      (waffetensor-grad ,tensor)))
 
 (defmacro parameter (tensor)
