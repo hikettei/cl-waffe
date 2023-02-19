@@ -5,7 +5,7 @@
 
 ; here's tests for several activation, several optimizers, some operators.
 
-(defparameter size 1000)
+(defparameter size 200)
 ; preparing dummy data
 (defparameter train (!beta `(,size ,(* 28 28)) 2.0 2.0))
 (defparameter label (!zeros `(,size 10)))

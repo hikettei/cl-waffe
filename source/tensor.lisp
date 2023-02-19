@@ -588,7 +588,10 @@ Example:
 (defun (setf !areflist) (value tensor dims)
   ; For backward, you need to call it like (setq z (setf (!aref x ~) ~))
   ; To solve this problem, i guess i need more macros.
-  (setf tensor (call (SetfArefTensor dims) tensor (assure-tensor value))))
+
+
+  (multiple-value-bind (value tensor) (straighten-up (assure-tensor value) (assure-tensor tensor))
+    (setf tensor (call (SetfArefTensor dims) tensor value))))
 
 (defmacro !row-major-aref (tensor index)
   `(mgl-mat:row-major-mref (data ,tensor) ,index))

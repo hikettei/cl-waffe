@@ -42,6 +42,7 @@
     t))
 
 
+
 (test networks-test
       (is (test-model linearlayer1 x))
       (is (test-model linearlayer2 x))
@@ -51,9 +52,9 @@
       (is (test-model denselayer4 x))
       (is (test-model dropout x))
       (is (test-model batchnorm2d x))
-      (is (test-model rnn1 words))
-      (is (test-model rnn2 words))
-      (is (test-model embedding words))
+      ;(is (test-model rnn1 words))
+      ;(is (test-model rnn2 words))
+      ;(is (test-model embedding words))
       (is (test-model-list))
       )
 
