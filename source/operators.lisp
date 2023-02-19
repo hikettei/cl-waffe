@@ -1302,7 +1302,6 @@ Example:
 
 (defmacro !with-displaces (tensor index batch-size)
   ""
-  
   )
 
 (defun !displace ()

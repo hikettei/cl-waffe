@@ -42,6 +42,7 @@
 	   #:WaffeDataset
 
 	   #:save-for-backward
+	   #:reset-config
 	   
 	   #:step-model
 	   #:predict
