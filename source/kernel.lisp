@@ -132,7 +132,10 @@ Note: this is not setfable"
       (invoke-kernel-inlined
        kernel-function
        variables
-       (data (second variables)) (+ i 1))
+       (unless (null (second variables))
+	 (data (second variables))
+	 nil)
+       (+ i 1))
       (invoke-cpu-kernel kernel-function variables)))
 
 (defun invoke-kernel (kernel-function
