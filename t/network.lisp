@@ -15,6 +15,15 @@
 (defparameter denselayer4 (denselayer 100 10 t #'!tanh))
 
 (defparameter dropout (dropout 0.5))
+(defparameter batchnorm2d (dropout 0.5))
+
+
+(defparameter embedding (Embedding 10 10))
+
+(defparameter rnn1 (RNN 10 256 :num-layers 1))
+(defparameter rnn2 (RNN 10 256 :num-layers 3))
+
+(defparameter words (call embedding (!ones `(10 10))))
 
 (defparameter model-list (model-list (list (linearlayer 10 1)
 					   (linearlayer 10 1))))
@@ -32,6 +41,7 @@
     (backward (!sum out))
     t))
 
+
 (test networks-test
       (is (test-model linearlayer1 x))
       (is (test-model linearlayer2 x))
@@ -40,6 +50,10 @@
       (is (test-model denselayer3 x))
       (is (test-model denselayer4 x))
       (is (test-model dropout x))
+      (is (test-model batchnorm2d x))
+      (is (test-model rnn1 words))
+      (is (test-model rnn2 words))
+      (is (test-model embedding words))
       (is (test-model-list))
       )
 
