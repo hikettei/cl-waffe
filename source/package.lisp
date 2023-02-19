@@ -22,6 +22,8 @@
 	   #:value
 	   #:grad
 
+	   #:*in-node-method*
+
 	   #:waffedatatype
 	   #:waffe-array
 

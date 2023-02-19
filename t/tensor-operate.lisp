@@ -249,7 +249,21 @@
     (setf (!aref tensor2 '(0 1)) tensor1)
     (and (= (data (!sum (!aref tensor2 '(0 1)))) 0.0)
 	 (> (data (!sum (!aref tensor2 '(2 -1)))) 0.0))))
-	   
+
+
+(defun setfaref-backward ()
+  (let ((tensor1 (parameter (!randn `(10 10 10))))
+	(tensor2 (!add (!randn `(10 10)) 1.0)))
+    (setq tensor1 (setf (!aref tensor1 0) tensor2))
+    (backward (!sum tensor1))
+    (print (grad tensor1))
+    (grad tensor1)))
+
+(defun aref-backward ()
+  (let* ((tensor1 (parameter (!randn `(10 10 10))))
+ 	 (tensor2 (!add (!randn `(10 10)) (!aref tensor1 0))))
+    (backward (!sum tensor1))
+    (grad tensor1)))
 
 #|
 (defun test-einsum ()
@@ -303,6 +317,7 @@ b)))
       (is (test-activations))
       (is (test-filter))
       (is (test-beta))
-     
+      (is (aref-backward))
+      ;(is (setfaref-backward))
       )
 

@@ -55,9 +55,10 @@
       (is (test-model batchnorm2d x)))
 
 (test nlp-test
-      (is (test-model embedding (parameter (!ones `(10 10))))))
+      (is (test-model embedding (parameter (!ones `(10 10)))))
       ;(is (test-model rnn1 words))
       ;(is (test-model rnn2 words))
+      )
 
 (test model-list-test
       (is (test-model-list)))
