@@ -447,23 +447,24 @@ Example:
 		       ;(declare (type waffetensor &optional result))
 		       (typecase result
 			 (list (prog1
+				   result
 				   ;reducible?
-				   (map 'list
-					(lambda (x)
-					  (typecase (waffetensor-data x)
-					    (mat
-					     (setf (data x) (data x))))
-					  x)
-					result)
+				   ;(map 'list
+					;(lambda (x)
+					 ; (typecase (waffetensor-data x)
+					  ;  (mat
+					   ;  (setf (data x) (data x))))
+					  ;x)
+					;result)
 				 (free-caches ,thread)
 				 (when ,is-top
 				   (set-thread-data nil ,@vars))))
 			 (waffetensor
 			  (prog1
 			      (progn
-				(typecase (waffetensor-data result)
-				  (mat
-				   (setf (data result) (data result))))
+				;(typecase (waffetensor-data result)
+				;  (mat
+				;   (setf (data result) (data result))))
 				result)
 			    (free-caches ,thread)
 			    (when ,is-top

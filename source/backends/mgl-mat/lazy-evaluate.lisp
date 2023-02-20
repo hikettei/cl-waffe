@@ -18,6 +18,9 @@
 (defparameter *ignore-jit-max-len* 3
   "When computation node is built and that length <= *ignore-jit-max-len* call backpoint and call blas api.")
 
+(defparameter *force-disable-jit* nil
+  "when t, jit never called")
+
 (defun reset-jit ()
   "Dispose all compiled jit functions. (compiled code remains)"
   (setf *jit-compiled* (make-hash-table))
@@ -125,6 +128,7 @@ When the tensor isn't appropriate, do nothing."
   (declare (type list args))
   `(if (and
 	; force-ignore-jit, to avoid: kernel -> jit -> kernel -> jit ... err
+	(not *force-disable-jit*)
 	(not (cl-waffe::waffetensor-force-ignore-jit ,tensor))
 	(or (and cl-waffe.caches:*static-node-mode*
 		 (cl-waffe::waffetensor-thread-data ,tensor))
@@ -237,7 +241,7 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 	       (cl-waffe::waffetensor-tensor-ident tensor)
 	       args-table)
 	      (data tensor))
-	(format jit-id "O") ; it could produce type-error, replace with its type name.
+	(format jit-id "(~a)" (type-of (data tensor)))
 	(cl-waffe::waffetensor-tensor-ident tensor))))))
       
 (defun generate-kernel-code (jit-id args-table mat-dims-table tensor lisp-function args)
@@ -456,7 +460,7 @@ Return: compiled-function's id, out"
 	  ;; Todo: any-tensorが不要ならany-tensorに書き込む
 
 	  (when *verbose*
-	    (format t "~%JIT Compiled New function ~a~%" jit-ident)
+	    (format t "~%JIT Compiled New function ~a ~a ~%" jit-ident jit-id)
 	    (print kernel-code)
 	    (format t "~%Output Mat Shape: ~a~%" out-mat-shape)
 	    (fresh-line))

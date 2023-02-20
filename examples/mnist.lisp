@@ -8,6 +8,10 @@
 ; this file is excluded from cl-waffe-test
 ; here's mnist example codes and benchmark
 
+(setf cl-waffe.backends.mgl:*verbose* t)
+(setf cl-waffe.backends.mgl::*force-disable-jit* t)
+(setf cl-waffe.backends.mgl:*static-node-mode* nil)
+
 (defmodel MLP (activation)
   :parameters ((layer1   (denselayer (* 28 28) 512 t activation))
 	       (layer2   (denselayer 512 256 t activation))
@@ -32,7 +36,7 @@
 
 (defun demo () (time (demo1)))
 (defun demo1 ()
-  (defparameter batch-size 300)
+  (defparameter batch-size 100)
   
   (setq trainer (MLPTrainer :relu 1e-4))
 
@@ -60,7 +64,7 @@
   (defparameter mnist-target-test (!zeros `(100 10)))
   |#
 
-  #|
+  
   (sb-profile:profile mgl-mat::blas-sgemm
 		      mgl-mat::blas-scopy
 		      mgl-mat::array-to-mat
@@ -82,7 +86,7 @@
 		      cl-waffe::call-backward
 		      cl-waffe.backends.mgl::adam-update
 		      svmformat:parse-file)
-  |#
+  
   (format t "Training: ~a~%" (!shape mnist-dataset))
   (format t "Valid   : ~a~%" (!shape mnist-target))
   (format t "Test    : ~a~%"  (!shape mnist-dataset-test))
@@ -104,7 +108,7 @@
    ;flamegraph:save-flame-graph ("/tmp/nonjit.stack")
   (mgl-mat:with-mat-counters (:count count :n-bytes n-bytes)
     (time (train trainer train :max-iterate 600
-			       :epoch 20
+			       :epoch 1
 			       :batch-size batch-size
 			       :valid-dataset test
 			       :verbose t :random t :print-each 100))
@@ -112,6 +116,6 @@
     (format t "Consumed: ~abytes~%" n-bytes)))
 
 ;  (tracer:save-report "report.json")
-  ;(sb-profile:report)
+  (sb-profile:report)
   )
 
