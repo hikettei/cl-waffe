@@ -130,7 +130,7 @@ When the tensor isn't appropriate, do nothing."
 	; force-ignore-jit, to avoid: kernel -> jit -> kernel -> jit ... err
 	(not *force-disable-jit*)
 	(not (cl-waffe::waffetensor-force-ignore-jit ,tensor))
-	(or (and cl-waffe.caches:*static-node-mode*
+	(or (and ;cl-waffe.caches:*static-node-mode*
 		 (cl-waffe::waffetensor-thread-data ,tensor))
 	    (or *force-lazy-eval*))
 	(all-the-same-shapes ,tensor ,args))
@@ -358,7 +358,7 @@ Return: compiled-function's id, out"
 			,(map 'list #'car ,args)
 			(declare (optimize (speed 3)
 					   (space 0)
-					   (safety 1)
+					   (safety 0)
 					   (compilation-speed 0))
 			         (ignore
 				  ,@(map

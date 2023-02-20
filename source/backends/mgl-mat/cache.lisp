@@ -17,9 +17,9 @@ This package exports features for making caches (sysconst)")
   "When every time you call your model and their computations node is static,
    enable this. By doing so, cl-waffe can optimize ram usage and computation speed.")
 
-; todo: add depends on tg, bordeaux-threads
 (defvar *thread-caches*
   (tg:make-weak-hash-table :weakness :key))
+
 (defvar *thread-cache-lock*
   (bordeaux-threads:make-lock "thread cache lock"))
 
