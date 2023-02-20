@@ -59,23 +59,33 @@ cl-waffe automatically coerce them to arbitary types
 (deftype WaffeTensorTypes ()
   `(or mgl-mat:mat waffesupporteddatatype))
 
-(defstruct grad-tmp
+(defstruct Grad-Tmp
   (value nil)
   (grad-called nil :type boolean))
 
 (defstruct (WaffeNodeThread
+	    (:print-function
+	     (lambda (obj stream depth)
+		 (declare (ignore depth))
+		 (format stream "[WaffeNodeThreadInfomation]:~%The top of node is: ~a~% The tensor locates in the depth of ~a~% The tensor is registered as a ~a~%"
+			 (waffenodethread-belong-to obj)
+			 (waffenodethread-thread-idx obj)
+			 (waffenodethread-cache-n obj))))
 	    (:constructor
 		thread
 		(thread-idx
+		 belong-to
 		 &aux
-		   (thread-idx thread-idx))))
+		   (thread-idx thread-idx)
+		   (belong-to belong-to))))
+  (belong-to nil :type (or null symbol))
   (thread-idx 0 :type fixnum)
   (cache-n 0 :type fixnum))
 
 (defstruct (WaffeTensor (:print-function
 			 (lambda (tensor stream depth)
-			   (declare (ignore depth))
-			   (format stream (render-tensor tensor))))
+			    (declare (ignore depth))
+			    (format stream (render-tensor tensor))))
 			(:constructor
 			    sysconst
 			    (value &key (backend *default-backend*)
@@ -222,6 +232,11 @@ Note: this function is setfable and inlined"
 		(the (values (or mat function) &optional) result)))))))
     (T (waffetensor-data tensor))))
 
+(defun reset-config ()
+  "Set *no=grad*=nil, *in-node-method*=nil. This function is for the case when an error occurs during training and these parameters weren't reseted correctly."
+  (setf *no-grad* nil)
+  (setf *in-node-method* nil))
+
 (defun (setf data) (val &optional tensor)
   "Modifying tensor'data.
 
@@ -248,14 +263,13 @@ When the argument that you want to insert is a tensor, this function automatical
 	      (cos (* 2.0 pi (double-random)))
 	      var)))))
 
-(declaim (ftype
-	  (function
-	   (waffetensorcontenttype)
-	   WaffeTensorTypes)
-	  init-waffe-tensor-data))
 (defun init-waffe-tensor-data (content)
   ; todo: coerce: simple-array -> mgl-mat
-  (declare (type waffetensorcontenttype content))
+  
+  (when (eql content t)
+    (reset-config)
+    (error "An tensor is initialized with ~a, which means your node/model's parameter weren't updated. This is due to you're training with *no-grad*=t or cl-waffe::*in-node-method*=t. Try this after calling (cl-waffe:reset-config). (This is occurs when an error occurs during training models.)" content))
+  
   (typecase content
     (ratio
      (if (eq mgl-mat:*default-mat-ctype* :double) ;...
@@ -298,11 +312,11 @@ Note: grad is @b(not) setfable"
        (error "The tensor is not a waffetensor."))
      
      (unless (waffetensor-grad ,tensor)
-       (error "The tensor is not a parameter. Constants doesn't have a grad. If you need grad, please define it with (parameter (const XXX))"))
+       (error "The tensor is not a parameter. Constants doesn't have a grad. If you need grad, please define it with (parameter (const XXX)). When using ~a~%" ,tensor))
 
      (if (typep (waffetensor-grad ,tensor) 'cons)
-	 (error "A grad is nil. Please remain you need to call (backward out) before using a grad. Or, If you need grad, please define it with (parameter (const ~~~)). When using ~%~a" ,tensor))
-
+	 (error "Refering the tensor's grad, cl-waffe got nil.~%This is because (backward out) weren't called after using (zero-grad), otherwise the computation nodes aren't continuous. ~%See also: Documentation of defnode/defmodel. ~%When using ~%~a~%" ,tensor))
+	 
      (waffetensor-grad ,tensor)))
 
 (defmacro parameter (tensor)
@@ -424,13 +438,12 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
 	 (if (typep (waffetensor-grad tensor) 'cons)
 	     ; is it first value? or not?
 	     (let ((new-grad (grad-tmp-value (waffetensor-grad-tmp tensor))))
-	       (setf (waffetensor-grad tensor) (value new-grad)))
-	     
+	       (setf (waffetensor-grad tensor) (value new-grad)))	     
 	     ;Otherwise (grad-tmp is created), Sum up grads for multiple variables
 	     (if (typep (waffetensor-grad tensor) 'mat)
 		 (axpy! 1.0 ; todo: integrate add with jit.
 			(value (grad-tmp-value
-			       (waffetensor-grad-tmp tensor)))
+				(waffetensor-grad-tmp tensor)))
 			(waffetensor-grad tensor))
 		 (setf (waffetensor-grad tensor)
 		       (+ (the single-float (waffetensor-grad tensor))
@@ -588,7 +601,10 @@ Example:
 (defun (setf !areflist) (value tensor dims)
   ; For backward, you need to call it like (setq z (setf (!aref x ~) ~))
   ; To solve this problem, i guess i need more macros.
-  (setf tensor (call (SetfArefTensor dims) tensor (assure-tensor value))))
+  (multiple-value-bind (value tensor) (straighten-up (assure-tensor value) (assure-tensor tensor))
+    (call (SetfArefTensor dims)
+	  tensor
+	  value)))
 
 (defmacro !row-major-aref (tensor index)
   `(mgl-mat:row-major-mref (data ,tensor) ,index))

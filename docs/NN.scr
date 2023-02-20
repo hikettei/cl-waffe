@@ -4,9 +4,63 @@
 
 @begin(section)
 @title(model-list)
-@cl:with-package[name="cl-waffe"](
-@cl:doc(struct model-list)
-)
+Holds submodules in a list.
+
+Model-List it contains are properly tracked by @cl:param(find-variables).
+
+Note: This Layer is exported from Package @cl:param(cl-waffe).
+@begin(section)
+@title(Parameters)
+@begin[lang=lisp](code)
+(model-list list)
+@end[lang=lisp](code)
+@begin(deflist)
+
+@def(list (list))
+@term(an list of models)
+
+@end(deflist)
+
+This model can also be created by @cl:param(mlist)
+
+@begin[lang=lisp](code)
+(mlist models) ; -> [Model: MODEL-LIST]
+@end[lang=lisp](code)
+@end(section)
+
+@begin(section)
+@title(Forward)
+@begin[lang=lisp](code)
+(call (Model-List) index &rest args)
+@end[lang=lisp](code)
+
+Note that @cl:param(index) must be waffetensor.
+
+To avoid this, @cl:param(mth) is available.
+
+@begin[lang=lisp](code)
+(call (mth 0 (Model-List)) &rest args)
+@end[lang=lisp](code)
+
+@begin(deflist)
+
+@def(index (waffetensor of which data is fixnum))
+@term(an index of models)
+
+@def(args (list))
+@term(arguments for index-th model)
+
+@end(deflist)
+@end(section)
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+(setq models (Model-List (list (linearlayer 10 1) (linearlayer 10 1))))
+(call models (const 0) (!randn `(10 10)))
+(call (mth 0 models) (!randn `(10 10)))
+@end[lang=lisp](code)
+@end(section)
 @end(section)
 
 @begin(section)

@@ -22,6 +22,8 @@
 	   #:value
 	   #:grad
 
+	   #:*in-node-method*
+
 	   #:waffedatatype
 	   #:waffe-array
 
@@ -42,6 +44,7 @@
 	   #:WaffeDataset
 
 	   #:save-for-backward
+	   #:reset-config
 	   
 	   #:step-model
 	   #:predict

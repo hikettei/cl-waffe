@@ -9,6 +9,10 @@
 (defparameter *destructive-operation* nil
   "When t, some computations will be done destructively. Default is nil")
 
+(defun share-memory-p (tensor1 tensor2)
+  "Todo"
+  (declare (ignore tensor1 tensor2)))
+
 (defmacro with-optimized-operation (&body body)
   ; doing all operations with destructive
   `(progn
@@ -49,7 +53,7 @@
 Note: this is not setfable"
   (declare (optimize (speed 3))
 	   (type waffetensor tensor))
-
+  
   (typecase (waffetensor-data tensor)
     (function
      (let ((function-info
@@ -75,6 +79,7 @@ Note: this is not setfable"
 
 (declaim (ftype (function (keyword cons) waffetensor) invoke-mgl-kernel invoke-cpu-kenel))
 (defun invoke-mgl-kernel (kernel-function variables)
+  (declare (optimize (speed 3)))
   (sysconst (cl-waffe.backends.mgl:dispatch-kernel
 				  kernel-function
 				  *destructive-operation*
@@ -93,8 +98,9 @@ Note: this is not setfable"
 					     variables))))
 
 (defun invoke-cpu-kernel (kernel-function variables)
+  (declare (optimize (speed 3)))
   (sysconst (cl-waffe.backends.cpu:dispatch-kernel kernel-function variables)
-	    :thread-data (let ((r (find t variables
+	    :thread-data (let ((r (find t (the list variables)
 					:test (lambda (x y)
 						(declare (ignore x))
 						(waffetensor-thread-data y)))))
@@ -128,11 +134,12 @@ Note: this is not setfable"
 				  (first-argument T)
 				  (i fixnum))
   (declare (type fixnum i))
-  (if (= i 0)
+  (if (and (= i 0) (not (= 1 (length variables))))
       (invoke-kernel-inlined
        kernel-function
        variables
-       (data (second variables)) (+ i 1))
+       (data (second variables))
+       (+ i 1))
       (invoke-cpu-kernel kernel-function variables)))
 
 (defun invoke-kernel (kernel-function
@@ -231,8 +238,7 @@ Example:
        (error "cl-waffe.with-kernel-case: target must be waffetensor. Encounted type of ~a, when using ~a" (type-of ,target) ,target))
      (value ,target)
      (cl-waffe.caches:with-cache
-	 (,var ,target :place (cl-waffe.backends.mgl:create-thread-idx
-			       (waffetensor-thread-data ,target))
+	 (,var ,target
 	  :copy ,copy)
        (warranty ,target)
        (labels ((mgl-cpu-step  () ,@mgl)

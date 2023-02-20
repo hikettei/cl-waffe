@@ -17,7 +17,7 @@ Output: Applied tensor, where the tensor is the shape of (batch-size out-feature
 		(parameter (!mul 0.01 (!randn `(,in-features ,out-features))))
 		:type waffetensor)
 	      (bias (if bias
-			(parameter (!zeros `(,out-features 1)))
+			(parameter (!zeros `(1 ,out-features)))
 			nil)))
   :forward ((x)
 	    (cl-waffe.nn:linear x (self weight) (self bias))))

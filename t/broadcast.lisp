@@ -57,7 +57,7 @@
 	 (k (!repeats m 2 100))
 	 (l (!randn `(100 100 100)))
 	 (result  (time (!add m l)))
-	 (result1 (time (!add m k))))
+	 (result1 (time (!add k l))))
     (M= (value result) (value result1))))
 
 

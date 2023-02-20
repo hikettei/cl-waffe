@@ -368,7 +368,7 @@
   (let ((place node-object))
     `(defun ,name ,args
        ,doc
-       (declare (optimize (speed 3) (safety 0)))
+       (declare (optimize (speed 3) (safety 1)))
        (let* ((,tensor (if *no-grad* ,place ,node-object)))
 	 ,@body))))
 
@@ -640,7 +640,7 @@ For nd tensors...
 	   (type waffetensor x))
   (case (!dims x)
     (0 (error "!sum: the tensor given is a number"))
-    (1 (!sum-2d (!unsqueeze x 1) axis keepdims))
+    (1 (!sum-2d x axis keepdims))
     (2 (!sum-2d x axis keepdims))
     (T
      (if (null axis)
@@ -649,7 +649,7 @@ For nd tensors...
 		 do (setq result (!add result (!sum (!aref x i)))))
 	   result)
 	 (let* ((dims (!shape x axis))
-					; Note: keepdims is ignored. And May need exclusive kernel for it because its too slow when forward and backward.
+		; Note: keepdims is ignored. And May need exclusive kernel for it because its too slow when forward and backward.
 
 		(sum-dims #'(lambda (n) (loop for i upfrom 0 below (!dims x)
 	 				      collect (if (= i axis)
@@ -1297,9 +1297,42 @@ Example:
 (defun !<= () "Todo")
 (defun !>= () "Todo")
 
-(defmacro !dotensors ()
-  "")
+(defun range-tail (start end acc step)
+  (if (> start end)
+      acc
+      (range-tail start (- end step) (cons end acc) step)))
 
+(defun range (start end &optional (step 1) (fill nil))
+  (range-tail start end '() step))
+#|
+(defnode FilteringTensorBackward (dim iter-num args)
+  :parameters ((dim dim :type fixnum)
+	       (iter-num iter-num :type fixnum)
+	       (args args :type cons))
+  :forward ((&rest result)
+	    result)
+  :backward ((dy)
+	     (loop for i fixnum upfrom 0 below (self iter-num)
+		   collect (apply #'!aref `(,(self args) ,i)))))
+
+(defun !filter-tensor (tensor dim batch-size function)
+  "This is a intrinsical function of doing iteration for waffe-tensor.
+This is the very fastst but not useful. So use macros in order to make it more useful."
+  (let ((args (loop for i fixnum upfrom 0 below (max (1- dim) 0)
+		    collect t)))
+    (print args)
+    (apply #'call `(,(FilteringTensorBackward
+		      dim
+		      ,(/ (!shape tensor dim) batch-size)))
+	   (loop for i fixnum
+		 upfrom 0
+		   below (/ (!shape tensor dim) batch-size)
+		 collect
+		 (funcall function
+			  i
+			  (apply #'!aref tensor `(,@args ,i))))))
+|#
+(defun !dotensor () "")
 (defun !displace ()
   "")
 

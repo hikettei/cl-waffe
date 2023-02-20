@@ -349,6 +349,7 @@ Input: dataset ... dataset defined by defdataset.
 This function is temporary and other arguments are ignored.
 
 And this function has a lot of todo."
+  (declare (ignore valid-each max-iterate progress-bar-freq save-model-path height))
   (let ((losses nil) ; cl-termgraph assumes that loss >= 0
 	(status-bar nil)
 	(total-len (get-dataset-length dataset)))

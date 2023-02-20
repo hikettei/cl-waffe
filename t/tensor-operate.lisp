@@ -221,6 +221,53 @@
 	 (!gelu x)
 	 (call (Swish :beta 1.0) x))))
 
+(defun test-aref ()
+  (let ((tensor1 (!reshape (!arange 0 100) '(10 10)))
+	(tensor2 (!reshape (!arange 0 100) '(5 2 10))))
+
+    (format t "Testing !aref...~%")
+
+    (let ((tensor1-result (!sum (!aref tensor1 0 0))) ; 0
+	  (tensor2-result (!sum (!aref tensor1 '(0 3) t))) ; 435.0
+	  (tensor3-result (!sum (!aref tensor1 '(1 3) t))) ;390.0
+	  (tensor4-result (!sum (!aref tensor1 '(1 3) '(2 4)))) ;70.0
+	  (tensor5-result (!sum (!aref tensor2 '(1 3) t '(1 3))))
+	  (tensor6 (!randn `(100 100 100))))
+
+      (format t "Measuring performance of !aref... ~a~%" tensor6)
+      (time (!aref tensor6 '(0 90) '(0 90) '(1 90)))
+      
+      (and (= (data tensor1-result) 0.0)
+	   (= (data tensor2-result) 435.0)
+	   (= (data tensor3-result) 390.0)
+	   (= (data tensor4-result) 70.0)
+	   (= (data tensor5-result) 292.0)))))
+
+(defun test-setfaref ()
+  (let ((tensor1 (!zeros `(10 10)))
+	(tensor2 (!ones `(10 10 10))))
+    (setf (!aref tensor2 '(0 1)) tensor1)
+    (and (= (data (!sum (!aref tensor2 '(0 1)))) 0.0)
+	 (> (data (!sum (!aref tensor2 '(2 -1)))) 0.0))))
+
+
+(defun setfaref-backward ()
+  (let ((tensor1 (parameter (!randn `(10 10 10))))
+	(tensor2 (!add (!randn `(10 10)) 1.0)))
+    (setq tensor1 (setf (!aref tensor1 0) tensor2))
+    (backward (!sum tensor1))
+    (print (grad tensor1))
+    (grad tensor1)))
+
+(defun aref-backward ()
+  (let* ((tensor1 (parameter (!randn `(10 10 10))))
+ 	 (tensor2 (!add (!randn `(10 10)) (!aref tensor1 0))))
+    (backward (!sum tensor1))
+    (grad tensor1)))
+
+(defun funcall-test ()
+  (and (!log 1) (!add 1 1)))
+
 #|
 (defun test-einsum ()
 (let ((r1 (-> (!einsum (i j) (i j) -> (i j))
@@ -266,11 +313,15 @@ b)))
       (is (operate-afunc #'!asinh #'asinh))
       (is (operate-afunc-cos #'!acosh #'acosh))
       (is (operate-afunc #'!atanh #'atanh))
-      
+
+      (is (test-aref))
+      (is (test-setfaref))
       (is (test-cross-entropy))
       (is (test-activations))
       (is (test-filter))
       (is (test-beta))
-     
+      (is (aref-backward))
+      (is (funcall-test))
+      ;(is (setfaref-backward))
       )
 

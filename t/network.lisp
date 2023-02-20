@@ -4,7 +4,7 @@
 (in-suite :test)
 
 
-(defparameter x (!randn `(10 100)))
+(defparameter x (parameter (!randn `(10 100))))
 
 (defparameter linearlayer1 (linearlayer 100 10 t))
 (defparameter linearlayer2 (linearlayer 100 10 nil))
@@ -15,6 +15,15 @@
 (defparameter denselayer4 (denselayer 100 10 t #'!tanh))
 
 (defparameter dropout (dropout 0.5))
+(defparameter batchnorm2d (dropout 0.5))
+
+
+(defparameter embedding (Embedding 10 10))
+
+(defparameter rnn1 (RNN 10 256 :num-layers 1))
+(defparameter rnn2 (RNN 10 256 :num-layers 3))
+
+(defparameter words (call embedding (parameter (!ones `(10 10)))))
 
 (defparameter model-list (model-list (list (linearlayer 10 1)
 					   (linearlayer 10 1))))
@@ -28,9 +37,10 @@
   t)
 
 (defun test-model (model input)
-  (let ((out (call model input)))
+  (let* ((i (parameter input))
+	 (out (call model i)))
     (backward (!sum out))
-    t))
+    (grad i)))
 
 (test networks-test
       (is (test-model linearlayer1 x))
@@ -39,7 +49,17 @@
       (is (test-model denselayer2 x))
       (is (test-model denselayer3 x))
       (is (test-model denselayer4 x))
-      (is (test-model dropout x))
-      (is (test-model-list))
+      (is (test-model dropout x)))
+
+(test batchnorm-test
+      (is (test-model batchnorm2d x)))
+
+(test nlp-test
+      (is (test-model embedding (parameter (!ones `(10 10)))))
+      ;(is (test-model rnn1 words))
+      ;(is (test-model rnn2 words))
       )
+
+(test model-list-test
+      (is (test-model-list)))
 

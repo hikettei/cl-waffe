@@ -35,9 +35,9 @@
 		:depends-on ("package" "tensor")
 		:components ((:file "cache")
 			     (:file "package")
+			     (:file "lazy-evaluate")			     
 			     (:file "utils")
-			     (:file "optimizers")
-			     (:file "lazy-evaluate")
+			     (:file "optimizers")			     
 			     (:file "kernel")))
 	       (:file "package")
 	       (:file "utils")
@@ -45,7 +45,7 @@
 	       (:file "tensor")
                (:file "kernel" :depends-on ("tensor"))
 	       (:file "trainer" :depends-on ("optimizers"))
-	       (:file "functions")
+	       (:file "functions" :depends-on ("model"))
 	       (:file "operators" :depends-on ("tensor"))
 	       (:module "optimizers"
 		:depends-on ("model")
@@ -53,6 +53,7 @@
 			     (:file "optimizers")
 			     (:file "optimizer")))
 	       (:module "nn"
+		:depends-on ("model")
 		:components ((:file "package")
 			     (:file "utils")
 			     (:file "losses")

@@ -12,14 +12,15 @@ This package exports features for making caches (sysconst)")
 
 (in-package :cl-waffe.caches)
 
+; This package is like torch.jit.tracing.
 ; cache want models to be static, while jit doesn't.
-(defparameter *static-node-mode* t
+(defparameter *static-node-mode* nil
   "When every time you call your model and their computations node is static,
    enable this. By doing so, cl-waffe can optimize ram usage and computation speed.")
 
-; todo: add depends on tg, bordeaux-threads
 (defvar *thread-caches*
   (tg:make-weak-hash-table :weakness :key))
+
 (defvar *thread-cache-lock*
   (bordeaux-threads:make-lock "thread cache lock"))
 
@@ -32,7 +33,7 @@ This package exports features for making caches (sysconst)")
   (calln-per-step 0 :type fixnum)
   (lock nil :type boolean))
 
-(defun update-calln (idx)
+(defun update-calln (thread-info idx)
   (let ((calln (or (gethash idx *thread-callns*)
 		   (make-cachedata :calln -1 :calln-per-step -1))))
     (unless (cachedata-lock calln)
@@ -48,7 +49,7 @@ This package exports features for making caches (sysconst)")
     
     (setf (gethash idx *thread-callns*) calln)))
 
-(defun lock-calln (idx)
+(defun lock-calln (thread-info idx)
   (let ((calln (gethash idx *thread-callns*)))
     (when calln
       (setf (cachedata-lock
@@ -79,6 +80,7 @@ This package exports features for making caches (sysconst)")
                      (make-hash-table :test #'equal)))))
     ;; Overwrite it. Keeping the larger, keeping all may be reasonable
     ;; strategies too.
+
     (setf (gethash key place-cache) value)))
 
 (defmacro with-thread-cached-mat1 ((var tensor
@@ -121,29 +123,19 @@ This package exports features for making caches (sysconst)")
 (defun caches-gc ()
   (tg:gc :full t))
 
-(defun is-locked? (idx)
+(defun is-locked? (thread idx)
   (cachedata-lock (gethash idx *thread-callns*)))
 
-(defun free-cache (idx)
+(defun free-cache (thread idx)
   (let* ((caches (bordeaux-threads:with-lock-held (*thread-cache-lock*)
 		   (gethash (bordeaux-threads:current-thread) *thread-caches*))))
     (when caches
       (when (gethash idx caches)
-	(if (is-locked? idx)
+	(if (is-locked? thread idx)
 	    (remhash idx caches)
-	    (lock-calln idx))))
+	    (lock-calln thread idx))))
     nil))
 
-(defmacro with-cache ((var tensor &key (ctype '*default-mat-ctype*) (copy nil)
-                      (place :ones))
-                      &body body)
-  "Todo: Write Docs"
-  `(with-thread-cached-mat1 (,var ,tensor :copy ,copy
-				          :place ,place
-					  :ctype ,ctype
-					  :initial-element 0.0)
-     (let ((,var ,var))
-       ,@body)))
 
 (defun check-abandon (idx)
   (let ((calln (gethash idx *thread-callns*)))
@@ -158,6 +150,17 @@ This package exports features for making caches (sysconst)")
 	   nil))
       (T nil))))
 
+(defmacro with-cache ((var tensor &key (ctype '*default-mat-ctype*) (copy nil)
+                      (place :ones))
+                      &body body)
+  "set var (data tensor)"
+  `(with-thread-cached-mat1 (,var ,tensor :copy ,copy
+				          :place ,place
+					  :ctype ,ctype
+					  :initial-element 0.0)
+     (let ((,var ,var))
+       ,@body)))
+
 (defmacro with-thread-cached-object1 ((var tensor key initform &key place (copy nil))
 				      &body body
 				      &aux (state (gensym)))
@@ -171,7 +174,7 @@ This package exports features for making caches (sysconst)")
 			   (cl-waffe::waffetensor-key tensor))))
 		 (if (null obj)
 		     (error "cl-waffe.caches:cached-data: The tensor that attempted to read has already cached and cleaned.~%Please remain that calculations must be done in the scope that the tensor has created, including defnode."))
-		 (update-calln (cl-waffe::waffetensor-idx tensor))
+		 (update-calln nil (cl-waffe::waffetensor-idx tensor))
 		 (cond
 		   (return-shape?
 		    (typecase obj
@@ -184,6 +187,7 @@ This package exports features for making caches (sysconst)")
 		   (compile-and-step?
 		    obj)
 		   (T obj)))))
+       (warranty ,tensor)
        (let* ((,state (check-abandon ,place))
 	      (,var (if (and
 			 ,state
@@ -196,6 +200,7 @@ This package exports features for making caches (sysconst)")
 	 (if ,copy
 	     (unless ,state ; when ,var is filled with 0.0
 	       (copy! (data ,tensor) ,var)))
+
 	 
 	 (when (and *static-node-mode*
 		    (cl-waffe::waffetensor-is-sysconst? ,tensor))
@@ -204,7 +209,7 @@ This package exports features for making caches (sysconst)")
 					,key
 					(if ,state
 					    (data ,tensor)
-					    (data ,tensor)) ;copy-mat
+					    (data ,tensor))
 					(cl-waffe::waffetensor-thread-data ,tensor))
 	   (setf (data ,tensor) #'cached-data)
 	   (setf (cl-waffe::waffetensor-key ,tensor) ,key)

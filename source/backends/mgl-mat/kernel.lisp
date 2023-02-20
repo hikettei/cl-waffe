@@ -36,7 +36,6 @@
 	     (idx (create-thread-idx thread-info)))
 	(value out)
 	(with-cache (result out :place idx :copy copy?)
-	  (incf (cl-waffe::waffenodethread-cache-n thread-info) 1)
 	  result))
       (decide-out-buffer nil args enable-optim copy?)))
 
@@ -51,7 +50,6 @@
 	       (idx (create-thread-idx thread-info)))
 	  (value out)
 	  (with-cache (result out :place idx :copy copy?)
-	    (incf (cl-waffe::waffenodethread-cache-n thread-info) 1)
 	    result))
 	(decide-out-buffer nil args enable-optim copy?))))
 
