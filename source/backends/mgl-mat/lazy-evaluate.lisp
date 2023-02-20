@@ -304,6 +304,7 @@ jit-id is a stream"
 	   
 	   ;; (when *verbose*
 	   ;;  (format t "~%JIT Loaded Compiled Function: ~a ~a~%" jit-function-id out-mat-shape))
+
 	   (apply-jit
 	    jit-function-id
 	    `(,out-mat-size ,out ,@mat-inputs))
@@ -357,9 +358,10 @@ Return: compiled-function's id, out"
 		     `(defun ,(intern (symbol-name jit-ident))
 			,(map 'list #'car ,args)
 			(declare (optimize (speed 3)
-					   (space 0)
+					   (space 1)
 					   (safety 0)
 					   (compilation-speed 0))
+				 (inline apply)
 			         (ignore
 				  ,@(map
 				     'list
@@ -388,7 +390,6 @@ Return: compiled-function's id, out"
 						     nil
 						     nil
 						     t)))
-			      
 			      (the mat
 				   (apply
 				    fname

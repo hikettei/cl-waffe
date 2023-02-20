@@ -9,6 +9,10 @@
 (defparameter *destructive-operation* nil
   "When t, some computations will be done destructively. Default is nil")
 
+(defun share-memory-p (tensor1 tensor2)
+  "Todo"
+  (declare (ignore tensor1 tensor2)))
+
 (defmacro with-optimized-operation (&body body)
   ; doing all operations with destructive
   `(progn
@@ -234,8 +238,7 @@ Example:
        (error "cl-waffe.with-kernel-case: target must be waffetensor. Encounted type of ~a, when using ~a" (type-of ,target) ,target))
      (value ,target)
      (cl-waffe.caches:with-cache
-	 (,var ,target :place (cl-waffe.backends.mgl:create-thread-idx
-			       (waffetensor-thread-data ,target))
+	 (,var ,target
 	  :copy ,copy)
        (warranty ,target)
        (labels ((mgl-cpu-step  () ,@mgl)

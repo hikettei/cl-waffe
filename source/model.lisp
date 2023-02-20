@@ -323,7 +323,7 @@ Example:
 	  do (progn (setf (waffenodethread-cache-n thread) i)
 		    (let ((cache-id
 			    (cl-waffe.backends.mgl:create-thread-idx thread)))
-		      (cl-waffe.caches:free-cache cache-id)))))
+		      (cl-waffe.caches:free-cache thread cache-id)))))
   nil)
 
 (defun enable-node-tensor (&rest args)
@@ -418,10 +418,8 @@ Example:
 					(tmp
 					 smaller-value
 					 :place
-					 (cl-waffe.backends.mgl:create-thread-idx
-					  thread-info)
+					 (cl-waffe.backends.mgl:create-thread-idx thread-info)
 					 :copy t)
-				      (incf (waffenodethread-cache-n thread-info) 1)
 				      (setf (self ,name) (const tmp))))
 				   (T (!allow-destruct smaller-value)
 				      (setf (self ,name) smaller-value)))))))))
@@ -487,6 +485,7 @@ Example:
 			    (setf (waffetensor-path-through-node? result) result-next-state)
 			    result))))))))
 	 (defmethod ,fname ((self ,name))
+	   (declare (optimize (speed 3)))
 	   #'(lambda (&rest node-inputs)
 	       (apply #',f-ident self node-inputs))))))
 

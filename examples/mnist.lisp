@@ -8,10 +8,6 @@
 ; this file is excluded from cl-waffe-test
 ; here's mnist example codes and benchmark
 
-(setf cl-waffe.backends.mgl:*verbose* t)
-(setf cl-waffe.backends.mgl::*force-disable-jit* t)
-(setf cl-waffe.backends.mgl:*static-node-mode* nil)
-
 (defmodel MLP (activation)
   :parameters ((layer1   (denselayer (* 28 28) 512 t activation))
 	       (layer2   (denselayer 512 256 t activation))
@@ -68,6 +64,13 @@
   (sb-profile:profile mgl-mat::blas-sgemm
 		      mgl-mat::blas-scopy
 		      mgl-mat::array-to-mat
+		      mgl-mat::make-mat
+		      mgl-mat::copy-mat
+		      mgl-mat::copy!
+		      cl-waffe.backends.mgl::parse-argument
+		      cl-waffe.backends.mgl::generate-kernel-code
+		      cl-waffe.backends.mgl::lisp-execute-tmp-kernel
+		      cl-waffe.backends.mgl::lisp-define-tmp-kernel
 		      cl-waffe::step-model
 		      cl-waffe::backward1
 		      cl-waffe.nn::softmax-cross-entropy
@@ -106,9 +109,9 @@
 ;			"MGL-MAT")
 
    ;flamegraph:save-flame-graph ("/tmp/nonjit.stack")
-  (mgl-mat:with-mat-counters (:count count :n-bytes n-bytes)
+    (mgl-mat:with-mat-counters (:count count :n-bytes n-bytes)
     (time (train trainer train :max-iterate 600
-			       :epoch 1
+			       :epoch 20
 			       :batch-size batch-size
 			       :valid-dataset test
 			       :verbose t :random t :print-each 100))
