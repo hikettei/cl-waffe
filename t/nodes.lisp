@@ -147,8 +147,8 @@
   (let* ((a (parameter (!randn `(10 10))))
  	 (model (TestNodeCallerModel1))
 	 (r (call model a)))
-    (print (waffetensor-thread-data r))
-    (and (not (M= (value a) (value r)))
+    (and (waffetensor-thread-data r)
+         (not (M= (value a) (value r)))
          (slot-value model 'x)
 	 (slot-value (slot-value model 'layer) 'x)
 	 (slot-value (slot-value (slot-value model 'layer) 'layer) 'x))))
@@ -164,10 +164,20 @@
 	      (layer3 x))))
 
 (defun test-save-for-backward7 ()
-  (let ((a (!zeros `(1 ,(* 28 28))))
+  (let ((a (!randn `(1 ,(* 28 28))))
 	(model (MLPTestModel :ReLU)))
-    (print (waffetensor-thread-data (call model a)))
-    (print (waffetensor-thread-data (call model a)))))
+
+    (let* ((t1 (waffetensor-thread-data (call model a)))
+	   (r1 (call model a))
+	   (t2 (waffetensor-thread-data (call model a)))
+	   (flag1 (eql (cl-waffe::waffenodethread-belong-to t1)
+		       (cl-waffe::waffenodethread-belong-to t2)))
+	   (r2 (call model a)))
+      (value r1)
+      (value r2)
+      (and flag1 ; cache-n created correctly
+	   (M= (value r1) (value r2)) ; each step is equivalent
+	   ))))
 
 #|
 Node内部のsave-for-backwardは以下の条件で無視される
