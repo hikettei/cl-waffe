@@ -649,7 +649,7 @@ For nd tensors...
 		 do (setq result (!add result (!sum (!aref x i)))))
 	   result)
 	 (let* ((dims (!shape x axis))
-					; Note: keepdims is ignored. And May need exclusive kernel for it because its too slow when forward and backward.
+		; Note: keepdims is ignored. And May need exclusive kernel for it because its too slow when forward and backward.
 
 		(sum-dims #'(lambda (n) (loop for i upfrom 0 below (!dims x)
 	 				      collect (if (= i axis)

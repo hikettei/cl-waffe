@@ -79,6 +79,7 @@ This package exports features for making caches (sysconst)")
                      (make-hash-table :test #'equal)))))
     ;; Overwrite it. Keeping the larger, keeping all may be reasonable
     ;; strategies too.
+
     (setf (gethash key place-cache) value)))
 
 (defmacro with-thread-cached-mat1 ((var tensor

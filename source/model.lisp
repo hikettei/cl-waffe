@@ -359,6 +359,7 @@ Example:
 				   (state  (gensym)))
   "The macro for defining node method. (:forward :backward in defmodel, defnode, defoptimizers)
   Also, the code for managing caches."
+  ; Note: is-node's meaning is on the around way.
   (let ((f-ident   (gensym (symbol-name name)))
 	(self-heap (gensym (symbol-name name)))
 	(vars (map 'list #'(lambda (x)
@@ -424,16 +425,29 @@ Example:
 				      (setf (self ,name) (const tmp))))
 				   (T (!allow-destruct smaller-value)
 				      (setf (self ,name) smaller-value)))))))))
-	     (self hide-from-tree)
+	     (self hide-from-tree) ; avoid unused argument (model itself)
 	     ,(if is-node
-		  ; when method is for models, copy tensors, and caches.
-		  `(let* ((,thread (thread (decide-thread-idx ,@vars)))
+		  ; when method is for models.
+		  ; WaffeNodeThread is created when called with model.
+		  `(let* ((,thread (thread ; initialize thread-data with searching the toplevel ident of models.
+				    (decide-thread-idx ,@vars)
+				    (or (let ((k (find t (list ,@vars) :test #'(lambda (x y)
+									   (declare (ignore x))
+									   (waffetensor-thread-data y)))))
+					  (if (and
+					       k
+					       (waffenodethread-belong-to (waffetensor-thread-data k)))
+					      (waffenodethread-belong-to (waffetensor-thread-data k))
+					      nil))
+					(self model-ident))))
 			  (,is-top (= (waffenodethread-thread-idx ,thread) 0)))
 		     (set-thread-data ,thread ,@vars)
 		     (let ((result (progn ,@body)))
+		       ; no matter what returns model/node, cl-waffe won't error.
 		       ;(declare (type waffetensor &optional result))
 		       (typecase result
 			 (list (prog1
+				   ;reducible?
 				   (map 'list
 					(lambda (x)
 					  (typecase (waffetensor-data x)
@@ -454,10 +468,8 @@ Example:
 			    (free-caches ,thread)
 			    (when ,is-top
 			      (set-thread-data nil ,@vars))))
-			 (T
-			  result))))
-		  ; when method is for nodes, or optimizers
-		  
+			 (T result))))
+		  ; when method is for nodes/optimizers
 		  `(let ((,state (enable-node-tensor ,@vars)))
 		     (declare (type list ,state))
 		     (with-node-method-mode
@@ -556,8 +568,9 @@ the object-type indicates the type of document format."
 		     (equal (symbol-name x) "backward")
 		     (equal (symbol-name x) "hide-from-tree")
 		     (equal (symbol-name x) "parameters")
+		     (equal (symbol-name x) "model-ident")
 		     (equal (symbol-name x) "self"))
-		 (error "the name ~a is not allowed to use" (symbol-name x))
+		 (error "cl-waffe.defobject: the name ~a is not allowed to use as a parameter" (symbol-name x))
 		 x)))
     (unless forward
       (error ":forward slot is need to be fulfilled. When defining Model [~a]" name))
@@ -574,8 +587,9 @@ the object-type indicates the type of document format."
 		       (:print-function (lambda (m stream k)
 					  (declare (ignore k))
 					  (render-simple-model-structure stream m)))
-		       (:constructor ,name (,@args &aux ,@(map 'list (lambda (x) `(,(car x) ,(second x))) parameters))))
+		       (:constructor ,name (,@args &aux (model-ident (gensym "WAFFEOBJECT")) ,@(map 'list (lambda (x) `(,(car x) ,(second x))) parameters))))
 	     ,doc-output
+	     (model-ident ,(gensym "WAFFEOBJECT") :type symbol)
 	     (hide-from-tree ,hide-from-tree :type boolean)
 	     (forward t :type boolean)
 	     (backward ,(if backward t nil) :type boolean)

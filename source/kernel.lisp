@@ -49,7 +49,7 @@
 Note: this is not setfable"
   (declare (optimize (speed 3))
 	   (type waffetensor tensor))
-
+  
   (typecase (waffetensor-data tensor)
     (function
      (let ((function-info

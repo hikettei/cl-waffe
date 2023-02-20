@@ -37,33 +37,37 @@
 
 ; copy is enabled?
 (defun test-save-for-backward ()
-  (let ((m (TestModel2))
-	(p (parameter (!randn `(10 10)))))
-    (call m p)
-    (slot-value m 'x)))
+  (let* ((m (TestModel2))
+ 	 (p (parameter (!randn `(10 10))))
+	 (r (call m p)))
+    (and (not (M= (value p) (value r))) (slot-value m 'x))))
 
 ; copy is ok?
 (defun test-save-for-backward1 ()
-  (let ((m (TestModel2))
-	(p (!randn `(10 10))))
-    (call m p)
-    (null (slot-value m 'x))))
+  (let* ((m (TestModel2))
+	 (p (!randn `(10 10)))
+	 (r (call m p)))
+    (and (not (M= (value p) (value r)))
+	 (null (slot-value m 'x)))))
 
 ; copy is disabled?
 (defun test-save-for-backward2 ()
   (let ((m (TestModel2))
 	(p (!randn `(10 10))))
     (with-no-grad
-	(call m p)
-      (null (slot-value m 'x)))))
+      (let ((r (call m p)))
+	(and (not (M= (value r) (value p)))
+	     (null (slot-value m 'x)))))))
 
 ; deeper node won't do copy
 (defun test-save-for-backward3 ()
   (let ((m (TestNode1))
 	(p (parameter (!randn `(10 10)))))
-    (call m p)
-    (and (slot-value m 'x)
-	 (null (TestNodeBackward-x (TestNode1-layer m))))))
+
+    (let ((r (call m p)))
+      (and (not (M= (value r) (value p)))
+           (slot-value m 'x)
+	   (null (TestNodeBackward-x (TestNode1-layer m)))))))
 
 ; this is the same to const
 (defun test-save-for-backward4 ()
@@ -96,7 +100,7 @@
 	    (save-for-backward x x)
 	    (call (self layer) x)))
 
-; for complicated model (Node -> Node -> Node -> Node)
+; for complicated model (Model -> Node -> Node -> Node)
 (defun test-save-for-backward5 ()
   (let ((a (parameter (!randn `(10 10))))
 	(model (TestNodeCallerModel)))
@@ -117,6 +121,54 @@
 	    'layer)
 	   'x)))))
 
+(defmodel TestNodeCallerModels1 nil
+  :parameters ((x nil))
+  :forward ((x)
+	    (save-for-backward x x)
+	    (!exp x)))
+
+(defnode TestNodeCaller1 nil
+  :parameters ((layer (TestNodeCallerModels1))
+	       (x nil))
+  :forward ((x)
+	    (save-for-backward x x)
+	    (call (self layer) x))
+  :backward ((dy) (list dy)))
+
+(defmodel TestNodeCallerModel1 nil
+  :parameters ((layer (TestNodeCaller1))
+	       (x nil))
+  :forward ((x)
+	    (save-for-backward x x)
+	    (call (self layer) x)))
+
+; for mixed nodes: model -> node -> model
+(defun test-save-for-backward6 ()
+  (let* ((a (parameter (!randn `(10 10))))
+ 	 (model (TestNodeCallerModel1))
+	 (r (call model a)))
+    (print (waffetensor-thread-data r))
+    (and (not (M= (value a) (value r)))
+         (slot-value model 'x)
+	 (slot-value (slot-value model 'layer) 'x)
+	 (slot-value (slot-value (slot-value model 'layer) 'layer) 'x))))
+
+(defmodel MLPTestModel (activation)
+  :parameters ((layer1   (denselayer (* 28 28) 512 t activation))
+	       (layer2   (denselayer 512 256 t activation))
+	       (layer3   (linearlayer 256 10 t)))
+  :forward ((x)
+	    (with-calling-layers x
+	      (layer1 x)
+ 	      (layer2 x)
+	      (layer3 x))))
+
+(defun test-save-for-backward7 ()
+  (let ((a (!zeros `(1 ,(* 28 28))))
+	(model (MLPTestModel :ReLU)))
+    (print (waffetensor-thread-data (call model a)))
+    (print (waffetensor-thread-data (call model a)))))
+
 #|
 Node内部のsave-for-backwardは以下の条件で無視される
 
@@ -135,4 +187,6 @@ defnode内部のdefnode
       (is (test-save-for-backward2))
       (is (test-save-for-backward3))
       (is (test-save-for-backward4))
-      (is (test-save-for-backward5)))
+      (is (test-save-for-backward5))
+      (is (test-save-for-backward6))
+      (is (test-save-for-backward7)))

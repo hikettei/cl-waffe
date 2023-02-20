@@ -59,23 +59,33 @@ cl-waffe automatically coerce them to arbitary types
 (deftype WaffeTensorTypes ()
   `(or mgl-mat:mat waffesupporteddatatype))
 
-(defstruct grad-tmp
+(defstruct Grad-Tmp
   (value nil)
   (grad-called nil :type boolean))
 
 (defstruct (WaffeNodeThread
+	    (:print-function
+	     (lambda (obj stream depth)
+		 (declare (ignore depth))
+		 (format stream "[WaffeNodeThreadInfomation]:~%The top of node is: ~a~% The tensor locates in the depth of ~a~% The tensor is registered as a ~a~%"
+			 (waffenodethread-belong-to obj)
+			 (waffenodethread-thread-idx obj)
+			 (waffenodethread-cache-n obj))))
 	    (:constructor
 		thread
 		(thread-idx
+		 belong-to
 		 &aux
-		   (thread-idx thread-idx))))
+		   (thread-idx thread-idx)
+		   (belong-to belong-to))))
+  (belong-to nil :type (or null symbol))
   (thread-idx 0 :type fixnum)
   (cache-n 0 :type fixnum))
 
 (defstruct (WaffeTensor (:print-function
 			 (lambda (tensor stream depth)
-			   (declare (ignore depth))
-			   (format stream (render-tensor tensor))))
+			    (declare (ignore depth))
+			    (format stream (render-tensor tensor))))
 			(:constructor
 			    sysconst
 			    (value &key (backend *default-backend*)
