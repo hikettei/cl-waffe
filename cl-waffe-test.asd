@@ -14,6 +14,8 @@
   :components ((:module "t" :components ((:file "package")
 					 (:file "utils")
 					 (:file "deriv")
+					 (:file "nodes")
+					 (:file "jit")
 					 (:file "broadcast")
 					 (:file "tensor-operate")
 					 (:file "network")

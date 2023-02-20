@@ -265,6 +265,9 @@
     (backward (!sum tensor1))
     (grad tensor1)))
 
+(defun funcall-test ()
+  (and (!log 1) (!add 1 1)))
+
 #|
 (defun test-einsum ()
 (let ((r1 (-> (!einsum (i j) (i j) -> (i j))
@@ -318,6 +321,7 @@ b)))
       (is (test-filter))
       (is (test-beta))
       (is (aref-backward))
+      (is (funcall-test))
       ;(is (setfaref-backward))
       )
 

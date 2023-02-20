@@ -37,7 +37,7 @@
 		    out))
      :predict ((x) (call (model) x))))
 
-(defun test-for (trainer &optional (niter 10))
+(defun test-for (trainer &optional (niter 3))
   (let ((losses nil))
     ; iterate for epoch
     (dotimes (epoch niter)
