@@ -368,7 +368,7 @@
   (let ((place node-object))
     `(defun ,name ,args
        ,doc
-       (declare (optimize (speed 3) (safety 0)))
+       (declare (optimize (speed 3) (safety 1)))
        (let* ((,tensor (if *no-grad* ,place ,node-object)))
 	 ,@body))))
 

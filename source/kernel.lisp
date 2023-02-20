@@ -75,6 +75,7 @@ Note: this is not setfable"
 
 (declaim (ftype (function (keyword cons) waffetensor) invoke-mgl-kernel invoke-cpu-kenel))
 (defun invoke-mgl-kernel (kernel-function variables)
+  (declare (optimize (speed 3)))
   (sysconst (cl-waffe.backends.mgl:dispatch-kernel
 				  kernel-function
 				  *destructive-operation*
@@ -93,8 +94,9 @@ Note: this is not setfable"
 					     variables))))
 
 (defun invoke-cpu-kernel (kernel-function variables)
+  (declare (optimize (speed 3)))
   (sysconst (cl-waffe.backends.cpu:dispatch-kernel kernel-function variables)
-	    :thread-data (let ((r (find t variables
+	    :thread-data (let ((r (find t (the list variables)
 					:test (lambda (x y)
 						(declare (ignore x))
 						(waffetensor-thread-data y)))))

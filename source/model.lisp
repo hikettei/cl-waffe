@@ -486,7 +486,8 @@ Example:
 			    (setf (waffetensor-path-through-node? result) result-next-state)
 			    result))))))))
 	 (defmethod ,fname ((self ,name))
-	   (lambda (&rest node-inputs) (apply #',f-ident self node-inputs))))))
+	   #'(lambda (&rest node-inputs)
+	       (apply #',f-ident self node-inputs))))))
 
 (defmacro defmodel (name args
 			 &key
