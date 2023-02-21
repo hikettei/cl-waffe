@@ -20,7 +20,7 @@
 				        	    (:reshape . :reshape)
 						    (:< . :<)
 						    (:bernoulli . :bernoulli))))
-(declaim (inline !div !transpose))
+(declaim (inline !div))
 
 (defun broadcasting (x y)
   (declare (type waffetensor x y))
@@ -1310,7 +1310,7 @@ Example:
 	       (iter-num iter-num :type fixnum)
 	       (args args :type cons))
   :forward ((&rest result)
-	    result)
+	    (sysconst (stack (self dim) (map 'list #'value result))))
   :backward ((dy)
 	     (loop for i fixnum upfrom 0 below (self iter-num)
 		   collect (apply #'!aref `(,(self args) ,i)))))
@@ -1320,18 +1320,19 @@ Example:
 This is the very fastst but not useful. So use macros in order to make it more useful."
   (let ((args (loop for i fixnum upfrom 0 below (max (1- dim) 0)
 		    collect t)))
-    (print args)
     (apply #'call `(,(FilteringTensorBackward
 		      dim
-		      ,(/ (!shape tensor dim) batch-size)))
+		      (/ (!shape tensor dim) batch-size)
+		      args))
 	   (loop for i fixnum
 		 upfrom 0
 		   below (/ (!shape tensor dim) batch-size)
 		 collect
 		 (funcall function
 			  i
-			  (apply #'!aref tensor `(,@args ,i))))))
+			  (apply #'!aref tensor `(,@args ,i)))))))
 |#
+
 (defun !dotensor () "")
 (defun !displace ()
   "")

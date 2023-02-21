@@ -27,6 +27,9 @@
 	   #:waffedatatype
 	   #:waffe-array
 
+	   #:with-tracing
+	   #:with-jit
+	   
 	   #:waffetensor-thread-data
 
 	   #:with-no-grad

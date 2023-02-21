@@ -1,10 +1,14 @@
 
 (in-package :cl-waffe.backends.mgl)
 
-					; Todo Rewrite with define-lisp-kernel
+; Todo Rewrite with define-lisp-kernel
 
 (defmacro will-be-destructed (tensor)
+  "Is tensor allowed to destruct?/ Judge it by !allow-to-destruct or caches if it has."
   `(waffetensor-thread-data ,tensor))
+
+(defmacro allowed-to-destruct? (tensor)
+  "")
 
 (defun create-thread-idx (thread-info &optional (ident ""))
   "Thread format: <Thread_IDx>+<Count_N>"
@@ -32,10 +36,9 @@
 			      copy?)
   (declare (optimize (speed 3) (space 0)))
   (if (not (null (waffetensor-thread-data out)))
-      (let* ((thread-info (waffetensor-thread-data out))
-	     (idx (create-thread-idx thread-info)))
+      (progn
 	(value out)
-	(with-cache (result out :place idx :copy copy?)
+	(with-cache (result out :copy copy?)
 	  result))
       (decide-out-buffer nil args enable-optim copy?)))
 
@@ -46,10 +49,9 @@
   (declare (optimize (speed 3) (space 0)))
   (let* ((args (value out)))
     (if (not (null (waffetensor-thread-data out)))
-	(let* ((thread-info (waffetensor-thread-data out))
-	       (idx (create-thread-idx thread-info)))
+	(progn
 	  (value out)
-	  (with-cache (result out :place idx :copy copy?)
+	  (with-cache (result out :copy copy?)
 	    result))
 	(decide-out-buffer nil args enable-optim copy?))))
 
@@ -65,6 +67,7 @@
 			      enable-optim
 			      copy?)
   (declare (optimize (speed 3) (space 0) (safety 0)))
+  ; (will-be-destructed?)
   (if enable-optim
       args
       (if copy?
@@ -76,6 +79,7 @@
 			      enable-optim
 			      copy?)
   (declare (optimize (speed 3) (space 0) (safety 0)))
+  ; (will-be-destructed?)
   (let* ((args (value (sysconst args))))
     (if enable-optim
 	args
@@ -317,11 +321,6 @@
 		tanh-tensor
 		exp-tensor))
 
-					; kernel function must be following:
-					; fname (enable-optimize? args-tensor1 args-tensor2 ... mat1 mat2 ....)
-					; Otherwise ignore jit can't return correctly.
-					; Todo: Write macro in order to define this.
-
 (defmacro define-waffe-kernel (name
 			       args
 			       args-mat
@@ -342,15 +341,14 @@
 		  (type boolean enable-optimize?)
 		  (type waffetensor ,@args)))
      ,(unless (null jit)
-					; place jit trigger.
+	 ; place jit trigger.
 	`(return-and-lazy-eval
 	  ,name
 	  ',jit
 	  ,(car args)
 	  (list ,@(cdr args))))
      
-					; if jit triggered, the form below never called.
-
+     ; if jit triggered, the form below never called.
      (macrolet ((get-out-buffer (tensor &key (copy nil))
 		  `(if output
 		       (if ,copy

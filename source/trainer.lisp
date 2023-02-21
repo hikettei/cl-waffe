@@ -39,7 +39,7 @@
 	   (lambda (&rest node-inputs) (apply #',f-ident self node-inputs))))))
 
 ; This model used for just only making thread.
-(defmodel TrainerInputLayer (caller)
+(defmodel TrainerInputLayer (caller) ; Todo: Delete it.
   :optimize t
   :parameters ((caller caller :type function))
   :forward (()

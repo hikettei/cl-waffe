@@ -78,6 +78,10 @@ cl-waffe automatically coerce them to arbitary types
 		 &aux
 		   (thread-idx thread-idx)
 		   (belong-to belong-to))))
+  "This structure has informations for optimizing out.
+belong-to indicates the trace id.
+thread-idx indicates the depth of nodes.
+cache-n indicates how many times the tensor copied."
   (belong-to nil :type (or null symbol))
   (thread-idx 0 :type fixnum)
   (cache-n 0 :type fixnum))
@@ -93,6 +97,7 @@ cl-waffe automatically coerce them to arbitary types
 				     (thread-data nil)
 				     (path-through-node? nil)
 				     (no-jit nil)
+				     (allow-destruct nil)
 			     &aux (data (init-waffe-tensor-data value))
 			       (backend (check-backend backend extend))
 			       (grad nil)
@@ -101,6 +106,7 @@ cl-waffe automatically coerce them to arbitary types
 			       (is-sysconst? t)
 			       (force-ignore-jit no-jit)
 			       (path-through-node? path-through-node?)
+			       (is-next-destruct? allow-destruct)
 			       (is-mat (typep value 'mgl-mat:mat))
 			       (grad-tmp (make-grad-tmp))))
 	                (:constructor
@@ -263,6 +269,23 @@ When the argument that you want to insert is a tensor, this function automatical
 	      (cos (* 2.0 pi (double-random)))
 	      var)))))
 
+(declaim (type (function (waffetensor symbol fixnum) waffetensor) register-trace-id))
+(defun register-trace-id (tensor symbol depth)
+  (declare (optimize (speed 3))
+           (type waffetensor tensor)
+	   (type fixnum depth))
+
+  (if (waffetensor-thread-data tensor)
+      (progn
+	;ここは一時的にこうしてる
+	(incf (waffenodethread-thread-idx
+	       (waffetensor-thread-data tensor))
+	      1)
+	tensor)
+      (progn
+	(setf (waffetensor-thread-data tensor) (thread depth symbol))
+	tensor)))
+
 (defun init-waffe-tensor-data (content)
   ; todo: coerce: simple-array -> mgl-mat
   
@@ -282,10 +305,6 @@ When the argument that you want to insert is a tensor, this function automatical
   (if (null tensor)
       backend
       (waffetensor-backend tensor)))
-
-(defmacro extend-from (new-tensor old-tensor)
-  ; (extend-from (!randn `(10 10)) old-tensor) :backendとかを引き継ぐ
-  (declare (ignore new-tensor old-tensor)))
 
 (defmacro !allow-destruct (tensor)
   `(setf (waffetensor-is-next-destruct? ,tensor) t))

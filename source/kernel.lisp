@@ -3,6 +3,8 @@
 
 ; dispaches kernel based on backends. and optimize node
 
+(defpackage :cl-waffe.trace-ids)
+
 (defparameter *kernels* `(:mgl)
   "The list of cl-waffe supported kernels")
 
@@ -12,6 +14,20 @@
 (defun share-memory-p (tensor1 tensor2)
   "Todo"
   (declare (ignore tensor1 tensor2)))
+
+(defmacro with-tracing (&body body &aux (id (gensym)))
+  "Enabling a tracing which contributes to reduce memory usage and improve performance."
+  `(let ((,id ',(gentemp "TraceID" :cl-waffe.trace-ids)))
+     (when (cl-waffe.caches:traced? ,id)
+       (cl-waffe.caches:call-id ,id))
+     (let ((*tracing-target-heap* ,id))
+       (prog1
+	   ,@body
+	 (cl-waffe.caches:lock-id ,id)))))
+
+(defmacro with-jit (&body body &aux (id (gensym)))
+  "Todo"
+  `(let ((,id ',(gentemp "JIT" :cl-waffe.trace-ids)))))
 
 (defmacro with-optimized-operation (&body body)
   ; doing all operations with destructive
@@ -31,13 +47,18 @@
 @begin[lang=lisp](code)
 (warranty your-tensor)
 (print your-tensor)
+
+or
+
+(print (warranty your-tensor))
 @end[lang=lisp](code)"
   (declare (optimize (speed 3) (safety 0) (space 0))
 	   (type waffetensor tensor))
   (prog1
       tensor
     (let ((thread (waffetensor-thread-data tensor)))
-      (if thread (incf (waffenodethread-cache-n thread) 1)))))
+      (if (not (null thread))
+	  (incf (waffenodethread-cache-n thread) 1)))))
 
 #|
 (declaim (ftype (function (waffetensor)

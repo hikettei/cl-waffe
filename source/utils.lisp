@@ -2,8 +2,10 @@
 (in-package :cl-waffe)
 
 (defparameter *gendoc-mode* t
-  "Enable this nil for general usage.
+  "Enable this nil for general usage otherwise functions doesn't inline.
 Owing to inlined-generic-function's bugs, without this param be t, stackoverflow occurs.")
+
+(defvar *tracing-target-heap* nil)
 
 (defstruct WaffeObjectUsage
   "An structure of restoring waffe objects usage

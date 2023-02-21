@@ -63,7 +63,7 @@ Output: An last value of layers."
        ,@(map 'list (lambda (layer)
 		      (declare (type cons layer))
 		      `(progn
-			 (!allow-destruct ,input)
+			 ;(!allow-destruct ,input)
 			 (setq ,input (call (self ,(car layer)) ,@(cdr layer)))))
 	      layers)
      ,input))
@@ -346,6 +346,8 @@ Example:
        args first-states)
   nil)
 
+(defun getlayer () "Todo")
+
 (defmacro define-node-method (fname
 			      name
 			      args
@@ -359,6 +361,7 @@ Example:
 				   (state  (gensym)))
   "The macro for defining node method. (:forward :backward in defmodel, defnode, defoptimizers)
   Also, the code for managing caches."
+  (declare (ignore thread is-top))
   ; Note: is-node's meaning is on the around way.
   (let ((f-ident   (gensym (symbol-name name)))
 	(self-heap (gensym (symbol-name name)))
@@ -369,7 +372,7 @@ Example:
 		   (remove-if #'(lambda (x) (find x `(&optional &key &aux &rest)))
 			      args))))
     `(progn
-       (declaim (ftype
+       #|(declaim (ftype
 		 (function
 		  (,name
 		   ,@(map 'list (lambda (x)
@@ -379,97 +382,92 @@ Example:
 				    (T `waffetensor)))
 			  `,args))
 		  (or null list waffetensor))
-		 ,f-ident))
+		 ,f-ident))|#
 	 (defun ,f-ident (,self-heap ,@args)
 	   ,(if optimize
 		`(declare (optimize (speed 3) (space 0) (safety 1))
 			  (type ,name ,self-heap))
 		`(declare (type ,name ,self-heap)))
+	   ; nodes only receive tensors
 	   ,(if hide-from-tree `(declare (type waffetensor ,@vars)) nil)
 	   ; Utils that can be used in :forward and :backward
 
-	   ; Optimizer is required to use model in arguments
+	   ; The form below updates argument's infos.
+	   ; All arguments asserted to be tensor because optimizer is required it to use model in arguments
 	   (when (not (eql ,object-type :optimizer))
 	       ,@(map 'list #'(lambda (variable)
 				`(setq ,variable (typecase ,variable
 						   (waffetensor ,variable)
 						   (T (const ,variable)))))
 		      `,vars))
+
+	   (when (not (null *tracing-target-heap*))
+	     ; When the node/model/optimizer is called with with-trace
+	     ,@(map 'list #'(lambda (variable)
+			      `(setq ,variable (typecase ,variable
+						 (waffetensor (register-trace-id ,variable *tracing-target-heap* 0))
+						 (T ,variable))))
+		    `,vars))
 	   
-	   (macrolet ((self (name) `(slot-value ,',self-heap ',name))
-		      (save-for-backward (name value)
-			`(let ((thread-info (waffetensor-thread-data ,value))
-			       (smaller-value (detach ,value)))
-			   (unless *no-grad* ; is no-grad disabled?
-			     (when (if *in-node-method*
+	   (let ((*tracing-target-heap* nil))
+	     (macrolet ((self (name) `(slot-value ,',self-heap ',name))
+			(save-for-backward (name value &optional (allow-destruct nil))
+			 
+			  `(let ((thread-info (waffetensor-thread-data ,value))
+				 (smaller-value (sysconst (data ,value) :allow-destruct ,allow-destruct)))
+			     (unless *no-grad* ; is no-grad disabled?
+			       (when (if *in-node-method*
+				       ; ignore it when (Node -> Node)
 				       (not
 					(waffetensor-path-through-node? ,value))
+				       ; Otherwise save it. (In model)
 				       t)
 			       ; save-for-backward is ignored when 1. in with-no-grad macro. 2. Nodes connected like (Node) -> (Node) ; (in nodes, :forward :backward doesn't create grads.)
 
-			       (when (member t (list ,@',vars)
+
+				 (when (member t (list ,@',vars)
 					     :test
 					     #'(lambda (x y)
 						 (eql x (waffetensor-is-ancestor-param y))))
-				 (cond
-				   ((and (typep (data ,value) 'mat)
+				   (cond
+				     ((and (typep (data ,value) 'mat)
 					 (not (null thread-info)))
-				    (cl-waffe.caches:with-cache
-					(tmp
-					 smaller-value
-					 :place
-					 (cl-waffe.backends.mgl:create-thread-idx thread-info)
-					 :copy t)
-				      (setf (self ,name) (const tmp))))
-				   (T (!allow-destruct smaller-value)
+				      (cl-waffe.caches:with-cache
+					  (tmp
+					   ,value
+					   :copy t)
+				        (setf (self ,name) (sysconst tmp :allow-destruct ,allow-destruct))))
+				     (T
+				    ;   Out of with-trace/value is not mat.
+				      ;(!allow-destruct smaller-value)
 				      (setf (self ,name) smaller-value)))))))))
-	     (self hide-from-tree) ; avoid unused argument (model itself)
-	     ,(if is-node
+	       (self hide-from-tree) ; avoid unused argument (model itself)
+	       ,(if is-node
 		  ; when method is for models.
 		  ; WaffeNodeThread is created when called with model.
-		  `(let* ((,thread (thread ; initialize thread-data with searching the toplevel ident of models.
-				    (decide-thread-idx ,@vars)
-				    (or (let ((k (find t (list ,@vars) :test #'(lambda (x y)
-									   (declare (ignore x))
-									   (waffetensor-thread-data y)))))
-					  (if (and
-					       k
-					       (waffenodethread-belong-to (waffetensor-thread-data k)))
-					      (waffenodethread-belong-to (waffetensor-thread-data k))
-					      nil))
-					(self model-ident))))
-			  (,is-top (= (waffenodethread-thread-idx ,thread) 0)))
-		     (set-thread-data ,thread ,@vars)
+		  `(progn
+		     ;(set-thread-data ,thread ,@vars)
 		     (let ((result (progn ,@body)))
 		       ; no matter what returns model/node, cl-waffe won't error.
 		       ;(declare (type waffetensor &optional result))
 		       (typecase result
 			 (list (prog1
 				   result
-				   ;reducible?
-				   ;(map 'list
-					;(lambda (x)
-					 ; (typecase (waffetensor-data x)
-					  ;  (mat
-					   ;  (setf (data x) (data x))))
-					  ;x)
-					;result)
-				 (free-caches ,thread)
-				 (when ,is-top
-				   (set-thread-data nil ,@vars))))
+				 ;(free-caches ,thread)
+				 ;(when ,is-top
+				 ;  (set-thread-data nil ,@vars))
+				 ))
 			 (waffetensor
 			  (prog1
-			      (progn
-				;(typecase (waffetensor-data result)
-				;  (mat
-				;   (setf (data result) (data result))))
-				result)
-			    (free-caches ,thread)
-			    (when ,is-top
-			      (set-thread-data nil ,@vars))))
+			      result
+			    ;(free-caches ,thread)
+			    ;(when ,is-top
+			    ;(set-thread-data nil ,@vars)
+			    ))
 			 (T result))))
+		  
 		  ; when method is for nodes/optimizers
-		  `(let ((,state (enable-node-tensor ,@vars)))
+		  `(let ((,state (enable-node-tensor ,@vars))) ;crerate scope for save-for-backward
 		     (declare (type list ,state))
 		     (with-node-method-mode
 		       (let ((result (progn ,@body))
@@ -483,7 +481,7 @@ Example:
 				 result))
 			   (T
 			    (setf (waffetensor-path-through-node? result) result-next-state)
-			    result))))))))
+			    result)))))))))
 	 (defmethod ,fname ((self ,name))
 	   (declare (optimize (speed 3)))
 	   #'(lambda (&rest node-inputs)
@@ -569,7 +567,6 @@ the object-type indicates the type of document format."
 		     (equal (symbol-name x) "backward")
 		     (equal (symbol-name x) "hide-from-tree")
 		     (equal (symbol-name x) "parameters")
-		     (equal (symbol-name x) "model-ident")
 		     (equal (symbol-name x) "self"))
 		 (error "cl-waffe.defobject: the name ~a is not allowed to use as a parameter" (symbol-name x))
 		 x)))
@@ -588,9 +585,8 @@ the object-type indicates the type of document format."
 		       (:print-function (lambda (m stream k)
 					  (declare (ignore k))
 					  (render-simple-model-structure stream m)))
-		       (:constructor ,name (,@args &aux (model-ident (gensym "WAFFEOBJECT")) ,@(map 'list (lambda (x) `(,(car x) ,(second x))) parameters))))
+		       (:constructor ,name (,@args &aux ,@(map 'list (lambda (x) `(,(car x) ,(second x))) parameters))))
 	     ,doc-output
-	     (model-ident ,(gensym "WAFFEOBJECT") :type symbol)
 	     (hide-from-tree ,hide-from-tree :type boolean)
 	     (forward t :type boolean)
 	     (backward ,(if backward t nil) :type boolean)

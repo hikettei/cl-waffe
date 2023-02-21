@@ -7,8 +7,14 @@ This package exports features for making caches (sysconst)")
    #:with-cache
    #:return-caches
    #:free-cache
+   
+   #:traced?
+   #:call-id
+   #:lock-id
+   
    #:*static-node-mode*
-   #:caches-gc))
+   #:caches-gc
+   ))
 
 (in-package :cl-waffe.caches)
 
@@ -17,6 +23,7 @@ This package exports features for making caches (sysconst)")
 (defparameter *static-node-mode* nil
   "When every time you call your model and their computations node is static,
    enable this. By doing so, cl-waffe can optimize ram usage and computation speed.")
+
 
 (defvar *thread-caches*
   (tg:make-weak-hash-table :weakness :key))
@@ -28,10 +35,78 @@ This package exports features for making caches (sysconst)")
 (defvar *thread-callns*
   (tg:make-weak-hash-table :weakness :key))
 
+(defvar *traced-nodes*
+  (tg:make-weak-hash-table :weakness :key)) ;weakness should be :key-and-values?
+
 (defstruct CacheData
   (calln 0 :type fixnum)
   (calln-per-step 0 :type fixnum)
   (lock nil :type boolean))
+
+(defstruct TraceData
+  (variables-table (make-hash-table) :type hash-table)
+  (calln-table (make-hash-table :test 'eq) :type hash-table)
+  (lock nil :type boolean))
+
+(defun find-mat-index (info mat)
+  "Find mat from TraceData and return its index. If there's nothing, create a new one."
+  (declare (optimize (speed 3))
+           (type tracedata info)
+	   (type mat mat))
+
+  (with-slots ((table variables-table)) info
+    (or (gethash mat table)
+	(progn
+	  (setf (gethash mat table) (hash-table-count table))
+	  (gethash mat table)))))
+
+(defun traced? (node-idx)
+  "Receiving node-idx which created with (with-trace), returns t if node-idx has been traced once."
+  (not (null (gethash node-idx *traced-nodes*))))
+
+(defun call-id (node-idx)
+
+  0)
+
+(defun lock-id (node-idx)
+  (declare (optimize (speed 3))
+	   (type symbol node-idx))
+  (if (null (gethash node-idx *traced-nodes*))
+      (error "cl-waffe.caches:lock-id. attempted to lock ~a but it hasn't yet traced." node-idx))
+  
+  (setf (gethash node-idx *traced-nodes*)
+	(let ((idx (gethash node-idx *traced-nodes*)))
+	  (setf (TraceData-lock idx) t)
+	  idx)))
+
+(defun step-calln (calln-table mat-index step-by)
+  (declare (optimize (speed 3))
+	   (type hash-table calln-table)
+	   (type fixnum mat-index step-by))
+  (if (null (gethash mat-index calln-table))
+      (setf (gethash mat-index calln-table) 0)
+      (incf (the fixnum (gethash mat-index calln-table)) step-by))
+  nil)
+	   
+(defun update-mat (idx mat)
+  (declare (optimize (speed 3))
+	   (type mat mat)
+	   (type symbol idx))
+  (let ((tracedata (gethash idx *traced-nodes*)))
+    (when (null tracedata)
+      (setf (gethash idx *traced-nodes*)
+	    (make-TraceData
+	     :lock nil)))
+
+    (let ((tracedata (gethash idx *traced-nodes*)))
+      (declare (type tracedata tracedata))
+      (with-slots ((table variables-table)
+		   (callns calln-table)
+		   (locked? lock))
+	  tracedata
+	(when (not locked?)
+	  (let ((mat-index (find-mat-index tracedata mat)))
+	    (step-calln callns mat-index 1)))))))
 
 (defun update-calln (thread-info idx)
   (let ((calln (or (gethash idx *thread-callns*)
@@ -55,7 +130,6 @@ This package exports features for making caches (sysconst)")
       (setf (cachedata-lock
 	     (gethash idx *thread-callns*))
 	    t))))
-
 
 (defun read-thread-cached-object (place-key key)
   (let ((thread-cache
@@ -82,40 +156,6 @@ This package exports features for making caches (sysconst)")
     ;; strategies too.
 
     (setf (gethash key place-cache) value)))
-
-(defmacro with-thread-cached-mat1 ((var tensor
-                                    &key
-				      (place :scratch)
-				      (copy nil)
-				      (ctype '*default-mat-ctype*)
-				      (displacement 0)
-				      max-size
-				      (initial-element 0) initial-contents)
-                                  &body body)
-  "Bind VAR to a matrix of DIMENSIONS, CTYPE, etc. Cache this matrix,
-  and possibly reuse it later by reshaping it. When BODY exits the
-  cached object is updated with the binding of VAR which BODY may
-  change.
-  There is a separate cache for each thread and each `PLACE` (under
-  EQ). Since every cache holds exactly one MAT per CTYPE, nested
-  WITH-THREAD-CACHED-MAT often want to use different `PLACE`s. By
-  convention, these places are called `:SCRATCH-1`, `:SCRATCH-2`,
-  etc."
-  (declare (ignore max-size initial-contents))
-  (progn
-    (alexandria:with-unique-names (key)
-      (alexandria:once-only (tensor displacement ctype initial-element)
-        `(let ((,key (list ,ctype ,initial-element)))
-           (with-thread-cached-object1
-               (,var ,tensor ,key (make-mat (!shape ,tensor)
-                                    :ctype ,ctype
-                                    :displacement ,displacement
-                                    :initial-element ,initial-element)
-                :place ,place
-		:copy ,copy)
-             (setq ,var (adjust! ,var (!shape ,tensor) ,displacement))
-	     ; may create new mat
-             (locally ,@body)))))))
 
 (defun return-caches ()
   *thread-caches*)
@@ -154,12 +194,58 @@ This package exports features for making caches (sysconst)")
                       (place :ones))
                       &body body)
   "set var (data tensor)"
-  `(with-thread-cached-mat1 (,var ,tensor :copy ,copy
-				          :place ,place
-					  :ctype ,ctype
-					  :initial-element 0.0)
-     (let ((,var ,var))
-       ,@body)))
+  `(let ((,var nil))
+     (if (null (waffetensor-thread-data ,tensor))
+	 ; when tensor is copied in out of range of traicing.
+	 (progn
+	   (setq ,var (make-mat (!shape ,tensor) :ctype ,ctype))
+	   (when ,copy
+	     (copy! (value ,tensor) ,var)))
+	 (let ((thread-data (waffetensor-thread-data ,tensor)))
+	   (with-slots ((idx cl-waffe::belong-to) (depth cl-waffe::thread-idx) (calln cl-waffe::cache-n)) thread-data
+	     (value ,tensor)
+	     (print idx)
+	     (print depth)
+	     (print calln)
+	     (update-mat idx (value ,tensor))
+	     (setq ,var (copy-mat (value ,tensor)))
+	     (warranty ,tensor))))
+     ,@body))
+
+(defmacro with-thread-cached-mat1 ((var tensor
+                                    &key
+				      (place :scratch)
+				      (copy nil)
+				      (ctype '*default-mat-ctype*)
+				      (displacement 0)
+				      max-size
+				      (initial-element 0) initial-contents)
+                                  &body body)
+  "Bind VAR to a matrix of DIMENSIONS, CTYPE, etc. Cache this matrix,
+  and possibly reuse it later by reshaping it. When BODY exits the
+  cached object is updated with the binding of VAR which BODY may
+  change.
+  There is a separate cache for each thread and each `PLACE` (under
+  EQ). Since every cache holds exactly one MAT per CTYPE, nested
+  WITH-THREAD-CACHED-MAT often want to use different `PLACE`s. By
+  convention, these places are called `:SCRATCH-1`, `:SCRATCH-2`,
+  etc."
+  (declare (ignore max-size initial-contents))
+  (progn
+    (alexandria:with-unique-names (key)
+      (alexandria:once-only (tensor displacement ctype initial-element)
+        `(let ((,key (list ,ctype ,initial-element)))
+           (with-thread-cached-object1
+               (,var ,tensor ,key (make-mat (!shape ,tensor)
+                                    :ctype ,ctype
+                                    :displacement ,displacement
+                                    :initial-element ,initial-element)
+                :place ,place
+		:copy ,copy)
+             (setq ,var (adjust! ,var (!shape ,tensor) ,displacement))
+	     ; may create new mat
+             (locally ,@body)))))))
+
 
 (defmacro with-thread-cached-object1 ((var tensor key initform &key place (copy nil))
 				      &body body
