@@ -596,7 +596,10 @@ Example:
 
 (defun (setf !aref) (value tensor &rest dims)
   "Todo: Define it as macro and (setq tensor ~)"
-  (setf (!areflist tensor dims) value))
+  (multiple-value-bind (value tensor) (straighten-up (assure-tensor value) (assure-tensor tensor))
+    (call (SetfArefTensor dims)
+	  tensor
+	  value)))
 
 (defun (setf !areflist) (value tensor dims)
   ; For backward, you need to call it like (setq z (setf (!aref x ~) ~))

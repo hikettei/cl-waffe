@@ -75,5 +75,4 @@
       (is (test-for (Trainer6)))
       (is (test-for (Trainer7)))
       (is (test-for (Trainer8)))
-      (is (test-for (Trainer9)))
-      )
+      (is (test-for (Trainer9))))

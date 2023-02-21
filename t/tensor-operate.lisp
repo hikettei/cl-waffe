@@ -254,15 +254,14 @@
 (defun setfaref-backward ()
   (let ((tensor1 (parameter (!randn `(10 10 10))))
 	(tensor2 (!add (!randn `(10 10)) 1.0)))
-    (setq tensor1 (setf (!aref tensor1 0) tensor2))
-    (backward (!sum tensor1))
-    (print (grad tensor1))
+    (setq tensor3 (setf (!aref tensor1 0) tensor2)) ; kore kuso
+    (backward (!sum tensor3))
     (grad tensor1)))
 
 (defun aref-backward ()
   (let* ((tensor1 (parameter (!randn `(10 10 10))))
  	 (tensor2 (!add (!randn `(10 10)) (!aref tensor1 0))))
-    (backward (!sum tensor1))
+    (backward (!sum tensor2))
     (grad tensor1)))
 
 (defun funcall-test ()
@@ -322,6 +321,6 @@ b)))
       (is (test-beta))
       (is (aref-backward))
       (is (funcall-test))
-      ;(is (setfaref-backward))
+      (is (setfaref-backward))
       )
 
