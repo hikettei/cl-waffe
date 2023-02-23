@@ -70,7 +70,7 @@
 	       (list dx dx))))
 
 (defun softmax-cross-entropy (x y &key (avoid-overflow t) (delta 1e-7) (epsilon 0.0))
-  "Softmax-Cross-Entropy Loss"
+  "This criterion computes the cross entropy loss between x and y."
   (if (> (!dims x) (!dims y))
       (call
        (SoftMaxCrossEntropy :avoid-overflow avoid-overflow :delta delta)
