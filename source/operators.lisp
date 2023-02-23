@@ -74,6 +74,16 @@
   `(call-and-dispatch-kernel
     ,kernel-function ,output ,overwrite ,@args))
 
+(defun sumup-tensor (x)
+  (declare (type waffetensor x))
+  (let ((r 0.0))
+    (declare (type single-float r))
+    (with-facet (arr ((value x) 'backing-array :direction :input))
+      (let ((size (array-total-size arr)))
+	(loop for i fixnum upfrom 0 below size
+	      do (incf r (aref arr i)))))
+    (sysconst r)))
+
 (defnode AddTensor (&optional (output nil) (overwrite nil))
   :optimize t
   :parameters ((output output) (overwrite overwrite))
@@ -232,7 +242,7 @@
   :forward ((x) ; only for 2d
 		(setf (self total-len) (/ (!size x)))
 		(setf (self shape) (!shape x))
-		(!sum (!sum x 1) 0))
+		(sumup-tensor x))
   :backward ((dy)
 	     (list (sysconst (scal! (self total-len)
 				    (make-mat (self shape)
@@ -649,10 +659,7 @@ For nd tensors...
     (2 (!sum-2d x axis keepdims))
     (T
      (if (null axis)
-	 (let ((result (!sum (!squeeze (!aref x 0)))))
-	   (loop for i upfrom 1 below (!shape x 0)
-		 do (setq result (!add result (!sum (!aref x i)))))
-	   result)
+	 (call (SumUpTensor) x)
 	 (let* ((dims (!shape x axis))
 		; Note: keepdims is ignored. And May need exclusive kernel for it because its too slow when forward and backward.
 
@@ -664,6 +671,7 @@ For nd tensors...
 	   (dotimes (i dims)
 	     (setq result (!add result (apply #'!aref x (funcall sum-dims i)))))
 	   result)))))
+
 
 (defun !mean (x &optional (axis nil) (keepdims nil))
   "The usage is the same as !sum.
@@ -818,12 +826,21 @@ Todo: implement 3d, 4d version...
 (defun !transpose1 (x &rest result)
   "Transpose x but doesn't produce lazy-eval.
 
-Todo: implement it by myself.
+Todo: Numcl's operation couldm't optimized well. i need to reimplement it by myself.
 
 @begin(section)
 @title(Example)
 @begin[lang=lisp](code)
+(setq a (!randn `(10 5 3)))
 
+(!transpose1 a)
+;#Const((((-0.47... -0.03... ~ -0.17... 0.328...)         
+;                   ...
+;         (0.210... -1.80... ~ 1.648... 0.135...))        
+;                 ...
+;        ((-0.52... 1.509... ~ 0.643... 0.258...)         
+;                   ...
+;         (-0.26... -1.14... ~ -1.08... 1.126...))) :mgl t :shape (3 5 10))
 @end[lang=lisp](code)
 @end(section)"
   (call (TransposeOriginalTensor (assure-tensor result)) (assure-tensor x)))
@@ -897,9 +914,32 @@ The matrix and x's each matrix are multiplied and is returned.
 @end[lang=lisp](code)
 @end(term)
 
-@def(For more...)
-@term(More will be added (e.g.: 1d and 2d, for larger than 4d ...))
+@def(x is 3D and y is 3D.)
+@begin(term)
+The Batch Filtered Matrix-Matrix product is returned.
+@begin[lang=lisp](code)
+(setq a (!randn `(5 3 10)))
+(setq b (!randn `(5 10 3)))
 
+; The returned mat is comprised of:
+; (!matmul (!aref a 0) (!aref b 0))
+; (!matmul (!aref a 1) (!aref b 1))
+; (!matmul (!aref a 2) (!aref b 2))
+; (!matmul (!aref a 3) (!aref b 3))
+
+(!matmul a b)
+;#Const((((6.621... -5.61... 2.898...)         
+;                   ...
+;         (-2.96... -4.26... -3.99...))        
+;                 ...
+;        ((-0.02... 2.707... 5.989...)         
+;                   ...
+;         (-3.35... 3.561... -3.90...))) :mgl t :shape (5 3 3))
+@end[lang=lisp](code)
+@end(term)
+
+@def(Otherwise)
+@term(Currently not implemented. In the near future for more will be added.)
 @end(deflist)"
   (cond
     ((and (= (the fixnum (!dims x)) 1)
