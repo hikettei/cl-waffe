@@ -78,7 +78,7 @@ Here's examples.
   :forward ((x)
 	    (setf (self prev-shape) (!shape x))
 	    (with-facet (array ((value x) 'array :direction :input))
-	      ; in defnode, It is not always necessary to use the cl-waffe API.
+	      ; In defnode, it is not always necessary to use the cl-waffe API.
 	      ; For this example, defining node with numcl's API.
 	      (sysconst (array-to-mat (numcl:transpose array)))))
   :backward ((dy)
@@ -122,13 +122,9 @@ $ ./run-test-model.ros mnist
 
 ・Rewrite some nodes with (with-kernel-case)
 
-・Expとかを自分で定義
-
 ・CCLで試す
 
 ・run-test-model.rosを使いやすく書き直す
-
-・Data LoaderのPrint関数にもっと詳細な情報を出す、:printみたいなスロット作っとく
 
 ・Documentを書く
 
