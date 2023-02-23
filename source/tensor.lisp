@@ -557,7 +557,7 @@ Todo: Backward."
     dataset))
 
 (defun !aref (tensor &rest dims)
-  "Very fast aref.
+  "Very fast and useful aref.
 
 This function is setfable.
 
@@ -576,18 +576,79 @@ Cons (e.g. '(1 3) reads 1<=x<3)
 
 Example:
 @begin[lang=lisp](code)
-
-(setq a (!randn `(10 10)))
-
-;=> #Const(((0.280... 1.941... ~ 0.723... -0.47...)        
+(setq a (!randn `(10 5 3)))
+;#Const((((0.621... -1.15... 2.396...)         
 ;                   ...
-;          (-1.01... 0.232... ~ -1.16... 0.405...)) :mgl t :shape (10 10))
+;         (0.157... 0.389... 1.084...))        
+;                 ...
+;        ((1.123... -0.58... -0.28...)         
+;                   ...
+;         (0.506... -0.44... -0.26...))) :mgl t :shape (10 5 3))
 
-(!aref a '(0 3) t)
-(!aref a t '(0 3))
-(!aref a 1 1)
-(setq a (setf (!aref a '(0 3) '(0 3)) (!zeros '(3 3)))) ; to update nodes
+(!aref a '(0 3)) ; interpreted as (!aref a '(0 3) t t)
+;#Const((((0.621... -1.15... 2.396...)         
+;                   ...
+;         (0.157... 0.389... 1.084...))        
+;                 ...
+;        ((0.694... 0.954... 1.210...)        
+;                   ...
+;         (0.884... 0.059... 0.190...))) :mgl t :shape (3 5 3))
 
+(!aref a '(1 3))
+;#Const((((0.657... 0.834... -2.01...)         
+;                   ...
+;         (1.194... 0.517... 0.356...))
+;        ((0.694... 0.954... 1.210...)         
+;                   ...
+;         (0.884... 0.059... 0.190...))) :mgl t :shape (2 5 3))
+
+(!aref a '(1 0)) ; When (cdr dims) <= 0, interpreted as (- (!shape tensor dim) (cdr dims))
+; In this Example, this is the same as (!aref a '(1 10))
+;#Const((((0.657... 0.834... -2.01...)         
+;                   ...
+;         (1.194... 0.517... 0.356...))        
+;                 ...
+;        ((1.123... -0.58... -0.28...)         
+;                   ...
+;         (0.506... -0.44... -0.26...))) :mgl t :shape (9 5 3))
+
+(!aref a '(1 -1))
+;#Const((((0.657... 0.834... -2.01...)         
+;                   ...
+;         (1.194... 0.517... 0.356...))        
+;                 ...
+;        ((-2.29... -1.12... -0.68...)         
+;                   ...
+;         (-1.74... 0.489... 1.519...))) :mgl t :shape (8 5 3))
+
+(!aref a t '(0 2))
+;Tensors in lower dimensions can also be clipped.
+;If 0th dim isn't needed to be cut, place t.
+;#Const((((0.621... -1.15... 2.396...)
+;         (0.642... 0.029... 1.334...))        
+;                 ...
+;        ((1.123... -0.58... -0.28...)
+;         (-2.43... -0.29... 0.882...))) :mgl t :shape (10 2 3))
+
+(!aref a '(0 2) '(1 2) '(1 3))
+;#Const((((0.029... 1.334...))
+;        ((-1.41... -0.32...))) :mgl t :shape (2 1 2))
+
+; This function is setfable, but currently I won't come up with the best solution to update computation node.
+; I know it is very ugly but additional setq is required after setf.
+; Also, note that (setf !aref). overwrites a.
+(setq a (setf (!aref a '(0 3) '(0 3)) (!zeros '(3 3))))
+
+;#Const((((0.0 0.0 0.0)         
+;                   ...
+;         (0.157... 0.389... 1.084...))
+;                 ...
+;        ((1.123... -0.58... -0.28...)
+;                   ...
+;         (0.506... -0.44... -0.26...))) :mgl t :shape (10 5 3))
+
+(!aref a 0 0)
+;#Const((((0.0 0.0 0.0))) :mgl t :shape (1 1 3))
 @end[lang=lisp](code)"
   (call (ArefTensor dims) tensor))
 
@@ -596,7 +657,10 @@ Example:
 
 (defun (setf !aref) (value tensor &rest dims)
   "Todo: Define it as macro and (setq tensor ~)"
-  (setf (!areflist tensor dims) value))
+  (multiple-value-bind (value tensor) (straighten-up (assure-tensor value) (assure-tensor tensor))
+    (call (SetfArefTensor dims)
+	  tensor
+	  value)))
 
 (defun (setf !areflist) (value tensor dims)
   ; For backward, you need to call it like (setq z (setf (!aref x ~) ~))

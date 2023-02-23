@@ -26,13 +26,14 @@
 		   (h-output (call (self h2l) hs)))
 	      (list h-output hs))))
 
-
 (defmodel Seq2Seq (vocab-size embedding-dim input-size)
   :parameters ((encoder (Encoder vocab-size embedding-dim input-size))
 	       (decoder (Decoder vocab-size embedding-dim input-size)))  
   :forward ((x y)
-	    (let ((x-state (call (self encoder) x)))
-	      (call (self decoder) x-state y))))
+	    (let ((x-state (call (self encoder) x))
+		  (y1 (!zeros (!shape y))))
+	      (setq y1 (setf (!aref y1) (!aref y '(1 0))))
+	      (call (self decoder) x-state y1))))
 
 (deftrainer Seq2SeqTrainer (vocab-size embedding-dim hidden-size)
   :model (Seq2Seq vocab-size embedding-dim hidden-size)
@@ -40,7 +41,7 @@
   :optimizer (:lr 1e-4)
   :step-model ((x y)
 	       (zero-grad)
-	       (let* ((outs (call (model) x y))
+	       (let* ((outs (call (self model) x y))
 		      (out (softmax-cross-entropy (car outs) y)))
 		 (backward out)
 		 (update)
@@ -53,10 +54,10 @@
 (defun demo (&key
 	       (lang1 :ja)
 	       (lang2 :en)
-	       (maxlen 30)
-	       (batch-size 1)
-	       (embedding-dim 64)
-	       (hidden-dim 128))
+	       (maxlen 32)
+	       (batch-size 2)
+	       (embedding-dim 32)
+	       (hidden-dim 64))
 
   ; Loadig Dataset
 

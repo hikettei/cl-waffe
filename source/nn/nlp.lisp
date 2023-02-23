@@ -13,8 +13,8 @@
 					(sqrt hidden-size))))
 	       (reccurent-weight (if reccurent-weight
 				     reccurent-weight
-				     (!div (!randn `(,hidden-size ,hidden-size))
-					   (sqrt hidden-size))))
+				     (parameter (!div (!randn `(,hidden-size ,hidden-size))
+						      (sqrt hidden-size)))))
                (bias (if bias
 			 (parameter (!zeros `(1 ,hidden-size)))
 			 nil))
@@ -37,7 +37,6 @@
 		   (h1 (case (self activation)
 			   (:tanh (!tanh h1))
 			   (:relu (!relu h1)))))
-	      (setf (self reccurent-weight) (!transpose h))
 	      h1)))
 
 (defmodel RNN (input-size
@@ -69,17 +68,14 @@
 	    "Input: X = (BatchSize SentenceLength Embedding_Dim)
              Output (values x{t+1} h{t+1})"
 
-	    (let* ((hs (if (null hs)
-			   (const NIL)
-			   hs))
-		   (batch-size (!shape x 0))
+	    (let* ((batch-size (!shape x 0))
 		   (s-len (!shape x 1))
 		   (hs (if (null (data hs))
 			 (!zeros `(,batch-size
 				   ,s-len
 				   ,(self hidden-size)))
 			 hs)))
-	      
+
 	      (if (self biredical)
 		  ; when biredical=t, calc in the around way
 		  (loop for xn downfrom (1- s-len) to 0
@@ -95,8 +91,7 @@
 
 		  ; when biredical=nil, calc in order.
 		  (loop for xn upfrom 0 below s-len
-			do (let ((h (!zeros `(,batch-size
-					      ,(self hidden-size))))
+			do (let ((h (!squeeze (!aref hs t xn t) 1))
 				 (xn-s (!squeeze (!aref x t xn t) 1)))
 			     (dotimes (i (self num-layers))
 			       (setq h (call (self rnn-layers)

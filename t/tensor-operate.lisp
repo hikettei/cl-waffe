@@ -197,6 +197,19 @@
 	    (setq result nil))))
     result))
 
+; labeling
+(defun test-cross-entropy1 ()
+  (let ((result t))
+    (dotimes (i 10)
+      (let ((loss (cl-waffe.nn:softmax-cross-entropy (!randn `(10 10 10))
+						     (!ones `(10 10)))))
+	(when (= i 0)
+	  (format t "CrossEntropyLoss:~a~%" loss))
+	(if (and result (>= (data loss) 0))
+	    (setq result t)
+	    (setq result nil))))
+    result))
+
 (defun test-beta ()
   (let ((beta1 (!beta '(1000 1000) 5.0 5.0))
 	(beta2 (!beta '(1000 1000) 0.5 0.5))
@@ -253,20 +266,71 @@
 
 (defun setfaref-backward ()
   (let ((tensor1 (parameter (!randn `(10 10 10))))
-	(tensor2 (!add (!randn `(10 10)) 1.0)))
-    (setq tensor1 (setf (!aref tensor1 0) tensor2))
-    (backward (!sum tensor1))
-    (print (grad tensor1))
+	(tensor2 (!add (!randn `(10 10)) 1.0))
+	(tensor3 nil))
+    (setq tensor3 (setf (!aref tensor1 0) tensor2)) ; kore kuso
+    (backward (!sum tensor3))
     (grad tensor1)))
 
 (defun aref-backward ()
   (let* ((tensor1 (parameter (!randn `(10 10 10))))
  	 (tensor2 (!add (!randn `(10 10)) (!aref tensor1 0))))
-    (backward (!sum tensor1))
+    (backward (!sum tensor2))
     (grad tensor1)))
 
 (defun funcall-test ()
   (and (!log 1) (!add 1 1)))
+
+(defun nd-matmul-test ()
+  (let ((m3d (!randn `(10 10 10)))
+	(m2d (!randn `(10 10))))
+    (format t "~%Matmul: 3D * 2D~%")
+    (time (assert (equal (!shape (!matmul m3d m2d))
+			 '(10 10 10))
+		  nil
+		  "Matmul failed"))
+
+    (format t "~%Matmul: 2D * 3D~%")
+    (time (assert (equal (!shape (!matmul m2d m3d))
+			 '(10 10 10))
+		  nil
+		  "Matmul Failed"))
+
+    (format t "~%Matmul: 3D * 3D~%")
+    (time (assert (equal (!shape (!matmul m3d m3d))
+			 '(10 10 10))
+		  nil
+		  "Matmul Failed"))
+
+    (let ((m2dt  (!transpose (!randn `(3 10))))
+	  (m3dt1 (!transpose (!randn `(10 3 10))))
+	  (m3dt  (!transpose (!randn `(10 10 3)))))
+      (format t "~%Matmul: 2D.T * 3D~%")
+      (time (assert (equal (!shape (!matmul (!transpose (!randn `(10 3))) m3d)) '(10 3 10))
+		    nil
+		    "Matmul test failed. 2D.T and 3D"))
+
+      (format t "~%Matmul: 2D.T * 3D.T~%")
+      (time (assert (equal (!shape (!matmul m2dt m3dt1))
+			   '(10 10 3))
+		    nil
+		    "Matmul Test Failed"))
+
+      (format t "~%Matmul: 3D.T * 2D~%")
+      (time (assert (equal (!shape (!matmul m3dt m2d))
+			   '(10 3 10))
+		    (m3dt m2d)
+		    "Matmul Test failed ~a.T and ~a"
+		    m3dt
+		    m2d))
+
+      (format t "~%Matmul: 3D.T * 3D.T")
+      (time (assert (equal (!shape (!matmul (!transpose (!randn `(10 70 50)))
+					    (!transpose (!randn `(10 20 70)))))
+			   '(10 50 20))
+		    nil
+		    "matmul test failed"))))
+  t)
 
 #|
 (defun test-einsum ()
@@ -316,12 +380,14 @@ b)))
 
       (is (test-aref))
       (is (test-setfaref))
+      (is (nd-matmul-test))
       (is (test-cross-entropy))
+      (is (test-cross-entropy1))
       (is (test-activations))
       (is (test-filter))
       (is (test-beta))
       (is (aref-backward))
       (is (funcall-test))
-      ;(is (setfaref-backward))
+      (is (setfaref-backward))
       )
 

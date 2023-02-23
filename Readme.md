@@ -70,12 +70,19 @@ As you can see from `./source/optimizers/optimizers.lisp`, or `./source/operator
 Here's examples.
 
 ```lisp
-; in ./source/operators.lisp at 17th line
-(defnode AddTensor nil
-  :parameters nil
-  :forward  ((x y)
-	     (with-searching-calc-node :add x y))
-  :backward ((dy) (list dy dy)))
+; in ./source/operators.lisp at 202th line
+
+(defnode TransposeOriginalTensor (shape)
+  :optimize t
+  :parameters ((prev-shape nil) (shape shape))
+  :forward ((x)
+	    (setf (self prev-shape) (!shape x))
+	    (with-facet (array ((value x) 'array :direction :input))
+	      ; In defnode, it is not always necessary to use the cl-waffe API.
+	      ; For this example, defining node with numcl's API.
+	      (sysconst (array-to-mat (numcl:transpose array)))))
+  :backward ((dy)
+	     (list (!transpose1 dy (self prev-shape)))))
 
 ; in ./source/optimizers/optimizers.lisp at 4th line
 
@@ -115,13 +122,9 @@ $ ./run-test-model.ros mnist
 
 ・Rewrite some nodes with (with-kernel-case)
 
-・Expとかを自分で定義
-
 ・CCLで試す
 
 ・run-test-model.rosを使いやすく書き直す
-
-・Data LoaderのPrint関数にもっと詳細な情報を出す、:printみたいなスロット作っとく
 
 ・Documentを書く
 
