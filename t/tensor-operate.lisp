@@ -281,6 +281,57 @@
 (defun funcall-test ()
   (and (!log 1) (!add 1 1)))
 
+(defun nd-matmul-test ()
+  (let ((m3d (!randn `(10 10 10)))
+	(m2d (!randn `(10 10))))
+    (format t "~%Matmul: 3D * 2D~%")
+    (time (assert (equal (!shape (!matmul m3d m2d))
+			 '(10 10 10))
+		  nil
+		  "Matmul failed"))
+
+    (format t "~%Matmul: 2D * 3D~%")
+    (time (assert (equal (!shape (!matmul m2d m3d))
+			 '(10 10 10))
+		  nil
+		  "Matmul Failed"))
+
+    (format t "~%Matmul: 3D * 3D~%")
+    (time (assert (equal (!shape (!matmul m3d m3d))
+			 '(10 10 10))
+		  nil
+		  "Matmul Failed"))
+
+    (let ((m2dt  (!transpose (!randn `(3 10))))
+	  (m3dt1 (!transpose (!randn `(10 3 10))))
+	  (m3dt  (!transpose (!randn `(10 10 3)))))
+      (format t "~%Matmul: 2D.T * 3D~%")
+      (time (assert (equal (!shape (!matmul (!transpose (!randn `(10 3))) m3d)) '(10 3 10))
+		    nil
+		    "Matmul test failed. 2D.T and 3D"))
+
+      (format t "~%Matmul: 2D.T * 3D.T~%")
+      (time (assert (equal (!shape (!matmul m2dt m3dt1))
+			   '(10 10 3))
+		    nil
+		    "Matmul Test Failed"))
+
+      (format t "~%Matmul: 3D.T * 2D~%")
+      (time (assert (equal (!shape (!matmul m3dt m2d))
+			   '(10 3 10))
+		    (m3dt m2d)
+		    "Matmul Test failed ~a.T and ~a"
+		    m3dt
+		    m2d))
+
+      (format t "~%Matmul: 3D.T * 3D.T")
+      (time (assert (equal (!shape (!matmul (!transpose (!randn `(10 70 50)))
+					    (!transpose (!randn `(10 20 70)))))
+			   '(10 50 20))
+		    nil
+		    "matmul test failed"))))
+  t)
+
 #|
 (defun test-einsum ()
 (let ((r1 (-> (!einsum (i j) (i j) -> (i j))
@@ -329,6 +380,7 @@ b)))
 
       (is (test-aref))
       (is (test-setfaref))
+      (is (nd-matmul-test))
       (is (test-cross-entropy))
       (is (test-cross-entropy1))
       (is (test-activations))
