@@ -621,7 +621,9 @@ Example:
 ;                   ...
 ;         (-1.74... 0.489... 1.519...))) :mgl t :shape (8 5 3))
 
-(!aref a t '(0 2)) ;Tensors in lower dimensions can also be clipped. If 0th dim isn't needed to be cut, place @cl:param(t).
+(!aref a t '(0 2))
+;Tensors in lower dimensions can also be clipped.
+;If 0th dim isn't needed to be cut, place t.
 ;#Const((((0.621... -1.15... 2.396...)
 ;         (0.642... 0.029... 1.334...))        
 ;                 ...
@@ -633,7 +635,7 @@ Example:
 ;        ((-1.41... -0.32...))) :mgl t :shape (2 1 2))
 
 ; This function is setfable, but currently I won't come up with the best solution to update computation node.
-; I know it is very ugly but additional setq is required after @cl:param(setf).
+; I know it is very ugly but additional setq is required after setf.
 ; Also, note that (setf !aref). overwrites a.
 (setq a (setf (!aref a '(0 3) '(0 3)) (!zeros '(3 3))))
 
