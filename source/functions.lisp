@@ -274,7 +274,8 @@ Todo: currently, it returns error.
   :parameters ((shape shape))
   :regard-as-node nil
   :forward ((x y)
-	    (apply #'!write-faref x y (self shape)))
+	    ; Note: defnode must produce new sysconst otherwise stackoverflow...
+	    (sysconst (data (apply #'!write-faref x y (self shape)))))
   :backward ((dy)
 	     (list dy (apply #'!faref dy (self shape)))))
 
@@ -314,7 +315,7 @@ Todo: currently, it returns error.
 					     (the fixnum (!shape tensor i))
 					     (the fixnum (car x))))
 				       (car x))
-				   (if (< (the fixnum (second x)) 0)
+				   (if (<= (the fixnum (second x)) 0)
 				       (the fixnum
 					    (+
 					     (the fixnum (!shape tensor i))
@@ -436,7 +437,7 @@ Todo: currently, it returns error.
 					     (the fixnum (!shape tensor i))
 					     (the fixnum (car x))))
 				       (car x))
-				   (if (< (the fixnum (second x)) 0)
+				   (if (<= (the fixnum (second x)) 0)
 				       (the fixnum
 					    (+
 					     (the fixnum (!shape tensor i))

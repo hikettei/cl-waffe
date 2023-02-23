@@ -20,8 +20,8 @@
 
 (defparameter embedding (Embedding 10 10))
 
-(defparameter rnn1 (RNN 10 256 :num-layers 1))
-(defparameter rnn2 (RNN 10 256 :num-layers 3))
+(defparameter rnn1 (RNN 10 25 :num-layers 1))
+(defparameter rnn2 (RNN 10 25 :num-layers 3))
 
 (defparameter words (call embedding (parameter (!ones `(10 10)))))
 
@@ -37,10 +37,52 @@
   t)
 
 (defun test-model (model input)
+  (format t "~%Running test forward and backward of ~a~%" model)
+  (format t "~%Calling Forward:~%")
   (let* ((i (parameter input))
-	 (out (call model i)))
-    (backward (!sum out))
+	 (out (time (call model i))))
+    (format t "~%Calling Backward:~%")
+    (time (backward (!sum out)))
     (grad i)))
+
+(defmodel Encoder (vocab-size embedding-dim hidden-size)
+  :parameters ((embedding (Embedding vocab-size embedding-dim :pad-idx 0))
+               (layer     (RNN embedding-dim hidden-size :num-layers 1)))
+  :forward ((x)
+	    (with-calling-layers x
+	      (embedding x)
+	      (layer x))))
+
+(defmodel Decoder (vocab-size embedding-dim hidden-size)
+  :parameters ((embedding (Embedding vocab-size embedding-dim :pad-idx 0))
+               (layer     (RNN embedding-dim hidden-size :num-layers 1))
+	       (h2l       (linearlayer hidden-size vocab-size)))
+  
+  :forward ((encoder-state y)
+	    (let* ((ye (call (self embedding) y))
+		   (hs (call (self layer) ye encoder-state))
+		   (h-output (call (self h2l) hs)))
+	      (list h-output hs))))
+
+(defmodel Seq2Seq (vocab-size embedding-dim input-size)
+  :parameters ((encoder (Encoder vocab-size embedding-dim input-size))
+	       (decoder (Decoder vocab-size embedding-dim input-size)))  
+  :forward ((x y)
+	    (let ((x-state (call (self encoder) x))
+		  (y1 (!zeros (!shape y))))
+	      (setq y1 (setf (!aref y1 t) (!aref y '(1 0))))
+	      (call (self decoder) x-state y1))))
+
+(defun embedding-and-rnn-test ()
+  (format t "~%Running Seq2Seq(RNN)~%")
+  (let* ((model (Seq2Seq 2 16 10))
+	 (x (!ones `(10 10)))
+	 (y (!ones `(10 10)))
+	 (out (time (call model x y))))
+    ;Too Slow.... Due to sum
+    ;(time (backward (!sum (car out))))
+    t
+    ))
 
 (test networks-test
       (is (test-model linearlayer1 x))
@@ -56,9 +98,9 @@
 
 (test nlp-test
       (is (test-model embedding (parameter (!ones `(10 10)))))
-      ;(is (test-model rnn1 words))
-      ;(is (test-model rnn2 words))
-      )
+      (is (test-model rnn1 words))
+      (is (test-model rnn2 words))
+      (is (embedding-and-rnn-test)))
 
 (test model-list-test
       (is (test-model-list)))

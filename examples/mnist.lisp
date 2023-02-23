@@ -1,6 +1,6 @@
 
 (defpackage :mnist-example
-  (:use :cl :cl-waffe :cl-waffe.nn :cl-waffe.io :flamegraph :tracer)
+  (:use :cl :cl-waffe :cl-waffe.nn :cl-waffe.io)
   (:export demo))
 
 (in-package :mnist-example)
@@ -51,16 +51,6 @@
     (defparameter mnist-dataset-test datamat)
     (defparameter mnist-target-test target))
 
-  
-  #|  
-  (defparameter mnist-dataset (!ones `(60000 784)))
-  (defparameter mnist-target  (!randn `(60000 10)))
-
-  (defparameter mnist-dataset-test (!zeros `(100 784)))
-  (defparameter mnist-target-test (!zeros `(100 10)))
-  |#
-
-  
   (sb-profile:profile mgl-mat::blas-sgemm
 		      mgl-mat::blas-scopy
 		      mgl-mat::array-to-mat
@@ -101,14 +91,7 @@
 			   mnist-target-test
 			   :batch-size 100))
 
-  (progn;tracer:with-tracing ("CL-WAFFE"
-;			"CL-WAFFE.NN"
-;			"CL-WAFFE.OPTIMIZERS"
-;			"CL-WAFFE.BACKENDS.MGL"
-;			"CL-WAFFE.CACHES"
-;			"MGL-MAT")
-
-   ;flamegraph:save-flame-graph ("/tmp/nonjit.stack")
+  (progn
     (mgl-mat:with-mat-counters (:count count :n-bytes n-bytes)
     (time (train trainer train :max-iterate 600
 			       :epoch 20
@@ -118,7 +101,6 @@
     (format t "Count: ~a~%" count)
     (format t "Consumed: ~abytes~%" n-bytes)))
 
-;  (tracer:save-report "report.json")
   (sb-profile:report)
   )
 

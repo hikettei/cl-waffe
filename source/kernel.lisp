@@ -77,15 +77,17 @@ Note: this is not setfable"
 		      (cl-waffe.backends.mgl:compile-and-run-lazy tensor))))))
     (T (setf (data tensor) (data tensor)))))
 
-(declaim (ftype (function (keyword cons) waffetensor) invoke-mgl-kernel invoke-cpu-kenel))
-(defun invoke-mgl-kernel (kernel-function variables)
+;(declaim (ftype (function (keyword cons) waffetensor) invoke-mgl-kernel invoke-cpu-kenel))
+(defun invoke-mgl-kernel (kernel-function variables &key (output nil) (overwrite nil))
   (declare (optimize (speed 3)))
   (sysconst (cl-waffe.backends.mgl:dispatch-kernel
 				  kernel-function
 				  *destructive-operation*
 				  (car variables)
 				  (second variables)
-				  variables)
+				  variables
+				  :output output
+				  :overwrite overwrite)
 	    :thread-data (let ((r (find t variables
 					:test (lambda (x y)
 						(declare (ignore x))
@@ -113,47 +115,61 @@ Note: this is not setfable"
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (unless *gendoc-mode*
-    (defgeneric invoke-kernel-inlined (kernel-function variables first-argument i)
+    (defgeneric invoke-kernel-inlined (kernel-function variables first-argument i output overwrite)
       (:generic-function-class inlined-generic-function))
-    (defgeneric invoke-kernel-inlined (kernel-function variables first-argument i))))
+    (defgeneric invoke-kernel-inlined (kernel-function variables first-argument i output overwrite))))
 
 (defmethod invoke-kernel-inlined ((kernel-function T)
 				  (variables list)
 				  (first-argument mgl-mat:mat)
-				  (i fixnum))
-  (invoke-mgl-kernel kernel-function variables))
+				  (i fixnum)
+				  output
+				  overwrite)
+  (invoke-mgl-kernel kernel-function variables :output output :overwrite overwrite))
 
 (defmethod invoke-kernel-inlined ((kernel-function T)
 				  (variables list)
 				  (first-argument function)
-				  (i fixnum))
-  (invoke-mgl-kernel kernel-function variables))
+				  (i fixnum)
+				  output
+				  overwrite)
+  (invoke-mgl-kernel kernel-function variables :output output :overwrite overwrite))
 
 (defmethod invoke-kernel-inlined ((kernel-function T)
 				  (variables list)
 				  (first-argument T)
-				  (i fixnum))
+				  (i fixnum)
+				  output
+				  overwrite)
   (declare (type fixnum i))
   (if (and (= i 0) (not (= 1 (length variables))))
       (invoke-kernel-inlined
        kernel-function
        variables
        (data (second variables))
-       (+ i 1))
+       (+ i 1)
+       output
+       overwrite)
       (invoke-cpu-kernel kernel-function variables)))
 
 (defun invoke-kernel (kernel-function
 		      variables
 		      first-argument
-		      i)
-  (declare (inline invoke-kernel-inlined))
-  (invoke-kernel-inlined kernel-function variables first-argument i))
+		      i
+		      &key
+			(output nil)
+			(overwrite nil))
+  (declare (inline invoke-kernel-inlined)
+	   (type boolean overwrite))
+  (invoke-kernel-inlined kernel-function variables first-argument i output overwrite))
 
-(defmacro call-and-dispatch-kernel (kernel-function &rest args)
+(defun call-and-dispatch-kernel (kernel-function output overwrite &rest args)
   "Invoke kernel and run kernel-function. return new sysconst
 It's the most general way for users to access cl-waffe's kernel.
 Todo:More Details"
-  `(invoke-kernel ,kernel-function ,args (car ,args) 0))
+  (invoke-kernel kernel-function args (data (car args)) 0
+		 :output output
+		 :overwrite overwrite))
 
 (declaim (ftype (function (keyword &rest waffetensor) waffetensor)))
 (defun with-searching-calc-node (kernel-function &rest args)

@@ -2,23 +2,27 @@
 (in-package :cl-waffe.nn)
 
 (defmacro assure-fixnum (val)
-  `(multiple-value-bind (f _) (round ,val)
+  `(multiple-value-bind (f _) (round (the single-float ,val))
      (declare (ignore _))
      f))
 
 (defun mat-labels (base-vec label epsilon)
-  (let ((v (!fill (!shape base-vec 2) epsilon)))
-    (setf (!aref v (the fixnum
+  (declare ;(optimize (speed 3))
+	   (type single-float epsilon))
+  (let ((v (!fill `(,(!shape base-vec 2)) epsilon)))
+    (setf (!aref v (the integer
 			(assure-fixnum
 			 (mgl-mat:mref (data label) 0 0))))
-	  (const (make-array '(1)
-			     :initial-element (- 1 epsilon))))
+	  (const (mgl-mat:make-mat '(1)
+				   :initial-element (- 1 epsilon))))
     (!unsqueeze (!unsqueeze v))))
 
 (defun to-onehot (ps vec epsilon)
+  "ps ... an tensor of possibilites, vec = labels epsilon=for smooth labeling."
+  (declare (optimize (speed 3)))
   (let ((result (!zeros (!shape ps))))
-    (loop for batch upfrom 0 below (!shape ps 0)
-	  do (loop for i upfrom 0 below (!shape ps 1)
+    (loop for batch fixnum upfrom 0 below (!shape ps 0)
+	  do (loop for i fixnum upfrom 0 below (!shape ps 1)
 		   do (let ((classes (mat-labels
 				      ps
 				      (!aref vec batch i)
@@ -32,6 +36,7 @@
 
 (defun cross-entropy (x y &optional (delta 1e-7) (epsilon 0.0))
   "CrossEntropy Loss"
+  (declare (optimize (speed 3)))
   ; epsilon ... an parameter for label smoothing
   ; Regards Correct=1-epsilon, Incorrect=epsilon
   ; x...

@@ -69,27 +69,32 @@
        (not (typep (data y) 'mat)))
    (equal (the list (!shape x)) (the list (!shape y)))))
 
-(defnode AddTensor nil
+(defmacro k-> (kernel-function output overwrite &rest args)
+  "Alias for call-and-dispatch-kernel"
+  `(call-and-dispatch-kernel
+    ,kernel-function ,output ,overwrite ,@args))
+
+(defnode AddTensor (&optional (output nil) (overwrite nil))
   :optimize t
-  :parameters nil
+  :parameters ((output output) (overwrite overwrite))
   :forward  ((x y)
-	     (with-searching-calc-node :add x y))
+	     (k-> :add (self output) (self overwrite) x y))
   :backward ((dy) (list dy dy)))
 
-(defnode SubTensor nil
+(defnode SubTensor (&optional (output nil) (overwrite nil))
   :optimize t
-  :parameters ()
+  :parameters ((output output) (overwrite overwrite))
   :forward ((x y)
-	    (with-searching-calc-node :sub x y))
+	    (k-> :sub (self output) (self overwrite) x y))
   :backward ((dy) (list dy (!mul dy (const -1)))))
 
-(defnode MulTensor nil
+(defnode MulTensor (&optional (output nil) (overwrite nil))
   :optimize t
-  :parameters ((xi T) (yi T))
+  :parameters ((xi T) (yi T) (output output) (overwrite overwrite))
   :forward ((x y)
 	    (save-for-backward xi x)
 	    (save-for-backward yi y)
-	    (with-searching-calc-node :mul x y))
+	    (k-> :mul (self output) (self overwrite) x y))
   :backward ((dy) (list (!mul (self yi) dy)
 			(!mul (self xi) dy))))
 
