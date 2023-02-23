@@ -18,7 +18,7 @@
 (defparameter *ignore-jit-max-len* 3
   "When computation node is built and that length <= *ignore-jit-max-len* call backpoint and call blas api.")
 
-(defparameter *force-disable-jit* nil
+(defparameter *force-disable-jit* t
   "when t, jit never called")
 
 (defun reset-jit ()

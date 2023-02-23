@@ -269,7 +269,14 @@
 		nil)
 	       (return-shape?
 					; Return transposed dims (for 2d only) for 3d is todo.
-		(reverse (!shape (sysconst tensor))))
+		(let ((result (!shape (sysconst tensor))))
+		  (declare (type list result))
+		  (case (length result)
+		    (1 (reverse result))
+		    (2 (reverse result))
+		    (T `(,@(subseq result 0 (- (length result) 2))
+			 ,@(reverse (subseq result (- (length result) 2)
+					    (length result))))))))
 	       (return-node-info
 		(values :lazy-transpose nil nil nil))
 	       (compile-and-step?
@@ -600,8 +607,8 @@
 			 (nth (1- dims) x-dims)
 			 (nth dims x-dims))
 		    ,(if (second transpose-map)
-			 (nth dims y-dims)
-			 (nth (1- dims) y-dims))))
+			 (nth (1- dims) y-dims)
+			 (nth dims y-dims))))
 		(out (or output-to (make-mat `(,@batch-dims ,@output-tmp-dim))))
 		(out-tmp (make-mat output-tmp-dim))
 		(displace-first1 (mat-displacement x1))
