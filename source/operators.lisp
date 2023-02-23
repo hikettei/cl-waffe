@@ -905,9 +905,32 @@ The matrix and x's each matrix are multiplied and is returned.
 @end[lang=lisp](code)
 @end(term)
 
-@def(For more...)
-@term(More will be added (e.g.: 1d and 2d, for larger than 4d ...))
+@def(x is 3D and y is 3D.)
+@begin(term)
+The Batch Filtered Matrix-Matrix product is returned.
+@begin[lang=lisp](code)
+(setq a (!randn `(5 3 10)))
+(setq b (!randn `(5 10 3)))
 
+; The returned mat is comprised of:
+; (!matmul (!aref a 0) (!aref b 0))
+; (!matmul (!aref a 1) (!aref b 1))
+; (!matmul (!aref a 2) (!aref b 2))
+; (!matmul (!aref a 3) (!aref b 3))
+
+(!matmul a b)
+;#Const((((6.621... -5.61... 2.898...)         
+;                   ...
+;         (-2.96... -4.26... -3.99...))        
+;                 ...
+;        ((-0.02... 2.707... 5.989...)         
+;                   ...
+;         (-3.35... 3.561... -3.90...))) :mgl t :shape (5 3 3))
+@end[lang=lisp](code)
+@end(term)
+
+@def(Otherwise)
+@term(Currently not implemented. In the near future for more will be added.)
 @end(deflist)"
   (cond
     ((and (= (the fixnum (!dims x)) 1)
