@@ -467,17 +467,20 @@
     (T nil)))
 
 (declaim (ftype (function (boolean waffetensor waffetensor waffetensor) mgl-mat:mat)
-		matmul-tensor
 		pow-tensor
 		compare-tensor
 		sum-tensor))
-(defun matmul-tensor (enable-optimize? o x y)
+
+(declaim (ftype (function (boolean waffetensor waffetensor waffetensor &optional (or null mat) boolean boolean) mgl-mat:mat) matmul-tensor))
+; Note: matmul would return unexcepted value if x or y is displaced.
+; To prevent this, we probably need to create copy in advance.
+(defun matmul-tensor (enable-optimize? o x y &optional (output-to nil) (trans-a? nil) (trans-b? nil))
   (declare (optimize (speed 3) (space 0) (safety 1))
-	   (ignore enable-optimize? o)
+	   (ignore o)
 	   (type boolean enable-optimize?)
 	   (type waffetensor o x y))
-  (let* ((transpose-map `(,(is-transpose? x)
-			  ,(is-transpose? y)))
+  (let* ((transpose-map `(,(or trans-a? (is-transpose? x))
+			  ,(or trans-b? (is-transpose? y))))
 	 (x1 (value x :ignore-transpose t))
 	 (y1 (value y :ignore-transpose t)))
     (declare (type mat x1 y1))
@@ -487,14 +490,16 @@
 
     (warranty x)
     (warranty y)
-    
+
+    ; x and y is a mat which isn't trasposed even when transpose is called befrore.
+    ; transpose-mat indicates x or y called trasnposed before calling matmul. 
     (let ((x-dims (the list (mat-dimensions x1)))
 	  (y-dims (the list (mat-dimensions y1))))
       (cond
 	((and (= (length x-dims) 2)
 	      (= (length y-dims) 2))
 
-					; Todo: check shapes
+	 ; Todo: check shapes
 
 	 (let ((out-dim `(,(if (car transpose-map)
 			       (car (reverse (mat-dimensions x1)))
@@ -502,7 +507,7 @@
 			  ,(if (second transpose-map)
 			       (second (reverse (mat-dimensions y1)))
 			       (second (mat-dimensions y1))))))
-	   (let ((out (make-mat out-dim)))
+	   (let ((out (or output-to (make-mat out-dim))))
 	     (matmul-tensor-2d
 	      out
 	      x1
@@ -521,20 +526,21 @@
 			       (nth 1 y-dims))))
 	       (displace-first (mat-displacement x1))
 	       (shape-first    (mat-dimensions x1)))
-	   (let ((out (make-mat out-dim)))
+	   (let ((out (or output-to (make-mat out-dim))))
 	     (dotimes (i (the fixnum (car x-dims)))
+	       (declare (type (integer 0 10000000) i)) ; note here!!!
 	       (reshape-and-displace! out
 				      (cdr out-dim)
 				      (the fixnum (* i
-						     (the fixnum (nth 1 out-dim))
-						     (the fixnum (nth 2 out-dim)))))
+						     (the (integer 0 10000000) (nth 1 out-dim))
+						     (the (integer 0 10000000) (nth 2 out-dim)))))
 	       
 	       (reshape-and-displace!
 		x1
 		(cdr shape-first)
 		(the fixnum (* i
-			       (the fixnum (nth 1 shape-first))
-			       (the fixnum (nth 2 shape-first)))))
+			       (the (integer 0 10000000) (nth 1 shape-first))
+			       (the (integer 0 10000000) (nth 2 shape-first)))))
 	       (matmul-tensor-2d out x1 y1 (car transpose-map) (second transpose-map)))
 	     (reshape-and-displace! out out-dim 0)
 	     (reshape-and-displace! x1 shape-first displace-first)
@@ -550,23 +556,24 @@
 			       (nth 2 y-dims))))
 	       (displace-first (mat-displacement y1))
 	       (shape-first    (mat-dimensions y1)))
-	   (let ((out (make-mat out-dim)))
+	   (let ((out (or output-to (make-mat out-dim))))
 	     (dotimes (i (the fixnum (car y-dims)))
+	       (declare (type (integer 0 10000000) i)) ; note here!!!
 	       (reshape-and-displace! out
 				      (cdr out-dim)
 				      (the fixnum
 					   (* i
-					      (the fixnum
+					      (the (integer 0 10000000)
 						   (nth 1 out-dim))
-					      (the fixnum
+					      (the (integer 0 10000000)
 						   (nth 2 out-dim)))))
 	       (reshape-and-displace! y1
 				      (cdr shape-first)
 				      (the fixnum
 					   (* i
-					      (the fixnum
+					      (the (integer 0 10000000)
 						   (nth 1 shape-first))
-					      (the fixnum
+					      (the (integer 0 10000000)
 						   (nth 2 shape-first)))))
 	       (matmul-tensor-2d out x1 y1
 				 (car transpose-map)
@@ -574,7 +581,84 @@
 	     (reshape-and-displace! out out-dim 0)
 	     (reshape-and-displace! y1 shape-first displace-first)
 	     out)))
-	(T (error "cl-waffe.backends.mgl:matmul-tensor: unimplemented combinations."))))))
+	((= (length x-dims) (length y-dims) 3)
+	 ; Otherwise, Batch Filter is adapted
+
+	 (when (>= (length x-dims) 4)
+	   (format t "Warning: currently cl-waffe doesn't support matmul for >= 3d. It possibly has performance problems."))
+
+	 (let* ((dims (1- (length x-dims)))
+		(batch-dims
+		  (loop for i fixnum upfrom 0 below (- dims 1)
+			unless (= (the fixnum (nth i x-dims))
+				  (the fixnum (nth i y-dims)))
+			  do (error "cl-waffe.backends.mgl:matmul-tensor: Operands could not broadcasted together. ~a and ~a. ~ath dims should be satisfy: ~a = ~a" x-dims y-dims i (nth i x-dims) (nth i y-dims))
+			collect (nth i x-dims)))
+		(output-tmp-dim ; (... 3 5) @ (... 5 3) -> (3 3)
+		  `(,(if (car transpose-map)
+			 (nth (1- dims) x-dims)
+			 (nth dims x-dims))
+		    ,(if (second transpose-map)
+			 (nth dims y-dims)
+			 (nth (1- dims) y-dims))))
+		(out (or output-to (make-mat `(,@batch-dims ,@output-tmp-dim))))
+		(out-tmp (make-mat output-tmp-dim))
+		(displace-first1 (mat-displacement x1))
+		(displace-first2 (mat-displacement y1))
+		(out-dim (mat-dimensions out))
+		(shape-first1 (mat-dimensions x1))
+		(shape-first2 (mat-dimensions y1)))
+	   (dotimes (i (the fixnum (car batch-dims)))
+	     (declare (type (integer 0 10000000) i))
+	     (reshape-and-displace! ;e.g.: (n 3 5) => k + (3 5) + m, k+m=n
+	      out
+	      (cdr out-dim)
+	      (the fixnum
+		   (* i
+		      (the (integer 0 10000000)
+			   (nth 1 out-dim))
+	              (the (integer 0 10000000)
+			   (nth 2 out-dim)))))
+	     
+	     (reshape-and-displace! x1
+				    (cdr shape-first1)
+				    (the fixnum
+					 (* i
+					    (the (integer 0 10000000)
+						 (nth 1 shape-first1))
+					    (the (integer 0 10000000)
+						 (nth 2 shape-first1)))))
+	     
+	     (reshape-and-displace! y1
+				    (cdr shape-first2)
+				    (the fixnum
+					 (* i
+					    (the (integer 0 10000000)
+						 (nth 1 shape-first2))
+					    (the (integer 0 10000000)
+						 (nth 2 shape-first2)))))
+
+	     ; displace tensors (i.e: make it 2d and 2d) and apply matmul.
+
+	     (matmul-tensor enable-optimize?
+			    x
+			    (const x1)
+			    (const y1)
+			    out-tmp
+			    (car transpose-map)
+			    (second transpose-map))
+	     ; reset displace
+	     (reshape-and-displace! x1 shape-first1 displace-first1)
+	     (reshape-and-displace! y1 shape-first2 displace-first2)
+
+	     (copy! out-tmp out))
+
+	   (reshape-and-displace!
+	    out
+	    out-dim
+	    0)
+	   out))
+	(T (error "unimplemented todo: broadcast"))))))
 
 (declaim (ftype
 	  (function
