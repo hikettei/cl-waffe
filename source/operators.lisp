@@ -826,12 +826,21 @@ Todo: implement 3d, 4d version...
 (defun !transpose1 (x &rest result)
   "Transpose x but doesn't produce lazy-eval.
 
-Todo: implement it by myself.
+Todo: Numcl's operation couldm't optimized well. i need to reimplement it by myself.
 
 @begin(section)
 @title(Example)
 @begin[lang=lisp](code)
+(setq a (!randn `(10 5 3)))
 
+(!transpose1 a)
+;#Const((((-0.47... -0.03... ~ -0.17... 0.328...)         
+;                   ...
+;         (0.210... -1.80... ~ 1.648... 0.135...))        
+;                 ...
+;        ((-0.52... 1.509... ~ 0.643... 0.258...)         
+;                   ...
+;         (-0.26... -1.14... ~ -1.08... 1.126...))) :mgl t :shape (3 5 10))
 @end[lang=lisp](code)
 @end(section)"
   (call (TransposeOriginalTensor (assure-tensor result)) (assure-tensor x)))
