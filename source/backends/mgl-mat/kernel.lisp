@@ -484,6 +484,7 @@
 	 (x1 (value x :ignore-transpose t))
 	 (y1 (value y :ignore-transpose t)))
     (declare (type mat x1 y1))
+
     (unless (or (<= (length (the list (mat-dimensions x1))) 3)
 		(<= (length (the list (mat-dimensions y1))) 3))
       (error "cl-waffe.backends.mgl:matmul-tensor Matmul only supports following: 2d * 2d, 2d * 3d, 3d * 2d, 3d * 3d."))
@@ -581,7 +582,7 @@
 	     (reshape-and-displace! out out-dim 0)
 	     (reshape-and-displace! y1 shape-first displace-first)
 	     out)))
-	((= (length x-dims) (length y-dims) 3)
+	((= (length x-dims) (length y-dims))
 	 ; Otherwise, Batch Filter is adapted
 
 	 (when (>= (length x-dims) 4)
@@ -658,7 +659,7 @@
 	    out-dim
 	    0)
 	   out))
-	(T (error "unimplemented todo: broadcast"))))))
+	(T (error "cl-waffe.backends.mgl:matmul-tensor Operands could not broadcasted together. Can't multiply ~a and ~a. These tensors' dims must be <= 3" x y))))))
 
 (declaim (ftype
 	  (function
