@@ -38,9 +38,11 @@
 
 (defun test-model (model input)
   (format t "~%Running test forward and backward of ~a~%" model)
+  (format t "~%Calling Forward:~%")
   (let* ((i (parameter input))
 	 (out (time (call model i))))
-    (backward (!sum out))
+    (format t "~%Calling Backward:~%")
+    (time (backward (!sum out)))
     (grad i)))
 
 (defmodel Encoder (vocab-size embedding-dim hidden-size)
@@ -68,7 +70,7 @@
   :forward ((x y)
 	    (let ((x-state (call (self encoder) x))
 		  (y1 (!zeros (!shape y))))
-	      (setq y1 (setf (!aref y1) (!aref y '(1 0))))
+	      (setq y1 (setf (!aref y1 t) (!aref y '(1 0))))
 	      (call (self decoder) x-state y1))))
 
 (defun embedding-and-rnn-test ()
@@ -77,6 +79,7 @@
 	 (x (!ones `(10 10)))
 	 (y (!ones `(10 10)))
 	 (out (time (call model x y))))
+    ;Too Slow.... Due to sum
     ;(time (backward (!sum (car out))))
     t
     ))
