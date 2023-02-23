@@ -315,7 +315,7 @@ Todo: currently, it returns error.
 					     (the fixnum (!shape tensor i))
 					     (the fixnum (car x))))
 				       (car x))
-				   (if (< (the fixnum (second x)) 0)
+				   (if (<= (the fixnum (second x)) 0)
 				       (the fixnum
 					    (+
 					     (the fixnum (!shape tensor i))
@@ -437,7 +437,7 @@ Todo: currently, it returns error.
 					     (the fixnum (!shape tensor i))
 					     (the fixnum (car x))))
 				       (car x))
-				   (if (< (the fixnum (second x)) 0)
+				   (if (<= (the fixnum (second x)) 0)
 				       (the fixnum
 					    (+
 					     (the fixnum (!shape tensor i))
