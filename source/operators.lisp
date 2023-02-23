@@ -74,6 +74,16 @@
   `(call-and-dispatch-kernel
     ,kernel-function ,output ,overwrite ,@args))
 
+(defun sumup-tensor (x)
+  (declare (type waffetensor x))
+  (let ((r 0.0))
+    (declare (type single-float r))
+    (with-facet (arr ((value x) 'backing-array :direction :input))
+      (let ((size (array-total-size arr)))
+	(loop for i fixnum upfrom 0 below size
+	      do (incf r (aref arr i)))))
+    (sysconst r)))
+
 (defnode AddTensor (&optional (output nil) (overwrite nil))
   :optimize t
   :parameters ((output output) (overwrite overwrite))
@@ -232,7 +242,7 @@
   :forward ((x) ; only for 2d
 		(setf (self total-len) (/ (!size x)))
 		(setf (self shape) (!shape x))
-		(!sum (!sum x 1) 0))
+		(sumup-tensor x))
   :backward ((dy)
 	     (list (sysconst (scal! (self total-len)
 				    (make-mat (self shape)
@@ -649,10 +659,7 @@ For nd tensors...
     (2 (!sum-2d x axis keepdims))
     (T
      (if (null axis)
-	 (let ((result (!sum (!squeeze (!aref x 0)))))
-	   (loop for i upfrom 1 below (!shape x 0)
-		 do (setq result (!add result (!sum (!aref x i)))))
-	   result)
+	 (call (SumUpTensor) x)
 	 (let* ((dims (!shape x axis))
 		; Note: keepdims is ignored. And May need exclusive kernel for it because its too slow when forward and backward.
 
@@ -664,6 +671,7 @@ For nd tensors...
 	   (dotimes (i dims)
 	     (setq result (!add result (apply #'!aref x (funcall sum-dims i)))))
 	   result)))))
+
 
 (defun !mean (x &optional (axis nil) (keepdims nil))
   "The usage is the same as !sum.
