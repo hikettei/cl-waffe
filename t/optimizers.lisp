@@ -25,7 +25,8 @@
 	      (layer3 x))))
 
 (defmacro define-test-trainer (name optim lr activation)
-  `(deftrainer ,name nil
+  `(progn
+   (deftrainer ,name nil
      :model (MLP ,activation)
      :optimizer ,optim
      :optimizer-args (:lr ,lr)
@@ -35,7 +36,10 @@
 		    (backward out)
 		    (update)
 		    out))
-     :predict ((x) (call (model) x))))
+     :predict ((x) (call (model) x)))
+
+   (defmethod print-object ((model ,name) stream)
+     (format stream "[Trainer: ~a]" ',name))))
 
 (defun test-for (trainer &optional (niter 3))
   (let ((losses nil))
@@ -43,7 +47,7 @@
     (dotimes (epoch niter)
       (!reset-batch train)
       (!reset-batch label)
-      (format t "Training ~a th epoch at ~a~%" epoch trainer)
+      (format t "~%Training ~a th epoch at ~a~%" epoch trainer)
 
       ; iterate for batch. todo -> !Loop-for-batch macro
       (loop for index fixnum upfrom 0 below (!shape train 0) by 100

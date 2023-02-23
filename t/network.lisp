@@ -20,8 +20,8 @@
 
 (defparameter embedding (Embedding 10 10))
 
-(defparameter rnn1 (RNN 10 256 :num-layers 1))
-(defparameter rnn2 (RNN 10 256 :num-layers 3))
+(defparameter rnn1 (RNN 10 25 :num-layers 1))
+(defparameter rnn2 (RNN 10 25 :num-layers 3))
 
 (defparameter words (call embedding (parameter (!ones `(10 10)))))
 
@@ -37,8 +37,9 @@
   t)
 
 (defun test-model (model input)
+  (format t "~%Running test forward and backward of ~a~%" model)
   (let* ((i (parameter input))
-	 (out (call model i)))
+	 (out (time (call model i))))
     (backward (!sum out))
     (grad i)))
 
