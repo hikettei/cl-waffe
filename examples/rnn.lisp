@@ -54,10 +54,10 @@
 (defun demo (&key
 	       (lang1 :ja)
 	       (lang2 :en)
-	       (maxlen 30)
-	       (batch-size 16)
-	       (embedding-dim 64)
-	       (hidden-dim 128))
+	       (maxlen 32)
+	       (batch-size 2)
+	       (embedding-dim 32)
+	       (hidden-dim 64))
 
   ; Loadig Dataset
 
