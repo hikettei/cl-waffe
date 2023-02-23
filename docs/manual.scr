@@ -33,7 +33,7 @@ Having not gpus, I can't test my framework on cuda ><. CUDA supporting are a lit
 @begin(section)
 @title(Sections)
 @begin(deflist)
-@def(Learn cl-waffe)
+@def(Learn cl-waffe (In Preparation))
 @begin(term)
 @link[uri="./mnist-tutorial.html"](Tutorial With MNIST) Let's get started with MNIST
 
