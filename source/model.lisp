@@ -69,7 +69,7 @@ Output: An last value of layers."
      ,input))
 
 ;(declaim (inline call))
-(declaim (ftype (function (t &rest waffetensor) waffetensor) call))
+(declaim (ftype (function (t &rest waffetensor) (or null list waffetensor)) call))
 (defun call (model &rest args)
   "Calls the forward steps which defined in: defnode, defmodel, defoptimizer.
 
@@ -114,6 +114,7 @@ Output: Waffetensor of list which comprised of waffetensor."
   (let* ((result (apply
 		  (the function (call-forward model)) args)))
     (declare (type (or null waffetensor list) result))
+    
     (typecase result
       (waffetensor
        (when (and (null (waffetensor-thread-data result))
@@ -130,15 +131,17 @@ Output: Waffetensor of list which comprised of waffetensor."
       
     (unless *no-grad*
       (if (slot-value model 'hide-from-tree) ;is model defined by defmodel?
-	  (when (or (typep result 'waffetensor)
-		    (typep result 'list))
-	    (setf (waffetensor-backward result) t)
-	    (setf (waffetensor-state result) model)
-	    (setf (waffetensor-variables result) args)
-	    (setf (waffetensor-is-ancestor-param result)
-		  (if (member-if #'waffetensor-is-ancestor-param args)
-		      t
-		      nil)))))
+	  (typecase result
+	    (waffetensor
+	     (setf (waffetensor-backward result) t)
+	     (setf (waffetensor-state result) model)
+	     (setf (waffetensor-variables result) args)
+	     (setf (waffetensor-is-ancestor-param result)
+		   (if (member-if #'waffetensor-is-ancestor-param args)
+		       t
+		       nil)))
+	    (t
+	     (error "cl-waffe.defnode: Nodes must return a single tensor. Not a list/null otherwise can't build computation node. (list is todo.)")))))
     result))
 
 (defmacro with-model-list (&rest models)
