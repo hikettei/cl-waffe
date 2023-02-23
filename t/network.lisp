@@ -56,8 +56,8 @@
 
 (test nlp-test
       (is (test-model embedding (parameter (!ones `(10 10)))))
-      ;(is (test-model rnn1 words))
-      ;(is (test-model rnn2 words))
+      (is (test-model rnn1 words))
+      (is (test-model rnn2 words))
       )
 
 (test model-list-test
