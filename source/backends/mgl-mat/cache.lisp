@@ -153,7 +153,7 @@ This package exports features for making caches (sysconst)")
 (defmacro with-cache ((var tensor &key (ctype '*default-mat-ctype*) (copy nil)
                       (place :ones))
                       &body body)
-  "set var (data tensor)"
+  "This feature is abandoned."
   `(with-thread-cached-mat1 (,var ,tensor :copy ,copy
 				          :place ,place
 					  :ctype ,ctype

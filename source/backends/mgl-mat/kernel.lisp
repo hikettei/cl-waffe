@@ -336,10 +336,10 @@
       :mat-mat ~
       :scal-mat ~
       :mat-scal ~"
-  `(defun ,name (enable-optimize? ,@args &key (output nil))
+  `(defun ,name (enable-optimize? ,@args &key (output nil) (overwrite nil))
      ,(unless ignore-optimize
 	`(declare (optimize (speed 3) (space 0))
-		  (type boolean enable-optimize?)
+		  (type boolean enable-optimize? overwrite)
 		  (type waffetensor ,@args)))
      ,(unless (null jit)
 					; place jit trigger.
@@ -352,12 +352,14 @@
 					; if jit triggered, the form below never called.
 
      (macrolet ((get-out-buffer (tensor &key (copy nil))
-		  `(if output
-		       (if ,copy
+		  `(if overwrite
+		       (value ,tensor)
+		       (if output
+			    (if ,copy
 		 	   (copy! (value ,tensor) output)
 			   output)
-		       (decide-out-buffer
-		        ,tensor (value ,tensor) enable-optimize? ,copy))))
+			    (decide-out-buffer
+			     ,tensor (value ,tensor) enable-optimize? ,copy)))))
        
        (let (,@(map 'list (lambda (target val)
 			    `(,target (value ,val)))
@@ -751,12 +753,18 @@
 	  (mgl-mat:mref o 0 0)
 	  o))))
 
-(declaim (ftype (function (boolean waffetensor waffetensor waffetensor) mgl-mat:mat) reshape-tensor))
-(defun reshape-tensor (enable-optimize out x y)
+;(declaim (ftype (function (boolean waffetensor waffetensor waffetensor) mgl-mat:mat) reshape-tensor))
+(defun reshape-tensor (enable-optimize out x y &key (output nil) (overwrite nil))
   (declare (optimize (speed 3) (space 0) (safety 1))
 	   (type boolean enable-optimize)
 	   (type waffetensor out x y))
-  (let ((x1 (decide-out-buffer out (data x) enable-optimize t))) ; cache
+  (let ((x1 (cond
+	      ((not (null output))
+	       output)
+	      (overwrite
+	       (value x))
+	      (T
+	       (decide-out-buffer out (value x) enable-optimize t)))))
     (mgl-mat:reshape! x1 (data y))
     x1))
 
@@ -882,9 +890,20 @@
      (data pad-idx)
      (!shape dy 2))
     out))
-
-(declaim (ftype (function (keyword boolean waffetensor waffetensor cons) (or mgl-mat:mat cl-waffe:waffedatatype)) dispatch-kernel))
-(defun dispatch-kernel (function is-first-time-call? destructable-tensor destructable-tensor1 args)
+#|
+(declaim (ftype
+	  (function
+	   (keyword
+	    boolean
+	    waffetensor
+	    waffetensor
+	    cons
+	    &key
+	    (output (or null waffetensor))
+	    (overwrite boolean))
+	   (or mgl-mat:mat cl-waffe:waffedatatype))
+	  dispatch-kernel))|#
+(defun dispatch-kernel (function is-first-time-call? destructable-tensor destructable-tensor1 args &key (output nil) (overwrite nil))
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type keyword function)
 	   (type boolean is-first-time-call?)
@@ -894,48 +913,87 @@
     (:add     (kernel-add
 	       is-first-time-call?
 	       destructable-tensor
-	       destructable-tensor1))
+	       destructable-tensor1
+	       :output output
+	       :overwrite overwrite))
     (:sub     (kernel-sub
 	       is-first-time-call?
 	       destructable-tensor
-	       destructable-tensor1))
+	       destructable-tensor1
+	       :output output
+	       :overwrite overwrite))
     (:mul     (kernel-mul
 	       is-first-time-call?
 	       destructable-tensor
-	       destructable-tensor1))
+	       destructable-tensor1
+	       :output output
+	       :overwrite overwrite))
     (:div     (kernel-div
 	       is-first-time-call?
 	       destructable-tensor
-	       destructable-tensor1))
+	       destructable-tensor1
+	       :output output
+	       :overwrite overwrite))
     (:dot     (dot-tensor is-first-time-call? destructable-tensor (car args) (second args)))
-    (:matmul  (matmul-tensor is-first-time-call? destructable-tensor (car args) (second args)))
+    (:matmul  (matmul-tensor is-first-time-call? destructable-tensor (car args) (second args)))    
+    (:log     (kernel-log is-first-time-call? destructable-tensor
+			  :output output
+			  :overwrite overwrite))
+    (:exp     (kernel-exp is-first-time-call? destructable-tensor
+			  :output output
+			  :overwrite overwrite))
+    (:sqrt    (kernel-sqrt is-first-time-call? destructable-tensor
+			   :output output
+			   :overwrite overwrite))
+    (:sin     (kernel-sin is-first-time-call? destructable-tensor
+			  :output output
+			  :overwrite overwrite))
+    (:cos     (kernel-cos is-first-time-call? destructable-tensor
+			  :output output
+			  :overwrite overwrite))
+    (:tan     (kernel-tan is-first-time-call? destructable-tensor
+			  :output output
+			  :overwrite overwrite))
+    (:asin    (kernel-asin is-first-time-call? destructable-tensor
+			   :output output
+			   :overwrite overwrite))
+    (:acos    (kernel-acos is-first-time-call? destructable-tensor
+			   :output output
+			   :overwrite overwrite))
+    (:atan    (kernel-atan is-first-time-call? destructable-tensor
+			   :output output
+			   :overwrite overwrite))
     
-    (:log     (kernel-log is-first-time-call? destructable-tensor))
-    (:exp     (kernel-exp is-first-time-call? destructable-tensor))
-    (:sqrt    (kernel-sqrt is-first-time-call? destructable-tensor))
-    (:sin     (kernel-sin is-first-time-call? destructable-tensor))
-    (:cos     (kernel-cos is-first-time-call? destructable-tensor))
-    (:tan     (kernel-tan is-first-time-call? destructable-tensor))
+    (:sinh    (kernel-sinh is-first-time-call? destructable-tensor
+			   :output output
+			   :overwrite overwrite))
+    (:cosh    (kernel-cosh is-first-time-call? destructable-tensor
+			   :output output
+			   :overwrite overwrite))
+    (:tanh    (kernel-tanh is-first-time-call? destructable-tensor
+			   :output output
+			   :overwrite overwrite))
     
-    (:asin    (kernel-asin is-first-time-call? destructable-tensor))
-    (:acos    (kernel-acos is-first-time-call? destructable-tensor))
-    (:atan    (kernel-atan is-first-time-call? destructable-tensor))
-    
-    (:sinh    (kernel-sinh is-first-time-call? destructable-tensor))
-    (:cosh    (kernel-cosh is-first-time-call? destructable-tensor))
-    (:tanh    (kernel-tanh is-first-time-call? destructable-tensor))
-    
-    (:asinh   (kernel-asinh is-first-time-call? destructable-tensor))
-    (:acosh   (kernel-acosh is-first-time-call? destructable-tensor))
-    (:atanh   (kernel-atanh is-first-time-call? destructable-tensor))
+    (:asinh   (kernel-asinh is-first-time-call? destructable-tensor
+			    :output output
+			    :overwrite overwrite))
+    (:acosh   (kernel-acosh is-first-time-call? destructable-tensor
+			    :output output
+			    :overwrite overwrite))
+    (:atanh   (kernel-atanh is-first-time-call? destructable-tensor
+			    :output output
+			    :overwrite overwrite))
     
     (:pow     (kernel-pow
 	       is-first-time-call?
 	       destructable-tensor
-	       destructable-tensor1))
+	       destructable-tensor1
+	       :output output
+	       :overwrite overwrite))
     (:sum     (sum-tensor is-first-time-call? destructable-tensor (car args) (second args)))
     (:mean    (mean-tensor is-first-time-call? destructable-tensor (car args) (second args)))
-    (:reshape (reshape-tensor is-first-time-call? destructable-tensor (car args) (second args)))
+    (:reshape (reshape-tensor is-first-time-call? destructable-tensor (car args) (second args) :output output
+	       :overwrite overwrite))
     (:<       (compare-tensor is-first-time-call? destructable-tensor (car args) (second args)))
     (:repeat  (mgl-repeat (data (car args)) (data (third args)) :axis (data (second args))))
     (:bernoulli (bernoulli-tensor is-first-time-call? destructable-tensor (car args) (second args)))
