@@ -90,7 +90,7 @@ Example:
   :optimize t
   :parameters nil
   :forward  ((x y)
-	     (+ x y))
+	     (sysconst (+ (data x) (data y))))
   :backward ((dy) (list dy dy)))
 
 (call (Add) (const 1.0) (const 1.0))
@@ -101,7 +101,6 @@ Example:
 Output: Waffetensor of list which comprised of waffetensor."
   (declare (optimize (speed 3) (safety 0) (space 0)))
   ; calculating op(x,y) -> result(x, y), state
-
 
   (when (typep model 'model-list)
     (return-from call

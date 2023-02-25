@@ -672,7 +672,6 @@ For nd tensors...
 	     (setq result (!add result (apply #'!aref x (funcall sum-dims i)))))
 	   result)))))
 
-
 (defun !mean (x &optional (axis nil) (keepdims nil))
   "The usage is the same as !sum.
 
