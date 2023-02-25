@@ -58,7 +58,7 @@ Constant is used when @b(no gradient) is required, being created with a function
 @begin(section)
 @title(Parameter Tensors)
 
-Constant is used when @b(gradient) is required, being created with a function (tensor value) or macro (parameter const).
+Parameter tensors is used when @b(gradient) is required, being created with a function (tensor value) or macro (parameter const).
 
 Created tensors will be required gradients, they will be created with a function (backward out), being accessed by (grad tensor).
 
