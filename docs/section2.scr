@@ -81,7 +81,25 @@ Each parameter can be accessed by using slot-value or each inherent accessor.
 ;[Seq2Seq Encoder which has: [Model: EMBEDDING] and [Model: RNN]]
 @end[lang=lisp](code)
 @end(section)
+@end(section)
 
+@begin(section)
+@title(deftrainer)
+
+@end(section)
+
+@begin(section)
+@title(defoptimizer)
+
+@end(section)
+
+@begin(section)
+@title(defnode)
+
+@end(section)
+
+@begin(section)
+@title(defdataset)
 
 @end(section)
 @end(section)

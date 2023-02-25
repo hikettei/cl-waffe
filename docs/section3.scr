@@ -300,12 +300,17 @@ Broadcasting is available to these operations.
 @title(JIT)
 
 Currently this feature is disabled.
+
+cl-waffe dynamically defines kernel... (its performance problems remain to be solved.)
+
 @end(section)
 
 @begin(section)
 @title(Tracing)
 
-Currently this feature is disabled.
+Currently this feature is disabled. (cuz it's unstable)
+
+cl-waffe can optimize define-by-run style codes by tracing their usage...
 @end(section)
 
 @begin(section)
