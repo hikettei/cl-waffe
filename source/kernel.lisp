@@ -166,7 +166,10 @@ Note: this is not setfable"
 (defun call-and-dispatch-kernel (kernel-function output overwrite &rest args)
   "Invoke kernel and run kernel-function. return new sysconst
 It's the most general way for users to access cl-waffe's kernel.
-Todo:More Details"
+
+If output is specified, write a result to output destructively.
+
+If overwrite is t, side effect will occurs. (i.e.: args can be destructed)"
   (invoke-kernel kernel-function args (data (car args)) 0
 		 :output output
 		 :overwrite overwrite))

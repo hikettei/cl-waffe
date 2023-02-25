@@ -73,33 +73,44 @@ Each parameter can be accessed by using slot-value or each inherent accessor.
 @begin[lang=lisp](code)
 
 (defmethod print-object ((model Encoder) stream)
-     (format stream "[Seq2Seq Encoder which has: ~a and ~a]"
+     (format stream "[Seq2Seq Encoder which contains: ~a and ~a]"
                     (slot-value model 'embedding)
 		    (encoder-layer model)))
 		    
 (print model)
-;[Seq2Seq Encoder which has: [Model: EMBEDDING] and [Model: RNN]]
+;[Seq2Seq Encoder which contains: [Model: EMBEDDING] and [Model: RNN]]
 @end[lang=lisp](code)
+
+See also for more APIs: @link[uri="./cl-waffe.html#1-defmodel"](document)
 @end(section)
 @end(section)
 
 @begin(section)
 @title(deftrainer)
 
+See: @link[uri="./cl-waffe.html#trainer"](document).
+
 @end(section)
 
 @begin(section)
 @title(defoptimizer)
 
+See: @link[uri="./cl-waffe.html#optimizer"](document).
 @end(section)
 
 @begin(section)
 @title(defnode)
 
+defnode
+
+See also for more APIs: @link[uri="./cl-waffe.html#2-defnode"](document)
 @end(section)
 
 @begin(section)
 @title(defdataset)
+See: @link[uri="./cl-waffe.html#datasets"](document).
+
+Todo: parallelize/make its memory-usage less.
 
 @end(section)
 @end(section)

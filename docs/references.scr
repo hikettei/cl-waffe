@@ -321,7 +321,7 @@ Todo: tutorial
 
 @cl:doc(function warranty)
 @cl:doc(macro with-kernel-case)
-@cl:doc(macro call-and-dispatch-kernel)
+@cl:doc(function call-and-dispatch-kernel)
 
 )
 @end(section)
