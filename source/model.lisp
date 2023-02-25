@@ -68,7 +68,7 @@ Output: An last value of layers."
 	      layers)
      ,input))
 
-;(declaim (inline call))
+(declaim (inline call))
 (declaim (ftype (function (t &rest waffetensor) (or null list waffetensor)) call))
 (defun call (model &rest args)
   "Calls the forward steps which defined in: defnode, defmodel, defoptimizer.
@@ -90,7 +90,7 @@ Example:
   :optimize t
   :parameters nil
   :forward  ((x y)
-	     (+ x y))
+	     (sysconst (+ (data x) (data y))))
   :backward ((dy) (list dy dy)))
 
 (call (Add) (const 1.0) (const 1.0))
@@ -99,9 +99,9 @@ Example:
 @end[lang=lisp](code)
 
 Output: Waffetensor of list which comprised of waffetensor."
-  (declare (optimize (speed 3) (safety 0) (space 0)))
+  (declare (optimize (speed 3) (safety 0) (space 0))
+	   (notinline call))
   ; calculating op(x,y) -> result(x, y), state
-
 
   (when (typep model 'model-list)
     (return-from call
@@ -111,10 +111,10 @@ Output: Waffetensor of list which comprised of waffetensor."
 	    (model-list-mlist model))
        (cdr args))))
   
-  (let* ((result (apply
-		  (the function (call-forward model)) args)))
+  (let* ((result (apply (the function (call-forward model)) args)))
     (declare (type (or null waffetensor list) result))
-    
+
+    #| These code is required when *with-tracing* is enabled but currently cl-waffe doesn't support it.
     (typecase result
       (waffetensor
        (when (and (null (waffetensor-thread-data result))
@@ -128,7 +128,8 @@ Output: Waffetensor of list which comprised of waffetensor."
 		   (setf (waffetensor-thread-data r)
 			 (waffetensor-thread-data (car args)))))
 	     result)))
-      
+      |#
+
     (unless *no-grad*
       (if (slot-value model 'hide-from-tree) ;is model defined by defmodel?
 	  (typecase result
@@ -387,7 +388,7 @@ Example:
 	   ,(if optimize
 		`(declare (optimize (speed 3) (space 0) (safety 1))
 			  (type ,name ,self-heap))
-		`(declare (type ,name ,self-heap)))
+		`(declare (type ,name ,self-heap))) ; This is needed to inline call-forwrd/backward.
 	   ,(if hide-from-tree `(declare (type waffetensor ,@vars)) nil)
 	   ; Utils that can be used in :forward and :backward
 

@@ -57,7 +57,6 @@
   :parameters ((embedding (Embedding vocab-size embedding-dim :pad-idx 0))
                (layer     (RNN embedding-dim hidden-size :num-layers 1))
 	       (h2l       (linearlayer hidden-size vocab-size)))
-  
   :forward ((encoder-state y)
 	    (let* ((ye (call (self embedding) y))
 		   (hs (call (self layer) ye encoder-state))
@@ -66,7 +65,7 @@
 
 (defmodel Seq2Seq (vocab-size embedding-dim input-size)
   :parameters ((encoder (Encoder vocab-size embedding-dim input-size))
-	       (decoder (Decoder vocab-size embedding-dim input-size)))  
+	       (decoder (Decoder vocab-size embedding-dim input-size)))
   :forward ((x y)
 	    (let ((x-state (call (self encoder) x))
 		  (y1 (!zeros (!shape y))))
@@ -76,11 +75,10 @@
 (defun embedding-and-rnn-test ()
   (format t "~%Running Seq2Seq(RNN)~%")
   (let* ((model (Seq2Seq 2 16 10))
-	 (x (!ones `(10 10)))
-	 (y (!ones `(10 10)))
+	 (x (!ones `(10 2)))
+	 (y (!ones `(10 2)))
 	 (out (time (call model x y))))
-    ;Too Slow.... Due to sum
-    ;(time (backward (!sum (car out))))
+    (time (backward (!sum (car out))))
     t
     ))
 

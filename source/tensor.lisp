@@ -410,7 +410,7 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
       (let* ((grad-tmp-before (waffetensor-grad-tmp tensor))
 	     (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top
 			      (grad-tmp-value grad-tmp-before)
-			      (sysconst 1))))
+			      (sysconst 1.0))))
 	; calculating backward(state, dy) -> x.grad, y.grad...
 
 	(progn

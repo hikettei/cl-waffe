@@ -5,100 +5,178 @@
 @begin(section)
 @title(Basic Tensor Operations)
 
-Coming soon...
-
-Todo: Write about... JIT/Lazy-Evaluation, Broadcasting, Basic usage of the tensor.
-
+There is a section here that explains the basics of tensors.
 @end(section)
 
 @begin(section)
-@title(Tensor)
+@title(Building Computation Nodes)
+
+Generally, the structure @cl:param(WaffeTensor) is used in order to use waffe's APIs, building computation nodes.
+
+WaffeTensor's slot can store the following data structures, being accessed by (data tensor).
+
+@begin(enum)
+@item(fixnum)
+@item(float)
+@item(boolean)
+@item(cons)
+@item(simple-array (Automatically converted to mgl-mat:mat))
+@item(mgl-mat:mat)
+@item(ratio (Automatically coerced to single-float))
+@end(enum)
+
+Internally, the matrix of WaffeTensor is a just mgl-mat, depending on it for the most part. (that is, what mgl-mat to cl-waffe is what Numpy to Chainer.)
+
+So it is highly recommended to check out @link[uri="https://github.com/melisgl/mgl-mat.git"](mgl-mat's official repository) before using cl-waffe.
 
 @begin(section)
-@title(Basic of Tensor and backward)
+@title(Construct Tensors)
 
-@begin(section)
-@title(Initialize Tensor)
-Choose your data structure as follows:
-
-@begin(deflist)
-@term(use grads)
-@def(=> Initialize with (tensor ) or (parameter ))
-@term(don't use grads)
-@def(=> Initialize with (const ))
-@end(deflist)
-
-@begin(section)
-@title(Parameters)
-
-@begin[lang=lisp](code)
-(tensor 0) ; => #Parameter{0 :device :MGL :backward NIL}
-(parameter (!zeros '(10 10)))
-; => #Parameter{((0.0 0.0 ~ 0.0 0.0)            
-;                         ...
-;            (0.0 0.0 ~ 0.0 0.0)) :mgl t :shape (10 10) :device :MGL :backward NIL}
-
-(setq mat (make-mat '(10 10)))
-(tensor mat) ;the save as above
-@end[lang=lisp](code)
-
-@end(section)
+There's three ways to create tensor depending on its purpose.
 
 @begin(section)
 @title(Constants)
 
-@begin[lang=lisp](code)
-(const 0) ; => #Const(0)
-(!zeros '(10 10)) ; =>
-;#Const(((0.0 0.0 ~ 0.0 0.0)        
-;                 ...
-;        (0.0 0.0 ~ 0.0 0.0)) :mgl t :shape (10 10))
+Constant is used when @b(no gradient) is required, being created with a function (const value).
 
-(setq mat (make-mat '(10 10)))
-(const mat) ; the same as above
+@begin[lang=lisp](code)
+(setq a (const 1.0))
+;#Const(1.0)
+
+; Using cl-waffe's APIs.
+(!add a (const 2.0))
+;#Const(3.0)
+
+; Initializes a tensor with sampiling beta distribution.
+(!beta `(10 10) 5.0 1.0)
+;#Const(((0.866... 0.801... ~ 0.836... 1.0)        
+;                 ...
+;        (0.826... 1.0 ~ 1.0 0.835...)) :mgl t :shape (10 10))
+@end[lang=lisp](code)
+@end(section)
+
+@begin(section)
+@title(Parameter Tensors)
+
+Constant is used when @b(gradient) is required, being created with a function (tensor value) or macro (parameter const).
+
+Created tensors will be required gradients, they will be created with a function (backward out), being accessed by (grad tensor).
+
+In each training step, we have to reset their gradients. (zero-grad) which provided by @cl:param(deftrainer) will be useful.
+
+@begin[lang=lisp](code)
+
+(setq a (tensor 5.0))
+(setq b (tensor 3.0))
+(setq c (tensor 3.0))
+
+(setq z (!add (!mul a b) c)) ; using cl-waffe's APIs will produce computation nodes.
+;#Const(18.0)
+(print (cl-waffe::waffetensor-state z)) ; They're stored in its state.
+; [Node : ADDTENSOR]
+(print (cl-waffe::waffetensor-variables z)) ; Also it contains infomations about nodes.
+; (#Const(15.0) #Parameter{3.0 :device :MGL :backward NIL})
+(backward z)
+; NIL
+
+(grad a)
+; 3.0
+(grad b)
+; 5.0
+(grad c)
+; 1.0
+@end[lang=lisp](code)
+
+Also, parameter tensors can be created like:
+
+@begin[lang=lisp](code)
+(setq a (parameter (!randn `(10 10))))
+;#Parameter{((-1.27... 2.076... ~ 2.816... 1.285...)            
+;                         ...
+;            (0.837... -0.62... ~ 1.735... -0.08...)) :mgl t :shape (10 10) :device :MGL :backward NIL}
+@end[lang=lisp](code)
+
+Let's check the example in the case of defining a Simple LinearLayer.
+
+Optimizers defined by a macro @cl:param(defoptimizer) can track the model's parameters and update them depending on their style.
+
+Optimizers will be accesed through deftrainer.
+
+@begin[lang=lisp](code)
+(defmodel LinearLayer (in-features out-features &optional (bias T))
+  :parameters ((weight
+		(parameter (!mul 0.01 (!randn `(,in-features ,out-features))))
+		:type waffetensor)
+	      (bias (if bias
+			(parameter (!zeros `(1 ,out-features)))
+			nil)))
+  :forward ((x)
+	    (cl-waffe.nn:linear x (self weight) (self bias))))
+
+(deftrainer ExampleTrainer ()
+  :model          (LinearLayer 10 3)
+  :optimizer      cl-waffe.optimizers:Adam
+  :optimizer-args (:lr lr)
+  :step-model ((x y)
+	       (zero-grad)
+	       (let ((out (cl-waffe.nn:softmax-cross-entropy (call (self model) x) y)))
+		 (backward out)
+		 (update) ; calling trainer's optimizers.
+		 out))
+ :predict ((x) (call (model) x)))
 @end[lang=lisp](code)
 
 @end(section)
 
+
 @begin(section)
-@title(Tensor vs Const)
-The differences between Tensor and Const are as follows
-@begin(enum)
-@item(Calling (backward out) function, and (grad tensor) get new grads-value while (grad const) doesn't)
-@item(Calling optimizers will modify the model's parameters where param is a tensor, while const isn't.)
-@end(enum)
+@title(Sysconst)
+
+Sysconst is used to store temporary data during the calculation process.
+
+In a macro @cl:param(defnode), in each process returning a result, using sysconst is a little faster ways than creating constants with (const tensor)
+
+@begin[lang=lisp](code)
+(defnode ExampleAddNode nil
+    :forward ((x y)
+              (sysconst ; Tensors created with sysconst will be cached well.
+	         (+ (data x) (data y))))
+    :backward ((dy) (list dy dy)))
+
+@end[lang=lisp](code)
+@end(section)
 @end(section)
 @end(section)
 
-In order to make constants an parameter, use this:
+@begin(section)
+@title(Accessing Tensor)
 
 @cl:with-package[name="cl-waffe"](
-@cl:doc(macro parameter)
+@cl:doc(function data)
+@cl:doc(function value)
 @cl:doc(macro detach)
 )
-
-Here's structure of waffetensor
-
-@cl:with-package[name="cl-waffe"](
-@cl:doc(struct WaffeTensor)
-)
-
-@cl:with-package[name="cl-waffe"](
-@cl:doc(function backward)
-@cl:doc(variable *no-grad*)
-@cl:doc(macro with-no-grad)
-)
-
 @end(section)
+
 @begin(section)
-@title(Forward Nodes)
+@title(backward and predicting mode)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(macro with-no-grad)
+@cl:doc(variable *no-grad*)
+@cl:doc(function backward)
+)
+@end(section)
+
+@begin(section)
+@title(Calling Forward of cl-waffe's objects)
 @cl:with-package[name="cl-waffe"](
 @cl:doc(function call)
 @cl:doc(macro with-calling-layers)
 )
 @end(section)
+
 @begin(section)
-@title(Exported Parameters)
+@title(Displaying Tensors)
 
 @cl:with-package[name="cl-waffe"](
 @cl:doc(variable *default-backend*)
@@ -122,15 +200,129 @@ Configs when printing tensor.
 @end(section)
 
 @begin(section)
+@title(Lazy evaluation)
+
+In default cl-waffe produces lazy-evaluated computation nodes.
+
+A function (!transpose tensor) is a good example to demonstrate.
+
+@begin[lang=lisp](code)
+(setq a (!randn `(10 5)))
+;#Const(((0.483... -0.52... -1.44... -0.06... 0.185...)        
+;                 ...
+;        (-0.85... 1.668... -0.27... 0.016... -0.45...)) :mgl t :shape (10 5))
+
+(setq a (!transpose a))
+;#Const(#<FUNCTION (LABELS CL-WAFFE.BACKENDS.MGL::LAZYTRANSPOSE :IN CL-WAFFE.BACKENDS.MGL::LAZY-EVAL-TRANSPOSE) {100C25EBEB}>)
+
+(!shape a) ; Shapes can be accesed correctly (5 10)
+
+; Transpose will be used with !matmul.
+
+(!matmul a (!randn `(10 5)))
+;#Const(((-5.39... 1.782... 2.277... -6.13... -6.14...)        
+;                 ...
+;        (-3.24... -1.60... 4.533... -2.23... 0.736...)) :mgl t :shape (5 5))
+
+; After being called with (value tensor), lazy-evaluate is done and a is now:
+
+;#Const(((0.483... -0.52... -1.44... -0.06... 0.185...)        
+;                 ...
+;        (-0.85... 1.668... -0.27... 0.016... -0.45...)) :mgl t :shape (10 5))
+
+; Transpose won't destruct a.
+
+; If you don't want to use lazy-evaluation, (!transpose1 tensor) is available. See Operators.
+@end[lang=lisp](code)
+
+Lazy-Evaluation will be enabled when...
+
+@begin(enum)
+@item(a function (!transpose tensor))
+@item(JIT is enabled)
+@item(Traicing is enabled)
+@end(enum)
+
+@end(section)
+
+@begin(section)
 @title(Accessor)
 
 @cl:with-package[name="cl-waffe"](
 @cl:doc(function data)
 @cl:doc(macro grad)
+@cl:doc(function value)
 )
 
 
 @end(section)
+
+@begin(section)
+@title(Broadcasting)
+
+cl-waffe supports broadcasting tensors like Numpy.
+
+Broadcasting do:
+@begin(enum)
+@item(If the dimension of two tensors doesn't match in specified axis, repeats them if can (the number of axes on either axis is 1.). Otherwise errors.)
+@item(If the two tensor's dims doesn't match, add one to the head of lesser Tensor's dim.)
+@end(enum)
+
+Broadcasting is available to these operations.
+
+@begin(enum)
+@item(!add)
+@item(!sub)
+@item(!mul)
+@item(!div)
+@item((setf !aref))
+@end(enum)
+@begin[lang=lisp](code)
+;(!randn `(10))'s dim became: `(10) -> `(1 10) -> repeat it with (:axis = 1, :repeat-num = 10)
+(!add (!randn `(10 10)) (!randn `(10)))
+;#Const(((-0.77... -0.32... ~ 1.563... -2.87...)        
+;                 ...
+;        (0.077... 3.698... ~ 1.669... -1.51...)) :mgl t :shape (10 10))
+
+;The first argument of !add will be repeated with (:axis=1, :repeat-num=3)
+(!add (!randn `(10 1 10)) (!randn `(10 3 10)))
+;#Const((((3.238... 0.185... ~ 2.035... -1.33...)         
+;                   ...
+;         (0.302... -0.20... ~ 1.731... -0.58...))        
+;                 ...
+;        ((-0.93... 0.992... ~ -1.50... -2.81...)         
+;                   ...
+;         (1.669... 0.659... ~ 1.218... -0.88...))) :mgl t :shape (10 3 10))
+@end[lang=lisp](code)
 @end(section)
 
+@begin(section)
+@title(JIT)
+
+Currently this feature is disabled.
+
+cl-waffe dynamically defines kernel... (its performance problems remain to be solved.)
+
+@end(section)
+
+@begin(section)
+@title(Tracing)
+
+Currently this feature is disabled. (cuz it's unstable)
+
+cl-waffe can optimize define-by-run style codes by tracing their usage...
+@end(section)
+
+@begin(section)
+@title(Compute tensors is a destructive way)
+
+cl-waffe exports a destructive APIs.
+
+(!!add x y)
+or
+(!exp x :out x)
+
+(This is in my Todo list...)
+
+@end(section)
 @end(section)

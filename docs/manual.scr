@@ -38,10 +38,10 @@ Having not gpus, I can't test my framework on cuda ><. CUDA supporting are a lit
 @link[uri="./mnist-tutorial.html"](Tutorial With MNIST) Let's get started with MNIST
 
 
-@link[uri="./extend-library.html"](Extend cl-waffe As you wish) cl-waffe's features are exported to users, in order to extend everything.
-
-
 @link[uri="./using-tensor.html"](The usage of cl-waffe tensor) The basic usage of cl-waffe's tensor, and JIT Compiler etc...
+
+
+@link[uri="./extend-library.html"](Extend cl-waffe As you wish) cl-waffe's features are exported to users in order to implement things in a flexible way.
 @end(term)
 
 @def(Documentation for each packages.)
