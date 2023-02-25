@@ -5,14 +5,11 @@
 @begin(section)
 @title(Basic Tensor Operations)
 
-Coming soon...
-
-Todo: Write about... JIT/Lazy-Evaluation, Broadcasting, Basic usage of the tensor.
-
+There is a section here that explains the basics of tensors.
 @end(section)
 
 @begin(section)
-@title(Building Computation nodes)
+@title(Building Computation Nodes)
 
 Generally, the structure @cl:param(WaffeTensor) is used in order to use waffe's APIs, building computation nodes.
 

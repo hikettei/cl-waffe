@@ -1,12 +1,86 @@
 @begin(section)
 @title(Extend library)
 
-Here's tutorials for defnode, defoptimizer etc...
+All features of cl-waffe is exported for users, users can extend it as they wish.
+
+The first section describes defmodel/deftrainer which will be most used macros.
+
+The rest sections describe defnode/defoptimizer/defdataset which will be a little difficult for users to understand.
 
 @begin(section)
-@title(Exported)
+@title(defmodel)
 
-Todo:
+To put it bluntly, what defmodel to cl-waffe is what class(nn.Modules): to PyTorch.
+
+Internally, defmodel is a macro for just defining defstruct, but can be used like CLOS Style.
+
+@cl:with-package[name="cl-waffe"](
+@cl:doc(macro defmodel)
+)
+
+For example, defines seq2seq's encoder.
+@begin[lang=lisp](code)
+(defmodel Encoder (vocab-size embedding-dim hidden-size)
+  :parameters ((embedding (Embedding vocab-size embedding-dim :pad-idx 0))
+               (layer     (RNN embedding-dim hidden-size :num-layers 1)))
+  :forward ((x)
+	    (with-calling-layers x
+	      (embedding x)
+	      (layer x))))
+@end[lang=lisp](code)
+
+(defmodel Encoder (vocab-size embedding-dim hidden-size) ~) says, The constructor of it is (Encoder vocab-size embedding-dim hidden-size) And these parameters will be used when initializing :parameters.
+
+:parameters have Parameters of each object, that is, each time model is initialized, (Embedding ~) and (RNN ~) are created and inserted to Encoder's embedding, layer.
+
+:forward defines forward-step.
+
+There is no need to define :backward as automatic differentiation is enabled inside the defmodel. That is, in defmodel's forward, @b(all calculations must be done in cl-waffe's APIs) otherwise computation nodes would be broken.
+
+@begin(section)
+@title(Initialize and call model)
+
+Let's create encoder and call forward.
+
+@begin[lang=lisp](code)
+(setq model (Encoder 10 16 10))
+;[Model: ENCODER]
+
+(call model (!ones `(10 10)))
+;#Const((((-2.31... 3.048... ~ 2.551... -2.98...)         
+;                   ...
+;         (-2.31... 3.048... ~ 2.551... -2.98...))        
+;                 ...
+;        ((-2.31... 3.048... ~ 2.551... -2.98...)         
+;                   ...
+;         (-2.31... 3.048... ~ 2.551... -2.98...))) :mgl t :shape (10 10 10))
+
+(backward (!sum *))
+; NIL
+; Backward process is done correctly!
+@end[lang=lisp](code)
+@end(section)
+
+@begin(section)
+@title(CLOS Style)
+
+(This is available in other macros as well.)
+
+This is obviously but you can define method for each cl-waffe objects.
+
+Each parameter can be accessed by using slot-value or each inherent accessor.
+
+@begin[lang=lisp](code)
+
+(defmethod print-object ((model Encoder) stream)
+     (format stream "[Seq2Seq Encoder which has: ~a and ~a]"
+                    (slot-value model 'embedding)
+		    (encoder-layer model)))
+		    
+(print model)
+;[Seq2Seq Encoder which has: [Model: EMBEDDING] and [Model: RNN]]
+@end[lang=lisp](code)
+@end(section)
 
 
 @end(section)
