@@ -181,9 +181,45 @@ Calling LinearLayer, and activation specified in @cl:param(activation).
 
 @begin(section)
 @title(Dropout)
-@cl:with-package[name="cl-waffe.nn"](
-@cl:doc(struct Dropout)
-)
+When *no-grad* is nil, dropout randomly zeroes some elements of the given tensor with sampling bernoulli tensor of @cl:param(dropout-rate).
+
+Futhermore, the outputs are scaled by (/ (- 1 (self dropout-rate))), (i.e.: This is a Inverted Dropout.). This means when *no-grad* is t (i.e.: during predicting) dropout simply returns the given tensor.
+
+@begin(section)
+@title(Parameters)
+@begin[lang=lisp](code)
+(dropout &optional (dropout-rate 0.5))
+@end[lang=lisp](code)
+
+@begin(deflist)
+@def(dropout-rate)
+@term(Dropout samples bernoulli distribution based on dropout-rate.)
+@end(deflist)
+@end(section)
+
+@begin(section)
+@title(Shape)
+@begin(deflist)
+@def(Input)
+@term(Any is OK)
+@def(Output)
+@term(The same as given input's shape.)
+@end(deflist)
+@end(section)
+
+@begin(section)
+@title(Forward)
+@begin[lang=lisp](code)
+(setq x (!randn `(10 10)))
+;#Const(((-0.59... -0.09... ~ 0.289... 0.390...)        
+;                 ...
+;        (1.447... 1.032... ~ -0.66... -0.55...)) :mgl t :shape (10 10))
+(call (Dropout 0.5) x)
+;#Const(((0.0 -0.19... ~ 0.0 0.0)        
+;                 ...
+;        (2.895... 2.064... ~ 0.0 -1.10...)) :mgl t :shape (10 10))
+@end[lang=lisp](code)
+@end(section)
 @end(section)
 
 @begin(section)
@@ -197,6 +233,28 @@ Calling LinearLayer, and activation specified in @cl:param(activation).
 @title(LayerNorm)
 @cl:with-package[name="cl-waffe.nn"](
 )
+@end(section)
+
+@begin(section)
+@title(Embedding)
+A simple lookup table object to store embedding vectors for NLP Models.
+
+@begin(section)
+@title(Parameter)
+@begin[lang=lisp](code)
+(Embedding vocab-size embedding-ize &key pad-idx)
+@end[lang=lisp](code)
+@begin(deflist)
+@def(vocab-size)
+@term(A)
+@def(embedding-size)
+@term(A)
+@def(pad-idx)
+@term(A)
+@end(deflist)
+@end(section)
+
+
 @end(section)
 
 @begin(section)

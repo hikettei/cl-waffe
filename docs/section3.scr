@@ -314,15 +314,14 @@ cl-waffe can optimize define-by-run style codes by tracing their usage...
 @end(section)
 
 @begin(section)
-@title(Compute tensors is a destructive way)
+@title(Compute tensors in a destructive way)
 
-cl-waffe exports a destructive APIs.
+In general, the cl-waffe APIs follow the following simple rules:
 
-(!!add x y)
-or
-(!exp x :out x)
-
-(This is in my Todo list...)
+@begin(enum)
+@item(Operators whose names begin with ! produce a new matrix every time they are called.)
+@item(Operators whoe names begin with !! @b(destructively) assigns a result to the @b(first argument.))
+@end(enum)
 
 @end(section)
 @end(section)
