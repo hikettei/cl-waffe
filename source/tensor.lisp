@@ -292,6 +292,9 @@ When the argument that you want to insert is a tensor, this function automatical
 (defmacro !allow-destruct (tensor)
   `(setf (waffetensor-is-next-destruct? ,tensor) t))
 
+(defmacro !disallow-destruct (tensor)
+  `(setf (waffetensor-is-next-destruct? ,tensor) nil))
+
 ; is-tensor
 (defun waffe-tensor-p (tensor)
   (typep tensor 'waffetensor))

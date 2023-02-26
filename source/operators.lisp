@@ -56,10 +56,17 @@
        (values x y))
       ((> dims-x dims-y)
        (let ((count (- dims-x dims-y)))
-	 (values x (!unsqueeze y 0 count))))
+	 (!allow-destruct y)
+	 (values x (prog1
+		       (!unsqueeze y 0 count)
+		     (!disallow-destruct y)))))
       ((> dims-y dims-x)
        (let ((count (- dims-y dims-x)))
-	 (values (!unsqueeze x 0 count) y))))))
+	 (!allow-destruct x)
+	 (values (prog1
+		     (!unsqueeze x 0 count)
+		   (!disallow-destruct x))
+		 y))))))
 
 (defun same-shape-p (x y)
   (declare (optimize (speed 3))
@@ -574,17 +581,17 @@ It supports:
 "
   (!mul x (!div-old 1 y)))
 
-(defun !!div (target-x y)
-    "Divides target-x by y in a destructive way.
+(defun !!div (target-x target-y)
+    "Divides target-x by target-y in a destructive way.
 
-target-x is always substituted for the result
-
-y is not subject to side effects unless target-x is not a mat.
+target-x and target-y are always substituted for the result
 
 See also: @link[uri=\"./using-tensor.html#compute-tensors-in-a-destructive-way\"](Destructive Operations)"
-  (let ((target-x (assure-tensor target-x)))
+  (let ((target-x (assure-tensor target-x))
+	(target-y (assure-tensor target-y)))
     (!allow-destruct target-x)
-    (!!mul target-x (!div-old 1 y))))
+    (!allow-destruct target-y)
+    (!!mul target-x (!div-old 1 target-y))))
 
 (defun !!inv () "Todo")
 

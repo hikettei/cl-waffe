@@ -42,8 +42,8 @@
 (defun get-difference (mat target-dim)
   "when defining lisp kernel, esp for 3d, 4d tensor. this is useful
    This function calculates that, the number that +1 in mat equivalent to in 1d mat"
-  (- (apply #'mat-row-major-index mat (fill-with-d mat target-dim 1))
-     (apply #'mat-row-major-index mat (fill-with-d mat target-dim 0))))
+  (the fixnum (- (apply #'mat-row-major-index mat (fill-with-d mat target-dim 1))
+		 (apply #'mat-row-major-index mat (fill-with-d mat target-dim 0)))))
 
 (defun write-to-nth-dim-with-range (out
 				    copy-from-mat

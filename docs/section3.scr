@@ -338,21 +338,114 @@ Let's take a another example of making BatchNorm2D faster.
 This is a slower ver of softmax.
 
 @begin[lang=lisp](code)
+(defun !average (x)
+  (let ((z (!sum x 1))
+	(batch-size (!shape x 0)))
+    (!div z batch-size)))
+
+(defun softmax (x)
+  (let* ((x1 (!sub x (!average x)))
+         (xe (!exp x1))
+	 (z (!sum xe 1)))
+     (!div xe z)))
 @end[lang=lisp](code)
 
 Benchmarking it with time macro, it is:
 
 @begin[lang=lisp](code)
+(setq a (!randn `(1000 1000)))
+
+
+(time (softmax a))
+
+
 @end[lang=lisp](code)
 
 Rewriting it with a destructive API.
 
+In !average function , z and x aren't combined because z is a new tensor produced by !sum which is a non-destructive API.
+
+So, !div should be destructive.
+
+!average become:
+
 @begin[lang=lisp](code)
+(defun !average (x)
+  (let ((z (!sum x 1))
+	(batch-size (!shape x 0)))
+    (!!div z batch-size)))
+@end[lang=lisp](code)
+
+Rewrite Softmax using similar steps.
+
+@begin[lang=lisp](code)
+(defun softmax (x)
+  (let* ((x1 (!!mul -1.0 (!!sub (!average x) x))) ; Reversing x and (!average) in !sub, the operator returns -1.0x result.
+         (xe (!!exp x1))
+	 (z (!sum xe 1)))
+     (!!div xe z)))
+@end[lang=lisp](code)
+
+So, the whole code is:
+
+@begin[lang=lisp](code)
+(defun !average (x)
+  (let ((z (!sum x 1))
+	(batch-size (!shape x 0)))
+    (!!div z batch-size)))
+
+(defun softmax (x)
+  (let* ((x1 (!!mul -1.0 (!!sub (!average x) x))) ; Reversing x and (!average) in !sub, the operator returns -1.0x result.
+         (xe (!!exp x1))
+	 (z  (!sum xe 1)))
+     (!!div xe z)))
 @end[lang=lisp](code)
 
 Benchmarking it, it is:
+
 @begin[lang=lisp](code)
+(time (softmax a))
+;Evaluation took:
+;  0.284 seconds of real time
+;  0.284234 seconds of total run time (0.269863 user, 0.014371 system)
+;  [ Run times consist of 0.007 seconds GC time, and 0.278 seconds non-GC time. ]
+;  100.00% CPU
+;  656,350,424 processor cycles
+;  209,210,256 bytes consed
+
+;#Const(((2.275... 0.002... ~ 1.028... 0.001...)        
+;                 ...
+;        (3.211... 6.013... ~ 0.001... 3.676...)) :mgl t :shape (1000 1000))
+
+
+a ; A is not destructed.
+;#Const(((-0.92... 1.464... ~ -1.72... 0.987...)        
+;                 ...
+;        (-0.68... -0.06... ~ 0.821... -0.55...)) :mgl t :shape (1000 1000))
 @end[lang=lisp](code)
 
+Compared to pure mgl-mat's implementation.
+
+@begin[lang=lisp](code)
+(defun softmax! (x)
+  (let ((result (make-mat (!shape x)))
+        (tmp    (make-mat `(1 ,@(cdr (!shape x)))))
+	(x      (copy-mat (data x))))
+       (sum! x tmp :axis 1)
+       (scal! (/ 1.0 (mat-dimension x 1)) tmp)
+       (fill! 1.0 result)
+       (scale-rows! tmp result)
+       (axpy! -1.0 result x)
+       (.exp! x)
+       (sum! x tmp :axis 1)
+       (fill! 1.0 result)
+       (scale-rows! tmp result)
+       (.inv! result)
+       (const (.*! x result))))
+
+(time (softmax! a))
+
+@end[lang=lisp](code)
+  
 @end(section)
 @end(section)
