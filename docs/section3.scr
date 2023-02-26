@@ -469,7 +469,7 @@ Compared to pure mgl-mat's implementation.
 
 cl-waffe has a lot of challenges in terms of memory usage, but in terms of speed it comes close to writing with mgl-mat alone.
 
-Currently, the benchmark is:
+Currently(2023/2/26), the benchmark is (added type declations):
 
 @begin[lang=lisp](code)
 
@@ -483,7 +483,7 @@ Currently, the benchmark is:
 (defun softmax (x)
   (declare (optimize (speed 3))
            (type waffetensor x))
-  (let* ((x1 (!sub x (the waffetensor (!average x))))
+  (let* ((x1 (!sub x (!average x)))
          (xe (!exp x1))
 	 (z (!sum xe 1)))
      (!div xe z)))
@@ -499,7 +499,7 @@ Currently, the benchmark is:
 (defun softmax1 (x)
   (declare (optimize (speed 3))
            (type waffetensor x))
-  (let* ((x1 (!!mul -1.0 (!!sub (the waffetensor (!average1 x)) x))) ; Reversing x and (!average) in !sub, the operator returns -1.0x result.
+  (let* ((x1 (!!mul -1.0 (!!sub (!average1 x) x)))
          (xe (!!exp x1))
 	 (z  (!sum xe 1)))
      (!!div xe z)))
