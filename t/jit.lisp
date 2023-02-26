@@ -3,6 +3,8 @@
 
 (in-suite :test)
 
+; tests for jit
+
 (defparameter test-input (!randn `(10 10)))
 (defparameter result (value (!softmax test-input)))
 
@@ -21,3 +23,4 @@
 
 (test jit-test
       (is (jittest1)))
+

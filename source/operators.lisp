@@ -108,33 +108,33 @@
   :backward ((dy) (list (!mul (self yi) dy)
 			(!mul (self xi) dy))))
 
-(defnode BroadCastingAddTensor nil
+(defnode BroadCastingAddTensor (&optional (output nil) (overwrite nil))
   :optimize t
-  :parameters ((dims-to-sum nil))
+  :parameters ((dims-to-sum nil) (output output) (overwrite overwrite))
   :forward  ((x y)
 	     (let ((dims-to-sum (broadcasting x y)))
 	       (setf (self dims-to-sum) dims-to-sum)
-	       (with-searching-calc-node :add x y)))
+	       (k-> :add (self output) (self overwrite) x y)))
   :backward ((dy) (sumup-broadcasted (self dims-to-sum) dy dy)))
 
-(defnode BroadCastingSubTensor nil
+(defnode BroadCastingSubTensor (&optional (output nil) (overwrite nil))
   :optimize t
-  :parameters ((dims-to-sum nil))
+  :parameters ((dims-to-sum nil) (output output) (overwrite overwrite))
   :forward ((x y)
 	    (let ((dims-to-sum (broadcasting x y)))
 	      (setf (self dims-to-sum) dims-to-sum)
-	      (with-searching-calc-node :sub x y)))
+	      (k-> :sub (self output) (self overwrite) x y)))
   :backward ((dy) (sumup-broadcasted (self dims-to-sum) dy (!mul dy (const -1)))))
 
-(defnode BroadCastingMulTensor nil
+(defnode BroadCastingMulTensor (&optional (output nil) (overwrite nil))
   :optimize t
-  :parameters ((xi T) (yi T) (dims-to-sum nil))
+  :parameters ((xi T) (yi T) (dims-to-sum nil) (output output) (overwrite overwrite))
   :forward ((x y)
 	    (let ((dims-to-sum (broadcasting x y)))
 	      (setf (self dims-to-sum) dims-to-sum)
 	      (save-for-backward xi x)
 	      (save-for-backward yi y)
-	      (with-searching-calc-node :mul x y)))
+	      (k-> :mul (self output) (self overwrite) x y)))
   :backward ((dy) (sumup-broadcasted (self dims-to-sum)
 				     (!mul (self yi) dy)
 				     (!mul (self xi) dy))))
@@ -392,6 +392,8 @@
 
 In the case when x or y is not a tensor, automatically creates a new tensor.
 
+Destructive mode: (!!add x y)
+
 It supports:
 
 @begin(enum)
@@ -590,6 +592,42 @@ It supports:
 @end(section)
 "
   (call node (assure-tensor x) (assure-tensor y)))
+
+(defun !!add (x y)
+  ""
+  (let ((x (assure-tensor x))
+	(y (assure-tensor y)))
+    (if (same-shape-p x y)
+	(call (AddTensor x t) x y)
+	(progn
+	  (setf (waffetensor-is-next-destruct? x) t)
+	  (let ((result (call (BroadCastingAddTensor x t) x y)))
+	    (setf (data x) result)
+	    (the waffetensor result))))))
+
+(defun !!sub (x y)
+  ""
+  (let ((x (assure-tensor x))
+	(y (assure-tensor y)))
+    (if (same-shape-p x y)
+	(call (SubTensor x t) x y)
+	(progn
+	  (setf (waffetensor-is-next-destruct? x) t)
+	  (let ((result (call (BroadCastingSubTensor x t) x y)))
+	    (setf (data x) result)
+	    (the waffetensor result))))))
+
+(defun !!mul (x y)
+  ""
+  (let ((x (assure-tensor x))
+	(y (assure-tensor y)))
+    (if (same-shape-p x y)
+	(call (MulTensor x t) x y)
+	(progn
+	  (setf (waffetensor-is-next-destruct? x) t)
+	  (let ((result (call (BroadCastingMulTensor x t) x y)))
+	    (setf (data x) result)
+	    (the waffetensor result))))))
 
 (defun !sum-2d (x &optional (axis nil) (keepdims nil))
   (if (null axis)

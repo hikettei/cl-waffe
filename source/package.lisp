@@ -122,9 +122,13 @@
 	   #:with-calling-layers
 
 	   #:!add
+	   #:!!add
 	   #:!sub
+	   #:!!sub
 	   #:!mul
+	   #:!!mul
 	   #:!div
+	   #:!!div
 
 	   #:!dot
 	   #:!sum

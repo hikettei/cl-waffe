@@ -78,7 +78,40 @@
 	 (x (!ones `(10 2)))
 	 (y (!ones `(10 2)))
 	 (out (time (call model x y))))
+    
+    (sb-profile:profile mgl-mat::blas-sgemm
+		      mgl-mat::blas-scopy
+		      mgl-mat::array-to-mat
+		      mgl-mat::make-mat
+		      mgl-mat::copy-mat
+		      mgl-mat::copy!
+		      cl-waffe.backends.mgl::parse-argument
+		      cl-waffe.backends.mgl::generate-kernel-code
+		      cl-waffe.backends.mgl::lisp-execute-tmp-kernel
+		      cl-waffe.backends.mgl::lisp-define-tmp-kernel
+		      cl-waffe::step-model
+		      cl-waffe::backward1
+		      cl-waffe.nn::softmax-cross-entropy
+		      cl-waffe::!sum
+		      cl-waffe::!mul
+		      cl-waffe::!div
+		      cl-waffe::!add
+		      cl-waffe::!matmul
+		      cl-waffe::!relu
+		      cl-waffe::!exp
+		      cl-waffe::!softmax
+		      cl-waffe::!faref
+		      cl-waffe::!write-faref
+		      cl-waffe::call
+		      cl-waffe::call-forward
+		      cl-waffe::call-backward
+		      cl-waffe.backends.mgl::adam-update
+		      svmformat:parse-file)
+    
     (time (backward (!sum (car out))))
+
+    (sb-profile:report)
+    
     t
     ))
 

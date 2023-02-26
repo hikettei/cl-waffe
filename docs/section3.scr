@@ -319,9 +319,12 @@ cl-waffe can optimize define-by-run style codes by tracing their usage...
 In general, the cl-waffe APIs follow the following simple rules:
 
 @begin(enum)
-@item(Operators whose names begin with ! produce a new matrix every time they are called.)
-@item(Operators whoe names begin with !! @b(destructively) assigns a result to the @b(first argument.))
+@item(Operators whose names begin with ! will @b(copy) a base tensor and @b(produce a new matrix) every time they are called.)
+@item(Operators whose names begin with !! will @b(destructively) assign a result to the @b(first argument.))
 @end(enum)
+
+Note: Matのみ、ブロードキャスティングできるOperatorは(!add 1 mat)はMatに代入
+
 
 @end(section)
 @end(section)

@@ -6,6 +6,9 @@
 (defmacro will-be-destructed (tensor)
   `(waffetensor-thread-data ,tensor))
 
+(defmacro wanted-to-be-destructed? (tensor)
+  (cl-waffe::waffetensor-is-next-destruct? tensor))
+
 (defun create-thread-idx (thread-info &optional (ident ""))
   "Thread format: <Thread_IDx>+<Count_N>"
   (if thread-info
@@ -134,7 +137,7 @@
   (declare (optimize (speed 3)); (safety 0))
 	   (type symbol function)
 	   (type waffetensor x y))
-					; assume that (!dims x) == (!dims y)
+  ; assume that (!dims x) == (!dims y)
 
   (unless (= (!dims x) (!dims y))
     (error "KernelError: Can't broadcasting ~a and ~a" x y))
@@ -356,17 +359,18 @@
 	  ,(car args)
 	  (list ,@(cdr args))))
      
-					; if jit triggered, the form below never called.
+     ; if jit triggered, the form below never called.
 
      (macrolet ((get-out-buffer (tensor &key (copy nil))
-		  `(if overwrite
-		       (value ,tensor)
-		       (if output
-			    (if ,copy
-		 	   (copy! (value ,tensor) output)
-			   output)
-			    (decide-out-buffer
-			     ,tensor (value ,tensor) enable-optimize? ,copy)))))
+		  `(cond
+		     (overwrite (value ,tensor))
+		     (output
+		      (if ,copy
+			  (copy! (value ,tensor) output))
+		      output)
+		     ((cl-waffe::waffetensor-is-next-destruct? ,tensor)
+		      (value ,tensor))
+		     (T (decide-out-buffer ,tensor (value ,tensor) enable-optimize? ,copy)))))
        
        (let (,@(map 'list (lambda (target val)
 			    `(,target (value ,val)))
@@ -407,8 +411,8 @@
 		  ((will-be-destructed x)
 		   (let ((o (get-out-buffer x :copy t)))
 		     (axpy! 1.0 y1 o)))
-		  ((will-be-destructed y)
-		   (axpy! 1.0 x1 (get-out-buffer y :copy t)))
+		  ;((will-be-destructed y)
+		   ;(axpy! 1.0 x1 (get-out-buffer y :copy t)))
 		  (T (axpy! 1.0 y1 (get-out-buffer x :copy t))))
 		(broadcasting-apply :+ x y))))
 
@@ -425,8 +429,8 @@
 		  ((will-be-destructed x)
 		   (let ((o (get-out-buffer x :copy t)))
 		     (axpy! -1.0 y1 o)))
-		  ((will-be-destructed y)
-		   (axpy! 1.0 x1 (scal! -1.0 (get-out-buffer y :copy t))))
+		  ;((will-be-destructed y)
+		  ; (axpy! 1.0 x1 (scal! -1.0 (get-out-buffer y :copy t))))
 		  (T (axpy! -1.0 y1 (get-out-buffer x :copy t))))
 		(broadcasting-apply :- x y))))
 
@@ -441,8 +445,8 @@
 		  ((will-be-destructed x)
 		   (let ((o (get-out-buffer x :copy nil)))
 		     (geem! 1.0 x1 y1 0.0 o)))
-		  ((will-be-destructed y)
-		   (geem! 1.0 x1 y1 0.0 (get-out-buffer y :copy nil)))
+		  ;((will-be-destructed y)
+		  ; (geem! 1.0 x1 y1 0.0 (get-out-buffer y :copy nil)))
 		  (T (geem! 1.0 x1 y1 0.0 (get-out-buffer x :copy nil))))
 		(broadcasting-apply :* x y))))
 
@@ -774,7 +778,6 @@
 		    do (setf (aref r i) (atanh (aref r i))))
 	      r)))
 
-
 (defun compare-tensor (enable-optim out x y)
   (declare (optimize (speed 3) (space 0) (safety 1))
 	   (type boolean enable-optim)
@@ -854,6 +857,8 @@
 	      ((not (null output))
 	       output)
 	      (overwrite
+	       (value x))
+	      ((cl-waffe::waffetensor-is-next-destruct? x)
 	       (value x))
 	      (T
 	       (decide-out-buffer out (value x) enable-optimize t)))))
