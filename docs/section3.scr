@@ -318,14 +318,41 @@ cl-waffe can optimize define-by-run style codes by tracing their usage...
 
 In general, the cl-waffe APIs follow the following simple rules:
 
+Side Effect Rules:
 @begin(enum)
 @item(Operators whose names begin with ! will @b(copy) a base tensor and @b(produce a new matrix) every time they are called.)
 @item(Operators whose names begin with !! will @b(destructively) assign a result to the @b(first argument.))
+@item(When the destructive operator's first argument is not a mat, assign a result to the @b(second argument.) otherwise create a new mat.)
 @end(enum)
 
+Note: Destructive Operation only supports when the tensor is a type of mgl-mat:mat.
 
-Note: Matのみ、ブロードキャスティングできるOperatorは(!add 1 mat)はMatに代入
+As a numerical library, creating a new tensors each calculation step is only a waste of memory-space. In term of speed/memory, it is recommended to use destructive operations.
 
+The code written in non-destructive APIs can be rewritten with destructive APIs in a simple way as all you have to do is follow the rules below:
+
+First, prepare the fomula where all operations are non-destructive. In the case of (!exp (!exp x)), this operation creates a new tensor whose shape is the same as x for twice times. To rewrite it without making a new side effect, the deeper !exp should be rewritten to (!!exp ). That is, (!!exp (!exp x)).
+
+Let's take a another example of making BatchNorm2D faster.
+
+This is a slower ver of softmax.
+
+@begin[lang=lisp](code)
+@end[lang=lisp](code)
+
+Benchmarking it with time macro, it is:
+
+@begin[lang=lisp](code)
+@end[lang=lisp](code)
+
+Rewriting it with a destructive API.
+
+@begin[lang=lisp](code)
+@end[lang=lisp](code)
+
+Benchmarking it, it is:
+@begin[lang=lisp](code)
+@end[lang=lisp](code)
 
 @end(section)
 @end(section)

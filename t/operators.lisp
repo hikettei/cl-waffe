@@ -55,6 +55,13 @@
     (let ((result (funcall ndfunc y x-copy)))
       (mgl-mat:M= (value x) (value result)))))
 
+(defun test-destructive-function (dfunc ndfunc)
+  (let* ((x (!randn `(100 100 100)))
+	 (x-copy (const (mgl-mat:copy-mat (data x)))))
+
+    (funcall dfunc x)
+    (mgl-mat:M= (value x) (funcall ndfunc x-copy))))
+
 (test destructive-scope-test
       (is (!!add-test)))
 
@@ -82,3 +89,5 @@
       (is (scale-destructive-x-and-y-test1 #'!!mul #'!mul))
       ;(is (scale-destructive-x-and-y-test1 #'!!div #'!div))
       )
+
+
