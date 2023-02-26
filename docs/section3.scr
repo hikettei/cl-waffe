@@ -469,6 +469,97 @@ Compared to pure mgl-mat's implementation.
 
 cl-waffe has a lot of challenges in terms of memory usage, but in terms of speed it comes close to writing with mgl-mat alone.
 
-Here's a table of benchmark.
+Here's a table of benchmark. (Added optimize declations)
+
+@begin[lang=lisp](code)
+
+(defun !average (x)
+  (declare (optimize (speed 3))
+           (type waffetensor x))
+  (let ((z (!sum x 1))
+	(batch-size (!shape x 0)))
+    (!div z batch-size)))
+
+(defun softmax (x)
+  (declare (optimize (speed 3))
+           (type waffetensor x))
+  (let* ((x1 (!sub x (the waffetensor (!average x))))
+         (xe (!exp x1))
+	 (z (!sum xe 1)))
+     (!div xe z)))
+
+; destructive ver.
+(defun !average1 (x)
+  (declare (optimize (speed 3))
+           (type waffetensor x))
+  (let ((z (!sum x 1))
+	(batch-size (!shape x 0)))
+    (!!div z batch-size)))
+
+(defun softmax1 (x)
+  (declare (optimize (speed 3))
+           (type waffetensor x))
+  (let* ((x1 (!!mul -1.0 (!!sub (the waffetensor (!average1 x)) x))) ; Reversing x and (!average) in !sub, the operator returns -1.0x result.
+         (xe (!!exp x1))
+	 (z  (!sum xe 1)))
+     (!!div xe z)))
+
+; mgl-mat
+
+(defun softmax2 (x)
+  (declare (optimize (speed 3))
+           (type waffetensor x))
+  (let ((result (make-mat (!shape x)))
+        (tmp    (make-mat `(1 ,@(cdr (!shape x)))))
+	(x      (copy-mat (data x))))
+       (sum! x tmp :axis 1)
+       (scal! (/ 1.0 (mat-dimension x 1)) tmp)
+       (fill! 1.0 result)
+       (scale-rows! tmp result)
+       (axpy! -1.0 result x)
+       (.exp! x)
+       (sum! x tmp :axis 1)
+       (fill! 1.0 result)
+       (scale-rows! tmp result)
+       (.inv! result)
+       (const (.*! x result))))
+
+(defparameter n 1000)
+
+(time (loop for i fixnum upfrom 0 below n
+            do (softmax a)))
+;Evaluation took:
+;  0.340 seconds of real time
+;  0.326843 seconds of total run time (0.322840 user, 0.004003 system)
+;  [ Run times consist of 0.003 seconds GC time, and 0.324 seconds non-GC time. ]
+;  96.18% CPU
+;  784,081,358 processor cycles
+;  233,002,704 bytes consed
+
+(time (loop for i fixnum upfrom 0 below n
+            do (softmax1 a)))
+;Evaluation took:
+;  0.347 seconds of real time
+;  0.335853 seconds of total run time (0.332290 user, 0.003563 system)
+;  [ Run times consist of 0.003 seconds GC time, and 0.333 seconds non-GC time. ]
+;  96.83% CPU
+;  801,195,214 processor cycles
+;  187,704,864 bytes consed
+
+(time (loop for i fixnum upfrom 0 below n
+            do (softmax2 a)))
+;Evaluation took:
+;  0.232 seconds of real time
+;  0.219684 seconds of total run time (0.216419 user, 0.003265 system)
+;  [ Run times consist of 0.003 seconds GC time, and 0.217 seconds non-GC time. ]
+;  94.83% CPU
+;  535,165,520 processor cycles
+;  92,326,496 bytes consed
+@end[lang=lisp](code)
+
+n=1000
+
+a = (100 100)
+
 @end(section)
 @end(section)
