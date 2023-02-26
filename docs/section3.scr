@@ -469,7 +469,7 @@ Compared to pure mgl-mat's implementation.
 
 cl-waffe has a lot of challenges in terms of memory usage, but in terms of speed it comes close to writing with mgl-mat alone.
 
-Here's a table of benchmark. (Added optimize declations)
+Currently, the benchmark is:
 
 @begin[lang=lisp](code)
 
@@ -556,10 +556,6 @@ Here's a table of benchmark. (Added optimize declations)
 ;  535,165,520 processor cycles
 ;  92,326,496 bytes consed
 @end[lang=lisp](code)
-
-n=1000
-
-a = (100 100)
 
 @end(section)
 @end(section)
