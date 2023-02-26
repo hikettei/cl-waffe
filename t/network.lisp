@@ -107,11 +107,8 @@
 		      cl-waffe::call-backward
 		      cl-waffe.backends.mgl::adam-update
 		      svmformat:parse-file)
-    
     (time (backward (!sum (car out))))
-
     (sb-profile:report)
-    
     t
     ))
 

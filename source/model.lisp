@@ -425,7 +425,7 @@ Example:
 					 (cl-waffe.backends.mgl:create-thread-idx thread-info)
 					 :copy t)
 				      (setf (self ,name) (const tmp))))
-				   (T (!allow-destruct smaller-value)
+				   (T ;(!allow-destruct smaller-value)
 				      (setf (self ,name) smaller-value)))))))))
 	     (self hide-from-tree) ; avoid unused argument (model itself)
 	     ,(if is-node

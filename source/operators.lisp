@@ -574,6 +574,20 @@ It supports:
 "
   (!mul x (!div-old 1 y)))
 
+(defun !!div (target-x y)
+    "Divides target-x by y in a destructive way.
+
+target-x is always substituted for the result
+
+y is not subject to side effects unless target-x is not a mat.
+
+See also: @link[uri=\"./using-tensor.html#compute-tensors-in-a-destructive-way\"](Destructive Operations)"
+  (let ((target-x (assure-tensor target-x)))
+    (!allow-destruct target-x)
+    (!!mul target-x (!div-old 1 y))))
+
+(defun !!inv () "Todo")
+
 (defope !dot (DotProductTensor) node (x y)
     "Computes the dot product of x and y where x and y are 1d Tensor.
 
@@ -593,37 +607,55 @@ It supports:
 "
   (call node (assure-tensor x) (assure-tensor y)))
 
-(defun !!add (x y)
-  ""
-  (let ((x (assure-tensor x))
+(defun !!add (target-x y)
+  "Adds target-x and y in a destructive way.
+
+target-x is always substituted for the result
+
+y is not subject to side effects unless target-x is not a mat.
+
+See also: @link[uri=\"./using-tensor.html#compute-tensors-in-a-destructive-way\"](Destructive Operations)"
+  (let ((x (assure-tensor target-x))
 	(y (assure-tensor y)))
     (if (same-shape-p x y)
 	(call (AddTensor x t) x y)
-	(progn
+	(multiple-value-bind (x y) (straighten-up x y)
 	  (setf (waffetensor-is-next-destruct? x) t)
 	  (let ((result (call (BroadCastingAddTensor x t) x y)))
 	    (setf (data x) result)
 	    (the waffetensor result))))))
 
-(defun !!sub (x y)
-  ""
-  (let ((x (assure-tensor x))
+(defun !!sub (target-x y)
+  "Substracts target-x by y in a destructive way.
+
+target-x is always substituted for the result.
+
+y is not subject to side effects unless target-x is not a mat.
+
+See also: @link[uri=\"./using-tensor.html#compute-tensors-in-a-destructive-way\"](Destructive Operations)"
+  (let ((x (assure-tensor target-x))
 	(y (assure-tensor y)))
     (if (same-shape-p x y)
 	(call (SubTensor x t) x y)
-	(progn
+	(multiple-value-bind (x y) (straighten-up x y)
 	  (setf (waffetensor-is-next-destruct? x) t)
 	  (let ((result (call (BroadCastingSubTensor x t) x y)))
 	    (setf (data x) result)
 	    (the waffetensor result))))))
 
-(defun !!mul (x y)
-  ""
-  (let ((x (assure-tensor x))
+(defun !!mul (target-x y)
+    "Multiplys target-x and y in a destructive way.
+
+target-x is always substituted for the result
+
+y is not subject to side effects unless target-x is not a mat.
+
+See also: @link[uri=\"./using-tensor.html#compute-tensors-in-a-destructive-way\"](Destructive Operations)"
+  (let ((x (assure-tensor target-x))
 	(y (assure-tensor y)))
     (if (same-shape-p x y)
 	(call (MulTensor x t) x y)
-	(progn
+	(multiple-value-bind (x y) (straighten-up x y)
 	  (setf (waffetensor-is-next-destruct? x) t)
 	  (let ((result (call (BroadCastingMulTensor x t) x y)))
 	    (setf (data x) result)
@@ -658,7 +690,6 @@ For nd tensors...
 @def(keepdims)
 @term(When t, the returning tensor is repeated with @cl:param(axis))
 @end(deflist)
-
 @end(section)
 
 @begin(section)

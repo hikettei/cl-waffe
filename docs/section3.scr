@@ -323,6 +323,7 @@ In general, the cl-waffe APIs follow the following simple rules:
 @item(Operators whose names begin with !! will @b(destructively) assign a result to the @b(first argument.))
 @end(enum)
 
+
 Note: Matのみ、ブロードキャスティングできるOperatorは(!add 1 mat)はMatに代入
 
 
