@@ -230,7 +230,7 @@ This package has:
 @end(term)
 
 
-@def(Samplign Probability Distributions)
+@def(Sampling Probability Distributions)
 @begin(term)
 @link[uri="./operators.html#!randn"](!randn)
 

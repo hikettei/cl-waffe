@@ -214,14 +214,6 @@ Softmax is applied to dim=0
 @begin(term)
 Softmax is applied to dim=0
 @begin[lang=lisp](code)
-
-@end[lang=lisp](code)
-@end(term)
-
-@def(3)
-@begin(term)
-Softmax is applied to dim=0
-@begin[lang=lisp](code)
 (setq a (!randn `(10 10)))
 ;#Const(((-0.29... -1.99... ~ -0.36... 1.725...)        
 ;                 ...
@@ -231,6 +223,30 @@ Softmax is applied to dim=0
 ;#Const(((0.064... 0.011... ~ 0.060... 0.489...)        
 ;                 ...
 ;        (0.129... 0.024... ~ 0.209... 0.124...)) :mgl t :shape (10 10))
+@end[lang=lisp](code)
+@end(term)
+
+@def(3)
+@begin(term)
+Softmax is applied to dim=0
+@begin[lang=lisp](code)
+(setq a (!randn `(10 10 10)))
+;#Const((((2.585... 0.517... ~ 0.428... 0.059...)         
+;                   ...
+;         (-2.11... 0.308... ~ -0.91... 0.649...))        
+;                 ...
+;        ((-0.75... 1.030... ~ 0.656... -0.00...)         
+;                   ...
+;         (-0.37... -0.52... ~ 1.589... -0.10...))) :mgl t :shape (10 10 10))
+
+(!softmax a)
+;#Const((((0.374... 0.047... ~ 0.043... 0.029...)         
+;                   ...
+;         (0.010... 0.115... ~ 0.033... 0.162...))        
+;                 ...
+;        ((0.029... 0.172... ~ 0.118... 0.061...)         
+;                   ...
+;         (0.048... 0.041... ~ 0.345... 0.063...))) :mgl t :shape (10 10 10))
 @end[lang=lisp](code)
 @end(term)
 
