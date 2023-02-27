@@ -106,29 +106,21 @@ $ ./run-test-model.ros mnist
 
 # Workload/Todo
 
-・Allowing destructive operations.
+・破壊的代入のサポート(Support more destructive operations)
 
-・Plotting graphs
+・Neural Networkの追加 (Add cl-waffe.nn models)
 
-・Optimize whole codes, in term of speed and memory space.
+・モデルの保存に対応 (Save and restore trained models.)
 
-・The usage rate of CPU is too low...
+・グラフの表示に対応 (Plotting losses and so on)
 
-・Implement a convenient data loader package and avoid users having to implement it themselves.
+・様々なデータ構造を扱えるように (Support more types of data structure)
 
-・support cuda in some operations
+・性能向上（メモリ使用量/CPU使用率の観点から
+）(In term of cpu-usage rate/memory-usage, cl-waffe has a lot of challenge to performance.)
+・CUDAに対応 (Support CUDA)
 
-・More functions for mathmatics.
-
-・save and restore models
-
-・Rewrite some nodes with (with-kernel-case)
-
-・CCLで試す
-
-・run-test-model.rosを使いやすく書き直す
-
-・Documentを書く
+・他の処理系で動くか試す (Try on another systems (e.g.: CCL))
 
 # Author
 
