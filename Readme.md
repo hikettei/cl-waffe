@@ -67,7 +67,7 @@ As of this writing:
 
 ## Broadcasting Matrix.
 
-See also:
+See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#broadcasting)
 
 ```lisp
 (setq a (!randn `(100 100 100)))
@@ -92,7 +92,7 @@ See also:
 
 ## Destructive APIs with a Simple Rule.
 
-See also:
+See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#compute-tensors-in-a-destructive-way)
 
 ```lisp
 (setq a (!randn `(100 100 100)))
@@ -117,9 +117,9 @@ See also:
 
 ## Useful APIs like Numpy/PyTorch.
 
-See also:
+See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/cl-waffe.html)
 
-```
+```lisp
 (setq a (!randn `(100 100 100)))
 ;#Const((((-1.47... 1.016... ~ -1.29... -1.71...)         
 ;                   ...
@@ -169,7 +169,13 @@ See also:
 ;         (1.566... -2.02... ~ -0.30... 0.085...))) :mgl t :shape (3 89 100))
 
 (time (setf (!aref a '(0 3)) (!ones '(100 3))))
+```
 
+## Auto backpropagations
+
+See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#basic-tensor-operations)
+
+```lisp
 (setq a (parameter (!randn `(10 10))))
 (setq b (parameter (!randn `(10 10))))
 (setq c (parameter (!randn `(10))))
@@ -201,7 +207,7 @@ See also:
 
 ## Extensible APIs
 
-See also:
+See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/extend-library.html)
 
 As you can see from `./source/optimizers/optimizers.lisp`, or `./source/operators.lisp`,  the features like `defnode`, `defoptimizer` is exported for users.
 Here's examples.
