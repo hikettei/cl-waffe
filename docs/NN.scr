@@ -233,8 +233,42 @@ Futhermore, the outputs are scaled by (/ (- 1 (self dropout-rate))), (i.e.: This
 @begin(section)
 @title(BatchNorm2d)
 
-BatchNorm2D
+Applies BatchNorm2D.
 
+@begin(section)
+@title(Parameters)
+@begin[lang=lisp](code)
+(BatchNorm2D in-features &key (affine t) (epsilon 1.0e-7))
+@end[lang=lisp](code)
+
+@begin(deflist)
+@def(in-features)
+@term(an excepted input of size)
+@def(affine)
+@term(if t, the model has trainable affine layers.)
+@def(epsilon)
+@term(the value used to the denominator for numerical stability. Default: 1.0e-7)
+@end(deflist)
+@end(section)
+
+@begin(section)
+@title(Shape)
+@begin[lang=lisp](code)
+(call (BatchNorm2D) x)
+@end[lang=lisp](code)
+
+@b(BatchNorm2D : (any, in-feature) -> (the same as input of shape))
+
+@end(section)
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+(setq model (BatchNorm2D 10))
+(call model (!randn `(30 10)))
+@end[lang=lisp](code)
+
+@end(section)
 @end(section)
 
 @begin(section)
@@ -286,7 +320,6 @@ A simple lookup table object to store embedding vectors for NLP Models.
          (-0.01... -0.01... ~ 0.013... 0.002...))) :mgl t :shape (1 10 20))
 @end[lang=lisp](code)
 @end(section)
-
 @end(section)
 
 
