@@ -781,8 +781,17 @@ For nd tensors...
 @end(section)"
   (call node (assure-tensor x) (assure-tensor n)))
 
+(defun !!pow (target-x n)
+  "Takes the power of each element in @cl:param(x) with n.
+
+target-x is destructed."
+
+  (let ((target-x (assure-tensor target-x)))
+    (!allow-destruct target-x)
+    (!pow target-x n)))
+
 (defope !sqrt (SqrtTensor) node (x)
-    "Takes the power of eachelement in @cl:param(x) with 1/2, creating new sysconst and nodes.
+    "Takes the power of each element in @cl:param(x) with 1/2, creating new sysconst and nodes.
 
 @begin(section)
 @title(Example)
@@ -795,6 +804,14 @@ For nd tensors...
 @end[lang=lisp](code)
 @end(section)"
   (call node (assure-tensor x)))
+
+(defun !!sqrt (target-x)
+  "Takes the power of each element in @cl:param(x) with 1/2.
+
+target-x is destructed."
+  (let ((target-x (assure-tensor target-x)))
+    (!allow-destruct target-x)
+    (!sqrt target-x)))
 
 (defope !log (LogTensor) node (x)
     "Returns a new tensor with the natural logarithm of the elements of input.
@@ -812,6 +829,12 @@ yi = log(e xi)
 @end[lang=lisp](code)
 @end(section)"
   (call node (assure-tensor x)))
+
+(defun !!log (target-x)
+  "Returns a modified tenssor with the natural logarithm of the elements of target-x"
+  (let ((target-x (assure-tensor target-x)))
+    (!allow-destruct target-x)
+    (!log target-x)))
 
 (defun !reshape (x dim)
   "Return a new sysconst with changing its shape. x won't be modified.
@@ -1131,6 +1154,12 @@ If the specified position of a tensor isn't one, !squeeze is skipped.
 @end(section)"
   
   (call node (assure-tensor x)))
+
+(defun !!exp (target-x)
+  "Applying !exp in a destructive way."
+  (let ((target-x (assure-tensor target-x)))
+    (!allow-destruct target-x)
+    (call (ExpTensor) target-x)))
 
 (defope !sin (SinTensor) node (x)
     "Applying sin to each element of x, creating a new sysconst.

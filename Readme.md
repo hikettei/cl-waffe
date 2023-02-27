@@ -106,7 +106,9 @@ $ ./run-test-model.ros mnist
 
 # Workload/Todo
 
-・Make full documentations and quickstart guide for JP and EN.
+・Allowing destructive operations.
+
+・Plotting graphs
 
 ・Optimize whole codes, in term of speed and memory space.
 
