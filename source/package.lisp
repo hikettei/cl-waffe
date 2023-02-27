@@ -16,6 +16,9 @@
 	   #:*print-arr-max-size*
 	   #:*print-mat-max-size*
 
+	   #:!!allow-destruct
+	   #:!!disallow-destruct
+
 	   ; Functions for using tensor's data
 	   #:warranty
 	   #:data
@@ -122,9 +125,13 @@
 	   #:with-calling-layers
 
 	   #:!add
+	   #:!!add
 	   #:!sub
+	   #:!!sub
 	   #:!mul
+	   #:!!mul
 	   #:!div
+	   #:!!div
 
 	   #:!dot
 	   #:!sum

@@ -188,7 +188,7 @@ Note that beta must begin given as a waffetensor.
 	   (setq result (setf (!aref result i)
 			      (!softmax-function (!squeeze (!aref x i) 0)))))
 	 result))
-    (T (error "!softmax: softmax only supports where (!dims tensor) <= 3."))))
+    (T (error "!softmax: Not implemented. softmax only supports where (!dims tensor) <= 3."))))
 
 (defmodel SoftMaxNode (avoid-overflow)
   :parameters ((avoid-overflow avoid-overflow))
@@ -214,7 +214,15 @@ Softmax is applied to dim=0
 @begin(term)
 Softmax is applied to dim=0
 @begin[lang=lisp](code)
+(setq a (!randn `(10 10)))
+;#Const(((-0.29... -1.99... ~ -0.36... 1.725...)        
+;                 ...
+;        (0.695... -0.94... ~ 1.179... 0.655...)) :mgl t :shape (10 10))
 
+(!softmax a)
+;#Const(((0.064... 0.011... ~ 0.060... 0.489...)        
+;                 ...
+;        (0.129... 0.024... ~ 0.209... 0.124...)) :mgl t :shape (10 10))
 @end[lang=lisp](code)
 @end(term)
 
@@ -222,7 +230,23 @@ Softmax is applied to dim=0
 @begin(term)
 Softmax is applied to dim=0
 @begin[lang=lisp](code)
+(setq a (!randn `(10 10 10)))
+;#Const((((2.585... 0.517... ~ 0.428... 0.059...)         
+;                   ...
+;         (-2.11... 0.308... ~ -0.91... 0.649...))        
+;                 ...
+;        ((-0.75... 1.030... ~ 0.656... -0.00...)         
+;                   ...
+;         (-0.37... -0.52... ~ 1.589... -0.10...))) :mgl t :shape (10 10 10))
 
+(!softmax a)
+;#Const((((0.374... 0.047... ~ 0.043... 0.029...)         
+;                   ...
+;         (0.010... 0.115... ~ 0.033... 0.162...))        
+;                 ...
+;        ((0.029... 0.172... ~ 0.118... 0.061...)         
+;                   ...
+;         (0.048... 0.041... ~ 0.345... 0.063...))) :mgl t :shape (10 10 10))
 @end[lang=lisp](code)
 @end(term)
 
@@ -235,7 +259,7 @@ Todo: currently, it returns error.
 @end(deflist)"
   (call (SoftMaxNode avoid-overflow) x))
 
-					; Todo :docstring
+; Todo :docstring
 (defmodel model-list (model-list)
   :document (with-usage "model-list"
 	      :overview "define model sequentially, (e.g. x = (sequence `((layer1) (layer2))), (call x 1 tensor) => layer1's output)"

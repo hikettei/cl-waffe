@@ -8,6 +8,13 @@
 
 (defparameter c (const 100.1))
 
+(defparameter a-copy (const (mgl-mat:copy-mat (data a))))
+(defparameter b-copy (const (mgl-mat:copy-mat (data b))))
+
+(defun no-side-effects? (a1 b1)
+  (and (M= (data a1) (data a-copy))
+       (M= (data b1) (data b-copy))))
+
 (defun operate-test (fname lisp-func)
   (format t "Running Test of ~a~%" fname)
   (time (operate-test1 fname lisp-func)))
@@ -42,7 +49,8 @@
 	   (getacc 2 r2 a c1)
 	   (getacc 3 r3 c1 a)
 	   (getacc 4 r4 c1 b)
-	   (getacc 5 r5 a a)))))
+	   (getacc 5 r5 a a)
+	   (no-side-effects? a b)))))
 
 (defun operate-func (fname lisp-func)
   (format t "Running Test of ~a~%" fname)
@@ -65,7 +73,8 @@
 		 result)))
 
       (and (getacc r1 a)
-	   (getacc r2 b)))))
+	   (getacc r2 b)
+	   (no-side-effects? a b)))))
 
 (defun operate-afunc (fname lisp-func)
   (format t "Running Test of ~a~%" fname)
@@ -89,7 +98,8 @@
 		 result)))
 
       (and (getacc r1 ones)
-	   (getacc r2 ones)))))
+	   (getacc r2 ones)
+	   (no-side-effects? a b)))))
 
 (defun operate-afunc-cos (fname lisp-func)
   (format t "Running Test of ~a~%" fname)
@@ -113,13 +123,17 @@
 		 result)))
 
       (and (getacc r1 ones)
-	   (getacc r2 ones)))))
+	   (getacc r2 ones)
+	   (no-side-effects? a b)))))
 
 (defun pow-test ()
   (let* ((k (!randn `(10 10)))
+	 (k-copy (const (mgl-mat:copy-mat (data k))))
 	 (r (!pow k 2)))
-    (mgl-mat:M= (value r)
-		(mgl-mat:.expt! (value k) 2))))
+    (and
+     (mgl-mat:M= (value k) (value k-copy))
+     (mgl-mat:M= (value r)
+		 (mgl-mat:.expt! (value k) 2)))))
 
 (defun dot-test ()
   (let* ((k (!randn `(10)))
@@ -154,11 +168,14 @@
   (let ((k (!mean (!ones '(10 10)))))
     (= (data k) 1.0)))
 
+; Tests for squeeze and unsqueeze including !reshape
 (defun squeeze-test ()
-  (let ((t1 (!randn `(10 10))))
+  (let* ((t1 (!randn `(10 10)))
+	 (t1-copy (const (mgl-mat:copy-mat (data t1)))))
     (and (equal (!shape (!unsqueeze t1)) '(1 10 10))
 	 (equal (!shape (!squeeze (!unsqueeze t1)))
-		'(10 10)))))
+		'(10 10))
+	 (mgl-mat:M= (value t1) (value t1-copy)))))
 
 (defun repeat-test ()
   (let ((t1 (!randn `(1 10))))
@@ -168,12 +185,6 @@
 (defun transpose1-test ()
   (let ((t1 (!randn `(1 10 12))))
     (equal (!shape (!transpose1 t1 2 1 0)) '(12 10 1))))
-
-(defun !aref-test ()
-  nil)
-
-(defun !setf-aref-test ()
-  nil)
 
 (defun test-softmax (x)
   (let ((r (!softmax x))

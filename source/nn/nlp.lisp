@@ -63,7 +63,6 @@
 	       (hidden-size hidden-size)
 	       (biredical biredical)
 	       (wo (linearlayer hidden-size hidden-size)))
-
   :forward ((x &optional (hs nil))
 	    "Input: X = (BatchSize SentenceLength Embedding_Dim)
              Output (values x{t+1} h{t+1})"
@@ -75,7 +74,7 @@
 				   ,s-len
 				   ,(self hidden-size)))
 			 hs)))
-
+	      
 	      (if (self biredical)
 		  ; when biredical=t, calc in the around way
 		  (loop for xn downfrom (1- s-len) to 0
@@ -100,4 +99,5 @@
 					     h)))
 			     (setq hs (setf (!aref hs t xn) h)))))
 	      (call (self wo) hs))))
+
 

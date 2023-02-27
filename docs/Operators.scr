@@ -181,6 +181,7 @@
 @title(!add)
 @cl:with-package[name="cl-waffe"](
 @cl:doc(function !add)
+@cl:doc(function !!add)
 )
 @end(section)
 
@@ -188,6 +189,7 @@
 @title(!sub)
 @cl:with-package[name="cl-waffe"](
 @cl:doc(function !sub)
+@cl:doc(function !!sub)
 )
 @end(section)
 
@@ -195,6 +197,7 @@
 @title(!mul)
 @cl:with-package[name="cl-waffe"](
 @cl:doc(function !mul)
+@cl:doc(function !!mul)
 )
 @end(section)
 
@@ -202,6 +205,7 @@
 @title(!div)
 @cl:with-package[name="cl-waffe"](
 @cl:doc(function !div)
+@cl:doc(function !!div)
 )
 @end(section)
 

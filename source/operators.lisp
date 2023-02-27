@@ -56,10 +56,17 @@
        (values x y))
       ((> dims-x dims-y)
        (let ((count (- dims-x dims-y)))
-	 (values x (!unsqueeze y 0 count))))
+	 (!allow-destruct y)
+	 (values x (prog1
+		       (!unsqueeze y 0 count)
+		     (!disallow-destruct y)))))
       ((> dims-y dims-x)
        (let ((count (- dims-y dims-x)))
-	 (values (!unsqueeze x 0 count) y))))))
+	 (!allow-destruct x)
+	 (values (prog1
+		     (!unsqueeze x 0 count)
+		   (!disallow-destruct x))
+		 y))))))
 
 (defun same-shape-p (x y)
   (declare (optimize (speed 3))
@@ -108,33 +115,33 @@
   :backward ((dy) (list (!mul (self yi) dy)
 			(!mul (self xi) dy))))
 
-(defnode BroadCastingAddTensor nil
+(defnode BroadCastingAddTensor (&optional (output nil) (overwrite nil))
   :optimize t
-  :parameters ((dims-to-sum nil))
+  :parameters ((dims-to-sum nil) (output output) (overwrite overwrite))
   :forward  ((x y)
 	     (let ((dims-to-sum (broadcasting x y)))
 	       (setf (self dims-to-sum) dims-to-sum)
-	       (with-searching-calc-node :add x y)))
+	       (k-> :add (self output) (self overwrite) x y)))
   :backward ((dy) (sumup-broadcasted (self dims-to-sum) dy dy)))
 
-(defnode BroadCastingSubTensor nil
+(defnode BroadCastingSubTensor (&optional (output nil) (overwrite nil))
   :optimize t
-  :parameters ((dims-to-sum nil))
+  :parameters ((dims-to-sum nil) (output output) (overwrite overwrite))
   :forward ((x y)
 	    (let ((dims-to-sum (broadcasting x y)))
 	      (setf (self dims-to-sum) dims-to-sum)
-	      (with-searching-calc-node :sub x y)))
+	      (k-> :sub (self output) (self overwrite) x y)))
   :backward ((dy) (sumup-broadcasted (self dims-to-sum) dy (!mul dy (const -1)))))
 
-(defnode BroadCastingMulTensor nil
+(defnode BroadCastingMulTensor (&optional (output nil) (overwrite nil))
   :optimize t
-  :parameters ((xi T) (yi T) (dims-to-sum nil))
+  :parameters ((xi T) (yi T) (dims-to-sum nil) (output output) (overwrite overwrite))
   :forward ((x y)
 	    (let ((dims-to-sum (broadcasting x y)))
 	      (setf (self dims-to-sum) dims-to-sum)
 	      (save-for-backward xi x)
 	      (save-for-backward yi y)
-	      (with-searching-calc-node :mul x y)))
+	      (k-> :mul (self output) (self overwrite) x y)))
   :backward ((dy) (sumup-broadcasted (self dims-to-sum)
 				     (!mul (self yi) dy)
 				     (!mul (self xi) dy))))
@@ -392,6 +399,8 @@
 
 In the case when x or y is not a tensor, automatically creates a new tensor.
 
+Destructive mode: (!!add x y)
+
 It supports:
 
 @begin(enum)
@@ -572,6 +581,20 @@ It supports:
 "
   (!mul x (!div-old 1 y)))
 
+(defun !!div (target-x target-y)
+    "Divides target-x by target-y in a destructive way.
+
+target-x and target-y are always substituted for the result
+
+See also: @link[uri=\"./using-tensor.html#compute-tensors-in-a-destructive-way\"](Destructive Operations)"
+  (let ((target-x (assure-tensor target-x))
+	(target-y (assure-tensor target-y)))
+    (!allow-destruct target-x)
+    (!allow-destruct target-y)
+    (!!mul target-x (!div-old 1 target-y))))
+
+(defun !!inv () "Todo")
+
 (defope !dot (DotProductTensor) node (x y)
     "Computes the dot product of x and y where x and y are 1d Tensor.
 
@@ -590,6 +613,60 @@ It supports:
 @end(section)
 "
   (call node (assure-tensor x) (assure-tensor y)))
+
+(defun !!add (target-x y)
+  "Adds target-x and y in a destructive way.
+
+target-x is always substituted for the result
+
+y is not subject to side effects unless target-x is not a mat.
+
+See also: @link[uri=\"./using-tensor.html#compute-tensors-in-a-destructive-way\"](Destructive Operations)"
+  (let ((x (assure-tensor target-x))
+	(y (assure-tensor y)))
+    (if (same-shape-p x y)
+	(call (AddTensor x t) x y)
+	(multiple-value-bind (x y) (straighten-up x y)
+	  (setf (waffetensor-is-next-destruct? x) t)
+	  (let ((result (call (BroadCastingAddTensor x t) x y)))
+	    (setf (data x) result)
+	    (the waffetensor result))))))
+
+(defun !!sub (target-x y)
+  "Substracts target-x by y in a destructive way.
+
+target-x is always substituted for the result.
+
+y is not subject to side effects unless target-x is not a mat.
+
+See also: @link[uri=\"./using-tensor.html#compute-tensors-in-a-destructive-way\"](Destructive Operations)"
+  (let ((x (assure-tensor target-x))
+	(y (assure-tensor y)))
+    (if (same-shape-p x y)
+	(call (SubTensor x t) x y)
+	(multiple-value-bind (x y) (straighten-up x y)
+	  (setf (waffetensor-is-next-destruct? x) t)
+	  (let ((result (call (BroadCastingSubTensor x t) x y)))
+	    (setf (data x) result)
+	    (the waffetensor result))))))
+
+(defun !!mul (target-x y)
+    "Multiplys target-x and y in a destructive way.
+
+target-x is always substituted for the result
+
+y is not subject to side effects unless target-x is not a mat.
+
+See also: @link[uri=\"./using-tensor.html#compute-tensors-in-a-destructive-way\"](Destructive Operations)"
+  (let ((x (assure-tensor target-x))
+	(y (assure-tensor y)))
+    (if (same-shape-p x y)
+	(call (MulTensor x t) x y)
+	(multiple-value-bind (x y) (straighten-up x y)
+	  (setf (waffetensor-is-next-destruct? x) t)
+	  (let ((result (call (BroadCastingMulTensor x t) x y)))
+	    (setf (data x) result)
+	    (the waffetensor result))))))
 
 (defun !sum-2d (x &optional (axis nil) (keepdims nil))
   (if (null axis)
@@ -620,7 +697,6 @@ For nd tensors...
 @def(keepdims)
 @term(When t, the returning tensor is repeated with @cl:param(axis))
 @end(deflist)
-
 @end(section)
 
 @begin(section)
@@ -705,8 +781,17 @@ For nd tensors...
 @end(section)"
   (call node (assure-tensor x) (assure-tensor n)))
 
+(defun !!pow (target-x n)
+  "Takes the power of each element in @cl:param(x) with n.
+
+target-x is destructed."
+
+  (let ((target-x (assure-tensor target-x)))
+    (!allow-destruct target-x)
+    (!pow target-x n)))
+
 (defope !sqrt (SqrtTensor) node (x)
-    "Takes the power of eachelement in @cl:param(x) with 1/2, creating new sysconst and nodes.
+    "Takes the power of each element in @cl:param(x) with 1/2, creating new sysconst and nodes.
 
 @begin(section)
 @title(Example)
@@ -719,6 +804,14 @@ For nd tensors...
 @end[lang=lisp](code)
 @end(section)"
   (call node (assure-tensor x)))
+
+(defun !!sqrt (target-x)
+  "Takes the power of each element in @cl:param(x) with 1/2.
+
+target-x is destructed."
+  (let ((target-x (assure-tensor target-x)))
+    (!allow-destruct target-x)
+    (!sqrt target-x)))
 
 (defope !log (LogTensor) node (x)
     "Returns a new tensor with the natural logarithm of the elements of input.
@@ -736,6 +829,12 @@ yi = log(e xi)
 @end[lang=lisp](code)
 @end(section)"
   (call node (assure-tensor x)))
+
+(defun !!log (target-x)
+  "Returns a modified tenssor with the natural logarithm of the elements of target-x"
+  (let ((target-x (assure-tensor target-x)))
+    (!allow-destruct target-x)
+    (!log target-x)))
 
 (defun !reshape (x dim)
   "Return a new sysconst with changing its shape. x won't be modified.
@@ -1055,6 +1154,12 @@ If the specified position of a tensor isn't one, !squeeze is skipped.
 @end(section)"
   
   (call node (assure-tensor x)))
+
+(defun !!exp (target-x)
+  "Applying !exp in a destructive way."
+  (let ((target-x (assure-tensor target-x)))
+    (!allow-destruct target-x)
+    (call (ExpTensor) target-x)))
 
 (defope !sin (SinTensor) node (x)
     "Applying sin to each element of x, creating a new sysconst.

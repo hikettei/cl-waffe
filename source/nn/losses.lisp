@@ -20,22 +20,37 @@
 (defun to-onehot (ps vec epsilon)
   "ps ... an tensor of possibilites, vec = labels epsilon=for smooth labeling."
   (declare (optimize (speed 3)))
-  (let ((result (!zeros (!shape ps))))
-    (loop for batch fixnum upfrom 0 below (!shape ps 0)
-	  do (loop for i fixnum upfrom 0 below (!shape ps 1)
-		   do (let ((classes (mat-labels
-				      ps
-				      (!aref vec batch i)
-				      epsilon)))
-			(setf (!aref result batch i) classes))))
-    result))
+  (with-no-grad
+    (let ((result (!zeros (!shape ps))))
+      (loop for batch fixnum upfrom 0 below (!shape ps 0)
+	    do (loop for i fixnum upfrom 0 below (!shape ps 1)
+		     do (let ((classes (mat-labels
+					ps
+					(!aref vec batch i)
+					epsilon)))
+			  (setf (!aref result batch i) classes))))
+    result)))
 
 (defun mse (p y)
-  "MSE Loss"
+  "Computes MSE Loss.
+
+mse is defined as (!mean (!pow (!sub p y) 2) 1)"
   (!mean (!pow (!sub p y) 2) 1))
 
 (defun cross-entropy (x y &optional (delta 1e-7) (epsilon 0.0))
-  "CrossEntropy Loss"
+  "This criterion computes the cross entropy loss between x and y.
+
+If epsilon is greater than 0.0, smooth-labeling is enabled.
+
+If avoid-overrflow is t, x is substracted by x's average in order to avoid overflowing.
+
+delta is the value used for (!log (!add x delta)).
+
+x is a probability distribution.
+
+y is a proablitity distribution or labels.
+
+If y is labels, y is fixed to a probability distribution."
   (declare (optimize (speed 3)))
   ; epsilon ... an parameter for label smoothing
   ; Regards Correct=1-epsilon, Incorrect=epsilon
@@ -70,7 +85,19 @@
 	       (list dx dx))))
 
 (defun softmax-cross-entropy (x y &key (avoid-overflow t) (delta 1e-7) (epsilon 0.0))
-  "This criterion computes the cross entropy loss between x and y."
+  "This criterion computes the softmax cross entropy loss between x and y.
+
+If epsilon is greater than 0.0, smooth-labeling is enabled.
+
+If avoid-overrflow is t, x is substracted by x's average in order to avoid overflowing.
+
+delta is the value used for (!log (!add x delta)).
+
+x is a probability distribution.
+
+y is a proablitity distribution or labels.
+
+If y is labels, y is fixed to a probability distribution."
   (if (> (!dims x) (!dims y))
       (call
        (SoftMaxCrossEntropy :avoid-overflow avoid-overflow :delta delta)

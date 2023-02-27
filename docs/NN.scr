@@ -86,6 +86,8 @@ Applies a linear transformation to the incoming data: @c((setq y (!add (!matmul 
 
 @begin(section)
 @title(Shape)
+@b(LinearLayer: (batch-size in-features) -> (batch-size out-features))
+
 @begin(deflist)
 
 @def(Input)
@@ -146,6 +148,9 @@ Calling LinearLayer, and activation specified in @cl:param(activation).
 
 @begin(section)
 @title(Shape)
+
+@b(DenseLayer: (batch-size in-features) -> (batch-size out-features))
+
 @begin(deflist)
 
 @def(Input)
@@ -181,16 +186,89 @@ Calling LinearLayer, and activation specified in @cl:param(activation).
 
 @begin(section)
 @title(Dropout)
-@cl:with-package[name="cl-waffe.nn"](
-@cl:doc(struct Dropout)
-)
+When *no-grad* is nil, dropout randomly zeroes some elements of the given tensor with sampling bernoulli tensor of @cl:param(dropout-rate).
+
+Futhermore, the outputs are scaled by (/ (- 1 (self dropout-rate))), (i.e.: This is a Inverted Dropout.). This means when *no-grad* is t (i.e.: during predicting) dropout simply returns the given tensor.
+
+@begin(section)
+@title(Parameters)
+@begin[lang=lisp](code)
+(dropout &optional (dropout-rate 0.5))
+@end[lang=lisp](code)
+
+@begin(deflist)
+@def(dropout-rate)
+@term(Dropout samples bernoulli distribution based on dropout-rate.)
+@end(deflist)
+@end(section)
+
+@begin(section)
+@title(Shape)
+
+@b(Dropout: (Any) -> (The same as a input))
+
+@begin(deflist)
+@def(Input)
+@term(Any is OK)
+@def(Output)
+@term(The same as given input's shape.)
+@end(deflist)
+@end(section)
+
+@begin(section)
+@title(Forward)
+@begin[lang=lisp](code)
+(setq x (!randn `(10 10)))
+;#Const(((-0.59... -0.09... ~ 0.289... 0.390...)        
+;                 ...
+;        (1.447... 1.032... ~ -0.66... -0.55...)) :mgl t :shape (10 10))
+(call (Dropout 0.5) x)
+;#Const(((0.0 -0.19... ~ 0.0 0.0)        
+;                 ...
+;        (2.895... 2.064... ~ 0.0 -1.10...)) :mgl t :shape (10 10))
+@end[lang=lisp](code)
+@end(section)
 @end(section)
 
 @begin(section)
 @title(BatchNorm2d)
-@cl:with-package[name="cl-waffe.nn"](
-@cl:doc(struct BatchNorm2d)
-)
+
+Applies BatchNorm2D.
+
+@begin(section)
+@title(Parameters)
+@begin[lang=lisp](code)
+(BatchNorm2D in-features &key (affine t) (epsilon 1.0e-7))
+@end[lang=lisp](code)
+
+@begin(deflist)
+@def(in-features)
+@term(an excepted input of size)
+@def(affine)
+@term(if t, the model has trainable affine layers.)
+@def(epsilon)
+@term(the value used to the denominator for numerical stability. Default: 1.0e-7)
+@end(deflist)
+@end(section)
+
+@begin(section)
+@title(Shape)
+@begin[lang=lisp](code)
+(call (BatchNorm2D) x)
+@end[lang=lisp](code)
+
+@b(BatchNorm2D : (any, in-feature) -> (the same as input of shape))
+
+@end(section)
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+(setq model (BatchNorm2D 10))
+(call model (!randn `(30 10)))
+@end[lang=lisp](code)
+
+@end(section)
 @end(section)
 
 @begin(section)
@@ -201,16 +279,123 @@ Calling LinearLayer, and activation specified in @cl:param(activation).
 
 @begin(section)
 @title(Embedding)
-@cl:with-package[name="cl-waffe.nn"](
-@cl:doc(struct Embedding)
-)
+A simple lookup table object to store embedding vectors for NLP Models.
+
+@begin(section)
+@title(Parameter)
+@begin[lang=lisp](code)
+(Embedding vocab-size embedding-ize &key pad-idx)
+@end[lang=lisp](code)
+@begin(deflist)
+@def(vocab-size)
+@term((fixnum) size of the dictionary of embeddings)
+@def(embedding-size)
+@term((fixnum) the size of each embedding tensor)
+@def(pad-idx)
+@term(If specified, the entries at padding_idx do not contribute to the gradient. If nil, ignored.)
+@end(deflist)
 @end(section)
 
 @begin(section)
+@title(Shape)
+@begin[lang=lisp](code)
+(call (Embedding 10 10) x)
+@end[lang=lisp](code)
+@b(Embedding: (batch-size sentence-length) -> (batch-size sentence-len embedding-dim))
+
+@begin(deflist)
+@def(x)
+@term(input x, where each element are single-float (like 1.0, 2.0 ...))
+@end(deflist)
+@end(section)
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+(setq model (cl-waffe.nn:Embedding 10 20))
+
+(call model (!ones `(1 10)))
+#Const((((-0.01... -0.01... ~ 0.013... 0.002...)         
+                   ...
+         (-0.01... -0.01... ~ 0.013... 0.002...))) :mgl t :shape (1 10 20))
+@end[lang=lisp](code)
+@end(section)
+@end(section)
+
+
+@begin(section)
 @title(RNN)
-@cl:with-package[name="cl-waffe.nn"](
-@cl:doc(struct RNN)
-)
+Applies a multi-layer RNN with tanh or ReLU.
+
+⚠️: RNN has performance problems when backward.
+
+The assumption is that (setf !aref)'s backward contributes to it.
+
+@begin(section)
+@title(Parameters)
+@begin[lang=lisp](code)
+(RNN input-size hidden-size &key (num-layers 1) (activation :tanh) (bias t) (dropout nil) (biredical nil))
+@end[lang=lisp](code)
+
+@begin(deflist)
+@def(input-size)
+@term(The number of excepted features of x)
+
+@def(hidden-size)
+@term(The number of features in hidden-layer)
+
+@def(num-layers)
+@term(Number of reccurent layers)
+
+@def(activation)
+@term(Can be either :tanh or :relu)
+
+@def(bias)
+@term((boolean) If t, the model has a trainable bias.)
+
+@def(dropout)
+@term((boolean) If t, the model has a dropout layer.)
+
+@def(biredical)
+@term((boolean) If t, the model become a biredical RNN)
+@end(deflist)
+@end(section)
+
+@begin(section)
+@title(Shape)
+@begin[lang=lisp](code)
+(call (RNN 10 10) x &optional (hs nil))
+@end[lang=lisp](code)
+@b(RNN : (batch-size sentence-length input-size) -> (batch-size sentence-length hidden-size))
+
+@begin(deflist)
+@def(x)
+@term(the input x where the shape is (batch-size sentence-length input-size))
+@def(hs)
+@term(The last hidden-state. if nil, the model creates a new one.)
+@end(deflist)
+@end(section)
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+(setq model (RNN 10 20))
+(setq embedding (Embedding 10 10))
+(call model
+  (call embedding (!one `(10 10))))
+
+;#Const((((-1.46... -1.46... ~ -5.53... 1.766...)         
+;                   ...
+;         (-1.46... -1.46... ~ -5.53... 1.766...))        
+;                 ...
+;        ((-1.46... -1.46... ~ -5.53... 1.766...)         
+;                   ...
+;         (-1.46... -1.46... ~ -5.53... 1.766...))) :mgl t :shape (10 10 20))
+  
+@end[lang=lisp](code)
+@end(section)
+
+
 @end(section)
 
 @begin(section)

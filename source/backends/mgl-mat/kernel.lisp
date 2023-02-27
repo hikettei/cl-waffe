@@ -6,6 +6,9 @@
 (defmacro will-be-destructed (tensor)
   `(waffetensor-thread-data ,tensor))
 
+(defmacro wanted-to-be-destructed? (tensor)
+  (cl-waffe::waffetensor-is-next-destruct? tensor))
+
 (defun create-thread-idx (thread-info &optional (ident ""))
   "Thread format: <Thread_IDx>+<Count_N>"
   (if thread-info
@@ -131,10 +134,10 @@
     (T (error "applying: function is following :+ :- :* ~a" function))))
 
 (defun broadcasting-apply (function x y)
-  (declare (optimize (speed 3)); (safety 0))
+  (declare (optimize (speed 3) (safety 0))
 	   (type symbol function)
 	   (type waffetensor x y))
-					; assume that (!dims x) == (!dims y)
+  ; assume that (!dims x) == (!dims y)
 
   (unless (= (!dims x) (!dims y))
     (error "KernelError: Can't broadcasting ~a and ~a" x y))
@@ -161,23 +164,18 @@
       (labels ((get-index (tensor index)
 		 (declare (optimize (speed 3) (safety 0))
 			  (inline get-difference))
-		 (the fixnum (get-difference (data tensor) index)))
+		 (get-difference (data tensor) index))
 	       (next (index
-		      &optional
-			(aref-args1 nil)
-			(aref-args2 nil)
-			(aref-args3 nil)
-			(first-index-x 0)
-			(first-index-y 0)
-			(first-index-o 0))
+		      first-index-x
+		      first-index-y
+		      first-index-o)
 		 (declare
-		  (optimize (speed 3))
-		  (type fixnum index first-index-x first-index-y first-index-o)
-		  (inline aref applying))
+		  (optimize (speed 3) (safety 0))
+		  (type fixnum index first-index-x first-index-y first-index-o))
 		 (let ((bx (car (nth index dims)))
 		       (by (second (nth index dims))))
 		   (when (= index (1- (length dims)))
-					; dif=1
+		     ; dif=1
 		     (cond
 		       ((and (null bx) (null by))
 			(loop for i fixnum upfrom 0 below (the fixnum (!shape x index))
@@ -208,12 +206,9 @@
 		      (loop with x-dif fixnum = (get-index x index)
 			    with y-dif fixnum = (get-index y index)
 			    with o-dif fixnum = (get-index out index)
-			    for i fixnum upfrom 0 below (!shape x index)
+			    for i fixnum upfrom 0 below (the fixnum (!shape x index))
 			    do (next
 				   (1+ index)
-				   `(,@aref-args1 ,i)
-				   `(,@aref-args2 ,i)
-				   `(,@aref-args3 ,i)
 				   (+ first-index-x (the fixnum (* i x-dif)))
 				   (+ first-index-y (the fixnum (* i y-dif)))
 				   (+ first-index-o (the fixnum (* i o-dif))))))
@@ -224,9 +219,6 @@
 			    for i fixnum upfrom 0 below by
 			    do (next
 				(1+ index)
-				`(,@aref-args1 ,i)
-				`(,@aref-args2 0)
-				`(,@aref-args3 ,i)
 				(+ first-index-x (the fixnum (* i x-dif)))
 				first-index-y
 				(+ first-index-o (the fixnum (* i o-dif))))))
@@ -237,15 +229,12 @@
 			    for i fixnum upfrom 0 below bx
 			    do (next
 				(1+ index)
-				`(,@aref-args1 0)
-				`(,@aref-args2 ,i)
-				`(,@aref-args3 ,i)
 				first-index-x
 				(+ first-index-y (the fixnum (* i y-dif)))
 				(+ first-index-o (the fixnum (* i o-dif))))))
 		     (T nil)))
 		 nil))
-	(next 0))
+	(next 0 0 0 0))
       (data out))))
 
 (defparameter *v2v-operations* `(:add :sub :mul :div :dot :matmul))
@@ -356,17 +345,18 @@
 	  ,(car args)
 	  (list ,@(cdr args))))
      
-					; if jit triggered, the form below never called.
+     ; if jit triggered, the form below never called.
 
      (macrolet ((get-out-buffer (tensor &key (copy nil))
-		  `(if overwrite
-		       (value ,tensor)
-		       (if output
-			    (if ,copy
-		 	   (copy! (value ,tensor) output)
-			   output)
-			    (decide-out-buffer
-			     ,tensor (value ,tensor) enable-optimize? ,copy)))))
+		  `(cond
+		     (overwrite (value ,tensor))
+		     (output
+		      (if ,copy
+			  (copy! (value ,tensor) output))
+		      output)
+		     ((cl-waffe::waffetensor-is-next-destruct? ,tensor)
+		      (value ,tensor))
+		     (T (decide-out-buffer ,tensor (value ,tensor) enable-optimize? ,copy)))))
        
        (let (,@(map 'list (lambda (target val)
 			    `(,target (value ,val)))
@@ -407,15 +397,15 @@
 		  ((will-be-destructed x)
 		   (let ((o (get-out-buffer x :copy t)))
 		     (axpy! 1.0 y1 o)))
-		  ((will-be-destructed y)
-		   (axpy! 1.0 x1 (get-out-buffer y :copy t)))
+		  ;((will-be-destructed y)
+		   ;(axpy! 1.0 x1 (get-out-buffer y :copy t)))
 		  (T (axpy! 1.0 y1 (get-out-buffer x :copy t))))
 		(broadcasting-apply :+ x y))))
 
 (define-waffe-kernel kernel-sub (x y) (x1 y1)
   :jit -
   :mat-scal ((let ((o (get-out-buffer x :copy t)))
-	       (.+! (the single-float (* -1.0 y1))
+	       (.+! (the single-float (* -1.0 (the single-float y1)))
 		    o)))
   :scal-mat ((let ((o (get-out-buffer y :copy t)))
 	       (.+! x1
@@ -425,8 +415,8 @@
 		  ((will-be-destructed x)
 		   (let ((o (get-out-buffer x :copy t)))
 		     (axpy! -1.0 y1 o)))
-		  ((will-be-destructed y)
-		   (axpy! 1.0 x1 (scal! -1.0 (get-out-buffer y :copy t))))
+		  ;((will-be-destructed y)
+		  ; (axpy! 1.0 x1 (scal! -1.0 (get-out-buffer y :copy t))))
 		  (T (axpy! -1.0 y1 (get-out-buffer x :copy t))))
 		(broadcasting-apply :- x y))))
 
@@ -441,8 +431,8 @@
 		  ((will-be-destructed x)
 		   (let ((o (get-out-buffer x :copy nil)))
 		     (geem! 1.0 x1 y1 0.0 o)))
-		  ((will-be-destructed y)
-		   (geem! 1.0 x1 y1 0.0 (get-out-buffer y :copy nil)))
+		  ;((will-be-destructed y)
+		  ; (geem! 1.0 x1 y1 0.0 (get-out-buffer y :copy nil)))
 		  (T (geem! 1.0 x1 y1 0.0 (get-out-buffer x :copy nil))))
 		(broadcasting-apply :* x y))))
 
@@ -774,7 +764,6 @@
 		    do (setf (aref r i) (atanh (aref r i))))
 	      r)))
 
-
 (defun compare-tensor (enable-optim out x y)
   (declare (optimize (speed 3) (space 0) (safety 1))
 	   (type boolean enable-optim)
@@ -854,6 +843,8 @@
 	      ((not (null output))
 	       output)
 	      (overwrite
+	       (value x))
+	      ((cl-waffe::waffetensor-is-next-destruct? x)
 	       (value x))
 	      (T
 	       (decide-out-buffer out (value x) enable-optimize t)))))
