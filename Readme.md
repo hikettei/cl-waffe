@@ -5,13 +5,15 @@
 
 **This package is still under development, and its features are far from practical.**
 
-cl-waffe is a deep learning framework for Common Lisp.
+cl-waffe is a deep learning framework with modern APIs for Common Lisp.
 
 # Documents
 
 [Documentation](https://hikettei.github.io/cl-waffe-docs) is available.
 
 # MNIST Example
+
+See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/mnist-tutorial.html)
 
 ```lisp
 ; full code is in examples/mnist.lisp
