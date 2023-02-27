@@ -259,7 +259,7 @@ Todo: currently, it returns error.
 @end(deflist)"
   (call (SoftMaxNode avoid-overflow) x))
 
-					; Todo :docstring
+; Todo :docstring
 (defmodel model-list (model-list)
   :document (with-usage "model-list"
 	      :overview "define model sequentially, (e.g. x = (sequence `((layer1) (layer2))), (call x 1 tensor) => layer1's output)"
