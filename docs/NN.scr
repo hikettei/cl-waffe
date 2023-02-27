@@ -254,14 +254,38 @@ A simple lookup table object to store embedding vectors for NLP Models.
 @end[lang=lisp](code)
 @begin(deflist)
 @def(vocab-size)
-@term(A)
+@term((fixnum) size of the dictionary of embeddings)
 @def(embedding-size)
-@term(A)
+@term((fixnum) the size of each embedding tensor)
 @def(pad-idx)
-@term(A)
+@term(If specified, the entries at padding_idx do not contribute to the gradient. If nil, ignored.)
 @end(deflist)
 @end(section)
 
+@begin(section)
+@title(Shape)
+@begin[lang=lisp](code)
+(call (Embedding 10 10) x)
+@end[lang=lisp](code)
+@b(Embedding: (batch-size sentence-length) -> (batch-size sentence-len embedding-dim))
+
+@begin(deflist)
+@def(x)
+@term(input x, where each element are single-float (like 1.0, 2.0 ...))
+@end(deflist)
+@end(section)
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+(setq model (cl-waffe.nn:Embedding 10 20))
+
+(call model (!ones `(1 10)))
+#Const((((-0.01... -0.01... ~ 0.013... 0.002...)         
+                   ...
+         (-0.01... -0.01... ~ 0.013... 0.002...))) :mgl t :shape (1 10 20))
+@end[lang=lisp](code)
+@end(section)
 
 @end(section)
 
