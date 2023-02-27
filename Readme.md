@@ -14,7 +14,6 @@ cl-waffe is a deep learning framework for Common Lisp.
 # MNIST Example
 
 ```lisp
-
 ; full code is in examples/mnist.lisp
 
 
@@ -64,7 +63,145 @@ cl-waffe is a deep learning framework for Common Lisp.
 
 # Features
 
-Full Version is Coming soon...
+As of this writing:
+
+## Broadcasting Matrix.
+
+See also:
+
+```lisp
+(setq a (!randn `(100 100 100)))
+(setq b (!randn `(100 1 100)))
+
+(time (!add a b))
+;Evaluation took:
+;  0.007 seconds of real time
+;  0.006872 seconds of total run time (0.006766 user, 0.000106 system)
+;  100.00% CPU
+;  16,330,130 processor cycles
+;  4,065,280 bytes consed
+  
+;#Const((((-1.65... 0.359... ~ -1.04... -1.63...)         
+;                   ...
+;         (0.172... 0.716... ~ -1.21... -0.18...))        
+;                 ...
+;        ((3.434... 0.050... ~ -0.65... 0.924...)         
+;                   ...
+;         (3.686... -1.60... ~ -0.31... 1.250...))) :mgl t :shape (100 100 100))
+```
+
+## Destructive APIs with a Simple Rule.
+
+See also:
+
+```lisp
+(setq a (!randn `(100 100 100)))
+(setq b (!randn `(100 100 100)))
+
+(time (!!add a b))
+;Evaluation took:
+;  0.000 seconds of real time
+;  0.000662 seconds of total run time (0.000605 user, 0.000057 system)
+;  100.00% CPU
+;  1,422,578 processor cycles
+;  0 bytes consed
+  
+;#Const((((-1.47... 1.016... ~ -1.29... -1.71...)         
+;                   ...
+;         (2.276... 0.878... ~ -1.35... 0.466...))        
+;                 ...
+;        ((1.712... 1.318... ~ 0.213... 1.262...)         
+;                   ...
+;         (1.084... -0.18... ~ -1.42... 0.552...))) :mgl t :shape (100 100 100))
+```
+
+## Useful APIs like Numpy/PyTorch.
+
+See also:
+
+```
+(setq a (!randn `(100 100 100)))
+;#Const((((-1.47... 1.016... ~ -1.29... -1.71...)         
+;                   ...
+;         (2.276... 0.878... ~ -1.35... 0.466...))        
+;                 ...
+;        ((1.712... 1.318... ~ 0.213... 1.262...)         
+;                   ...
+;         (1.084... -0.18... ~ -1.42... 0.552...))) :mgl t :shape (100 100 100))
+
+(time (!aref a 0 0 0))
+;Evaluation took:
+;  0.000 seconds of real time
+;  0.000140 seconds of total run time (0.000113 user, 0.000027 system)
+;  100.00% CPU
+;  217,178 processor cycles
+;  0 bytes consed
+  
+;#Const((((-1.47...))) :mgl t :shape (1 1 1))
+
+(time (!aref a t 0 0))
+;Evaluation took:
+;  0.000 seconds of real time
+;  0.000153 seconds of total run time (0.000132 user, 0.000021 system)
+;  100.00% CPU
+;  275,596 processor cycles
+;  65,024 bytes consed
+  
+;#Const((((-1.47...))        
+;                 ...
+;        ((1.712...))) :mgl t :shape (100 1 1))
+
+(time (!aref a '(0 3) '(10 -1) t))
+
+;Evaluation took:
+;  0.004 seconds of real time
+;  0.004643 seconds of total run time (0.004562 user, 0.000081 system)
+;  125.00% CPU
+;  11,068,610 processor cycles
+;  4,346,976 bytes consed
+  
+;#Const((((1.400... -0.64... ~ -0.48... 2.753...)         
+;                   ...
+;         (-0.07... 1.025... ~ 0.765... 0.371...))        
+;                 ...
+;        ((-0.47... 0.320... ~ 1.465... 1.738...)         
+;                   ...
+;         (1.566... -2.02... ~ -0.30... 0.085...))) :mgl t :shape (3 89 100))
+
+(time (setf (!aref a '(0 3)) (!ones '(100 3))))
+
+(setq a (parameter (!randn `(10 10))))
+(setq b (parameter (!randn `(10 10))))
+(setq c (parameter (!randn `(10))))
+
+
+(setq z (!sum (!add (!mul a b) c)))
+
+(time (backward z))
+;Evaluation took:
+;  0.001 seconds of real time
+;  0.001469 seconds of total run time (0.001344 user, 0.000125 system)
+;  100.00% CPU
+;  3,239,008 processor cycles
+;  130,048 bytes consed
+  
+;NIL
+
+(print (const (grad a)))
+;#Const(((0.004... -0.00... ~ 0.004... 5.721...)
+;                 ...
+;        (0.001... 5.919... ~ 7.748... -0.00...)) :mgl t :shape (10 10))
+(print (const (grad b)))
+;#Const(((0.004... -0.00... ~ 0.004... 5.721...)
+;                 ...
+;        (0.001... 5.919... ~ 7.748... -0.00...)) :mgl t :shape (10 10))
+(print (const (grad c)))
+;#Const((0.01 0.01 ~ 0.01 0.01) :mgl t :shape (10))
+```
+
+## Extensible APIs
+
+See also:
 
 As you can see from `./source/optimizers/optimizers.lisp`, or `./source/operators.lisp`,  the features like `defnode`, `defoptimizer` is exported for users.
 Here's examples.
@@ -93,6 +230,18 @@ Here's examples.
 	     (copy! (data (!sub (gethash i (self params))
 					   (!mul (self lr) (grad (gethash i (self params))))))
 			  (data (gethash i (self params)))))))
+```
+
+# Usage
+
+For example:
+
+```
+$ git clone git@github.com:hikettei/cl-waffe.git
+$ cd cl-waffe
+$ sbcl
+* (load "cl-waffe.asd")
+* (ql:quickload :cl-waffe) ; all is done!
 ```
 
 # Run MNIST With Roswell
