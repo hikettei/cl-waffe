@@ -86,6 +86,8 @@ Applies a linear transformation to the incoming data: @c((setq y (!add (!matmul 
 
 @begin(section)
 @title(Shape)
+@b(LinearLayer: (batch-size in-features) -> (batch-size out-features))
+
 @begin(deflist)
 
 @def(Input)
@@ -146,6 +148,9 @@ Calling LinearLayer, and activation specified in @cl:param(activation).
 
 @begin(section)
 @title(Shape)
+
+@b(DenseLayer: (batch-size in-features) -> (batch-size out-features))
+
 @begin(deflist)
 
 @def(Input)
@@ -199,6 +204,9 @@ Futhermore, the outputs are scaled by (/ (- 1 (self dropout-rate))), (i.e.: This
 
 @begin(section)
 @title(Shape)
+
+@b(Dropout: (Any) -> (The same as a input))
+
 @begin(deflist)
 @def(Input)
 @term(Any is OK)
@@ -224,9 +232,9 @@ Futhermore, the outputs are scaled by (/ (- 1 (self dropout-rate))), (i.e.: This
 
 @begin(section)
 @title(BatchNorm2d)
-@cl:with-package[name="cl-waffe.nn"](
-@cl:doc(struct BatchNorm2d)
-)
+
+BatchNorm2D
+
 @end(section)
 
 @begin(section)
@@ -257,18 +265,12 @@ A simple lookup table object to store embedding vectors for NLP Models.
 
 @end(section)
 
-@begin(section)
-@title(Embedding)
-@cl:with-package[name="cl-waffe.nn"](
-@cl:doc(struct Embedding)
-)
-@end(section)
 
 @begin(section)
 @title(RNN)
-@cl:with-package[name="cl-waffe.nn"](
-@cl:doc(struct RNN)
-)
+
+RNN
+
 @end(section)
 
 @begin(section)
