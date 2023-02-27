@@ -325,8 +325,76 @@ A simple lookup table object to store embedding vectors for NLP Models.
 
 @begin(section)
 @title(RNN)
+Applies a multi-layer RNN with tanh or ReLU.
 
-RNN
+⚠️: RNN has performance problems when backward.
+
+The assumption is that (setf !aref)'s backward contributes to it.
+
+@begin(section)
+@title(Parameters)
+@begin[lang=lisp](code)
+(RNN input-size hidden-size &key (num-layers 1) (activation :tanh) (bias t) (dropout nil) (biredical nil))
+@end[lang=lisp](code)
+
+@begin(deflist)
+@def(input-size)
+@term(The number of excepted features of x)
+
+@def(hidden-size)
+@term(The number of features in hidden-layer)
+
+@def(num-layers)
+@term(Number of reccurent layers)
+
+@def(activation)
+@term(Can be either :tanh or :relu)
+
+@def(bias)
+@term((boolean) If t, the model has a trainable bias.)
+
+@def(dropout)
+@term((boolean) If t, the model has a dropout layer.)
+
+@def(biredical)
+@term((boolean) If t, the model become a biredical RNN)
+@end(deflist)
+@end(section)
+
+@begin(section)
+@title(Shape)
+@begin[lang=lisp](code)
+(call (RNN 10 10) x &optional (hs nil))
+@end[lang=lisp](code)
+@b(RNN : (batch-size sentence-length input-size) -> (batch-size sentence-length hidden-size))
+
+@begin(deflist)
+@def(x)
+@term(the input x where the shape is (batch-size sentence-length input-size))
+@def(hs)
+@term(The last hidden-state. if nil, the model creates a new one.)
+@end(deflist)
+@end(section)
+
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+(setq model (RNN 10 20))
+(setq embedding (Embedding 10 10))
+(call model
+  (call embedding (!one `(10 10))))
+
+;#Const((((-1.46... -1.46... ~ -5.53... 1.766...)         
+;                   ...
+;         (-1.46... -1.46... ~ -5.53... 1.766...))        
+;                 ...
+;        ((-1.46... -1.46... ~ -5.53... 1.766...)         
+;                   ...
+;         (-1.46... -1.46... ~ -5.53... 1.766...))) :mgl t :shape (10 10 20))
+  
+@end[lang=lisp](code)
+@end(section)
+
 
 @end(section)
 
