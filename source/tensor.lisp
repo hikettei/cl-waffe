@@ -290,9 +290,103 @@ When the argument that you want to insert is a tensor, this function automatical
   (declare (ignore new-tensor old-tensor)))
 
 (defmacro !allow-destruct (tensor)
+  "Tensors which path through this macro are allowed to be destructed by cl-waffe's kernel.
+
+
+In default, cl-waffe's operators won't make side effects.
+@begin[lang=lisp](code)
+(setq a (!randn `(3 3)))
+
+;#Const(((0.811... -0.43... -0.91...)        
+;                 ...
+;        (0.959... -0.62... 1.150...)) :mgl t :shape (3 3))
+
+(!exp a)
+;#Const(((2.252... 0.645... 0.400...)        
+;                 ...
+;        (2.610... 0.534... 3.159...)) :mgl t :shape (3 3))
+
+(print a)
+;#Const(((0.811... -0.43... -0.91...)        
+;                 ...
+;        (0.959... -0.62... 1.150...)) :mgl t :shape (3 3))
+@end[lang=lisp](code)
+
+However, This macro let kernel know that the given tensor is allowed to destruct(i.e.: the result is overwritten)
+
+@begin[lang=lisp](code)
+(setq a (!randn `(3 3)))
+
+;#Const(((0.811... -0.43... -0.91...)        
+;                 ...
+;        (0.959... -0.62... 1.150...)) :mgl t :shape (3 3))
+
+(!allow-destruct a)
+; T
+
+(!exp a)
+;#Const(((2.252... 0.645... 0.400...)        
+;                 ...
+;        (2.610... 0.534... 3.159...)) :mgl t :shape (3 3))
+
+(print a) ; You can see the result is overwritten.
+;#Const(((2.252... 0.645... 0.400...)        
+;                 ...
+;        (2.610... 0.534... 3.159...)) :mgl t :shape (3 3))
+@end[lang=lisp](code)
+
+Avoiding copy, destructive operations are superior in terms of memory usage.
+
+@begin[lang=lisp](code)
+(setq a (!randn `(100 100)))
+
+(time (!exp a))
+;Evaluation took:
+;  0.000 seconds of real time
+;  0.000275 seconds of total run time (0.000219 user, 0.000056 system)
+;  100.00% CPU
+;  498,150 processor cycles
+;  31,264 bytes consed
+
+(!allow-destruct a)
+
+(time (!exp a))
+; Evaluation took:
+;  0.000 seconds of real time
+;  0.000178 seconds of total run time (0.000160 user, 0.000018 system)
+;  100.00% CPU
+;  273,646 processor cycles
+;  0 bytes consed 
+@end[lang=lisp](code)
+
+See also: !disallow-destruct which does the opposite.
+"
   `(setf (waffetensor-is-next-destruct? ,tensor) t))
 
 (defmacro !disallow-destruct (tensor)
+  "Tensors that path through this macro are not destructed.
+
+@begin[lang=lisp](code)
+(setq a (!randn `(3 3)))
+;#Const(((1.084... -1.10... 1.406...)        
+;                 ...
+;        (1.044... 0.059... -0.53...)) :mgl t :shape (3 3))
+
+(!allow-destruct a)
+; T
+(!disallow-destruct a)
+; NIL
+
+(!exp a)
+;#Const(((2.957... 0.329... 4.080...)        
+;                 ...
+;        (2.840... 1.060... 0.584...)) :mgl t :shape (3 3))
+
+(print a) ; a is kept remained.
+;#Const(((1.084... -1.10... 1.406...)        
+;                 ...
+;        (1.044... 0.059... -0.53...)) :mgl t :shape (3 3))
+@end[lang=lisp](code)"
   `(setf (waffetensor-is-next-destruct? ,tensor) nil))
 
 ; is-tensor

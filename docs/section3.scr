@@ -246,18 +246,6 @@ Lazy-Evaluation will be enabled when...
 @end(section)
 
 @begin(section)
-@title(Accessor)
-
-@cl:with-package[name="cl-waffe"](
-@cl:doc(function data)
-@cl:doc(macro grad)
-@cl:doc(function value)
-)
-
-
-@end(section)
-
-@begin(section)
 @title(Broadcasting)
 
 cl-waffe supports broadcasting tensors like Numpy.
@@ -557,5 +545,15 @@ Currently(2023/2/26), the benchmark is (added type declations):
 ;  92,326,496 bytes consed
 @end[lang=lisp](code)
 
+@begin(section)
+@title(Creating Destructive Operations)
+
+Using these macros below, you can inform cl-waffe's kernel of which tensors should be destructed.
+
+@cl:with-package[name="cl-waffe"](
+  @cl:doc(macro !allow-destruct)
+  @cl:doc(macro !disallow-destruct)
+)
+@end(section)
 @end(section)
 @end(section)
