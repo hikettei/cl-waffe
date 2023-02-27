@@ -188,7 +188,7 @@ Note that beta must begin given as a waffetensor.
 	   (setq result (setf (!aref result i)
 			      (!softmax-function (!squeeze (!aref x i) 0)))))
 	 result))
-    (T (error "!softmax: softmax only supports where (!dims tensor) <= 3."))))
+    (T (error "!softmax: Not implemented. softmax only supports where (!dims tensor) <= 3."))))
 
 (defmodel SoftMaxNode (avoid-overflow)
   :parameters ((avoid-overflow avoid-overflow))
@@ -222,7 +222,15 @@ Softmax is applied to dim=0
 @begin(term)
 Softmax is applied to dim=0
 @begin[lang=lisp](code)
+(setq a (!randn `(10 10)))
+;#Const(((-0.29... -1.99... ~ -0.36... 1.725...)        
+;                 ...
+;        (0.695... -0.94... ~ 1.179... 0.655...)) :mgl t :shape (10 10))
 
+(!softmax a)
+;#Const(((0.064... 0.011... ~ 0.060... 0.489...)        
+;                 ...
+;        (0.129... 0.024... ~ 0.209... 0.124...)) :mgl t :shape (10 10))
 @end[lang=lisp](code)
 @end(term)
 
