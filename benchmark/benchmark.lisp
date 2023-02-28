@@ -15,10 +15,15 @@
 
 (with-benchmark "2D_Sub"
   :cl-waffe (with-init-2d x y
-	      (dotimes (i *loop-n*)
-		(!sub x y))))
+	      (time (dotimes (i *loop-n*)
+		      (!sub x y))))
+  :mgl-mat (with-init-2d x y
+	     (time (dotimes (i *loop-n*)
+		     (with-init-2d-out o
+		       (axpy! -1.0 (data x) (data y))
+		       (copy! (data y) (data o)))))))
 
-(defun start-benchmark (&key (dim-n 1000) (loop-n 1000) (directory "AAA"))
+(defun start-benchmark (&key (dim-n 1000) (loop-n 1000) (directory "./benchmark/benchmark.md"))
   (format t "✅ Benchmarking :cl-waffe~%")
   (format t "✅ The number of benchmarks is : ~a~%" (length *benchmarks*))
   

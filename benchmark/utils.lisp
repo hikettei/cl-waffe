@@ -21,7 +21,6 @@ name must be given by string"
 
 (defvar *dim-n*)
 (defvar *loop-n*)
-(defvar *result*)
 
 (defmacro with-init-2d-out (o1  &body body)
   `(let ((,o1 (!ones `(,*dim-n* ,*dim-n*))))
@@ -63,21 +62,28 @@ name must be given by string"
 	       (main-name name))
       benchmark
 
-    (format t "~%🗒----Executing: ~a~%" main-name)
-    (format t "--------~a:" "cl-waffe")
-    (with-output-to-string (*trace-output*)
-      ; handling
-      (funcall main-operation))
+    (let ((results))
+      (format t "~%🗒----Executing: ~a~%" main-name)
+      (format t "--------~a:" "cl-waffe")
+      (let ((result
+	      (with-output-to-string (*trace-output*)
+	        ; Todo: error handling
+		(funcall main-operation))))
+	(if (equal result "")
+	    (format t " ❌ (time macro wasn't called.)~%")
+	    (progn
+	      (push `(,main-name ,result) results)
+	      (format t " OK~%"))))
 
-    (format t " OK~%")
-    
-    (dolist (op other-operations)
-      (format t "--------~a:" (car op))
-      (with-output-to-string (*trace-output*)
-	(funcall (second op)))
-
-      (format t " OK~%"))
-    
-    ; etc...
-    ))
+      (dolist (op other-operations)
+	(format t "--------~a:" (car op))
+	(let ((result (with-output-to-string (*trace-output*)
+			(funcall (cdr op)))))
+	  (if (equal result "")
+	      (format t " ❌ (time macro wasn't called.)~%")
+	      (progn
+		(push `(,(car op) ,result) results)
+		(format t " OK~%")))))
+      (add-result results)
+      nil)))
 

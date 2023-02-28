@@ -4,7 +4,7 @@
   :version nil
   :author "hikettei"
   :licence "MIT"
-  :depends-on (:cl-waffe :cl-cram)
+  :depends-on (:cl-waffe :cl-cram :cl-ppcre)
   :components ((:module "benchmark"
 		:components ((:file "package")
 			     (:file "utils")
