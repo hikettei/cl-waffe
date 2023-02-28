@@ -16,8 +16,8 @@
 	   #:*print-arr-max-size*
 	   #:*print-mat-max-size*
 
-	   #:!!allow-destruct
-	   #:!!disallow-destruct
+	   #:!allow-destruct
+	   #:!disallow-destruct
 
 	   ; Functions for using tensor's data
 	   #:warranty

@@ -1,7 +1,7 @@
 
 (in-package :cl-waffe.backends.mgl)
 
-					; Todo Rewrite with define-lisp-kernel
+; Todo Rewrite with define-lisp-kernel
 
 (defmacro will-be-destructed (tensor)
   `(waffetensor-thread-data ,tensor))
@@ -19,21 +19,25 @@
 	      :keyword)
       (gensym)))
 
-(defgeneric decide-out-buffer (out args enable-optim copy?))
-
-(defmethod decide-out-buffer ((out waffetensor)
-			      (args waffetensor)
-			      enable-optim
-			      copy?)
-  (declare (optimize (speed 3) (space 0) (safety 0)))
-  (let ((args (value out)))
-    (decide-out-buffer out args enable-optim copy?)))
-
-(defmethod decide-out-buffer ((out waffetensor)
-			      (args mgl-mat:mat)
-			      enable-optim
-			      copy?)
-  (declare (optimize (speed 3) (space 0)))
+(defun decide-out-buffer (out args enable-optim copy?)
+  (declare (optimize (speed 3) (safety 0))
+	   (inline decide-out-buffer2
+		   decide-out-buffer3))
+  (let ((args (if (typep args 'waffetensor)
+		  args
+		  (sysconst args))))
+    (value args)
+    (if (null out)
+	(decide-out-buffer3 out (data args) enable-optim copy?)
+	(typecase args
+	  (waffetensor
+	   (decide-out-buffer2 out (data args) enable-optim copy?))))))
+     
+(defun decide-out-buffer2 (out
+			   args
+			   enable-optim
+			   copy?)
+  (declare (optimize (speed 3) (safety 0)))
   (if (not (null (waffetensor-thread-data out)))
       (let* ((thread-info (waffetensor-thread-data out))
 	     (idx (create-thread-idx thread-info)))
@@ -42,49 +46,17 @@
 	  result))
       (decide-out-buffer nil args enable-optim copy?)))
 
-(defmethod decide-out-buffer ((out waffetensor)
-			      (args function)
-			      enable-optim
-			      copy?)
-  (declare (optimize (speed 3) (space 0)))
-  (let* ((args (value out)))
-    (if (not (null (waffetensor-thread-data out)))
-	(let* ((thread-info (waffetensor-thread-data out))
-	       (idx (create-thread-idx thread-info)))
-	  (value out)
-	  (with-cache (result out :place idx :copy copy?)
-	    result))
-	(decide-out-buffer nil args enable-optim copy?))))
-
-(defmethod decide-out-buffer ((out null)
-			      (args waffetensor)
-			      enable-optim
-			      copy?)
-  (declare (optimize (speed 3) (space 0) (safety 0)))
-  (decide-out-buffer out (value args) enable-optim copy?))
-
-(defmethod decide-out-buffer ((out null)
-			      (args mgl-mat:mat)
-			      enable-optim
-			      copy?)
-  (declare (optimize (speed 3) (space 0) (safety 0)))
+(defun decide-out-buffer3 (out
+			   args
+			   enable-optim
+			   copy?)
+  (declare (optimize (speed 3) (safety 0))
+	   (ignore out))
   (if enable-optim
       args
       (if copy?
 	  (copy-mat args)
 	  (make-mat (mat-dimensions args)))))
-
-(defmethod decide-out-buffer ((out null)
-			      (args function)
-			      enable-optim
-			      copy?)
-  (declare (optimize (speed 3) (space 0) (safety 0)))
-  (let* ((args (value (sysconst args))))
-    (if enable-optim
-	args
-	(if copy?
-	    (copy-mat args)
-	    (make-mat (mat-dimensions args))))))
 
 (declaim (ftype (function (mgl-mat:mat fixnum &key (:axis fixnum)) mgl-mat:mat) mgl-repeat))
 (defun mgl-repeat (tensor n &key axis)
@@ -338,7 +310,7 @@
 		  (type boolean enable-optimize? overwrite)
 		  (type waffetensor ,@args)))
      ,(unless (null jit)
-					; place jit trigger.
+	 ; place jit trigger.
 	`(return-and-lazy-eval
 	  ,name
 	  ',jit
@@ -773,12 +745,11 @@
     (mgl-mat:.<! (value y) o)))
 
 (defun sum-tensor (is-first-time-call? out x y)
-  (declare (optimize (speed 3) (space 0) (safety 1))
+  (declare (optimize (speed 3) (space 0) (safety 0))
            (type boolean is-first-time-call?)
            (type waffetensor out x y)
 	   (ignore is-first-time-call? out))
-
-					; Todo Optimize 
+  ; Todo Optimize 
 
   (warranty x)
   (warranty y)
@@ -786,21 +757,21 @@
   (value x)
   (value y)
   
-  (let* ((dims (mgl-mat:mat-dimensions (value x)))
+  (let* ((dims (mat-dimensions (data x)))
 	 (dims (if (and (= 1 (the fixnum (car (last dims))))
 			(= 3 (length dims)))
 		   (butlast dims)
 		   dims))
-	 (x1 (mgl-mat:reshape! (mgl-mat:copy-mat (value x)) dims))
+	 (x1 (value x))
 	 (dims (case (data y)
 		 (1 `(,@(list (car dims)) 1))
 		 (0 `(1 ,@(cdr dims)))
 		 (T (error "Sum only supports a 2d matrix")))))
-    (let ((o (mgl-mat:make-mat dims :initial-element 0)))
-      (mgl-mat:sum! x1 o :axis (data y) :beta 1)
+    (let ((o (mgl-mat:make-mat dims :initial-element 0.0)))
+      (mgl-mat:sum! x1 o :axis (data y) :beta 0.0)
       (mgl-mat:reshape! o dims)
       (if (equal dims `(1 1))
-	  (mgl-mat:mref o 0 0)
+	  (mat-as-scalar o)
 	  o))))
 
 (defun mean-tensor (is-first-time-call? out x y)

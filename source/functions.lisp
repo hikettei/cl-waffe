@@ -170,21 +170,23 @@ Note that beta must begin given as a waffetensor.
 (defun !average (x)
   (let ((z (!sum x 1))
 	(batch-size (!shape x 0)))
-    (!div z batch-size)))
+    (!div z batch-size))) ; slow?
 
 (defun !softmax-function (x &key (avoid-overflow t))
   "Applying softmax.
 
 !softmax has three behaivour depending on the number of dimensions."
+  (declare (optimize (speed 3))
+	   (type waffetensor x))
   (case (!dims x)
     (1 (!softmax-function (!unsqueeze x)))
     (2 (let* ((x1 (if avoid-overflow
 		      (!sub x (!average x))
 		      x))
-	      (z (!sum (!exp x1) 1 t)))
+	      (z (!sum (!exp x1) 1)))
 	 (!div (!exp x1) z)))
     (3 (let* ((result (!zeros (!shape x)))) ; For batched inputs
-	 (dotimes (i (!shape x 0))
+	 (dotimes (i (the fixnum (!shape x 0)))
 	   (setq result (setf (!aref result i)
 			      (!softmax-function (!squeeze (!aref x i) 0)))))
 	 result))
@@ -257,6 +259,7 @@ Todo: currently, it returns error.
 @end[lang=lisp](code)
 @end(term)
 @end(deflist)"
+  (declare (type waffetensor x))
   (call (SoftMaxNode avoid-overflow) x))
 
 ; Todo :docstring

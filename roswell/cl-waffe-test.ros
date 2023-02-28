@@ -20,5 +20,6 @@ exec ros -Q -- $0 "$@"
 
 (defun main (&rest argv)
   (declare (ignorable argv))
+  (format t "Testing cl-waffe-test...~%")
   (asdf:test-system :cl-waffe-test))
 ;;; vim: set ft=lisp lisp:
