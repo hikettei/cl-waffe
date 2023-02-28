@@ -1,0 +1,20 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#|
+exec ros -Q -- $0 "$@"
+|#
+(progn ;;init forms
+  (ros:ensure-asdf)
+  (load "cl-waffe.asd")
+  (load "cl-waffe-benchmark.asd")
+  #+quicklisp(ql:quickload '(:cl-waffe :cl-waffe-benchmark) :silent t)
+  )
+
+(defpackage :ros.script.cl-waffe-benchmark.3886546903
+  (:use :cl))
+(in-package :ros.script.cl-waffe-benchmark.3886546903)
+
+(defun main (&rest argv)
+  (declare (ignorable argv))
+  (cl-waffe-benchmark:start-benchmark))
+;;; vim: set ft=lisp lisp:

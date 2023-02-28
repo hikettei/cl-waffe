@@ -9,7 +9,7 @@
 (defsystem :cl-waffe-test
   :version nil
   :author "hikettei"
-  :licence nil
+  :licence "MIT"
   :depends-on (:cl-waffe :fiveam :cl-libsvm-format)
   :components ((:module "t" :components ((:file "package")
 					 (:file "utils")
