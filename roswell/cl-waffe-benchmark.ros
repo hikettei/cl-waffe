@@ -16,5 +16,11 @@ exec ros -Q -- $0 "$@"
 
 (defun main (&rest argv)
   (declare (ignorable argv))
-  (cl-waffe-benchmark:start-benchmark))
+  (case (car argv)
+    ("test"
+     (cl-waffe-benchmark:start-benchmark
+      :dim-n 10
+      :loop-n 1))
+    (T
+     (cl-waffe-benchmark:start-benchmark))))
 ;;; vim: set ft=lisp lisp:

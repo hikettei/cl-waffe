@@ -13,7 +13,7 @@
 
 (defun parse-result (result)
   (let ((parsed-result (cl-ppcre:split " " (car result))))
-    ; emmmm >< find another way and it depends on SBCL 
+    ; emmmm >< find another way, depending on SBCL 
     (values (read-from-string (nth 3 parsed-result))
 	    (read-from-string (remove #\comma (nth (- (length parsed-result) 5) parsed-result))))))
 

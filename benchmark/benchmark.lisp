@@ -197,7 +197,8 @@
 		   (with-init-2d-out o
 		     (softmax2 o)))))
 
-(defun start-benchmark (&key (dim-n 100) (loop-n 1000) (directory "./benchmark/benchmark.md") (speed-alert-min 1.5) (space-alert-min 1.5))
+
+(defun start-benchmark (&key (dim-n 100) (loop-n 10000) (directory "./benchmark/benchmark.md") (speed-alert-min 1.5) (space-alert-min 1.5))
   (format t "✅ Benchmarking :cl-waffe~%")
   (format t "✅ The number of benchmarks is : ~a~%" (length *benchmarks*))
   
