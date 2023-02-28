@@ -43,7 +43,7 @@
 		       (.inv! (data y))
 		       (geem! -1.0 (data x) (data y) 0.0 (data o)))))))
 
-(defun start-benchmark (&key (dim-n 1000) (loop-n 1000) (directory "./benchmark/benchmark.md"))
+(defun start-benchmark (&key (dim-n 1000) (loop-n 1000) (directory "./benchmark/benchmark.md") (speed-alert-min 1.5) (space-alert-min 1.5))
   (format t "✅ Benchmarking :cl-waffe~%")
   (format t "✅ The number of benchmarks is : ~a~%" (length *benchmarks*))
   
@@ -54,6 +54,8 @@
   (let ((*dim-n* dim-n)
 	(*loop-n* loop-n)
 	(*result*)
+	(*space-alert-min* space-alert-min)
+	(*speed-alert-min* speed-alert-min)
 	(*benchmarks* (reverse *benchmarks*)))
     (dotimes (i (length *benchmarks*))
       (execute-benchmark (nth i *benchmarks*))

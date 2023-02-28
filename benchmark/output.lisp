@@ -5,6 +5,9 @@
 
 (defvar *result*)
 
+(defvar *speed-alert-min* 1.5)
+(defvar *space-alert-min* 1.5)
+
 (defun add-result (result)
   (push result *result*))
 
@@ -34,7 +37,13 @@
 		  (parse-result (cdr r))
 
 		(format stream "~%### ~a ~%~%~a is:~%~%" (car r) (car r))
-		(format stream "Time: ~ax faster, (~as)~%~%" (coerce (/ original-time r-time) 'single-float) r-time)
-		(format stream "Total Consed: ~ax smaller, (~aMB)~%~%" (coerce (/ original-space r-space) 'single-float)
-			(coerce (/ r-space 1e6) 'single-float))))))))))
+
+		(let ((speed-rate (coerce (/ original-time r-time) 'single-float))
+		      (space-rate (coerce (/ original-space r-space) 'single-float)))
+		  (if (>= speed-rate *speed-alert-min*)
+		      (format stream "❗️**Time: ~ax faster, (~as)**~%~%" speed-rate r-time)
+		      (format stream "Time: ~ax faster, (~as)~%~%" speed-rate r-time))
+		  (if (>= space-rate *space-alert-min*)
+		      (format stream "❗️**Total Consed: ~ax smaller, (~aMB)**~%~%" space-rate (coerce (/ r-space 1e6) 'single-float))
+		      (format stream "Total Consed: ~ax smaller, (~aMB)~%~%" space-rate (coerce (/ r-space 1e6) 'single-float))))))))))))
 
