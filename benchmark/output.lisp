@@ -25,7 +25,7 @@
 	  (multiple-value-bind (original-time original-space)
 	      (parse-result (cdr cl-waffe-result))
 
-	    (format stream "~%# ~a ~%~%" (car cl-waffe-result))
+	    (format stream "~%# ~a ~%~%### cl-waffe~%~%" (car cl-waffe-result))
 	    (format stream "Time: ~as~%~%" original-time)
 	    (format stream "Total Consed: ~aMB~%~%" (coerce (/ original-space 1e6) 'single-float))
 
@@ -33,8 +33,8 @@
 	      (multiple-value-bind (r-time r-space)
 		  (parse-result (cdr r))
 
-		(format stream "~%### ~a ~%~%" (car r))
-		(format stream "Time: ~ax, ~as~%~%" (coerce (/ r-time original-time) 'single-float) r-time)
-		(format stream "Total Consed: ~ax, ~aMB~%~%" (coerce (/ r-space original-space) 'single-float)
+		(format stream "~%### ~a ~%~%~a is:~%~%" (car r) (car r))
+		(format stream "Time: ~ax faster, (~as)~%~%" (coerce (/ original-time r-time) 'single-float) r-time)
+		(format stream "Total Consed: ~ax smaller, (~aMB)~%~%" (coerce (/ original-space r-space) 'single-float)
 			(coerce (/ r-space 1e6) 'single-float))))))))))
 
