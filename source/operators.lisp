@@ -579,7 +579,9 @@ It supports:
 @end[lang=lisp](code)
 @end(section)
 "
-  (!mul x (!div-old 1 y)))
+  (let ((result (!div-old 1 y)))
+    (!allow-destruct result)
+    (!mul result x)))
 
 (defun !!div (target-x target-y)
     "Divides target-x by target-y in a destructive way.

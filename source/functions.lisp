@@ -170,7 +170,7 @@ Note that beta must begin given as a waffetensor.
 (defun !average (x)
   (let ((z (!sum x 1))
 	(batch-size (!shape x 0)))
-    (!div z batch-size)))
+    (!div z batch-size))) ; slow?
 
 (defun !softmax-function (x &key (avoid-overflow t))
   "Applying softmax.
