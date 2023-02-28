@@ -20,8 +20,11 @@ name must be given by string"
   (name "No Name" :type string))
 
 
-(defmacro with-benchmark (name &key cl-waffe)
-  `(register-to-benchmark ,name #'(lambda () ,cl-waffe) nil))
+(defmacro with-benchmark (name &key cl-waffe (mgl-mat nil))
+  `(register-to-benchmark ,name #'(lambda () ,cl-waffe)
+			  ,(if (null mgl-mat)
+			       nil
+			       `(list "MGL-MAT" #'(lambda () ,mgl-mat)))))
 
 (defun register-to-benchmark (name cl-waffe-operation other-operations)
   (declare (type string name)
@@ -33,12 +36,16 @@ name must be given by string"
 (defun execute-benchmark (benchmark)
   "Receiving benchmark structure, this function start benchmark following data with saving to specified file."
   (declare (type benchmarkset benchmark))
-  (with-slots ((main-operation cl-waffe-operations)
+  (with-slots ((main-operation cl-waffe-operation)
 	       (other-operations other-operations)
 	       (main-name name))
       benchmark
+
+    (funcall main-operation)
+
+    (dolist (op other-operations)
+      (funcall (second other-operations)))
     
-    (format t "--Executing ~a~%" main-name)
     ; etc...
     ))
 
