@@ -127,45 +127,6 @@ Note: this is not setfable"
 					     #'waffetensor-path-through-node?
 					     variables))))
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (unless *gendoc-mode*
-    (defgeneric invoke-kernel-inlined (kernel-function variables first-argument i output overwrite)
-      (:generic-function-class inlined-generic-function))
-    (defgeneric invoke-kernel-inlined (kernel-function variables first-argument i output overwrite))))
-
-(defmethod invoke-kernel-inlined ((kernel-function T)
-				  (variables list)
-				  (first-argument mgl-mat:mat)
-				  (i fixnum)
-				  output
-				  overwrite)
-  (invoke-mgl-kernel kernel-function variables :output output :overwrite overwrite))
-
-(defmethod invoke-kernel-inlined ((kernel-function T)
-				  (variables list)
-				  (first-argument function)
-				  (i fixnum)
-				  output
-				  overwrite)
-  (invoke-mgl-kernel kernel-function variables :output output :overwrite overwrite))
-
-(defmethod invoke-kernel-inlined ((kernel-function T)
-				  (variables list)
-				  (first-argument T)
-				  (i fixnum)
-				  output
-				  overwrite)
-  (declare (type fixnum i))
-  (if (and (= i 0) (not (= 1 (length variables))))
-      (invoke-kernel-inlined
-       kernel-function
-       variables
-       (data (second variables))
-       (+ i 1)
-       output
-       overwrite)
-      (invoke-cpu-kernel kernel-function variables)))
-
 (defun invoke-kernel (kernel-function
 		      variables
 		      first-argument
@@ -173,7 +134,8 @@ Note: this is not setfable"
 		      &key
 			(output nil)
 			(overwrite nil))
-  (declare (type boolean overwrite)
+  (declare (optimize (speed 3))
+	   (type boolean overwrite)
 	   (ignore first-argument i))
   (let ((has-mat (member-if #'(lambda (x)
 				(when (typep x 'waffetensor)
@@ -195,6 +157,7 @@ It's the most general way for users to access cl-waffe's kernel.
 If output is specified, write a result to output destructively.
 
 If overwrite is t, side effect will occurs. (i.e.: args can be destructed)"
+  (declare (inline invoke-kernel))
   (invoke-kernel kernel-function args (data (car args)) 0
 		 :output output
 		 :overwrite overwrite))
@@ -205,7 +168,8 @@ If overwrite is t, side effect will occurs. (i.e.: args can be destructed)"
 
 Todo:More Details"
   (declare (optimize (speed 3) (space 0) (safety 0))
-	   (type keyword kernel-function))
+	   (type keyword kernel-function)
+	   (inline invoke-kernel))
   (invoke-kernel kernel-function args (data (car args)) 0))
 
 (defgeneric with-searching-calc-node-optim (kernel-function target-data target-tensor args))
