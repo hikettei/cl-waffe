@@ -40,6 +40,8 @@
       (cl-cram:update bar 1)
       (fresh-line))
     (fresh-line)
-    (save-result t)
-    (format t "✅ Benchmarks are all done. The results are saved to ~a~%" directory)))
+    (format t "~%Collecting results...~%")
+    (with-open-file (stream directory :direction :output :if-exists :supersede)
+      (save-result stream))
+    (format t "~%✅ Benchmarks are all done. The results are saved to ~a~%" directory)))
 
