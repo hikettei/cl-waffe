@@ -19,6 +19,10 @@ name must be given by string"
   (other-operations nil :type list)
   (name "No Name" :type string))
 
+
+(defmacro with-benchmark (name &key cl-waffe)
+  `(register-to-benchmark ,name #'(lambda () ,cl-waffe) nil))
+
 (defun register-to-benchmark (name cl-waffe-operation other-operations)
   (declare (type string name)
 	   (type function cl-waffe-operation)
@@ -27,8 +31,14 @@ name must be given by string"
   t)
 
 (defun execute-benchmark (benchmark)
+  "Receiving benchmark structure, this function start benchmark following data with saving to specified file."
   (declare (type benchmarkset benchmark))
-  
-  nil)
+  (with-slots ((main-operation cl-waffe-operations)
+	       (other-operations other-operations)
+	       (main-name name))
+      benchmark
+    
+    (format t "--Executing ~a~%" main-name)
+    ; etc...
+    ))
 
-(defmacro with-benchmark (name cl-waffe-benchmark))

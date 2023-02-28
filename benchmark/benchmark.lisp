@@ -4,16 +4,31 @@
 ; Execute benchmarks
 
 (defvar *dim-n*)
+(defvar *loop-n*)
 
-;(with-benchmark :Aadd ...)
+(defmacro with-init-2d (x1 y1 &body body)
+  `(let ((,x1 (!ones `(,*dim-n* ,*dim-n*)))
+	 (,y1 (!ones `(,*dim-n* ,*dim-n*))))
+     ,@body))
 
-(defun start-benchmark (&key (dim-n 100))
+(defmacro with-init-3d (x1 y1 &body body)
+  `(let ((,x1 (!ones `(,*dim-n* ,*dim-n* ,*dim-n*)))
+	 (,y1 (!ones `(,*dim-n* ,*dim-n* ,*dim-n*))))
+     ,@body))
+
+(with-benchmark "2D_Add"
+  :cl-waffe (with-init-2d x y
+	      (dotimes (i *loop-n*)
+		(!add x y))))
+
+(defun start-benchmark (&key (dim-n 100) (loop-n 100))
   (format t "✅ Benchmarking :cl-waffe~%")
   (format t "✅ The number of benchmarks is : ~a~%" (length *benchmarks*))
   
   (cl-cram:init-progress-bar bar "Benchmark" (length *benchmarks*))
 
-  (let ((*dim-n* dim-n))
+  (let ((*dim-n* dim-n)
+	(*loop-n* loop-n))
     (dotimes (i (length *benchmarks*))
       (execute-benchmark (nth i *benchmarks*))
       (cl-cram:update bar 1)))
