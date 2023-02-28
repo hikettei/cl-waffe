@@ -235,7 +235,8 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 	      (mat-dimensions (data tensor))) ; (data tensor) is supposed to be mat. (the end of node.)
 	(format jit-id "M")
 	`(aref ,(cl-waffe::waffetensor-tensor-ident tensor)
-	       ,(mat-size-symbol (cl-waffe::waffetensor-tensor-ident tensor))))
+	       cl-waffe.backends.mgl::index;,(mat-size-symbol (cl-waffe::waffetensor-tensor-ident tensor))
+	       ))
        (T
 	(if (null (cl-waffe::waffetensor-tensor-ident tensor))
 	    (setf (cl-waffe::waffetensor-tensor-ident tensor) (gensym "K")))
@@ -294,7 +295,8 @@ jit-id is a stream"
 	       mat-dims-table)
       
       (setq mat-inputs `(,@(reverse mat-inputs)
-			 ,@(reverse mat-ninputs)))
+			 ;,@(reverse mat-ninputs)
+			 ))
       (warranty any-tensor)
       (let ((out (make-mat out-mat-shape)));cl-waffe.caches:with-cache (out any-tensor)
 	;;(if (cl-waffe::waffetensor-thread-data any-tensor)
@@ -441,13 +443,15 @@ Return: compiled-function's id, out"
 			     (setq out-mat-size n-mat-size))))))
 	       mat-dims-table)
       
-      (setq symbols `((size fixnum)
+      (setq symbols `((size mgl-mat::index)
 		      (out :mat :output)
 		      ,@(reverse symbols)
-		      ,@(reverse nsymbols)))
+		      ;,@(reverse nsymbols)
+		      ))
 
       (setq mat-inputs `(,@(reverse mat-inputs)
-			 ,@(reverse mat-ninputs)))
+			 ;,@(reverse mat-ninputs)
+			 ))
 
       (let* ((kernel-code (def-dynamic-kernel args-table symbols code)))
 	;(warranty any-tensor)
