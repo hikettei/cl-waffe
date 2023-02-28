@@ -259,6 +259,7 @@ Todo: currently, it returns error.
 @end[lang=lisp](code)
 @end(term)
 @end(deflist)"
+  (declare (type waffetensor x))
   (call (SoftMaxNode avoid-overflow) x))
 
 ; Todo :docstring
