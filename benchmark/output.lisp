@@ -38,8 +38,12 @@
 
 		(format stream "~%### ~a ~%~%~a is:~%~%" (car r) (car r))
 
-		(let ((speed-rate (coerce (/ original-time r-time) 'single-float))
-		      (space-rate (coerce (/ original-space r-space) 'single-float)))
+		(let ((speed-rate (if (= r-time 0.0)
+				      -1.0
+				      (coerce (/ original-time r-time) 'single-float)))
+		      (space-rate (if (= r-space 0.0)
+				      -1.0
+				      (coerce (/ original-space r-space) 'single-float))))
 		  (if (>= speed-rate *speed-alert-min*)
 		      (format stream "❗️**Time: ~ax faster, (~as)**~%~%" speed-rate r-time)
 		      (format stream "Time: ~ax faster, (~as)~%~%" speed-rate r-time))
