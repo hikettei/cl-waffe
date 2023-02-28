@@ -173,9 +173,20 @@ Note: this is not setfable"
 		      &key
 			(output nil)
 			(overwrite nil))
-  (declare (inline invoke-kernel-inlined)
-	   (type boolean overwrite))
-  (invoke-kernel-inlined kernel-function variables first-argument i output overwrite))
+  (declare (type boolean overwrite)
+	   (ignore first-argument i))
+  (let ((has-mat (member-if #'(lambda (x)
+				(when (typep x 'waffetensor)
+				  (or (typep (data x) 'mgl-mat:mat)
+				      (typep (data x) 'function))))
+			    variables)))
+    (if (null has-mat) ; invoke cpu-kernel
+	(invoke-cpu-kernel kernel-function
+			   variables)
+	(invoke-mgl-kernel kernel-function
+			   variables
+			   :output output
+			   :overwrite overwrite))))
 
 (defun call-and-dispatch-kernel (kernel-function output overwrite &rest args)
   "Invoke kernel and run kernel-function. return new sysconst
