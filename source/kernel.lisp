@@ -28,6 +28,13 @@
      (setf cl-waffe.backends.mgl:*verbose* t)
      ,@body))
 
+(defmacro with-no-jit (&body body)
+  `(progn
+     (setf cl-waffe.backends.mgl::*force-disable-jit* t)
+     (setf cl-waffe.backends.mgl:*force-lazy-eval* nil)
+     (setf cl-waffe.backends.mgl:*verbose* t)
+     ,@body))
+
 (declaim (ftype (function (waffetensor) waffetensor) warranty))
 (defun warranty (tensor)
   "Notice waffe's optimizer that do not delete tensor given until warranty called

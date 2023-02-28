@@ -363,7 +363,6 @@ Return: compiled-function's id, out"
 					   (space 1)
 					   (safety 0)
 					   (compilation-speed 0))
-				 (inline apply)
 			         (ignore
 				  ,@(map
 				     'list
@@ -405,7 +404,7 @@ Return: compiled-function's id, out"
 		      `(mgl-mat:define-lisp-kernel
 			   (,jit-ident)
 			   ,,args
-			 (loop for index fixnum upfrom 0 below size
+			 (loop for index of-type mgl-mat::index upfrom 0 below (mgl-mat::the! mgl-mat::index size)
 			       do (setf (aref out index) ,,body))))))
 	     (apply-jit (jit-id args)
 	       `(apply ,jit-id ,args)))
