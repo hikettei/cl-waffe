@@ -1,7 +1,7 @@
 
 (in-package :cl-waffe.backends.mgl)
 
-					; Todo Rewrite with define-lisp-kernel
+; Todo Rewrite with define-lisp-kernel
 
 (defmacro will-be-destructed (tensor)
   `(waffetensor-thread-data ,tensor))
@@ -338,7 +338,7 @@
 		  (type boolean enable-optimize? overwrite)
 		  (type waffetensor ,@args)))
      ,(unless (null jit)
-					; place jit trigger.
+	 ; place jit trigger.
 	`(return-and-lazy-eval
 	  ,name
 	  ',jit

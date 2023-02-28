@@ -1,7 +1,9 @@
 
 (in-package :cl-waffe.backends.mgl)
 
-; JIT Compiler
+(defpackage :cl-waffe.backends.compiled-functions)
+
+; Tracing JIT Compiler
 
 (defparameter *jit-compiled* (make-hash-table)
   "An hash table, jit-id -> jit-function-name")
@@ -233,7 +235,7 @@ Note jit-id: In Common Lisp, the maximum length of symbol is array-dimension-lim
 	      (mat-dimensions (data tensor))) ; (data tensor) is supposed to be mat. (the end of node.)
 	(format jit-id "M")
 	`(aref ,(cl-waffe::waffetensor-tensor-ident tensor)
-	       (mod index ,(mat-size-symbol (cl-waffe::waffetensor-tensor-ident tensor)))))
+	       ,(mat-size-symbol (cl-waffe::waffetensor-tensor-ident tensor))))
        (T
 	(if (null (cl-waffe::waffetensor-tensor-ident tensor))
 	    (setf (cl-waffe::waffetensor-tensor-ident tensor) (gensym "K")))
@@ -266,7 +268,7 @@ jit-id is a stream"
      &key (jit-function-id nil))
   (declare (optimize (speed 3) (space 0)))
   (macrolet ((apply-jit (jit-id args)
-	       `(apply (intern (symbol-name ,jit-id)) ,args)))
+	       `(apply ,jit-id ,args)))
     (let ((mat-inputs nil)
 	  (mat-ninputs nil)
 	  (out-mat-shape nil)
@@ -330,7 +332,7 @@ jit-id is a stream"
 			       mat-dims-table
 			       code
 			       any-tensor
-			       &aux (jit-ident (gensym "JitFunction")))
+			       &aux (jit-ident (gentemp "JitFunction" :cl-waffe.backends.compiled-functions)))
   "do define-lisp-kernel and execute it.
 Return: compiled-function's id, out"
   (declare (optimize (speed 3) (space 0))
@@ -355,7 +357,7 @@ Return: compiled-function's id, out"
 			   (declare (ignore val))
 			   (push key tmp-args))
 		       ,args-table)
-		     `(defun ,(intern (symbol-name jit-ident))
+		     `(defun ,jit-ident
 			,(map 'list #'car ,args)
 			(declare (optimize (speed 3)
 					   (space 1)
@@ -401,12 +403,12 @@ Return: compiled-function's id, out"
 				    :output ,(car mat-args))))))))
 		   (progn
 		      `(mgl-mat:define-lisp-kernel
-			   (,(intern (symbol-name jit-ident)))
+			   (,jit-ident)
 			   ,,args
 			 (loop for index fixnum upfrom 0 below size
 			       do (setf (aref out index) ,,body))))))
 	     (apply-jit (jit-id args)
-	       `(apply (intern (symbol-name ,jit-id)) ,args)))
+	       `(apply ,jit-id ,args)))
     ; collecting inputs
     (let ((symbols nil)     ; args for mat, obj
 	  (nsymbols nil)    ; args for mat-size
@@ -426,7 +428,7 @@ Return: compiled-function's id, out"
 	       args-table)
 
       (maphash #'(lambda (key val)
-		   (push `(,key fixnum) nsymbols)
+		   (push `(,key mgl-mat::index) nsymbols)
 		   (let ((n-mat-size (apply #'* val)))		     
 		     (push n-mat-size mat-ninputs)
 		     (if (null out-mat-shape)
