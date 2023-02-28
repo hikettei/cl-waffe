@@ -373,7 +373,7 @@ Example:
 		   (remove-if #'(lambda (x) (find x `(&optional &key &aux &rest)))
 			      args))))
     `(progn
-       (declaim (ftype
+       #|(declaim (ftype
 		 (function
 		  (,name
 		   ,@(map 'list (lambda (x)
@@ -383,7 +383,7 @@ Example:
 				    (T `waffetensor)))
 			  `,args))
 		  (or null list waffetensor))
-		 ,f-ident))
+		 ,f-ident))|#
 	 (defun ,f-ident (,self-heap ,@args)
 	   ,(if optimize
 		`(declare (optimize (speed 3) (space 0) (safety 1))
@@ -491,6 +491,7 @@ Example:
 	 (defmethod ,fname ((self ,name))
 	   (declare (optimize (speed 3)))
 	   #'(lambda (&rest node-inputs)
+	       (declare (optimize (speed 3)))
 	       (apply #',f-ident self node-inputs))))))
 
 (defmacro defmodel (name args
