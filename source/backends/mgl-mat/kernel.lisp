@@ -20,7 +20,7 @@
       (gensym)))
 
 (defun decide-out-buffer (out args enable-optim copy?)
-  (declare (optimize (speed 3))
+  (declare (optimize (speed 3) (safety 0))
 	   (inline decide-out-buffer2
 		   decide-out-buffer3))
   (let ((args (if (typep args 'waffetensor)
@@ -37,7 +37,7 @@
 			   args
 			   enable-optim
 			   copy?)
-  (declare (optimize (speed 3) (space 0)))
+  (declare (optimize (speed 3) (safety 0)))
   (if (not (null (waffetensor-thread-data out)))
       (let* ((thread-info (waffetensor-thread-data out))
 	     (idx (create-thread-idx thread-info)))
@@ -50,7 +50,7 @@
 			   args
 			   enable-optim
 			   copy?)
-  (declare (optimize (speed 3) (space 0) (safety 0))
+  (declare (optimize (speed 3) (safety 0))
 	   (ignore out))
   (if enable-optim
       args
