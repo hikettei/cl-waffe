@@ -199,6 +199,7 @@
 					 ((null (second dim))
 					  (!shape y i))))))
 	 (out (!zeros result-shape))
+	 (tmp-size (last result-shape 2))
 	 (x-dims-first (!shape x))
 	 (y-dims-first (!shape y))
 	 (x-displacement-first (mat-displacement (data x)))
@@ -417,18 +418,33 @@
 						     y
 						     x))
 				      (on-the-around-way?
-					(not (= (the fixnum (!shape x 0)) 1))))
-				  (case function
-				    (:+
-				     ))
-				  (print row-x)
-				  (print columns-y)
-				  (print out)
-				  (print on-the-around-way?)
-				))))))
+					(= (the fixnum (!shape x 0)) 1)))
+				  (with-ones (tmp tmp-size)
+				    (case function
+				      (:+
+				       (fill! 1.0 tmp)
+				       (fill! 1.0 (data out))
+				       (scale-columns! (data row-x) tmp)
+				       (scale-rows! (data columns-y) (data out))
+				       (axpy! 1.0 tmp (data out)))
+				      (:-
+				       (fill! 1.0 tmp)
+				       (fill! 1.0 (data out))
+				       (scale-columns! (data row-x) tmp)
+				       (scale-rows! (data columns-y) (data out))
+				       (axpy! -1.0 tmp (data out))
+				       (when on-the-around-way?
+					 (scal! -1.0 (data out))))
+				      (:*
+				       (fill! 1.0 (data out))
+				       (scale-columns! (data row-x) (data out))
+				       (scale-rows! (data columns-y) (data out)))))))))))
 		   nil))
 	  (explore-batch x-dims-first y-dims-first 0 0 0)
 	  (reshape-and-displace! (data x) x-dims-first x-displacement-first)
 	  (reshape-and-displace! (data y) y-dims-first y-displacement-first)
 	  (reshape-and-displace! (data out) result-shape 0)
 	  out)))))
+
+
+(defun faref ())
