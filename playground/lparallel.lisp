@@ -260,8 +260,9 @@
 		       ; When processing tensors are reached to 2D/1D
 		       ; Applying functions.
 		       (let ((rx (car (nth dim-currently-processing dims)))
-			     (ry (second (nth dim-currently-processing dims))))
-			 ;(declare (type list rx ry))
+			     (ry (second (nth dim-currently-processing dims)))
+			     (rx1 (car (nth (1+ dim-currently-processing) dims)))
+			     (ry1 (second (nth (1+ dim-currently-processing) dims))))
 			 
 			 (reshape-and-displace!
 			  (data x)
@@ -273,13 +274,24 @@
 			  y-index)
 			 (reshape-and-displace!
 			  (data out)
-			  (if (null rx)
-			      dims-x
-			      dims-y)
+			  (if (= (length dims-x) 1)
+			      (if (null rx)
+				  dims-x
+				  dims-y)
+			      `(,(if (null rx)
+				     (car dims-x)
+				     (car dims-y))
+				,(if (null rx1)
+				     (second dims-x)
+				     (second dims-y))))
 			  (if (null ry)
 			      x-index
 			      y-index))
-			 
+
+			 (print rx)
+			 (print ry)
+			 (print rx1)
+			 (print ry1)
 			 (if (= (length dims-x) 1)
 			     ; the rest is 1D
 			     (cond
@@ -323,7 +335,9 @@
 			     ; The rest are 2D
 			     (cond
 			       ((and (null rx)
-				     (null ry))
+				     (null ry)
+				     (null rx1)
+				     (null ry1))
 			       ; Shapes are the same
 
 				(case function
@@ -335,10 +349,32 @@
 				   (axpy! -1.0 (data y) (data out)))
 				  (:*
 				   (geem! 1.0 (data x) (data y) 0.0 (data out)))))
-			       ((null rx)
-				; ry is 1D or Scal?
-
-				)
+			       ((and
+				 (or (null rx)
+				     (null ry))
+				 (and (null rx1)
+				      (null ry1)))
+				; broadcasting at dim=0, dim!=1
+				; loop by columns
+				(let ((row (if (null rx)
+					       y
+					       x))
+				      (mat (if (null rx)
+					       x
+					       y)))
+				  (case function
+				    (:+
+				     (fill! 1.0 (data out))
+				     (scale-columns! (data row) (data out))
+				     (axpy! 1.0 (data mat) (data out)))
+				    (:-
+				     (fill! 1.0 (data out))
+				     (scale-columns! (data row) (data out))
+				     (axpy! -1.0 (data mat) (data out)))
+				    (:*
+				     (fill! 1.0 (data out))
+				     (scale-columns! (data row) (data out))
+				     (geem! 1.0 (data out) (data mat) 0.0 (data out))))))
 			       ((null ry)
 				; ry is 1D or Scal?
 
