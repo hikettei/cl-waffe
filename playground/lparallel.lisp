@@ -258,13 +258,12 @@
 					      (1+ dim-currently-processing)))))
 		       ; When processing tensors are reached to 2D/1D
 		       ; Applying functions.
-		       (let ((_ (incf dim-currently-processing 1))
-			     (rx (car (nth dim-currently-processing dims)))
-			     (ry (second (nth dim-currently-processing dims)))
-			     (rx1 (car (nth (1+ dim-currently-processing) dims)))
-			     (ry1 (second (nth (1+ dim-currently-processing) dims))))
-			 (declare (ignore _))
-			 
+		       (let* ((dim-currently-processing (the fixnum (+ dim-currently-processing )))
+			      (rx (car (nth dim-currently-processing dims)))
+			      (ry (second (nth dim-currently-processing dims)))
+			      (rx1 (car (nth (1+ dim-currently-processing) dims)))
+			      (ry1 (second (nth (1+ dim-currently-processing) dims))))
+
 			 (reshape-and-displace!
 			  (data x)
 			  dims-x
@@ -285,9 +284,13 @@
 				,(if (null rx1)
 				     (second dims-x)
 				     (second dims-y))))
-			  (if (null ry)
-			      x-index
-			      y-index))
+			  (if (= (length dims-x) 1)
+			      (if (null rx)
+				  x-index
+				  y-index)
+			      (if (null rx1)
+				  x-index
+				  y-index)))
 
 			 (if (= (length dims-x) 1)
 			     ; the rest is 1D
@@ -389,6 +392,7 @@
 				      (mat (if (null rx1)
 					       x
 					       y)))
+				  
 				  (case function
 				    (:+
 				     (fill! 1.0 (data out))
