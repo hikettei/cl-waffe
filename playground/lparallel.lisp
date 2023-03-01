@@ -220,28 +220,25 @@
 			     collect (get-stride x-dims-first i)))
 	    (y-strides (loop for i fixnum upfrom 0 below (the fixnum (length y-dims-first))
 			     collect (get-stride y-dims-first i)))
-	    (dim-currently-processing 0))
-	(declare (type fixnum dims-currently-processing))
-	(labels ((x-step-index (state i repeat?)
-		   (declare (type fixnum i state))
+	    (mgl-cube:*let-output-through-p* t))
+	(labels ((x-step-index (state i repeat? dim-currently-processing)
+		   (declare (type fixnum i state dim-currently-processing))
 		   (+ state (if (null repeat?)
 				(the fixnum (* i (the fixnum (nth dim-currently-processing x-strides))))
 				0)))
-		 (y-step-index (state i repeat?)
+		 (y-step-index (state i repeat? dim-currently-processing)
 		   (+ state (if (null repeat?)
 				(the fixnum (* i (the fixnum (nth dim-currently-processing y-strides))))
 				0)))
-		 (explore-batch (dims-x dims-y x-index y-index)
+		 (explore-batch (dims-x dims-y x-index y-index dim-currently-processing)
 		   (declare (type list dims-x dims-y)
-			    (type fixnum x-index y-index))
+			    (type fixnum x-index y-index dim-currently-processing))
 		   ; Parallel 3D 4D ...
 
 		   (if (> (length dims-x) 2)
 		       ; Tensor's dim >= 3, batch them until currenlt refering tensor is 2d. If *kernel*, parallelize.
 		       (let* ((repeat-instruction-x (car (nth dim-currently-processing dims)))
 			      (repeat-instruction-y (second (nth dim-currently-processing dims))))
-			 
-			 (incf (the fixnum dim-currently-processing) 1)
 
 			 (if (null lparallel:*kernel*)
 			     ; single thread
@@ -249,20 +246,24 @@
 			       (declare (type fixnum i))
 			       (explore-batch (cdr dims-x)
 					      (cdr dims-y)
-					      (x-step-index x-index i repeat-instruction-x)
-					      (y-step-index y-index i repeat-instruction-y)))
+					      (x-step-index x-index i repeat-instruction-x dim-currently-processing)
+					      (y-step-index y-index i repeat-instruction-y dim-currently-processing)
+					      (1+ dim-currently-processing)))
 			     (lparallel:pdotimes (i (nth dim-currently-processing x-dims-first))
 			       (declare (type fixnum i))
 			       (explore-batch (cdr dims-x)
 					      (cdr dims-y)
-					      (x-step-index x-index i repeat-instruction-x)
-					      (y-step-index y-index i repeat-instruction-y)))))
+					      (x-step-index x-index i repeat-instruction-x dim-currently-processing)
+					      (y-step-index y-index i repeat-instruction-y dim-currently-processing)
+					      (1+ dim-currently-processing)))))
 		       ; When processing tensors are reached to 2D/1D
 		       ; Applying functions.
-		       (let ((rx (car (nth dim-currently-processing dims)))
+		       (let ((_ (incf dim-currently-processing 1))
+			     (rx (car (nth dim-currently-processing dims)))
 			     (ry (second (nth dim-currently-processing dims)))
 			     (rx1 (car (nth (1+ dim-currently-processing) dims)))
 			     (ry1 (second (nth (1+ dim-currently-processing) dims))))
+			 (declare (ignore _))
 			 
 			 (reshape-and-displace!
 			  (data x)
@@ -288,10 +289,6 @@
 			      x-index
 			      y-index))
 
-			 (print rx)
-			 (print ry)
-			 (print rx1)
-			 (print ry1)
 			 (if (= (length dims-x) 1)
 			     ; the rest is 1D
 			     (cond
@@ -408,9 +405,25 @@
 				     (fill! 1.0 (data out))
 				     (scale-rows! (data column) (data out))
 				     (geem! 1.0 (data out) (data mat) 0.0 (data out))))))
-			       (T )))))
+			       (T
+				(let ((row-x (if (= (the fixnum (!shape x 0)) 1)
+						 x
+						 y))
+				      (columns-y (if (= (the fixnum (!shape x 0)) 1)
+						     y
+						     x))
+				      (on-the-around-way?
+					(not (= (the fixnum (!shape x 0)) 1))))
+				  (case function
+				    (:+
+				     ))
+				  (print row-x)
+				  (print columns-y)
+				  (print out)
+				  (print on-the-around-way?)
+				))))))
 		   nil))
-	  (explore-batch x-dims-first y-dims-first 0 0)
+	  (explore-batch x-dims-first y-dims-first 0 0 0)
 	  (reshape-and-displace! (data x) x-dims-first x-displacement-first)
 	  (reshape-and-displace! (data y) y-dims-first y-displacement-first)
 	  (reshape-and-displace! (data out) result-shape 0)
