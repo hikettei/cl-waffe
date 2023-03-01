@@ -179,12 +179,6 @@
   (pdotimes (i 10)
     (hoge1)))
 
-(defun shape-row-major-index (a &rest subscripts)
-   (apply #'+ (maplist #'(lambda (x y)
-                            (* (car x) (apply #'* (cdr y))))
-                       subscripts
-                       a)))
-
 (defun sapply (function x y)
   (declare (optimize (speed 3))
 	   (type symbol function)
@@ -267,7 +261,8 @@
 		       ; Applying functions.
 		       (let ((rx (car (nth dim-currently-processing dims)))
 			     (ry (second (nth dim-currently-processing dims))))
-			 (declare (type list rx ry))
+			 ;(declare (type list rx ry))
+			 
 			 (reshape-and-displace!
 			  (data x)
 			  dims-x
@@ -324,13 +319,30 @@
 				     (copy! (data y) (data out))
 				     (.+! (- scal) (data out)))
 				    (:*
-				     (axpy! scal (data y) (data out))))))))
-			 (print rx)
-			 (print ry)
-			 (print dims-x)
-			 (print dims-y)
-			 (print x-index)
-			 (print y-index)
+				     (axpy! scal (data y) (data out)))))))
+			     ; The rest are 2D
+			     (cond
+			       ((and (null rx)
+				     (null ry))
+			       ; Shapes are the same
+
+				(case function
+				  (:+
+				   (copy! (data x) (data out))
+				   (axpy! 1.0 (data y) (data out)))
+				  (:-
+				   (copy! (data x) (data out))
+				   (axpy! -1.0 (data y) (data out)))
+				  (:*
+				   (geem! 1.0 (data x) (data y) 0.0 (data out)))))
+			       ((null rx)
+				; ry is 1D or Scal?
+
+				)
+			       ((null ry)
+				; ry is 1D or Scal?
+
+				)))
 			 nil))
 		   nil))
 	  (explore-batch x-dims-first y-dims-first 0 0)
