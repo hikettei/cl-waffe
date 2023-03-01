@@ -354,8 +354,8 @@
 				     (null ry))
 				 (and (null rx1)
 				      (null ry1)))
-				; broadcasting at dim=0, dim!=1
-				; loop by columns
+				; broadcasting will be done at dim=0, dim!=1
+				; iterate by columns
 				(let ((row (if (null rx)
 					       y
 					       x))
@@ -370,16 +370,45 @@
 				    (:-
 				     (fill! 1.0 (data out))
 				     (scale-columns! (data row) (data out))
-				     (axpy! -1.0 (data mat) (data out)))
+				     (axpy! -1.0 (data mat) (data out))
+				     ; x and y are reversed?
+				     (if (null rx)
+					 (scal! -1.0 (data out))))
 				    (:*
 				     (fill! 1.0 (data out))
 				     (scale-columns! (data row) (data out))
 				     (geem! 1.0 (data out) (data mat) 0.0 (data out))))))
-			       ((null ry)
-				; ry is 1D or Scal?
+			       ((and
+				 (and (null rx)
+				      (null ry))
+				 (or  (null rx1)
+				      (null ry1)))
+				; broadcasting will be done at dim=1, not dim=0
+				; iterate by rows
 
-				)))
-			 nil))
+				(let ((column (if (null rx1)
+					          y
+					          x))
+				      (mat (if (null rx1)
+					       x
+					       y)))
+				  (case function
+				    (:+
+				     (fill! 1.0 (data out))
+				     (scale-rows! (data column) (data out))
+				     (axpy! 1.0 (data mat) (data out)))
+				    (:-
+				     (fill! 1.0 (data out))
+				     (scale-rows! (data column) (data out))
+				     (axpy! -1.0 (data mat) (data out))
+				     ; x and y are reversed?
+				     (if (null rx1)
+					 (scal! -1.0 (data out))))
+				    (:*
+				     (fill! 1.0 (data out))
+				     (scale-rows! (data column) (data out))
+				     (geem! 1.0 (data out) (data mat) 0.0 (data out))))))
+			       (T )))))
 		   nil))
 	  (explore-batch x-dims-first y-dims-first 0 0)
 	  (reshape-and-displace! (data x) x-dims-first x-displacement-first)
