@@ -180,7 +180,7 @@
     (hoge1)))
 
 (defun sapply (function x y)
-  (declare (optimize (speed 3))
+  (declare (optimize (speed 3) (safety 0))
 	   (type symbol function)
 	   (type waffetensor x y))
   ; assume that (!dims x) == (!dims y)
@@ -209,8 +209,9 @@
     (reshape-and-displace! (data y) `(,(!size y)) y-displacement-first)
 
     (labels ((get-stride (shape dim)
-	       (let ((subscripts (loop for i fixnum upfrom 0 below dim
+	       (let ((subscripts (loop for k fixnum upfrom 0 below dim
 				       collect 0)))
+
 		 (apply #'+ (maplist #'(lambda (x y)
 					 (the fixnum
 					      (* (the fixnum (car x))
@@ -221,19 +222,25 @@
 			     collect (get-stride x-dims-first i)))
 	    (y-strides (loop for i fixnum upfrom 0 below (the fixnum (length y-dims-first))
 			     collect (get-stride y-dims-first i)))
-	    (mgl-cube:*let-output-through-p* t))
+	    (out-strides (loop for i fixnum upfrom 0 below (the fixnum (length result-shape))
+			       collect (get-stride result-shape i))))
 	(labels ((x-step-index (state i repeat? dim-currently-processing)
 		   (declare (type fixnum i state dim-currently-processing))
 		   (+ state (if (null repeat?)
 				(the fixnum (* i (the fixnum (nth dim-currently-processing x-strides))))
 				0)))
 		 (y-step-index (state i repeat? dim-currently-processing)
+		   (declare (type fixnum i state dim-currently-processing))
 		   (+ state (if (null repeat?)
 				(the fixnum (* i (the fixnum (nth dim-currently-processing y-strides))))
 				0)))
-		 (explore-batch (dims-x dims-y x-index y-index dim-currently-processing)
-		   (declare (type list dims-x dims-y)
-			    (type fixnum x-index y-index dim-currently-processing))
+		 (o-step-index (state i dim-currently-processing)
+		   (declare (type fixnum i state dim-currently-processing))
+		   (+ state (the fixnum (* i (the fixnum (nth dim-currently-processing out-strides))))))
+		 
+		 (explore-batch (dims-x dims-y dims-o x-index y-index o-index dim-currently-processing)
+		   (declare (type list dims-x dims-y dims-o)
+			    (type fixnum x-index y-index o-index dim-currently-processing))
 		   ; Parallel 3D 4D ...
 
 		   (if (> (length dims-x) 2)
@@ -247,15 +254,19 @@
 			       (declare (type fixnum i))
 			       (explore-batch (cdr dims-x)
 					      (cdr dims-y)
+					      (cdr dims-o)
 					      (x-step-index x-index i repeat-instruction-x dim-currently-processing)
 					      (y-step-index y-index i repeat-instruction-y dim-currently-processing)
+					      (o-step-index o-index i dim-currently-processing)
 					      (1+ dim-currently-processing)))
 			     (lparallel:pdotimes (i (nth dim-currently-processing x-dims-first))
 			       (declare (type fixnum i))
 			       (explore-batch (cdr dims-x)
 					      (cdr dims-y)
+					      (cdr dims-o)
 					      (x-step-index x-index i repeat-instruction-x dim-currently-processing)
 					      (y-step-index y-index i repeat-instruction-y dim-currently-processing)
+					      (o-step-index o-index i dim-currently-processing)
 					      (1+ dim-currently-processing)))))
 		       ; When processing tensors are reached to 2D/1D
 		       ; Applying functions.
@@ -275,24 +286,8 @@
 			  y-index)
 			 (reshape-and-displace!
 			  (data out)
-			  (if (= (length dims-x) 1)
-			      (if (null rx)
-				  dims-x
-				  dims-y)
-			      `(,(if (null rx)
-				     (car dims-x)
-				     (car dims-y))
-				,(if (null rx1)
-				     (second dims-x)
-				     (second dims-y))))
-			  (if (= (length dims-x) 1)
-			      (if (null rx)
-				  x-index
-				  y-index)
-			      (if (null rx1)
-				  x-index
-				  y-index)))
-
+			  dims-o
+			  o-index)
 			 (if (= (length dims-x) 1)
 			     ; the rest is 1D
 			     (cond
@@ -440,7 +435,7 @@
 				       (scale-columns! (data row-x) (data out))
 				       (scale-rows! (data columns-y) (data out)))))))))))
 		   nil))
-	  (explore-batch x-dims-first y-dims-first 0 0 0)
+	  (explore-batch x-dims-first y-dims-first result-shape 0 0 0 0)
 	  (reshape-and-displace! (data x) x-dims-first x-displacement-first)
 	  (reshape-and-displace! (data y) y-dims-first y-displacement-first)
 	  (reshape-and-displace! (data out) result-shape 0)
