@@ -180,6 +180,7 @@
     (hoge1)))
 
 (defun sapply (function x y)
+  "xとyの下二つの次元数が一致してる時用"
   ; still node debugged but it used mgl-mat's APIs
   (declare (optimize (speed 3) (safety 0))
 	   (type symbol function)
@@ -276,7 +277,6 @@
 			      (ry (second (nth dim-currently-processing dims)))
 			      (rx1 (car (nth (1+ dim-currently-processing) dims)))
 			      (ry1 (second (nth (1+ dim-currently-processing) dims))))
-
 			 (reshape-and-displace!
 			  (data x)
 			  dims-x
@@ -515,7 +515,7 @@
     ; setf-mode?=t, -> the copied tensor overwrittes out
     ; setf-mode?=nil, -> creates new tensor and is overwritted
 
-    ; (compare-dims)
+    ; (compare-dims) out>xを防ぐ
     (reshape-and-displace! (data x)   `(,(!size x)) x-displace-first)
     (reshape-and-displace! (data out) `(,(!size out)) o-displace-first)
     
@@ -581,17 +581,31 @@
 				      (o-step-index o-index i dim-index))))))
 		       ; Apply copy
 		       (let* ((sub (nth dim-index subscripts))
-			      (x-size (typecase sub
-					(fixnum `(1))
-					(cons `(,(the fixnum (- (the fixnum (second sub)) (the fixnum (car sub))))))
-					(t dims-x)))
-			      (o-size dims-o)
-			      (x-begin (typecase sub
-					 (fixnum sub)
-					 (cons (car sub))
-					 (t 0)))
-			      (o-begin 0))
-			 (declare (type fixnum x-begin))
+			      (x-size (if setf-mode?
+					  dims-x
+					  (typecase sub
+					    (fixnum `(1))
+					    (cons `(,(the fixnum (- (the fixnum (second sub)) (the fixnum (car sub))))))
+					    (t dims-x))))
+			      (o-size (if setf-mode?
+					  (typecase sub
+					    (fixnum `(1))
+					    (cons `(,(the fixnum (- (the fixnum (second sub)) (the fixnum (car sub))))))
+					    (t dims-o))
+					  dims-o))
+			      (x-begin (if setf-mode?
+					   0
+				           (typecase sub
+					     (fixnum sub)
+					     (cons (car sub))
+					     (t 0))))
+			      (o-begin (if setf-mode?
+					   (typecase sub
+					     (fixnum sub)
+					     (cons (car sub))
+					     (t 0))
+					   0)))
+			 (declare (type fixnum x-begin o-begin))
 			 (reshape-and-displace!
 			  (data x)
 			  x-size
@@ -599,8 +613,7 @@
 			 (reshape-and-displace!
 			  (data out)
 			  o-size
-			  (+ o-begin o-index))
-
+			  (the fixnum (+ o-begin o-index)))
 			 (copy! (data x) (data out))))
 		   nil))
 	  (explore-batch 0 x-dim-first o-dim-first 0 0)
