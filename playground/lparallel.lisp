@@ -452,7 +452,7 @@
 	  (reshape-and-displace! (data out) result-shape 0)
 	  out)))))
 
-(defun compare-shape (setf-mode? out tensor subscripts broadcasts)
+(defun saref-p (setf-mode? out tensor subscripts broadcasts)
   (declare (ignore broadcasts))
   (let ((topic-tensor (if setf-mode?
 			  out
@@ -555,7 +555,7 @@
     and when setf-mode is t, subscriptions affect outs.
     |#
 
-    (compare-shape
+    (saref-p
      setf-mode?
      out
      x
