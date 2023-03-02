@@ -191,7 +191,6 @@
 	 shape)))
 
 (defun sapply (function x y)
-  "xとyの下二つの次元数が一致してる時用"
   ; still node debugged but it used mgl-mat's APIs
   (declare (optimize (speed 3) (safety 0))
 	   (type symbol function)
@@ -260,7 +259,6 @@
 			      (repeat-instruction-y (second (nth dim-currently-processing dims))))
 
 			 (if (null lparallel:*kernel*)
-			     ; iterate is missing when first argument is t
 			     (dotimes (i (nth dim-currently-processing result-shape))
 			       (declare (type fixnum i))
 			       (explore-batch (cdr dims-x)
@@ -344,8 +342,8 @@
 				     (null ry)
 				     (null rx1)
 				     (null ry1))
-			       ; Shapes are the same
-
+				; Shapes are the same
+				; (n m) + (n m)
 				(case function
 				  (:+
 				   (copy! (data x) (data out))
@@ -362,6 +360,7 @@
 				      (null ry1)))
 				; broadcasting will be done at dim=0, dim!=1
 				; iterate by columns
+				; tensor is (1 m) (n m)
 				(let ((row (if (null rx)
 					       y
 					       x))
@@ -391,7 +390,7 @@
 				      (null ry1)))
 				; broadcasting will be done at dim=1, not dim=0
 				; iterate by rows
-
+				; tensor is (n 1) (n m)
 				(let ((column (if (null rx1)
 					          y
 					          x))
@@ -416,7 +415,7 @@
 				     (scale-rows! (data column) (data out))
 				     (geem! 1.0 (data out) (data mat) 0.0 (data out))))))
 			       (T
-				; won't works well
+				; 2D Mat is (1 n) (m 1) or (n 1) (1 m)
 				(let ((row-x (if (= (the fixnum (!shape x 0)) 1)
 						 x
 						 y))
