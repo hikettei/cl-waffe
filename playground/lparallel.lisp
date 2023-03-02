@@ -41,7 +41,7 @@
   (declare (optimize (speed 3) (safety 0))
 	   (type symbol function)
 	   (type waffetensor x y))
-  ; assume that (!dims x) == (!dims y)
+					; assume that (!dims x) == (!dims y)
 
   (unless (= (!dims x) (!dims y))
     (error "KernelError: Can't broadcasting ~a and ~a" x y))
@@ -62,7 +62,7 @@
 
     (reshape-and-displace! (data x) `(,(!size x)) 0)
     (reshape-and-displace! (data y) `(,(!size y)) 0)
-    ; Todo: CUDA Support
+					; Todo: CUDA Support
     (with-facets ((o  ((data out) 'backing-array :direction :output))
 		  (x1 ((data x) 'backing-array :direction :input))
 		  (y1 ((data y) 'backing-array :direction :input)))
@@ -80,7 +80,7 @@
 		 (let ((bx (car (nth index dims)))
 		       (by (second (nth index dims))))
 		   (when (= index (1- (length dims)))
-		     ; dif=1
+					; dif=1
 		     (cond
 		       ((and (null bx) (null by))
 			(loop for i fixnum upfrom 0 below (the fixnum (!shape x index))
@@ -112,13 +112,13 @@
 			    (o-dif (get-index out index)))
 			(declare (type fixnum x-dif y-dif o-dif))
 			(if (= index 0)
-			(pdotimes (i (the fixnum (!shape x index)))
-			  (declare (type fixnum i))
-			  (next
-			   (1+ index)
-			   (+ first-index-x (the fixnum (* i x-dif)))
-			   (+ first-index-y (the fixnum (* i y-dif)))
-			   (+ first-index-o (the fixnum (* i o-dif))))))
+			    (pdotimes (i (the fixnum (!shape x index)))
+			      (declare (type fixnum i))
+			      (next
+			       (1+ index)
+			       (+ first-index-x (the fixnum (* i x-dif)))
+			       (+ first-index-y (the fixnum (* i y-dif)))
+			       (+ first-index-o (the fixnum (* i o-dif))))))
 			(dotimes (i (the fixnum (!shape x index)))
 			  (declare (type fixnum i))
 			  (next
@@ -131,32 +131,32 @@
 			    (o-dif (get-index out index)))
 			(declare (type fixnum x-dif o-dif))
 			(if (= index 0)
-			(pdotimes (i by)
-			  (declare (type fixnum i))
-			  (next
-				(1+ index)
-				(+ first-index-x (the fixnum (* i x-dif)))
-				first-index-y
-				(+ first-index-o (the fixnum (* i o-dif))))))
+			    (pdotimes (i by)
+			      (declare (type fixnum i))
+			      (next
+			       (1+ index)
+			       (+ first-index-x (the fixnum (* i x-dif)))
+			       first-index-y
+			       (+ first-index-o (the fixnum (* i o-dif))))))
 			(dotimes (i by)
 			  (declare (type fixnum i))
 			  (next
-				(1+ index)
-				(+ first-index-x (the fixnum (* i x-dif)))
-				first-index-y
-				(+ first-index-o (the fixnum (* i o-dif)))))))
+			   (1+ index)
+			   (+ first-index-x (the fixnum (* i x-dif)))
+			   first-index-y
+			   (+ first-index-o (the fixnum (* i o-dif)))))))
 		     ((null by)
 		      (let ((y-dif (get-index y index))
 			    (o-dif (get-index out index)))
 			(declare (type fixnum y-dif o-dif))
 			(if (= index 0)
-			(pdotimes (i bx)
-			  (declare (type fixnum i))
-			  (next
-			   (1+ index)
-			   first-index-x
-			   (+ first-index-y (the fixnum (* i y-dif)))
-			   (+ first-index-o (the fixnum (* i o-dif))))))
+			    (pdotimes (i bx)
+			      (declare (type fixnum i))
+			      (next
+			       (1+ index)
+			       first-index-x
+			       (+ first-index-y (the fixnum (* i y-dif)))
+			       (+ first-index-o (the fixnum (* i o-dif))))))
 			(dotimes (i bx)
 			  (declare (type fixnum i))
 			  (next
@@ -191,11 +191,11 @@
 	 shape)))
 
 (defun sapply (function x y)
-  ; still node debugged but it used mgl-mat's APIs
+					; still node debugged but it used mgl-mat's APIs
   (declare (optimize (speed 3) (safety 0))
 	   (type symbol function)
 	   (type waffetensor x y))
-  ; assume that (!dims x) == (!dims y)
+					; assume that (!dims x) == (!dims y)
   (unless (= (!dims x) (!dims y))
     (error "KernelError: Can't broadcasting ~a and ~a" x y))
 
@@ -226,8 +226,8 @@
 					 (the fixnum
 					      (* (the fixnum (car x))
 						 (the fixnum (apply #'* (cdr y))))))
-					 subscripts
-					 shape)))))
+				     subscripts
+				     shape)))))
       (let ((x-strides (loop for i fixnum upfrom 0 below (the fixnum (length x-dims-first))
 			     collect (get-stride x-dims-first i)))
 	    (y-strides (loop for i fixnum upfrom 0 below (the fixnum (length y-dims-first))
@@ -251,10 +251,10 @@
 		 (explore-batch (dims-x dims-y dims-o x-index y-index o-index dim-currently-processing)
 		   (declare (type list dims-x dims-y dims-o)
 			    (type fixnum x-index y-index o-index dim-currently-processing))
-		   ; Parallel 3D 4D ...
+					; Parallel 3D 4D ...
 
 		   (if (> (length dims-x) 2)
-		       ; Tensor's dim >= 3, batch them until currenlt refering tensor is 2d. If *kernel*, parallelize.
+					; Tensor's dim >= 3, batch them until currenlt refering tensor is 2d. If *kernel*, parallelize.
 		       (let* ((repeat-instruction-x (car (nth dim-currently-processing dims)))
 			      (repeat-instruction-y (second (nth dim-currently-processing dims))))
 
@@ -268,7 +268,8 @@
 					      (y-step-index y-index i repeat-instruction-y dim-currently-processing)
 					      (o-step-index o-index i dim-currently-processing)
 					      (1+ dim-currently-processing)))
-			     (lparallel:pdotimes (i (nth dim-currently-processing result-shape))
+					; Todo pdotimes
+			     (dotimes (i (nth dim-currently-processing result-shape))
 			       (declare (type fixnum i))
 			       (explore-batch (cdr dims-x)
 					      (cdr dims-y)
@@ -277,8 +278,8 @@
 					      (y-step-index y-index i repeat-instruction-y dim-currently-processing)
 					      (o-step-index o-index i dim-currently-processing)
 					      (1+ dim-currently-processing)))))
-		       ; When processing tensors are reached to 2D/1D
-		       ; Applying functions.
+					; When processing tensors are reached to 2D/1D
+					; Applying functions.
 		       (let* ((dim-currently-processing (the fixnum (+ dim-currently-processing )))
 			      (rx (car (nth dim-currently-processing dims)))
 			      (ry (second (nth dim-currently-processing dims)))
@@ -297,21 +298,21 @@
 			  dims-o
 			  o-index)
 			 (if (= (length dims-x) 1)
-			     ; the rest is 1D
+					; the rest is 1D
 			     (cond
 			       ((and (null rx)
 				     (null ry))
-				; applying the same shapes
+					; applying the same shapes
 				(case function
-				      (:+
-				       (copy! (data x) (data out))
-				       (axpy! 1.0 (data y) (data out)))
-				      (:-
-				       (copy! (data x) (data out))
-				       (axpy! -1.0 (data y) (data out)))
-				      (:* (geem! 1.0 (data x) (data y) 0.0 (data out)))))
+				  (:+
+				   (copy! (data x) (data out))
+				   (axpy! 1.0 (data y) (data out)))
+				  (:-
+				   (copy! (data x) (data out))
+				   (axpy! -1.0 (data y) (data out)))
+				  (:* (geem! 1.0 (data x) (data y) 0.0 (data out)))))
 			       ((null rx)
-				; ry is repeat (i.e: y is scalar)
+					; ry is repeat (i.e: y is scalar)
 				(let ((scal (mat-as-scalar (data y))))
 				  (declare (type single-float scal))
 				  (case function
@@ -324,7 +325,7 @@
 				    (:*
 				     (axpy! scal (data x) (data out))))))
 			       ((null ry)
-				 ; rx is repeat (i.e: x is scalar)
+					; rx is repeat (i.e: x is scalar)
 				(let ((scal (mat-as-scalar (data x))))
 				  (declare (type single-float scal))
 				  (case function
@@ -336,14 +337,14 @@
 				     (.+! (- scal) (data out)))
 				    (:*
 				     (axpy! scal (data y) (data out)))))))
-			     ; The rest are 2D
+					; The rest are 2D
 			     (cond
 			       ((and (null rx)
 				     (null ry)
 				     (null rx1)
 				     (null ry1))
-				; Shapes are the same
-				; (n m) + (n m)
+					; Shapes are the same
+					; (n m) + (n m)
 				(case function
 				  (:+
 				   (copy! (data x) (data out))
@@ -358,9 +359,9 @@
 				     (null ry))
 				 (and (null rx1)
 				      (null ry1)))
-				; broadcasting will be done at dim=0, dim!=1
-				; iterate by columns
-				; tensor is (1 m) (n m)
+					; broadcasting will be done at dim=0, dim!=1
+					; iterate by columns
+					; tensor is (1 m) (n m)
 				(let ((row (if (null rx)
 					       y
 					       x))
@@ -376,7 +377,7 @@
 				     (fill! 1.0 (data out))
 				     (scale-columns! (data row) (data out))
 				     (axpy! -1.0 (data mat) (data out))
-				     ; x and y are reversed?
+					; x and y are reversed?
 				     (if (null rx)
 					 (scal! -1.0 (data out))))
 				    (:*
@@ -388,9 +389,9 @@
 				      (null ry))
 				 (or  (null rx1)
 				      (null ry1)))
-				; broadcasting will be done at dim=1, not dim=0
-				; iterate by rows
-				; tensor is (n 1) (n m)
+					; broadcasting will be done at dim=1, not dim=0
+					; iterate by rows
+					; tensor is (n 1) (n m)
 				(let ((column (if (null rx1)
 					          y
 					          x))
@@ -407,7 +408,7 @@
 				     (fill! 1.0 (data out))
 				     (scale-rows! (data column) (data out))
 				     (axpy! -1.0 (data mat) (data out))
-				     ; x and y are reversed?
+					; x and y are reversed?
 				     (if (null rx1)
 					 (scal! -1.0 (data out))))
 				    (:*
@@ -415,7 +416,7 @@
 				     (scale-rows! (data column) (data out))
 				     (geem! 1.0 (data out) (data mat) 0.0 (data out))))))
 			       (T
-				; 2D Mat is (1 n) (m 1) or (n 1) (1 m)
+					; 2D Mat is (1 n) (m 1) or (n 1) (1 m)
 				(let ((row-x (if (= (the fixnum (!shape x 0)) 1)
 						 x
 						 y))
@@ -450,6 +451,33 @@
 	  (reshape-and-displace! (data y) y-dims-first y-displacement-first)
 	  (reshape-and-displace! (data out) result-shape 0)
 	  out)))))
+
+(defun compare-shape (setf-mode? out tensor subscripts broadcasts)
+  (declare (ignore broadcasts))
+  (let ((topic-tensor (if setf-mode?
+			  out
+			  tensor)))
+    (mapc
+     #'(lambda (x y)
+	 (typecase y
+	   (fixnum
+	    (if (>= y x)
+		(error "!aref the index ~a is beyonds ~a.~%~a~%and~%~a~%~% dims are specified in the range of (0 ~a)" y x topic-tensor subscripts (1- x))))
+	   (list
+	    (if (>= (car y) x)
+		(error "!aref the first index ~a is beyonds ~a.~%~a~%and~%~a~%~% dims are specified in the range of (0 ~a)" y x topic-tensor subscripts (1- x)))
+	    (if (>= (second y) x)
+		(error "!aref the second index ~a is beyonds ~a.~%~a~%and~%~a~%~% stops are specified in the range of (0 ~a)" y x topic-tensor subscripts (1- x))))))
+     (!shape topic-tensor) subscripts))
+  (mapc
+   #'(lambda (a b c)
+       (typecase b
+	 (fixnum t)
+	 (cons (if (< a (- (second b) (car b)))
+		 (error "!aref: Can't copy ~%~a and ~%~a ~%~%beacuse the subscript ~a will produce the tensor whose shape is (~a)~% but it won't fit into the tensor of (~a)" out tensor b (- (second b) (car b)) a)))
+	 (t (if (< a c)
+		(error "!aref: Can't copy ~a and ~a ~%~%because the size ~a tensor won't fit into the size ~a tensor.~%That is, the given out is too small to copy the target.~%~%(setf (!aref out subscripts) target) <- out is too small." out tensor c a)))))
+   (!shape out) subscripts (!shape tensor)))
 
 (defun parse-subscripts (tensor subscripts)
   (declare (optimize (speed 3))
@@ -521,29 +549,35 @@
 			  out)
 			 nil)))
     (declare (type list x-dim-first o-dim-first))
-    ; setf-mode?=t, -> the copied tensor overwrittes out
-    ; setf-mode?=nil, -> creates new tensor and is overwritted
+    #|
+    setf-mode?=t, -> the copied tensor overwrittes out
+    setf-mode?=nil, -> creates new tensor and is overwritted
+    and when setf-mode is t, subscriptions affect outs.
+    |#
 
-    ; (compare-dims) out>xを防ぐ
+    (compare-shape
+     setf-mode?
+     out
+     x
+     subscripts
+     broadcasts)
+
     (reshape-and-displace! (data x)   `(,(!size x)) x-displace-first)
     (reshape-and-displace! (data out) `(,(!size out)) o-displace-first)
     
     (labels ((get-stride (shape dim)
-	       (let ((subscripts (loop for k fixnum upfrom 0 below dim
-				       collect 0)))
-
+	       (let ((subscripts (fill-with-d shape dim)))
 		 (apply #'+ (maplist #'(lambda (x y)
 					 (the fixnum
 					      (* (the fixnum (car x))
 						 (the fixnum (apply #'* (cdr y))))))
-					 `(,@subscripts 1)
-					 shape)))))
+				     subscripts
+				     shape)))))
 
       (let ((x-strides (loop for i fixnum upfrom 0 below (the fixnum (length x-dim-first))
 			     collect (get-stride x-dim-first i)))
 	    (o-strides (loop for i fixnum upfrom 0 below (the fixnum (length o-dim-first))
 			     collect (get-stride o-dim-first i))))
-
 	(labels ((x-step-index (state i dim-index)
 		   (declare (type fixnum state i dim-index))
 		   (if (or (null broadcasts)
@@ -570,16 +604,38 @@
 			     (+ 1 dim-index)
 			     (cdr dims-x)
 			     (cdr dims-o)
-			     (x-step-index x-index sub dim-index)
-			     (o-step-index o-index sub dim-index)))
+			     (x-step-index
+			      x-index
+			      (if setf-mode?
+				  0
+				  sub)
+			      dim-index)
+			     (o-step-index
+			      o-index
+			      (if setf-mode?
+				  sub
+				  0)
+			      dim-index)))
 			   (list
-			    (loop for i fixnum upfrom (car sub) below (second sub)
+			    (loop
+			      with m fixnum = (car sub)
+			      for i fixnum upfrom 0 below (- (the fixnum (second sub)) (the fixnum (car sub)))
 				  do (explore-batch
 				      (+ 1 dim-index)
 				      (cdr dims-x)
 				      (cdr dims-o)
-				      (x-step-index x-index i dim-index)
-				      (o-step-index o-index i dim-index))))
+				      (x-step-index
+				       x-index
+				       (if setf-mode?
+					   i
+					   (+ m i))
+				       dim-index)
+				      (o-step-index
+				       o-index
+				       (if setf-mode?
+					   (+ m i)
+					   i)
+				       dim-index))))
 			   (t
 			    (loop for i fixnum upfrom 0 below (car dims-o)
 				  do (explore-batch
@@ -588,7 +644,7 @@
 				      (cdr dims-o)
 				      (x-step-index x-index i dim-index)
 				      (o-step-index o-index i dim-index))))))
-		       ; Apply copy
+				      ; Apply copy
 		       (let* ((sub (nth dim-index subscripts))
 			      (x-size (if setf-mode?
 					  dims-x
