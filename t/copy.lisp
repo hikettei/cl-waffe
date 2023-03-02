@@ -95,8 +95,6 @@ Testing !aref, (setf !aref) for multi dims
       (is (arefs-test aref-arg3 '(0 3) '(0 3) '(0 3) '(0 3)))
       (is (arefs-test aref-arg3 '(0 -1) '(1 -1) '(2 -2) '(3 -1))))
 
-; broadcasting errorは、!arefされてないoutと!arefされたTensorを比べてるから起きる
-
 (test setf-aref-test-1d
       (is (setf-aref-test1 (!randn `(10)) t))
       (is (setf-aref-test1 (!randn `(10)) 0))
@@ -121,6 +119,19 @@ Testing !aref, (setf !aref) for multi dims
       (is (setf-aref-test1 (!randn `(10 10)) '(1 3) '(1 3))))
 
 (test setf-aref-test-3d
-      (is (setf-aref-test1 (!randn `(10 10 10)) t)))
+      (is (setf-aref-test1 (!randn `(10 10 10)) t))
+      (is (setf-aref-test1 (!randn `(10 10 10)) t 0 0))
+      (is (setf-aref-test1 (!randn `(10 10 10)) 0 t 0))
+      (is (setf-aref-test1 (!randn `(10 10 10)) t '(0 3) t))
+      (is (setf-aref-test1 (!randn `(10 10 10)) '(1 3) '(1 3) t))
+      (is (setf-aref-test1 (!randn `(10 10 10)) '(1 3) '(2 3) '(2 -1))))
+
+(test setf-aref-test-4d
+      (is (setf-aref-test1 (!randn `(10 10 10 10)) t))
+      (is (setf-aref-test1 (!randn `(10 10 10 10)) t 0 0 t))
+      (is (setf-aref-test1 (!randn `(10 10 10 10)) 0 t 0 1))
+      (is (setf-aref-test1 (!randn `(10 10 10 10)) t '(0 3) t 0))
+      (is (setf-aref-test1 (!randn `(10 10 10 10)) '(1 3) '(1 3) t '(2 3)))
+      (is (setf-aref-test1 (!randn `(10 10 10 10)) '(1 3) '(2 3) '(2 -1) 0)))
 	  
 
