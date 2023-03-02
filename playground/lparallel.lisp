@@ -180,6 +180,7 @@
     (hoge1)))
 
 (defun sapply (function x y)
+  ; still node debugged but it used mgl-mat's APIs
   (declare (optimize (speed 3) (safety 0))
 	   (type symbol function)
 	   (type waffetensor x y))
@@ -441,5 +442,169 @@
 	  (reshape-and-displace! (data out) result-shape 0)
 	  out)))))
 
+(defun parse-subscripts (tensor subscripts)
+  (declare (optimize (speed 3))
+	   (type waffetensor tensor)
+	   (type (or null cons) subscripts))
+  (unless (>= (!dims tensor) (length subscripts))
+    (error "!aref: The number of subscripts is larger than given tensor: ~a and ~a" (!shape tensor) subscripts))
+  (loop for i fixnum upfrom 0 below (!dims tensor)
+	collect (let ((subscript (or (nth i subscripts) t))
+		      (shape (!shape tensor i)))
+		  (declare (type fixnum shape))
+		  (typecase subscript
+		    (fixnum
+		     (if (>= subscript 0)
+			 subscript
+			 (the fixnum (+ shape (the fixnum subscript)))))
+		    (list
+		     (unless (= (length subscript) 2)
+		       (error "!aref: The subscript is invaild: Subscripts are given by '(start stop) but got ~a." subscripts))
+		     (let ((subscript (map 'list #'(lambda (a)
+						     (typecase a
+						       (fixnum
+							(if (>= a 0)
+							    a
+							    (the fixnum (+ shape a))))
+						       (t
+							(unless (eql a t)
+							  (error "!aref: The subscript is invaild: cons arguments are given by fixnum but got ~a, at ~a" a subscript))
+							shape)))
+					   subscript)))
 
-(defun faref ())
+		       (unless (< (the fixnum (car subscript)) (the fixnum (second subscript)))
+			 (error "!aref: The subscript is invaild: Got ~a but the first argument is larget than the second one." subscript))
+		       subscript))
+		    (t
+		     (unless (eql subscript t)
+		       (error "!aref: The format is invaild. Subscripts are given by following format: fixnum cons t but got ~a" subscript))
+		     t)))))
+
+(defun saref (out x &rest subscripts)
+  "saref excepts to be out and x's dims are the same."
+  (declare (optimize (speed 3))
+	   (type cons subscripts)
+	   (type waffetensor x)
+	   (type (or null waffetensor) out))
+  (let* ((setf-mode? (not (null out)))
+	 (subscripts (parse-subscripts (if setf-mode?
+					   out
+					   x)
+				       subscripts))
+	 (out-shape (or (if (not (null out))
+			    (!shape out))
+			(loop for i fixnum upfrom 0 below (length (the list subscripts))
+			      collect (let ((sub (nth i subscripts)))
+					(typecase sub
+					  (fixnum 1)
+					  (cons (the fixnum (- (the fixnum (second sub))
+							       (the fixnum (car sub)))))
+					  (T (!shape x i)))))))
+	 (out (or out
+		  (!zeros out-shape)))
+	 (x-dim-first (!shape x))
+	 (o-dim-first (!shape out))
+	 (x-displace-first (mat-displacement (data x)))
+	 (o-displace-first (mat-displacement (data out)))
+	 (broadcasts (if setf-mode?
+			 (cl-waffe::broadcasting
+			  x
+			  out)
+			 nil)))
+    (declare (type list x-dim-first o-dim-first))
+    ; setf-mode?=t, -> the copied tensor overwrittes out
+    ; setf-mode?=nil, -> creates new tensor and is overwritted
+
+    ; (compare-dims)
+    (reshape-and-displace! (data x)   `(,(!size x)) x-displace-first)
+    (reshape-and-displace! (data out) `(,(!size out)) o-displace-first)
+    
+    (labels ((get-stride (shape dim)
+	       (let ((subscripts (loop for k fixnum upfrom 0 below dim
+				       collect 0)))
+
+		 (apply #'+ (maplist #'(lambda (x y)
+					 (the fixnum
+					      (* (the fixnum (car x))
+						 (the fixnum (apply #'* (cdr y))))))
+					 `(,@subscripts 1)
+					 shape)))))
+
+      (let ((x-strides (loop for i fixnum upfrom 0 below (the fixnum (length x-dim-first))
+			     collect (get-stride x-dim-first i)))
+	    (o-strides (loop for i fixnum upfrom 0 below (the fixnum (length o-dim-first))
+			     collect (get-stride o-dim-first i))))
+
+	(labels ((x-step-index (state i dim-index)
+		   (declare (type fixnum state i dim-index))
+		   (if (or (null broadcasts)
+			   (null (car (nth dim-index broadcasts))))
+		       (+ state (the fixnum
+				     (* i (the fixnum (nth dim-index x-strides)))))
+		       state))
+		 (o-step-index (state i dim-index)
+		   (declare (type fixnum state i dim-index))
+		   (if (or (null broadcasts)
+			   (null (second (nth dim-index broadcasts))))
+		       (+ state (the fixnum
+				     (* i (the fixnum (nth dim-index o-strides)))))
+		       state))
+		 (explore-batch (dim-index dims-x dims-o x-index o-index)
+		   (declare (type fixnum dim-index x-index o-index)
+			    (type list dims-x dims-o))
+		   (if (>= (length dims-x) 2)
+		       ; Batch
+		       (let ((sub (nth dim-index subscripts)))
+			 (typecase sub
+			   (fixnum
+			    (explore-batch
+			     (+ 1 dim-index)
+			     (cdr dims-x)
+			     (cdr dims-o)
+			     (x-step-index x-index sub dim-index)
+			     (o-step-index o-index sub dim-index)))
+			   (list
+			    (loop for i fixnum upfrom (car sub) below (second sub)
+				  do (explore-batch
+				      (+ 1 dim-index)
+				      (cdr dims-x)
+				      (cdr dims-o)
+				      (x-step-index x-index i dim-index)
+				      (o-step-index o-index i dim-index))))
+			   (t
+			    (loop for i fixnum upfrom 0 below (car dims-o)
+				  do (explore-batch
+				      (+ 1 dim-index)
+				      (cdr dims-x)
+				      (cdr dims-o)
+				      (x-step-index x-index i dim-index)
+				      (o-step-index o-index i dim-index))))))
+		       ; Apply copy
+		       (let* ((sub (nth dim-index subscripts))
+			      (x-size (typecase sub
+					(fixnum `(1))
+					(cons `(,(the fixnum (- (the fixnum (second sub)) (the fixnum (car sub))))))
+					(t dims-x)))
+			      (o-size dims-o)
+			      (x-begin (typecase sub
+					 (fixnum sub)
+					 (cons (car sub))
+					 (t 0)))
+			      (o-begin 0))
+			 (declare (type fixnum x-begin))
+			 (reshape-and-displace!
+			  (data x)
+			  x-size
+			  (the fixnum (+ x-begin x-index)))
+			 (reshape-and-displace!
+			  (data out)
+			  o-size
+			  (+ o-begin o-index))
+
+			 (copy! (data x) (data out))))
+		   nil))
+	  (explore-batch 0 x-dim-first o-dim-first 0 0)
+	  (reshape-and-displace! (data x) x-dim-first x-displace-first)
+	  (reshape-and-displace! (data out) o-dim-first o-displace-first)
+	  out)))))
+
