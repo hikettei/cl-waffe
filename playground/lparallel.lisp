@@ -179,6 +179,17 @@
   (pdotimes (i 10)
     (hoge1)))
 
+(defun fill-with-d (shape i)
+  (let ((index -1))
+    (map 'list (lambda (x)
+		 (declare (ignore x))
+		 (incf index 1)
+		 (cond
+		   ((= i index)
+		    1)
+		   (T 0)))
+	 shape)))
+
 (defun sapply (function x y)
   "xとyの下二つの次元数が一致してる時用"
   ; still node debugged but it used mgl-mat's APIs
@@ -211,14 +222,12 @@
     (reshape-and-displace! (data y) `(,(!size y)) y-displacement-first)
 
     (labels ((get-stride (shape dim)
-	       (let ((subscripts (loop for k fixnum upfrom 0 below dim
-				       collect 0)))
-
+	       (let ((subscripts (fill-with-d shape dim)))
 		 (apply #'+ (maplist #'(lambda (x y)
 					 (the fixnum
 					      (* (the fixnum (car x))
 						 (the fixnum (apply #'* (cdr y))))))
-					 `(,@subscripts 1)
+					 subscripts
 					 shape)))))
       (let ((x-strides (loop for i fixnum upfrom 0 below (the fixnum (length x-dims-first))
 			     collect (get-stride x-dims-first i)))
@@ -251,8 +260,8 @@
 			      (repeat-instruction-y (second (nth dim-currently-processing dims))))
 
 			 (if (null lparallel:*kernel*)
-			     ; single thread
-			     (dotimes (i (nth dim-currently-processing x-dims-first))
+			     ; iterate is missing when first argument is t
+			     (dotimes (i (nth dim-currently-processing result-shape))
 			       (declare (type fixnum i))
 			       (explore-batch (cdr dims-x)
 					      (cdr dims-y)
@@ -261,7 +270,7 @@
 					      (y-step-index y-index i repeat-instruction-y dim-currently-processing)
 					      (o-step-index o-index i dim-currently-processing)
 					      (1+ dim-currently-processing)))
-			     (lparallel:pdotimes (i (nth dim-currently-processing x-dims-first))
+			     (lparallel:pdotimes (i (nth dim-currently-processing result-shape))
 			       (declare (type fixnum i))
 			       (explore-batch (cdr dims-x)
 					      (cdr dims-y)
@@ -407,6 +416,7 @@
 				     (scale-rows! (data column) (data out))
 				     (geem! 1.0 (data out) (data mat) 0.0 (data out))))))
 			       (T
+				; won't works well
 				(let ((row-x (if (= (the fixnum (!shape x 0)) 1)
 						 x
 						 y))
