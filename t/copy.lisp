@@ -13,10 +13,10 @@ Testing !aref, (setf !aref) for multi dims
 (defun use-saref (tensor &rest dims)
   (apply #'cl-waffe::%saref nil tensor dims))
 
-(defun use-setf-faref (target tensor &rest dims)
+(defun use-setf-faref (target tensor dims)
   (apply #'cl-waffe::%write-faref target tensor dims))
 
-(defun use-setf-saref (target tensor &rest dims)
+(defun use-setf-saref (target tensor dims)
   (apply #'cl-waffe::%saref target tensor dims))
 
 (defmacro arefs-test (tensor &rest dims &aux (r1 (gensym)) (r2 (gensym)))
@@ -25,24 +25,20 @@ Testing !aref, (setf !aref) for multi dims
      (M= (data ,r1)
 	 (data ,r2))))
 
-(defmacro setf-aref-test1 (tensor
-			   &rest dims
-			   &aux
-			     (storeroom (gensym))
-			     (x (gensym))
-			     (y (gensym)))
-  `(let ((,storeroom (copy-mat (data ,tensor)))
-	 (,x (copy-mat (data ,tensor)))
-	 (,y (copy-mat (data ,tensor))))
-     (use-setf-faref (const ,x)
-		     (!aref (const ,x) ,@dims)
-		     ,@dims)
+(defun setf-aref-test1 (tensor
+			&rest dims)		       
+  (let ((storeroom (copy-mat (data tensor)))
+	(x (copy-mat (data tensor)))
+	(y (copy-mat (data tensor))))
+     (use-setf-faref (const x)
+		     (apply #'!aref (const x) dims)
+		     dims)
 
-     (use-setf-saref (const ,x)
-		     (!aref (const ,x) ,@dims)
-		     ,@dims)
-     (and (M= ,x ,y)
-	  (M= ,storeroom ,x))))
+     (use-setf-saref (const y)
+		     (apply #'!aref (const y) dims)
+		     dims)
+     (and (M= x y)
+	  (M= storeroom x))))
 
 (defparameter aref-arg1 (!ones `(10 10)))
 (defparameter aref-arg2 (!ones `(100 10 10)))
@@ -125,6 +121,6 @@ Testing !aref, (setf !aref) for multi dims
       (is (setf-aref-test1 (!randn `(10 10)) '(1 3) '(1 3))))
 
 (test setf-aref-test-3d
-      (is (setf-aref-test1 (!randn `(10 10 10)))
-
+      (is (setf-aref-test1 (!randn `(10 10 10)) t)))
+	  
 

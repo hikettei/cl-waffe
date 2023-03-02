@@ -664,6 +664,20 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
 		       (error "!aref: The format is invaild. Subscripts are given by following format: fixnum cons t but got ~a" subscript))
 		     t)))))
 
+(defun broadcasting1 (x y)
+  (declare (type waffetensor x y))
+  (map 'list #'(lambda (xi yi)
+		 (declare (type fixnum xi yi))
+		 (if (and (or (= xi 1) (= yi 1))
+			  (not (= xi yi)))
+		     (if (= xi 1)
+			 `(,(max xi yi) nil)
+			 `(nil ,(max xi yi)))
+		     (if (= xi yi)
+			 `(nil nil)
+			 `(nil nil))))
+       (!shape x) (!shape y)))
+
 (defun %saref (out x &rest subscripts)
   "saref excepts to be out and x's dims are the same."
   (declare (optimize (speed 3))
@@ -691,7 +705,7 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
 	 (x-displace-first (mat-displacement (data x)))
 	 (o-displace-first (mat-displacement (data out)))
 	 (broadcasts (if setf-mode?
-			 (broadcasting
+			 (broadcasting1
 			  x
 			  out)
 			 nil)))
