@@ -350,11 +350,11 @@ These function are called by broadcasting-apply
 			  dims-o
 			  o-index)
 			 (if (= (length dims-x) 1)
-					; the rest is 1D
+			     ; the rest is 1D
 			     (cond
 			       ((and (null rx)
 				     (null ry))
-					; applying the same shapes
+				 ; applying the same shapes
 				(case function
 				  (:+
 				   (copy! (data x) (data out))
@@ -363,9 +363,8 @@ These function are called by broadcasting-apply
 				   (copy! (data x) (data out))
 				   (axpy! -1.0 (data y) (data out)))
 				  (:* (geem! 1.0 (data x) (data y) 0.0 (data out)))))
-
 			       ((null rx)
-					; ry is repeat (i.e: y is scalar)
+				; ry is repeat (i.e: y is scalar)
 				(let ((scal (mat-as-scalar (data y))))
 				  (declare (type single-float scal))
 				  (case function
@@ -378,7 +377,7 @@ These function are called by broadcasting-apply
 				    (:*
 				     (axpy! scal (data x) (data out))))))
 			       ((null ry)
-					; rx is repeat (i.e: x is scalar)
+				; rx is repeat (i.e: x is scalar)
 				(let ((scal (mat-as-scalar (data x))))
 				  (declare (type single-float scal))
 				  (case function
@@ -386,11 +385,11 @@ These function are called by broadcasting-apply
 				     (copy! (data y) (data out))
 				     (.+! scal (data out)))
 				    (:-
-				     (copy! (data y) (data out))
-				     (.+! (- scal) (data out)))
+				     (axpy! -1.0 (data y) (data out))
+				     (.+! scal (data out)))
 				    (:*
 				     (axpy! scal (data y) (data out)))))))
-					; The rest are 2D
+			     ; The rest are 2D
 			     (cond
 			       ((and (null rx)
 				     (null ry)

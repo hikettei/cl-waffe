@@ -106,7 +106,8 @@
 
 (test broadcasting-blas-1d
       (is (broadcast-test (!randn `(10)) (!randn `(1))))
-      (is (broadcast-test (!randn `(1)) (!randn `(10)))))
+      (is (broadcast-test (!randn `(1)) (!randn `(10))))
+      (is (broadcast-test (!randn `(10)) (!randn `(10)))))
 
 ; Are they OK when batch is enabled?
 
