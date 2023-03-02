@@ -501,7 +501,7 @@ These function are called by broadcasting-apply
 	  (reshape-and-displace! (data x) x-dims-first x-displacement-first)
 	  (reshape-and-displace! (data y) y-dims-first y-displacement-first)
 	  (reshape-and-displace! (data out) result-shape 0)
-	  out)))))
+	  (data out))))))
 
 (defparameter *v2v-operations* `(:add :sub :mul :div :dot :matmul))
 (defparameter *abort-delay-instruction* :matmul)

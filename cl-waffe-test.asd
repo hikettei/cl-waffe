@@ -14,6 +14,7 @@
   :components ((:module "t" :components ((:file "package")
 					 (:file "utils")
 					 (:file "deriv")
+					 (:file "copy")
 					 (:file "caches")
 					 (:file "nodes")
 					 (:file "jit")

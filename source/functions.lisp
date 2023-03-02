@@ -691,7 +691,7 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
 	 (x-displace-first (mat-displacement (data x)))
 	 (o-displace-first (mat-displacement (data out)))
 	 (broadcasts (if setf-mode?
-			 (cl-waffe::broadcasting
+			 (broadcasting
 			  x
 			  out)
 			 nil)))
