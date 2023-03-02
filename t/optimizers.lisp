@@ -2,8 +2,10 @@
 (in-package :cl-waffe-test)
 
 (in-suite :test)
-
-; here's tests for several activation, several optimizers, some operators.
+#|
+Here's tests for several activation, several optimizers, some operators.
+Using dummy data, i will get assure activation and optimizers are working well.
+|#
 
 (defparameter size 200)
 ; preparing dummy data

@@ -3,6 +3,6 @@
 
 (in-suite :test)
 
-; Tests for backward(integrated to optimizers)
+; Tests for backward (its test integrated to optimizers)
 
 

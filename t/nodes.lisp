@@ -3,6 +3,10 @@
 
 (in-suite :test)
 
+#|
+Testing defnode and its features
+|#
+
 (defmodel TestModel1 nil
   :parameters nil
   :forward ((x)

@@ -3,7 +3,9 @@
 
 (in-suite :test)
 
-(format t "Testing for broadcasting shapes~%")
+#|
+  Testing broadcasted operators.
+|#
 
 (defparameter arg1 (!randn `(1000 1000)))
 (defparameter arg2 (!randn `(1000 1)))

@@ -3,6 +3,10 @@
 
 (in-suite :test)
 
+#|
+Testing arithmetic operators
+|#
+
 (defparameter a (!add 10 (!randn `(10 10))))
 (defparameter b (!add 10 (!randn `(10 10))))
 
