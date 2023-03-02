@@ -92,7 +92,6 @@
       (is (broadcast-test (!randn `(10 10 10)) (!randn `(10 10 10))))
       (is (broadcast-test (!randn `(10 10 10 10)) (!randn `(10 10 10 10)))))
 
-
 ; All combines of broadcasting
 
 (test broadcasting-blas-2d-repeats
@@ -106,8 +105,48 @@
       (is (broadcast-test (!randn `(1 10)) (!randn `(10 1)))))
 
 (test broadcasting-blas-1d
-      (is (broadcast-test (!randn `(10)) (!randn `(1)))))
+      (is (broadcast-test (!randn `(10)) (!randn `(1))))
+      (is (broadcast-test (!randn `(1)) (!randn `(10)))))
 
 ; Are they OK when batch is enabled?
 
+(test broadcasting-blas-3d-repeats
+      (is (broadcast-test (!randn `(10 10 1)) (!randn `(10 10 10))))
+      (is (broadcast-test (!randn `(10 10 10)) (!randn `(10 10 1))))
+      
+      (is (broadcast-test (!randn `(10 1 10)) (!randn `(10 10 10))))
+      (is (broadcast-test (!randn `(10 10 10)) (!randn `(10 1 10))))
+
+      (is (broadcast-test (!randn `(10 10 1)) (!randn `(10 1 10))))
+      (is (broadcast-test (!randn `(10 1 10)) (!randn `(10 10 1)))))
+
+(test broadcasting-blas-3d
+      (is (broadcast-test (!randn `(1 10 1)) (!randn `(10 10 10))))
+      (is (broadcast-test (!randn `(10 10 10)) (!randn `(1 10 1))))
+      
+      (is (broadcast-test (!randn `(1 1 10)) (!randn `(10 10 10))))
+      (is (broadcast-test (!randn `(10 10 10)) (!randn `(1 1 10))))
+
+      (is (broadcast-test (!randn `(1 10 1)) (!randn `(10 1 10))))
+      (is (broadcast-test (!randn `(10 1 10)) (!randn `(1 10 1)))))
+
+(test broadcasting-blas-4d-repeats
+      (is (broadcast-test (!randn `(10 1 10 1)) (!randn `(10 10 10 10))))
+      (is (broadcast-test (!randn `(10 10 10 10)) (!randn `(10 1 10 1))))
+      
+      (is (broadcast-test (!randn `(10 1 1 10)) (!randn `(10 10 10 10))))
+      (is (broadcast-test (!randn `(10 10 10 10)) (!randn `(10 1 1 10))))
+
+      (is (broadcast-test (!randn `(10 1 10 1)) (!randn `(10 10 1 10))))
+      (is (broadcast-test (!randn `(10 10 1 10)) (!randn `(10 1 10 1)))))
+
+(test broadcasting-blas-4d
+      (is (broadcast-test (!randn `(10 1 10 1)) (!randn `(1 10 10 10))))
+      (is (broadcast-test (!randn `(1 10 10 10)) (!randn `(10 1 10 1))))
+      
+      (is (broadcast-test (!randn `(10 1 1 10)) (!randn `(1 10 10 10))))
+      (is (broadcast-test (!randn `(1 10 10 10)) (!randn `(10 1 1 10))))
+
+      (is (broadcast-test (!randn `(10 1 10 1)) (!randn `(1 10 1 10))))
+      (is (broadcast-test (!randn `(1 10 1 10)) (!randn `(10 1 10 1)))))
 
