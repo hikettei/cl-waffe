@@ -1,7 +1,13 @@
 
 (in-package :cl-waffe)
 
-; dispaches kernel based on backends. and optimize node
+#|
+Here's:
+1. The functions that dispache kernel based on backends and data structures.
+2. Utils for JIT/Tracing.
+3. Utils for Lazy-evaluated tensor.
+4. with-kernel-case (utils for defnode)
+|#
 
 (defparameter *kernels* `(:mgl)
   "The list of cl-waffe supported kernels")

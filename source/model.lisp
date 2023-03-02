@@ -1,6 +1,10 @@
 
 (in-package :cl-waffe)
 
+#|
+Here's
+Utils for defnode/defmodel/defoptimizer
+|#
 (defparameter *in-node-method* nil)
 
 (defgeneric call-forward  (self))

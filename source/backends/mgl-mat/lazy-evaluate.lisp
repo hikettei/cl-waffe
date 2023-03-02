@@ -1,9 +1,14 @@
 
 (in-package :cl-waffe.backends.mgl)
 
-(defpackage :cl-waffe.backends.compiled-functions)
+#|
+Here's
+  1. Tracing JIT (Dynamically defines kernel)
+  2. And utils for it
+|#
 
-; Tracing JIT Compiler
+
+(defpackage :cl-waffe.backends.compiled-functions)
 
 (defparameter *jit-compiled* (make-hash-table)
   "An hash table, jit-id -> jit-function-name")

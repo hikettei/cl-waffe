@@ -1,6 +1,10 @@
 
 (in-package :cl-waffe)
 
+#|
+Here's utils for deftrainer/defdataset
+and train/valid function.
+|#
 (defun uncheck-destructive (variables)
   (dolist (v variables)
     (if (typep v 'waffetensor)

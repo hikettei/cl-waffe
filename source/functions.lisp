@@ -65,6 +65,7 @@ Output: Tensor"
   "Applying tanh to x, return a new sysconst with making nodes."
   (call (TanhTensor) (assure-tensor x)))
 
+; Optimizing won't go well
 (defun !gelu (x &key (approximate t))
   "Applying gelu to x, returning a new sysconst.
 
@@ -318,17 +319,25 @@ Todo: currently, it returns error.
 
 
 #|
+For peoples who are reading my ugly code.
 There's two !aref:
   1. %faref/%write-faref (old implementation using facets)
   2. %saref (new implementation using BLAS Operations
 %faref %write-faref is not used anymore but it supports simple-array.
 I set aside %faref for testing %saref
+
+Note: !aref/(setf !aref) definitions are located at tensor.lisp
 |#
 
+; wrapper
 (defun !faref (tensor &rest dims)
+  (value tensor)
   (apply #'%faref tensor dims))
 
+; wrapper
 (defun !write-faref (tensor value &rest dims)
+  (unless (= (!dims value) (!dims tensor))
+    (error "!write-faref: the size of dim doesn't match. use !unsqueeze and !squeeze to adjust it.: ~a and ~a" (!dims value) (!dims tensor)))
   (apply #'%write-faref tensor value dims))
 
 (defun %faref (tensor &rest dims)

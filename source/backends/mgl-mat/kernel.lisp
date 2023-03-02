@@ -1,7 +1,11 @@
 
 (in-package :cl-waffe.backends.mgl)
 
-; Todo Rewrite with define-lisp-kernel
+#|
+Here's
+  1. Broadcasting
+  2. Operations using mgl-mat
+|#
 
 (defmacro will-be-destructed (tensor)
   `(waffetensor-thread-data ,tensor))
@@ -94,9 +98,11 @@
     (make-mat (reverse dims) :initial-element value)))
 
 #|
+For people who is reading my ugly code:
+
 There's two broadcasting functions.
-1. broadcasting-apply-facet
-2. broadcasting-apply-mgl
+  1. broadcasting-apply-facet
+  2. broadcasting-apply-mgl
 
 The first one uses with-facet, on the other hand the second one uses BLAS/CUDA Operations.
 

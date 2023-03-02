@@ -1,6 +1,12 @@
 
 (in-package :cl-waffe.backends.mgl)
 
+#|
+Here's kernels of optimizers which wanted to get full performance.
+(It's best to just use Waffe's API and write quickly.)
+||#
+
+
 (mgl-mat:define-lisp-kernel (adam-step-grads)
     ((params :mat :output)
      (m :mat :output)
