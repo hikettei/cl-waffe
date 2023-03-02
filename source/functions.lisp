@@ -1,6 +1,12 @@
 
 (in-package :cl-waffe)
 
+#|
+Here's Mathematical Functions and Utils:
+  1.Model-List
+  2.!aref/(setf !aref)
+|#
+
 (defparameter pi-single-float (the single-float (coerce pi 'single-float)))
 
 (defnode ReLUTensor nil
@@ -262,7 +268,8 @@ Todo: currently, it returns error.
   (declare (type waffetensor x))
   (call (SoftMaxNode avoid-overflow) x))
 
-; Todo :docstring
+; Model Lists
+
 (defmodel model-list (model-list)
   :document (with-usage "model-list"
 	      :overview "define model sequentially, (e.g. x = (sequence `((layer1) (layer2))), (call x 1 tensor) => layer1's output)"
@@ -284,6 +291,9 @@ Todo: currently, it returns error.
 	 (waffetensor (data index))
 	 (T index))
        (model-list-mlist mlist)))
+
+
+; !aref, (setf !aref) function and nodes:
 
 (defnode ArefTensor (shape)
   :regard-as-node nil
@@ -309,13 +319,19 @@ Todo: currently, it returns error.
 
 #|
 There's two !aref:
-  1. !faref/!write-faref (old implementation using facets)
+  1. %faref/%write-faref (old implementation using facets)
   2. %saref (new implementation using BLAS Operations
-!faref !write-faref is not used anymore but it supports simple-array.
-I set aside !faref for testing !faref.
+%faref %write-faref is not used anymore but it supports simple-array.
+I set aside %faref for testing %saref
 |#
 
 (defun !faref (tensor &rest dims)
+  (apply #'%faref tensor dims))
+
+(defun !write-faref (tensor value &rest dims)
+  (apply #'%write-faref tensor value dims))
+
+(defun %faref (tensor &rest dims)
   (declare (optimize (speed 3))
 	   (type waffetensor tensor))
   (value tensor)
@@ -432,7 +448,7 @@ I set aside !faref for testing !faref.
 	(next-node dims-indices nil nil)
 	result))))
 
-(defun !write-faref (tensor value &rest dims)
+(defun %write-faref (tensor value &rest dims)
   "(setf tensor value)
 
 (!aref tensor dims) <- (!aref value (!shape dims))"
@@ -636,7 +652,7 @@ I set aside !faref for testing !faref.
 		       (error "!aref: The format is invaild. Subscripts are given by following format: fixnum cons t but got ~a" subscript))
 		     t)))))
 
-(defun saref (out x &rest subscripts)
+(defun %saref (out x &rest subscripts)
   "saref excepts to be out and x's dims are the same."
   (declare (optimize (speed 3))
 	   (type cons subscripts)
