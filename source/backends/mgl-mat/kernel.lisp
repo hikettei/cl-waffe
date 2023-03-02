@@ -62,6 +62,7 @@ Here's
 	  (copy-mat args)
 	  (make-mat (mat-dimensions args)))))
 
+; could be optimized with broadcast
 (declaim (ftype (function (mgl-mat:mat fixnum &key (:axis fixnum)) mgl-mat:mat) mgl-repeat))
 (defun mgl-repeat (tensor n &key axis)
   (declare (optimize (speed 3) (space 0) (safety 0) (debug 0))
@@ -476,16 +477,15 @@ These function are called by broadcasting-apply
 						     x))
 				      (on-the-around-way?
 					(= (the fixnum (!shape x 0)) 1)))
-				  (with-ones (tmp tmp-size)
+				  (mgl-mat:with-ones (tmp tmp-size)
+				    (fill! 1.0 tmp)
 				    (case function
 				      (:+
-				       (fill! 1.0 tmp)
 				       (fill! 1.0 (data out))
 				       (scale-columns! (data row-x) tmp)
 				       (scale-rows! (data columns-y) (data out))
 				       (axpy! 1.0 tmp (data out)))
 				      (:-
-				       (fill! 1.0 tmp)
 				       (fill! 1.0 (data out))
 				       (scale-columns! (data row-x) tmp)
 				       (scale-rows! (data columns-y) (data out))

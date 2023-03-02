@@ -14,22 +14,16 @@
 (defun broadcast-2 (func a b)
   (cl-waffe.backends.mgl::broadcasting-apply-mgl func a b))
 
-(defmacro broadcast-test (a b &aux
-				(a1 (gensym))
-				(b1 (gensym))
-				(a2 (gensym))
-				(b2 (gensym))
-				(a3 (gensym))
-				(b3 (gensym)))
-  `(let ((,a1 (broadcast-1 :+ ,a ,b))
-	 (,b1 (broadcast-2 :+ ,a ,b))
-	 (,a2 (broadcast-1 :- ,a ,b))
-	 (,b2 (broadcast-2 :- ,a ,b))
-	 (,a3 (broadcast-1 :* ,a ,b))
-	 (,b3 (broadcast-2 :* ,a ,b)))
-     (and (M= ,a1 ,b1)
-	  (M= ,a2 ,b2)
-	  (M= ,a3 ,b3))))
+(defun broadcast-test (a b)
+  (let ((a1 (broadcast-1 :+ a b))
+	(b1 (broadcast-2 :+ a b))
+	(a2 (broadcast-1 :- a b))
+	(b2 (broadcast-2 :- a b))
+	(a3 (broadcast-1 :* a b))
+	(b3 (broadcast-2 :* a b)))
+     (and (M= a1 b1)
+	  (M= a2 b2)
+	  (M= a3 b3))))
   
 ; most basic
 (defun simple-test1 ()
@@ -93,7 +87,6 @@
 
 ; Tests below supposed broadcasting-apply-facet to be OK for all operations.
 
-
 (test broadcasting-blas-squares
       (is (broadcast-test (!randn `(10 10)) (!randn `(10 10))))
       (is (broadcast-test (!randn `(10 10 10)) (!randn `(10 10 10))))
@@ -109,11 +102,8 @@
       (is (broadcast-test (!randn `(1 10)) (!randn `(10 10))))
       (is (broadcast-test (!randn `(10 10)) (!randn `(1 10))))
 
-      ;won't works well...
       (is (broadcast-test (!randn `(10 1)) (!randn `(1 10))))
-      (is (broadcast-test (!randn `(1 10)) (!randn `(10 1))))
-
-      )
+      (is (broadcast-test (!randn `(1 10)) (!randn `(10 1)))))
 
 (test broadcasting-blas-1d
       (is (broadcast-test (!randn `(10)) (!randn `(1)))))
