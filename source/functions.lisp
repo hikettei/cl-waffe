@@ -319,7 +319,7 @@ Todo: currently, it returns error.
 
 
 #|
-For peoples who are reading my ugly code.
+For those who are reading my ugly code.
 There's two !aref:
   1. %faref/%write-faref (old implementation using facets)
   2. %saref (new implementation using BLAS Operations
@@ -332,13 +332,16 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
 ; wrapper
 (defun !faref (tensor &rest dims)
   (value tensor)
-  (apply #'%faref tensor dims))
+  ;(apply #'%faref tensor dims)
+  (apply #'%saref nil tensor dims))
 
 ; wrapper
 (defun !write-faref (tensor value &rest dims)
   (unless (= (!dims value) (!dims tensor))
     (error "!write-faref: the size of dim doesn't match. use !unsqueeze and !squeeze to adjust it.: ~a and ~a" (!dims value) (!dims tensor)))
-  (apply #'%write-faref tensor value dims))
+  (apply #'%write-faref tensor value dims)
+  ;(apply #'%saref tensor value dims)
+  )
 
 (defun %faref (tensor &rest dims)
   (declare (optimize (speed 3))
@@ -608,9 +611,9 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
 	    (if (>= y x)
 		(error "!aref the index ~a is beyonds ~a.~%~a~%and~%~a~%~% dims are specified in the range of (0 ~a)" y x topic-tensor subscripts (1- x))))
 	   (list
-	    (if (>= (car y) x)
+	    (if (> (car y) x)
 		(error "!aref the first index ~a is beyonds ~a.~%~a~%and~%~a~%~% dims are specified in the range of (0 ~a)" y x topic-tensor subscripts (1- x)))
-	    (if (>= (second y) x)
+	    (if (> (second y) x)
 		(error "!aref the second index ~a is beyonds ~a.~%~a~%and~%~a~%~% stops are specified in the range of (0 ~a)" y x topic-tensor subscripts (1- x))))))
      (!shape topic-tensor) subscripts))
   (mapc
