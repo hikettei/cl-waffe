@@ -28,17 +28,9 @@ Here's:
        result)))
 
 (defmacro with-jit (&body body)
-  `(progn
-     (setf cl-waffe.backends.mgl::*force-disable-jit* nil)
-     (setf cl-waffe.backends.mgl:*force-lazy-eval* t)
-     (setf cl-waffe.backends.mgl:*verbose* t)
-     ,@body))
-
-(defmacro with-no-jit (&body body)
-  `(progn
-     (setf cl-waffe.backends.mgl::*force-disable-jit* t)
-     (setf cl-waffe.backends.mgl:*force-lazy-eval* nil)
-     (setf cl-waffe.backends.mgl:*verbose* t)
+  `(let ((cl-waffe.backends.mgl::*force-disable-jit* nil)
+	 (cl-waffe.backends.mgl:*force-lazy-eval* t)
+	 (cl-waffe.backends.mgl:*verbose* t))
      ,@body))
 
 (declaim (ftype (function (waffetensor) waffetensor) warranty))
