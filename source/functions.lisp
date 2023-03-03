@@ -339,8 +339,8 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
 (defun !write-faref (tensor value &rest dims)
   (unless (= (!dims value) (!dims tensor))
     (error "!write-faref: the size of dim doesn't match. use !unsqueeze and !squeeze to adjust it.: ~a and ~a" (!dims value) (!dims tensor)))
-  (apply #'%write-faref tensor value dims)
-  ;(apply #'%saref tensor value dims)
+  ;(apply #'%write-faref tensor value dims)
+  (apply #'%saref tensor value dims)
   )
 
 (defun %faref (tensor &rest dims)
@@ -350,7 +350,7 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
   (let* ((tensor-dims (!shape tensor))
 	 (dims (cond
 		 ((> (!dims tensor) (length dims))
-					; adjust the size of dim
+		  ; adjust the size of dim
 		  (concatenate
 		   'list
 		   dims
@@ -803,8 +803,14 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
 				      (+ 1 dim-index)
 				      (cdr dims-x)
 				      (cdr dims-o)
-				      (x-step-index x-index i dim-index)
-				      (o-step-index o-index i dim-index))))))
+				      (x-step-index
+				       x-index
+				       (mod i (the fixnum (nth dim-index x-dim-first))) ; out of range.
+				       dim-index)
+				      (o-step-index
+				       o-index
+				       (mod i (the fixnum (nth dim-index o-dim-first))) ; out of range.
+				       dim-index))))))
 					; Apply copy
 		       (let* ((sub (nth dim-index subscripts))
 			      (x-size (if setf-mode?
