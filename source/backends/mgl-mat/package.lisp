@@ -4,6 +4,7 @@
   (:use :cl :cl-waffe :mgl-mat :cl-cuda :cl-waffe.caches)
   (:export #:dispatch-kernel
 	   #:adam-update
+	   #:*use-blas-min-size
 	   #:write-to-nth-dim-with-range
 	   #:write-to-nth-dim-with-range1
 	   #:create-thread-idx

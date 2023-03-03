@@ -166,7 +166,7 @@
 (defun softmax1 (x)
   (declare (optimize (speed 3))
            (type waffetensor x))
-  (let* ((x1 (!!mul -1.0 (!!sub (!average1 x) x)))
+  (let* ((x1 (!!mul -1.0 (!sub (!average1 x) x)))
          (xe (!!exp x1))
 	 (z  (!sum xe 1)))
     (!!div xe z)))
@@ -197,8 +197,16 @@
 		   (with-init-2d-out o
 		     (softmax2 o)))))
 
+(with-benchmark "2D_Copy"
+  :cl-waffe (with-init-2d-out x
+	      (time (dotimes (i *loop-n*)
+		      (!aref x t))))
+  :mgl-mat (time (dotimes (i *loop-n*)
+		   (with-init-2d x y
+		     (copy! (data x) (data y))))))
 
-(defun start-benchmark (&key (dim-n 100) (loop-n 10000) (directory "./benchmark/benchmark.md") (speed-alert-min 1.5) (space-alert-min 1.5))
+
+(defun start-benchmark (&key (dim-n 100) (loop-n 1000) (directory "./benchmark/benchmark.md") (speed-alert-min 1.5) (space-alert-min 1.5))
   (format t "✅ Benchmarking :cl-waffe~%")
   (format t "✅ The number of benchmarks is : ~a~%" (length *benchmarks*))
   

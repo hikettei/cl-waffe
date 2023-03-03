@@ -1,6 +1,10 @@
 
 (in-package :cl-waffe)
 
+#|
+Utils for documentation
+|#
+
 (defparameter *gendoc-mode* t
   "Enable this nil for general usage.
 Owing to inlined-generic-function's bugs, without this param be t, stackoverflow occurs.")

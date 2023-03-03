@@ -33,6 +33,7 @@
 	   #:waffetensor-thread-data
 
 	   #:with-no-grad
+	   #:with-jit
 	   #:*no-grad*
 
 	   #:waffe-tensor-p

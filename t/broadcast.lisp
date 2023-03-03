@@ -3,12 +3,30 @@
 
 (in-suite :test)
 
-(format t "Testing for broadcasting shapes~%")
+#|
+  Testing broadcasted operators.
+|#
 
 (defparameter arg1 (!randn `(1000 1000)))
 (defparameter arg2 (!randn `(1000 1)))
 
+(defun broadcast-1 (func a b)
+  (cl-waffe.backends.mgl::broadcasting-apply-facet func a b))
 
+(defun broadcast-2 (func a b)
+  (cl-waffe.backends.mgl::broadcasting-apply-mgl func a b))
+
+(defun broadcast-test (a b)
+  (let ((a1 (broadcast-1 :+ a b))
+	(b1 (broadcast-2 :+ a b))
+	(a2 (broadcast-1 :- a b))
+	(b2 (broadcast-2 :- a b))
+	(a3 (broadcast-1 :* a b))
+	(b3 (broadcast-2 :* a b)))
+     (and (M= a1 b1)
+	  (M= a2 b2)
+	  (M= a3 b3))))
+  
 ; most basic
 (defun simple-test1 ()
   (format t "Test1: broadcasting (!add arg1 arg2)...")
@@ -68,3 +86,70 @@
       (is (simple-test4))
       (is (simple-test5))
       (is (simple-test6)))
+
+; Tests below supposed broadcasting-apply-facet to be OK for all operations.
+
+(test broadcasting-blas-squares
+      (is (broadcast-test (!randn `(10 10)) (!randn `(10 10))))
+      (is (broadcast-test (!randn `(10 10 10)) (!randn `(10 10 10))))
+      (is (broadcast-test (!randn `(10 10 10 10)) (!randn `(10 10 10 10)))))
+
+; All combines of broadcasting
+
+(test broadcasting-blas-2d-repeats
+      (is (broadcast-test (!randn `(10 1)) (!randn `(10 10))))
+      (is (broadcast-test (!randn `(10 10)) (!randn `(10 1))))
+      
+      (is (broadcast-test (!randn `(1 10)) (!randn `(10 10))))
+      (is (broadcast-test (!randn `(10 10)) (!randn `(1 10))))
+
+      (is (broadcast-test (!randn `(10 1)) (!randn `(1 10))))
+      (is (broadcast-test (!randn `(1 10)) (!randn `(10 1)))))
+
+(test broadcasting-blas-1d
+      (is (broadcast-test (!randn `(10)) (!randn `(1))))
+      (is (broadcast-test (!randn `(1)) (!randn `(10))))
+      (is (broadcast-test (!randn `(10)) (!randn `(10)))))
+
+; Are they OK when batch is enabled?
+
+(test broadcasting-blas-3d-repeats
+      (is (broadcast-test (!randn `(10 10 1)) (!randn `(10 10 10))))
+      (is (broadcast-test (!randn `(10 10 10)) (!randn `(10 10 1))))
+      
+      (is (broadcast-test (!randn `(10 1 10)) (!randn `(10 10 10))))
+      (is (broadcast-test (!randn `(10 10 10)) (!randn `(10 1 10))))
+
+      (is (broadcast-test (!randn `(10 10 1)) (!randn `(10 1 10))))
+      (is (broadcast-test (!randn `(10 1 10)) (!randn `(10 10 1)))))
+
+(test broadcasting-blas-3d
+      (is (broadcast-test (!randn `(1 10 1)) (!randn `(10 10 10))))
+      (is (broadcast-test (!randn `(10 10 10)) (!randn `(1 10 1))))
+      
+      (is (broadcast-test (!randn `(1 1 10)) (!randn `(10 10 10))))
+      (is (broadcast-test (!randn `(10 10 10)) (!randn `(1 1 10))))
+
+      (is (broadcast-test (!randn `(1 10 1)) (!randn `(10 1 10))))
+      (is (broadcast-test (!randn `(10 1 10)) (!randn `(1 10 1)))))
+
+(test broadcasting-blas-4d-repeats
+      (is (broadcast-test (!randn `(10 1 10 1)) (!randn `(10 10 10 10))))
+      (is (broadcast-test (!randn `(10 10 10 10)) (!randn `(10 1 10 1))))
+      
+      (is (broadcast-test (!randn `(10 1 1 10)) (!randn `(10 10 10 10))))
+      (is (broadcast-test (!randn `(10 10 10 10)) (!randn `(10 1 1 10))))
+
+      (is (broadcast-test (!randn `(10 1 10 1)) (!randn `(10 10 1 10))))
+      (is (broadcast-test (!randn `(10 10 1 10)) (!randn `(10 1 10 1)))))
+
+(test broadcasting-blas-4d
+      (is (broadcast-test (!randn `(10 1 10 1)) (!randn `(1 10 10 10))))
+      (is (broadcast-test (!randn `(1 10 10 10)) (!randn `(10 1 10 1))))
+      
+      (is (broadcast-test (!randn `(10 1 1 10)) (!randn `(1 10 10 10))))
+      (is (broadcast-test (!randn `(1 10 10 10)) (!randn `(10 1 1 10))))
+
+      (is (broadcast-test (!randn `(10 1 10 1)) (!randn `(1 10 1 10))))
+      (is (broadcast-test (!randn `(1 10 1 10)) (!randn `(10 1 10 1)))))
+

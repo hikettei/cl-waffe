@@ -2,9 +2,10 @@
 (in-package :cl-waffe-test)
 
 (in-suite :test)
-
-; An test codes for destructive/nondestructive operations.
-
+#|
+ Testing destructive/nondestructive operations.
+ with regard to nondestructive operators, i need to assure that there's no side effect.
+|#
 
 (defun d-test-1 ()
   (let ((x (!ones `(10 10)))

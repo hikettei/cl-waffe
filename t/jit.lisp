@@ -3,7 +3,9 @@
 
 (in-suite :test)
 
-; tests for jit
+#|
+  Tests for Tracing JIT. ./backends/mgl/lazy-evaluation.lisp
+|#
 
 (defparameter test-input (!randn `(10 10)))
 (defparameter result (value (!softmax test-input)))

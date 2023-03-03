@@ -1,7 +1,13 @@
 
 (in-package :cl-waffe)
 
-; dispaches kernel based on backends. and optimize node
+#|
+Here's:
+1. The functions that dispache kernel based on backends and data structures.
+2. Utils for JIT/Tracing.
+3. Utils for Lazy-evaluated tensor.
+4. with-kernel-case (utils for defnode)
+|#
 
 (defparameter *kernels* `(:mgl)
   "The list of cl-waffe supported kernels")
@@ -22,17 +28,15 @@
        result)))
 
 (defmacro with-jit (&body body)
-  `(progn
-     (setf cl-waffe.backends.mgl::*force-disable-jit* nil)
-     (setf cl-waffe.backends.mgl:*force-lazy-eval* t)
-     (setf cl-waffe.backends.mgl:*verbose* t)
+  `(let ((cl-waffe.backends.mgl::*force-disable-jit* nil)
+	 (cl-waffe.backends.mgl:*force-lazy-eval* t)
+	 (cl-waffe.backends.mgl:*verbose* nil))
      ,@body))
 
-(defmacro with-no-jit (&body body)
-  `(progn
-     (setf cl-waffe.backends.mgl::*force-disable-jit* t)
-     (setf cl-waffe.backends.mgl:*force-lazy-eval* nil)
-     (setf cl-waffe.backends.mgl:*verbose* t)
+(defmacro with-jit-debug (&body body)
+  `(let ((cl-waffe.backends.mgl::*force-disable-jit* nil)
+	 (cl-waffe.backends.mgl:*force-lazy-eval* t)
+	 (cl-waffe.backends.mgl:*verbose* t))
      ,@body))
 
 (declaim (ftype (function (waffetensor) waffetensor) warranty))

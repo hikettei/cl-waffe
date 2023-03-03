@@ -1,6 +1,15 @@
 
 (in-package :cl-waffe)
 
+#|
+Here's utils for tensor.
+1. Displaying tensors
+2. Initializing tensors with sampling specified distributions.
+3. Backward function
+4. Utils for tensors. 
+|#
+
+
 (defparameter *no-grad* nil
   "When t, some node will be ignored. see references below for details. default: nil")
 

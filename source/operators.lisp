@@ -1,6 +1,11 @@
 
 (in-package :cl-waffe)
 
+#|
+Here's elementary operators and nodes for tensor.
+And utils for broadcasting etc...
+|#
+
 (declaim (ftype (function (t) waffetensor) assure-tensor))
 (defun assure-tensor (x)
   "This function is used in order to implement this: e.g. (!add 1 1)"

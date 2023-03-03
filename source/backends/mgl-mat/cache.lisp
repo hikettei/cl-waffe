@@ -12,6 +12,10 @@ This package exports features for making caches (sysconst)")
 
 (in-package :cl-waffe.caches)
 
+#|
+Currently disabled and i think it is useless...
+|#
+
 ; This package is like torch.jit.tracing.
 ; cache want models to be static, while jit doesn't.
 (defparameter *static-node-mode* nil

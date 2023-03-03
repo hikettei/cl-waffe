@@ -3,6 +3,6 @@
 
 (in-suite :test)
 
-; Test codes for tracing/caching.
+; Test codes for tracing/caching. (currently disabled)
 
 
