@@ -7,6 +7,8 @@ Here's
   2. Operations using mgl-mat
 |#
 
+(defparameter *use-blas-min-size* 10000 "This thereshold decides what functions to use to broadcast. If the product of the last two dimensions is above this threshold, broadcast with a blas instruction.")
+
 (defmacro will-be-destructed (tensor)
   `(waffetensor-thread-data ,tensor))
 
@@ -115,7 +117,13 @@ These function are called by broadcasting-apply
 |#
 
 (defun broadcasting-apply (function x y)
-  (broadcasting-apply-facet function x y))
+  ; consider use-cuda-p?
+
+  (let ((last-dims-x (apply #'* (last (!shape x) 2)))
+	(last-dims-y (apply #'* (last (!shape y) 2))))
+    (if (>= (min last-dims-x last-dims-y) *use-blas-min-size*)
+	(broadcasting-apply-mgl   function x y)
+	(broadcasting-apply-facet function x y))))
 
 (declaim (ftype (function (single-float single-float symbol) single-float) applying))
 (defun applying (a b function)
