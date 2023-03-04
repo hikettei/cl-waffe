@@ -66,6 +66,13 @@ See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/mnist-tutoria
 # Features
 
 As of this writing:
+- Broadcasting
+- Destructive APIs
+- Rich APIs
+- Auto BackPropagations
+- Useful Lazy-Evaluation System
+- Tracing JIT
+- Extensible APIs
 
 ## Broadcasting Matrix.
 
@@ -278,7 +285,7 @@ See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.
 
 ## Tracing JIT
 
-This is stil experimental but...
+This is still experimental but...
 
 In `(with-jit)` macro, cl-waffe dynamically defines the kernel functions with lazy-evaluation system.
 
