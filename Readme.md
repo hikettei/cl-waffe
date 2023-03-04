@@ -334,6 +334,8 @@ In `(with-jit)` macro, cl-waffe dynamically defines the kernel functions with la
 ;#Const(((0.570... -0.13... ~ 0.217... 0.862...)        
 ;                 ...
 ;        (-0.12... 0.384... ~ -0.25... -0.91...)) :mgl t :shape (10 10))
+
+; P.S.: Back propagation is available even when with-jit is enabled
 ```
 
 
