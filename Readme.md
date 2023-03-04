@@ -216,15 +216,17 @@ See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.
 ;#Const(((0.411... 0.244... 2.828...)        
 ;                 ...
 ;        (-1.26... -1.41... 0.821...)) :mgl t :shape (10 3))
+
 (!transpose a)
 ;#Const(#<FUNCTION (LABELS CL-WAFFE.BACKENDS.MGL::LAZYTRANSPOSE :IN CL-WAFFE.BACKENDS.MGL::LAZY-EVAL-TRANSPOSE) {100CA0F5EB}>)
 
+; Generally, using delayed evaluation does not require additional new code.
 (!add * 1)
 ;#Const(((1.411... 0.862... ~ 1.590... -0.26...)        
 ;                 ...
 ;        (3.828... 0.582... ~ -0.57... 1.821...)) :mgl t :shape (3 10))
 
-; It is much faster.
+; Using !transpose is much faster for !matmul (even when the tensors are 3d/4d...).
 (time (!matmul a (!transpose a)))
 ;Evaluation took:
 ;  0.000 seconds of real time
@@ -264,6 +266,8 @@ See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.
 
 (print lazy-evaluated-a)
 ;#Const(#<FUNCTION (LABELS CL-WAFFE.BACKENDS.MGL::LAZYTRANSPOSE :IN CL-WAFFE.BACKENDS.MGL::LAZY-EVAL-TRANSPOSE) {100E48135B}>)
+
+; value will accept and evaluated lazy-evaluated tensor.
 (value lazy-evaluated-a)
 
 (print lazy-evaluated-a)
