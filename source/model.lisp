@@ -10,7 +10,7 @@ Utils for defnode/defmodel/defoptimizer
 (defgeneric call-forward  (self))
 (defgeneric call-backward (self))
 
-(defmacro with-no-grad (&body body &aux (no-grad-first (gensym)))
+(defmacro with-no-grad (&body body)
   "This macro is used in order to implict that codes below is ignored:
 save-for-backward, creating new node object, using backward and processes for it.
 
@@ -20,16 +20,12 @@ For tasks in which grads are not required, using it helps better performance.
 (with-no-grad
   (call (model) x))
 @end[lang=lisp](code)"
-  `(let ((,no-grad-first *no-grad*))
-     (setq *no-grad* t)
-     (prog1 (progn ,@body)
-       (setq *no-grad* ,no-grad-first))))
+  `(let ((*no-grad* t))
+     ,@body))
 
-(defmacro with-node-method-mode (&body body &aux (state-first (gensym)))
-  `(let ((,state-first *in-node-method*))
-     (setq *in-node-method* t)
-     (prog1 (progn ,@body)
-       (setq *in-node-method* ,state-first))))
+(defmacro with-node-method-mode (&body body)
+  `(let ((*in-node-method* t))
+     ,@body))
 
 (defmacro with-calling-layers (input &rest layers)
   "This macro allows to sequentially call layers.
