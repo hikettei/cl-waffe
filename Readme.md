@@ -15,6 +15,8 @@ Having not GPUs, I can't test my framework on cuda ><. CUDA support is a little 
 
 # TOC
 
+<!-- START doctoc -->
+<!-- END doctoc -->
 
 # MNIST Example
 
@@ -464,6 +466,11 @@ Does anyone have any ideas? Please share with me on issues!
 
 Also, bug reports and more are welcome!
 
+# Acknowledgements
+
+- The author of [mgl-mat](https://github.com/melisgl/mgl-mat), since the cl-waffe tensor depends on this. (Without it, the cl-waffe's performance was the worst.)
+- To all those who gave me ideas, helps and knowledgement.
+
 # Author
 
 hikettei
@@ -471,7 +478,7 @@ hikettei
 - [Github](https://github.com/hikettei)
 - Discord: rulia🌙#5298
 
-## Environment
+# Environment
 
 
 - SBCL 2.2.5
