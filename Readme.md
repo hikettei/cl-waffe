@@ -15,8 +15,28 @@ Having not GPUs, I can't test my framework on cuda ><. CUDA support is a little 
 
 # TOC
 
-<!-- START doctoc -->
-<!-- END doctoc -->
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**
+
+- [MNIST Example](#mnist-example)
+- [Features](#features)
+  - [Broadcasting.](#broadcasting)
+  - [Destructive APIs with a Simple Rule.](#destructive-apis-with-a-simple-rule)
+  - [Useful APIs like Numpy/PyTorch.](#useful-apis-like-numpypytorch)
+  - [Automatic Differentiation](#automatic-differentiation)
+  - [Useful Lazy-Evaluation System](#useful-lazy-evaluation-system)
+  - [Tracing JIT](#tracing-jit)
+  - [Extensible APIs](#extensible-apis)
+- [Usage](#usage)
+- [Run MNIST With Roswell](#run-mnist-with-roswell)
+- [Currently Problems/Todo](#currently-problemstodo)
+- [Goals](#goals)
+- [Acknowledgements](#acknowledgements)
+- [Author](#author)
+- [Environment](#environment)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 # MNIST Example
 
