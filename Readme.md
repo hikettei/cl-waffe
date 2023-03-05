@@ -398,10 +398,12 @@ $ cd ..
 $ ./run-test-model.ros mnist
 ```
 
-# Problems/Todo
+# Currently Problems/Todo
+As of writing, I'm working on:
+
 - 破壊的代入のサポート(Support more destructive operations)
 - Neural Networkの追加 (Add cl-waffe.nn models)
-- IterationのBackwardを高速化 (Improve performance of RNN)
+- IterationのBackwardを高速化 (Improve performance of RNN) (e.g.: the backward of (setf !aref) ...)
 - モデルの保存に対応 (Save and restore trained models.)
 - グラフの表示に対応 (Plotting losses and so on)
 - 様々なデータ構造を扱えるように (Support more types of data structure)
@@ -409,7 +411,7 @@ $ ./run-test-model.ros mnist
 ）(In term of cpu-usage rate/memory-usage, cl-waffe has a lot of challenge to performance.)
 - CUDAに対応 (Support CUDA)
 - 他の処理系で動くか試す (Try on another systems (e.g.: CCL))
-
+- Improving the quality of documentation.
 # Goals
 
 - Making cl-waffe a modern and fast framework.
@@ -425,11 +427,13 @@ $ ./run-test-model.ros mnist
 	- Add: Mathematical Functions
 	- Add: High power APIs (such features are rooted in !aref, broadcasting. they need to be optimized more)
 	- Add: DataLoader like PyTorch
+	- Add: Save and Restore Models, (Compatible with PyTorch if possible...)
 	
 - Go faster cl-waffe
 	- Support: more parallelized operators
 	- Keep whole codes abstracted and extensible
 	- Apply full optimisation when some functionality is reached enough.
+	- More benchmarks are needed and put it all in a table somewhere.
 
 Does anyone have any ideas? Please share with me on issues!
 
@@ -437,8 +441,10 @@ Also, bug reports and more are welcome!
 
 # Author
 
-hikettei (Twitter: @ichndm, github:@hikettei)
-
+hikettei
+- [Twitter](https://twitter.com/ichndm) 
+- [Github](https://github.com/hikettei)
+- Discord: rulia🌙#5298
 
 ## Environment
 
