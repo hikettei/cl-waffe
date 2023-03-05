@@ -106,24 +106,34 @@ As of this writing:
 See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#broadcasting)
 
 ```lisp
-(setq a (!randn `(100 100 100)))
-(setq b (!randn `(100 1 100)))
+(setq a (!randn `(1 100 200)))
+;#Const((((1.900... -0.70... ~ 0.609... 1.397...)         
+;                   ...
+;         (0.781... 1.735... ~ -1.01... 0.152...))) :mgl t :shape (1 100 200))
+(setq b (!randn `(100 100 200)))
+;#Const((((-1.21... 0.823... ~ 2.001... -0.21...)         
+;                   ...
+;         (-0.34... 0.441... ~ -0.07... -0.38...))        
+;                 ...
+;        ((1.627... 1.127... ~ 0.705... 0.798...)         
+;                   ...
+;         (0.070... 1.883... ~ 1.850... -0.47...))) :mgl t :shape (100 100 200))
 
 (time (!add a b))
 ;Evaluation took:
-;  0.007 seconds of real time
-;  0.006872 seconds of total run time (0.006766 user, 0.000106 system)
+;  0.003 seconds of real time
+;  0.002999 seconds of total run time (0.002799 user, 0.000200 system)
 ;  100.00% CPU
-;  16,330,130 processor cycles
-;  4,065,280 bytes consed
+;  6,903,748 processor cycles
+;  8,163,776 bytes consed
   
-;#Const((((-1.65... 0.359... ~ -1.04... -1.63...)         
+;#Const((((0.689... 0.115... ~ 2.611... 1.183...)         
 ;                   ...
-;         (0.172... 0.716... ~ -1.21... -0.18...))        
+;         (0.435... 2.177... ~ -1.08... -0.23...))        
 ;                 ...
-;        ((3.434... 0.050... ~ -0.65... 0.924...)         
+;        ((3.528... 0.419... ~ 1.315... 2.195...)         
 ;                   ...
-;         (3.686... -1.60... ~ -0.31... 1.250...))) :mgl t :shape (100 100 100))
+;         (0.851... 3.619... ~ 0.839... -0.32...))) :mgl t :shape (100 100 200))
 ```
 
 ## Destructive APIs with a Simple Rule.
