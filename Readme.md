@@ -167,55 +167,86 @@ See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/cl-waffe.html
 
 ```lisp
 (setq a (!randn `(100 100 100)))
-;#Const((((-1.47... 1.016... ~ -1.29... -1.71...)         
+;#Const((((-1.45... -0.70... ~ -0.87... -0.52...)         
 ;                   ...
-;         (2.276... 0.878... ~ -1.35... 0.466...))        
+;         (0.655... -1.47... ~ -2.10... -1.79...))        
 ;                 ...
-;        ((1.712... 1.318... ~ 0.213... 1.262...)         
+;        ((-0.28... -1.75... ~ -1.28... 0.381...)         
 ;                   ...
-;         (1.084... -0.18... ~ -1.42... 0.552...))) :mgl t :shape (100 100 100))
+;         (-0.55... -0.53... ~ 0.421... -0.13...))) :mgl t :shape (100 100 100))
 
 (time (!aref a 0 0 0))
 ;Evaluation took:
 ;  0.000 seconds of real time
-;  0.000140 seconds of total run time (0.000113 user, 0.000027 system)
+;  0.000163 seconds of total run time (0.000135 user, 0.000028 system)
 ;  100.00% CPU
-;  217,178 processor cycles
+;  235,060 processor cycles
 ;  0 bytes consed
   
-;#Const((((-1.47...))) :mgl t :shape (1 1 1))
+;#Const((((-1.45...))) :mgl t :shape (1 1 1))
 
 (time (!aref a t 0 0))
 ;Evaluation took:
 ;  0.000 seconds of real time
-;  0.000153 seconds of total run time (0.000132 user, 0.000021 system)
+;  0.000477 seconds of total run time (0.000455 user, 0.000022 system)
 ;  100.00% CPU
-;  275,596 processor cycles
-;  65,024 bytes consed
+;  963,246 processor cycles
+;  98,256 bytes consed
   
-;#Const((((-1.47...))        
+;#Const((((-1.45...))        
 ;                 ...
-;        ((1.712...))) :mgl t :shape (100 1 1))
+;        ((-0.28...))) :mgl t :shape (100 1 1))
 
 (time (!aref a '(0 3) '(10 -1) t))
 
 ;Evaluation took:
-;  0.004 seconds of real time
-;  0.004643 seconds of total run time (0.004562 user, 0.000081 system)
-;  125.00% CPU
-;  11,068,610 processor cycles
-;  4,346,976 bytes consed
+;  0.001 seconds of real time
+;  0.001489 seconds of total run time (0.001445 user, 0.000044 system)
+;  100.00% CPU
+;  3,518,516 processor cycles
+;  322,144 bytes consed
   
-;#Const((((1.400... -0.64... ~ -0.48... 2.753...)         
+;#Const((((-0.10... 0.226... ~ -1.68... 0.662...)         
 ;                   ...
-;         (-0.07... 1.025... ~ 0.765... 0.371...))        
+;         (-0.14... 1.239... ~ -0.90... -0.60...))        
 ;                 ...
-;        ((-0.47... 0.320... ~ 1.465... 1.738...)         
+;        ((-0.97... 1.588... ~ 0.558... -1.79...)         
 ;                   ...
-;         (1.566... -2.02... ~ -0.30... 0.085...))) :mgl t :shape (3 89 100))
+;         (-0.80... -1.50... ~ -1.11... -0.21...))) :mgl t :shape (3 89 100))
 
-(time (setf (!aref a '(0 3)) (!ones '(100 3))))
+(time (!aref a t t t))
+;Evaluation took:
+;  0.024 seconds of real time
+;  0.024426 seconds of total run time (0.024367 user, 0.000059 system)
+;  100.00% CPU
+;  56,193,050 processor cycles
+;  12,675,952 bytes consed
+  
+;#Const((((-1.45... -0.70... ~ -0.87... -0.52...)         
+;                   ...
+;         (0.655... -1.47... ~ -2.10... -1.79...))        
+;                 ...
+;        ((-0.28... -1.75... ~ -1.28... 0.381...)         
+;                   ...
+;         (-0.55... -0.53... ~ 0.421... -0.13...))) :mgl t :shape (100 100 100))
+
+(setq b (!ones `(100 3)))
+(time (setf (!aref a '(0 3)) b))
+;Evaluation took:
+;  0.001 seconds of real time
+;  0.001312 seconds of total run time (0.001274 user, 0.000038 system)
+;  100.00% CPU
+;  2,898,956 processor cycles
+;  262,048 bytes consed
+;#Const((((1.0 1.0 ~ -0.87... -0.52...)         
+;                   ...
+;         (1.0 1.0 ~ -2.10... -1.79...))        
+;                 ...
+;        ((-0.28... -1.75... ~ -1.28... 0.381...)         
+;                   ...
+;         (-0.55... -0.53... ~ 0.421... -0.13...))) :mgl t :shape (100 100 100))
 ```
+
 
 ## Automatic Differentiation
 
