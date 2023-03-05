@@ -473,7 +473,6 @@ hikettei
 
 ## Environment
 
-```
-SBCL 2.2.5
-macOS Monterey version 12.4
-```
+
+- SBCL 2.2.5
+	- it is recommended to use SBCL, I've not tested on others
