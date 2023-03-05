@@ -13,6 +13,9 @@ Having not GPUs, I can't test my framework on cuda ><. CUDA support is a little 
 
 [Documentation](https://hikettei.github.io/cl-waffe-docs) is available.
 
+# TOC
+
+
 # MNIST Example
 
 See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/mnist-tutorial.html)
@@ -69,14 +72,14 @@ See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/mnist-tutoria
 
 As of this writing:
 - Broadcasting
-- Destructive APIs
-- Rich APIs
-- Auto BackPropagations
+- Destructive APIs with a Simple Rule.
+- Useful APIs like Numpy/PyTorch
+- Automatic Differentiation
 - Useful Lazy-Evaluation System
 - Tracing JIT
 - Extensible APIs
 
-## Broadcasting Matrix.
+## Broadcasting.
 
 See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#broadcasting)
 
@@ -182,7 +185,7 @@ See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/cl-waffe.html
 (time (setf (!aref a '(0 3)) (!ones '(100 3))))
 ```
 
-## Auto backpropagations
+## Automatic Differentiation
 
 See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#basic-tensor-operations)
 
@@ -217,6 +220,12 @@ See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.
 ```
 
 ## Useful Lazy-Evaluation System
+
+See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#lazy-evaluation)
+
+cl-waffe's lazy-evaluation system doesn't require any additional code.
+
+Just call `(value tensor)` to accept lazy evaluation.
 
 `!transpose` will produce lazy-evaluated tensor, while `!transpose1` will do not.
 
@@ -289,7 +298,7 @@ See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.
 
 This is still experimental but...
 
-In `(with-jit)` macro, cl-waffe dynamically defines the kernel functions with lazy-evaluation system.
+In `(with-jit)` macro, cl-waffe dynamically defines the kernel functions with lazy-evaluation system. (currently only for blas)
 
 ```lisp
 
@@ -348,6 +357,8 @@ See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/extend-librar
 As you can see from `./source/optimizers/optimizers.lisp`, or `./source/operators.lisp`,  the features like `defnode`, `defoptimizer` is exported for users.
 Here's examples.
 
+(For details about with-facet, numcl: [with-facet](https://github.com/melisgl/mgl-mat#x-28MGL-MAT-3A-40MAT-FACET-API-20MGL-PAX-3ASECTION-29), [numcl](https://github.com/numcl/numcl))
+
 ```lisp
 ; in ./source/operators.lisp at 202th line
 
@@ -363,6 +374,10 @@ Here's examples.
   :backward ((dy)
 	     (list (!transpose1 dy (self prev-shape)))))
 
+(defun !transpose1 (tensor &rest dims)
+  ; defined nodes are called with call
+  (call (TransposeOriginalTensor dims) tensor))
+  
 ; in ./source/optimizers/optimizers.lisp at 4th line
 
 (defoptimizer SGD (params &key (lr 1e-3))
@@ -378,7 +393,7 @@ Here's examples.
 
 Please clone this repository and register it as a local-project or just load `cl-waffe.asd`
 
-This framework is still imcomplete and experimental, I won't register it quicklisp until the goal is achived.
+This framework is still **incomplete and experimental**, being not yet ready to register with Quicklisp etc..
 
 For Example:
 ```
