@@ -7,9 +7,36 @@
 
 cl-waffe is a deep learning framework with modern APIs for Common Lisp.
 
+Having not GPUs, I can't test my framework on cuda ><. CUDA support is a little further along.
+
 # Documents
 
 [Documentation](https://hikettei.github.io/cl-waffe-docs) is available.
+
+# TOC
+
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**
+
+- [MNIST Example](#mnist-example)
+- [Features](#features)
+  - [Broadcasting.](#broadcasting)
+  - [Destructive APIs with a Simple Rule.](#destructive-apis-with-a-simple-rule)
+  - [Useful APIs like Numpy/PyTorch.](#useful-apis-like-numpypytorch)
+  - [Automatic Differentiation](#automatic-differentiation)
+  - [Useful Lazy-Evaluation System](#useful-lazy-evaluation-system)
+  - [Tracing JIT](#tracing-jit)
+  - [Extensible APIs](#extensible-apis)
+- [Usage](#usage)
+- [Run MNIST With Roswell](#run-mnist-with-roswell)
+- [Currently Problems/Todo](#currently-problemstodo)
+- [Goals](#goals)
+- [Acknowledgements](#acknowledgements)
+- [Author](#author)
+- [Environment](#environment)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 # MNIST Example
 
@@ -67,14 +94,14 @@ See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/mnist-tutoria
 
 As of this writing:
 - Broadcasting
-- Destructive APIs
-- Rich APIs
-- Auto BackPropagations
+- Destructive APIs with a Simple Rule.
+- Useful APIs like Numpy/PyTorch
+- Automatic Differentiation
 - Useful Lazy-Evaluation System
 - Tracing JIT
 - Extensible APIs
 
-## Broadcasting Matrix.
+## Broadcasting.
 
 See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#broadcasting)
 
@@ -180,7 +207,7 @@ See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/cl-waffe.html
 (time (setf (!aref a '(0 3)) (!ones '(100 3))))
 ```
 
-## Auto backpropagations
+## Automatic Differentiation
 
 See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#basic-tensor-operations)
 
@@ -215,6 +242,12 @@ See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.
 ```
 
 ## Useful Lazy-Evaluation System
+
+See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#lazy-evaluation)
+
+cl-waffe's lazy-evaluation system doesn't require any additional code.
+
+Just call `(value tensor)` to accept lazy evaluation.
 
 `!transpose` will produce lazy-evaluated tensor, while `!transpose1` will do not.
 
@@ -287,7 +320,7 @@ See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.
 
 This is still experimental but...
 
-In `(with-jit)` macro, cl-waffe dynamically defines the kernel functions with lazy-evaluation system.
+In `(with-jit)` macro, cl-waffe dynamically defines the kernel functions with lazy-evaluation system. (currently only for blas)
 
 ```lisp
 
@@ -346,6 +379,8 @@ See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/extend-librar
 As you can see from `./source/optimizers/optimizers.lisp`, or `./source/operators.lisp`,  the features like `defnode`, `defoptimizer` is exported for users.
 Here's examples.
 
+(For details about with-facet, numcl: [with-facet](https://github.com/melisgl/mgl-mat#x-28MGL-MAT-3A-40MAT-FACET-API-20MGL-PAX-3ASECTION-29), [numcl](https://github.com/numcl/numcl))
+
 ```lisp
 ; in ./source/operators.lisp at 202th line
 
@@ -361,6 +396,10 @@ Here's examples.
   :backward ((dy)
 	     (list (!transpose1 dy (self prev-shape)))))
 
+(defun !transpose1 (tensor &rest dims)
+  ; defined nodes are called with call
+  (call (TransposeOriginalTensor dims) tensor))
+  
 ; in ./source/optimizers/optimizers.lisp at 4th line
 
 (defoptimizer SGD (params &key (lr 1e-3))
@@ -374,8 +413,11 @@ Here's examples.
 
 # Usage
 
-For example:
+Please clone this repository and register it as a local-project or just load `cl-waffe.asd`
 
+This framework is still **incomplete and experimental**, being not yet ready to register with Quicklisp etc..
+
+For Example:
 ```
 $ git clone git@github.com:hikettei/cl-waffe.git
 $ cd cl-waffe
@@ -393,35 +435,71 @@ $ cd ..
 $ ./run-test-model.ros mnist
 ```
 
-# Problems/Todo
+# Currently Problems/Todo
+As of writing, I'm working on:
 
-・破壊的代入のサポート(Support more destructive operations)
-
-・Neural Networkの追加 (Add cl-waffe.nn models)
-
-・IterationのBackwardを高速化 (Improve performance of RNN)
-
-・モデルの保存に対応 (Save and restore trained models.)
-
-・グラフの表示に対応 (Plotting losses and so on)
-
-・様々なデータ構造を扱えるように (Support more types of data structure)
-
-・性能向上（メモリ使用量/CPU使用率の観点から
+- 破壊的代入のサポート(Support more destructive operations)
+- Neural Networkの追加 (Add cl-waffe.nn models)
+- IterationのBackwardを高速化 (Improve performance of RNN) (e.g.: the backward of (setf !aref) ...)
+- モデルの保存に対応 (Save and restore trained models.)
+- グラフの表示に対応 (Plotting losses and so on)
+- 様々なデータ構造を扱えるように (Support more types of data structure)
+- 性能向上（メモリ使用量/CPU使用率の観点から
 ）(In term of cpu-usage rate/memory-usage, cl-waffe has a lot of challenge to performance.)
+- CUDAに対応 (Support CUDA)
+- 他の処理系で動くか試す (Try on another systems (e.g.: CCL))
+- Improving the quality of documentation.
+# Goals
 
-・CUDAに対応 (Support CUDA)
+- Making cl-waffe a modern and fast framework.
+	- Fix: high memory usage
+	- Add: More APIs
+	- Add: Clear distinction between slow and fast APIs.
+	- Add: Simple rules to make it fast and lacklustre and documentations for it
+	- Goal: Training Transformer Model
+	
+- Making cl-waffe practical
+	- Support: cl-jupyter, any plotting library, matplotlib, etc...
+	- Support: CUDA with Full Performance!
+	- Add: Mathematical Functions
+	- Add: High power APIs (such features are rooted in !aref, broadcasting. they need to be optimized more)
+	- Add: DataLoader like PyTorch
+	- Add: Save and Restore Models, (Compatible with PyTorch if possible...)
+	
+- Go faster cl-waffe
+	- Support: more parallelized operators
+	- Keep whole codes abstracted and extensible
+	- Apply full optimisation when some functionality is reached enough.
+	- More benchmarks are needed and put it all in a table somewhere.
 
-・他の処理系で動くか試す (Try on another systems (e.g.: CCL))
+I love Common Lisp very much and there are many excellent libraries for numerical operations with great ideas.
+
+However, I know I'm really reckless, but the one I want to make is:
+- Making full use of Common Lisp's nice features.
+- I want to have a range of functions comparable to Python's frameworks.
+- Simple/Compact notations and APIs
+
+Having started on 2022/12/26, this project will take a long time before these features are realised.
+
+
+Does anyone have any ideas? Please share with me on issues!
+
+Also, bug reports and more are welcome!
+
+# Acknowledgements
+
+- The author of [mgl-mat](https://github.com/melisgl/mgl-mat), since the cl-waffe tensor depends on this. (Without it, the cl-waffe's performance was the worst.)
+- To all those who gave me ideas, helps and knowledgement.
 
 # Author
 
-hikettei (Twitter: @ichndm, github:@hikettei)
+hikettei
+- [Twitter](https://twitter.com/ichndm) 
+- [Github](https://github.com/hikettei)
+- Discord: rulia🌙#5298
+
+# Environment
 
 
-## Environment
-
-```
-SBCL 2.2.5
-macOS Monterey version 12.4
-```
+- SBCL 2.2.5
+	- it is recommended to use SBCL, I've not tested on others
