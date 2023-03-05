@@ -450,6 +450,16 @@ As of writing, I'm working on:
 	- Apply full optimisation when some functionality is reached enough.
 	- More benchmarks are needed and put it all in a table somewhere.
 
+I love Common Lisp very much and there are many excellent libraries for numerical operations with great ideas.
+
+However, I know I'm really reckless, but the one I want to make is:
+- Making full use of Common Lisp's nice features.
+- I want to have a range of functions comparable to Python's frameworks.
+- Simple/Compact notations and APIs
+
+Having started on 2022/12/26, this project will take a long time before these features are realised.
+
+
 Does anyone have any ideas? Please share with me on issues!
 
 Also, bug reports and more are welcome!
