@@ -7,6 +7,8 @@
 
 cl-waffe is a deep learning framework with modern APIs for Common Lisp.
 
+Having not GPUs, I can't test my framework on cuda ><. CUDA support is a little further along.
+
 # Documents
 
 [Documentation](https://hikettei.github.io/cl-waffe-docs) is available.
@@ -374,8 +376,11 @@ Here's examples.
 
 # Usage
 
-For example:
+Please clone this repository and register it as a local-project or just load `cl-waffe.asd`
 
+This framework is still imcomplete and experimental, I won't register it quicklisp until the goal is achived.
+
+For Example:
 ```
 $ git clone git@github.com:hikettei/cl-waffe.git
 $ cd cl-waffe
@@ -394,25 +399,41 @@ $ ./run-test-model.ros mnist
 ```
 
 # Problems/Todo
-
-・破壊的代入のサポート(Support more destructive operations)
-
-・Neural Networkの追加 (Add cl-waffe.nn models)
-
-・IterationのBackwardを高速化 (Improve performance of RNN)
-
-・モデルの保存に対応 (Save and restore trained models.)
-
-・グラフの表示に対応 (Plotting losses and so on)
-
-・様々なデータ構造を扱えるように (Support more types of data structure)
-
-・性能向上（メモリ使用量/CPU使用率の観点から
+- 破壊的代入のサポート(Support more destructive operations)
+- Neural Networkの追加 (Add cl-waffe.nn models)
+- IterationのBackwardを高速化 (Improve performance of RNN)
+- モデルの保存に対応 (Save and restore trained models.)
+- グラフの表示に対応 (Plotting losses and so on)
+- 様々なデータ構造を扱えるように (Support more types of data structure)
+- 性能向上（メモリ使用量/CPU使用率の観点から
 ）(In term of cpu-usage rate/memory-usage, cl-waffe has a lot of challenge to performance.)
+- CUDAに対応 (Support CUDA)
+- 他の処理系で動くか試す (Try on another systems (e.g.: CCL))
 
-・CUDAに対応 (Support CUDA)
+# Goals
 
-・他の処理系で動くか試す (Try on another systems (e.g.: CCL))
+- Making cl-waffe a modern and fast framework.
+	- Fix: high memory usage
+	- Add: More APIs
+	- Add: Clear distinction between slow and fast APIs.
+	- Add: Simple rules to make it fast and lacklustre and documentations for it
+	- Goal: Training Transformer Model
+	
+- Making cl-waffe practical
+	- Support: cl-jupyter, any plotting library, matplotlib, etc...
+	- Support: CUDA with Full Performance!
+	- Add: Mathematical Functions
+	- Add: High power APIs (such features are rooted in !aref, broadcasting. they need to be optimized more)
+	- Add: DataLoader like PyTorch
+	
+- Go faster cl-waffe
+	- Support: more parallelized operators
+	- Keep whole codes abstracted and extensible
+	- Apply full optimisation when some functionality is reached enough.
+
+Does anyone have any ideas? Please share with me on issues!
+
+Also, bug reports and more are welcome!
 
 # Author
 
