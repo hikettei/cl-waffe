@@ -6,8 +6,7 @@ exec ros -Q -- $0 "$@"
 (progn ;;init forms
   (ros:ensure-asdf)
   (load "cl-waffe.asd")
-  (load "cl-waffe-benchmark.asd")
-  #+quicklisp(ql:quickload '(:cl-waffe :cl-waffe-benchmark) :silent t)
+  #+quicklisp(ql:quickload '(:cl-waffe :cl-waffe/benchmark) :silent t)
   )
 
 (defpackage :ros.script.cl-waffe-benchmark.3886546903
