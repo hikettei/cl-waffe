@@ -1,6 +1,6 @@
 
 # cl-waffe
-
+[![CI](https://github.com/hikettei/cl-waffe/actions/workflows/ci.yml/badge.svg)](https://github.com/hikettei/cl-waffe/actions/workflows/ci.yml)
 ![cl-waffe](https://hikettei.github.io/cl-waffe-docs/docs/cl-waffe-logo.png)
 
 **This package is still under development, and its features are far from practical.**
@@ -459,12 +459,27 @@ Please clone this repository and register it as a local-project or just load `cl
 This framework is still **incomplete and experimental**, being not yet ready to register with Quicklisp etc..
 
 For Example:
-```
+```shell
 $ git clone git@github.com:hikettei/cl-waffe.git
 $ cd cl-waffe
 $ sbcl
 * (load "cl-waffe.asd")
 * (ql:quickload :cl-waffe) ; all is done!
+```
+
+[Lakefile](https://github.com/leanprover/lake) is available. (Also it requires [Roswell](https://github.com/roswell/roswell))
+
+```shell
+$ lake
+Usage: lake [command]
+
+Tasks:
+  test                     Operate tests
+  benchmark                Start Benchmarking
+  gendoc                   Generating Documentations
+  example:install          Install training data for examples
+  example:mnist            Run example model with MNIST
+  example:rnn              Run example model with Seq2Seq
 ```
 
 # Run MNIST With Roswell
@@ -542,5 +557,5 @@ hikettei
 # Environment
 
 
-- SBCL 2.2.5
+- SBCL
 	- it is recommended to use SBCL, I've not tested on others
