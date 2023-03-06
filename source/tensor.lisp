@@ -667,6 +667,12 @@ Todo: Backward."
     (reshape-and-displace! (data dataset) (list len dim) 0)
     dataset))
 
+(defun !view ()
+  "Todo:
+Its usage is similar to pytorch's view.
+!view returns a displaced and reshaped tensor but won't produce copies.
+This is useful when you want to apply some operations to the specified area of tensor. !set-batch will be implemented by view.")
+
 (defun !aref (tensor &rest dims)
   "!aref creates a new tensor from the area specified by @cl:param(dims) from the given @cl:param(tensor).
 
