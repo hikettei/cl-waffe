@@ -353,6 +353,41 @@
 @end(section)
 
 @begin(section)
+@title(!concatenate)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !concatenate)
+)
+@end(section)
+
+@begin(section)
+@title(!stack)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !stack)
+)
+@end(section)
+
+@begin(section)
+@title(!split)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !split)
+)
+@end(section)
+
+@begin(section)
+@title(!vstack)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(macro !vstack)
+)
+@end(section)
+
+@begin(section)
+@title(!hstack)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(macro !hstack)
+)
+@end(section)
+
+@begin(section)
 @title(!unsqueeze)
 @cl:with-package[name="cl-waffe"](
 @cl:doc(function !unsqueeze)

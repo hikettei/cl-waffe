@@ -184,6 +184,21 @@ This package has:
 
 
 @link[uri="./operators.html#!filter"](!filter)
+
+
+@link[uri="./operators.html#!split"](!split) Note: backward is not yet implemented.
+
+
+@link[uri="./operators.html#!concatenate"](!concatenate) the fastest one.
+
+
+@link[uri="./operators.html#!stack"](!stack) a little slower than concatenate
+
+
+@link[uri="./operators.html#!vstack"](!vstack) the same as numpy's one.
+
+
+@link[uri="./operators.html#!hstack"](!hstack) the same as numpy's one.
 @end(term)
 
 

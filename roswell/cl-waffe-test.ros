@@ -6,7 +6,6 @@ exec ros -Q -- $0 "$@"
 (progn ;;init forms
   (ros:ensure-asdf)
   (load "cl-waffe.asd")
-  (load "cl-waffe-test.asd")
   #+quicklisp(ql:quickload '(:lake :fiveam) :silent t)
   )
 
@@ -21,5 +20,5 @@ exec ros -Q -- $0 "$@"
 (defun main (&rest argv)
   (declare (ignorable argv))
   (format t "Testing cl-waffe-test...~%")
-  (asdf:test-system :cl-waffe-test))
+  (asdf:test-system :cl-waffe/test))
 ;;; vim: set ft=lisp lisp:

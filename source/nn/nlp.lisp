@@ -63,7 +63,7 @@
 	       (hidden-size hidden-size)
 	       (biredical biredical)
 	       (wo (linearlayer hidden-size hidden-size)))
-  :forward ((x &optional (hs nil))
+  :forward ((x &optional (hs (const nil)))
 	    "Input: X = (BatchSize SentenceLength Embedding_Dim)
              Output (values x{t+1} h{t+1})"
 

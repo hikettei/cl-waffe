@@ -332,6 +332,7 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
 ; wrapper
 (defun !faref (tensor &rest dims)
   (value tensor)
+  ; Todo: Add handler condition because reshaped tensor won't fixed.
   ;(apply #'%faref tensor dims)
   (apply #'%saref nil tensor dims))
 
@@ -340,8 +341,7 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
   (unless (= (!dims value) (!dims tensor))
     (error "!write-faref: the size of dim doesn't match. use !unsqueeze and !squeeze to adjust it.: ~a and ~a" (!dims value) (!dims tensor)))
   ;(apply #'%write-faref tensor value dims)
-  (apply #'%saref tensor value dims)
-  )
+  (apply #'%saref tensor value dims))
 
 (defun %faref (tensor &rest dims)
   (declare (optimize (speed 3))
@@ -665,6 +665,7 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
 		     t)))))
 
 (defun broadcasting1 (x y)
+  "returns broadcasting instructions but won't return error"
   (declare (type waffetensor x y))
   (map 'list #'(lambda (xi yi)
 		 (declare (type fixnum xi yi))
@@ -846,7 +847,21 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
 			  (data out)
 			  o-size
 			  (the fixnum (+ o-begin o-index)))
-			 (copy! (data x) (data out))))
+			 (if (same-shape-p x out)
+			     ; if the last dim is not repeating...
+			     (copy! (data x) (data out))
+			     ; otherwise (the last dims should be repeated...)
+			     (if (= (the fixnum (!shape x 0)) 1)
+				 (fill! (mat-as-scalar (data x)) (data out))
+				 (let ((stride (the fixnum (!shape x 0))))
+				   (loop for k fixnum upfrom 0 below (the fixnum (!shape out 0)) by stride
+					 do (progn
+					      (reshape-and-displace!
+					       (data out)
+					       x-size
+					       (the fixnum (+ o-begin o-index k)))					      
+					      (copy! (data x)
+						     (data out)))))))))
 		   nil))
 	  (explore-batch 0 x-dim-first o-dim-first 0 0)
 	  (reshape-and-displace! (data x) x-dim-first x-displace-first)

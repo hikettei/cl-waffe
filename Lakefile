@@ -1,0 +1,46 @@
+#|-*- mode:lisp -*-|#
+(in-package :cl-user)
+(defpackage :lake.user
+  (:use :cl :asdf :lake :cl-syntax)
+  (:shadowing-import-from :lake
+                          :directory))
+(in-package :lake.user)
+
+(use-syntax :interpol)
+
+(defparameter *app-name* "cl-waffe")
+(defparameter *version* "0.1")
+
+; To add: Ros ensure
+
+(task "default" ()
+  (echo #?"${*app-name*} version: ${*version*}
+Usage: lake [command]
+
+Tasks:
+  test                     Operate tests
+  benchmark                Start Benchmarking
+  gendoc                   Generating Documentations
+  example:install          Install training data for examples
+  example:mnist            Run example model with MNIST
+  example:rnn              Run example model with Seq2Seq
+"))
+
+(task "test" ()
+  (sh "./roswell/cl-waffe-test.ros"))
+
+(task "benchmark" ()
+  (sh "./roswell/cl-waffe-benchmark.ros"))
+
+(task "gendoc" ()
+  (sh "./roswell/gendoc.ros"))
+
+(namespace "example"
+  (task ("install") ()
+    (sh "cd ./examples && sh install.sh && cd ../"))
+  (task ("mnist") ()
+    (sh #?"./run-test-model.ros mnist"))
+  (task ("rnn") ()
+    (sh #?"./run-test-model.ros rnn")))
+
+;;; here follow your tasks...

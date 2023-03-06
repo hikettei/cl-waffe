@@ -182,10 +182,19 @@ Testing arithmetic operators
 	 (mgl-mat:M= (value t1) (value t1-copy)))))
 
 (defun repeat-test ()
-  (let ((t1 (!randn `(1 10))))
-    (equal (!shape (!repeats t1 0 10))
-	   '(10 10))))
-
+  (let* ((target-1 (const 1.0))
+	 (target-2 (!randn `(1 10)))
+	 (target-3 (!randn `(10 10 10 10 10)))
+	 (t3-first (!aref target-3 t 0))
+	 (t3-res (!repeats target-3 1 10)))
+    (and (= (data (!sum (!repeats target-1 0 1000)))
+	    1000.0)
+	 (equal (!shape (!repeats target-2 0 10))
+		`(10 10))
+	 (not (find nil (loop for dim fixnum upfrom 0 below 100
+			      collect (mgl-mat:M=
+				       (data t3-first)
+				       (data (!aref t3-res t dim)))))))))
 (defun transpose1-test ()
   (let ((t1 (!randn `(1 10 12))))
     (equal (!shape (!transpose1 t1 2 1 0)) '(12 10 1))))

@@ -9,11 +9,9 @@
 
 (defun repeat (array n &key axis)
   ; asserted array is not tensor and may be axis is always zero
-  (let ((dims (case axis
-		(0 `(,n))
-		(1 `(1, n))
-		(T (error "kernel error")))))
-    (mgl-mat:make-mat dims :initial-element array)))
+  (let ((dims (loop for i upfrom 0 below axis
+		    collect 1)))
+    (mgl-mat:make-mat `(,@dims ,n) :initial-element array)))
 
 (declaim (ftype (function (cons) cons) assure-args))
 (defun assure-args (args)
