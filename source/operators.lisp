@@ -409,15 +409,62 @@ And utils for broadcasting etc...
 			     else
 			       collect (nth i first-shape)))
 		     (result (!zeros result-shape)))
+		(setf (self shape) (!shape (car tensors) (self axis)))
 		(stack! (self axis)
 			(map 'list #'value tensors)
 			(data result))
 		result)))
   :backward ((dy)
-	     ; backward??
-	     (list dy)))
+	     (!split dy (self shape) :axis (self axis))))
 
-; SplitTensor
+(defnode SplitTensorNode (split-size axis)
+  :parameters ((split-size split-size :type fixnum)
+	       (axis axis :type fixnum))
+  :forward ((tensor)
+	    (loop
+	      with each-tensor-shape = (let ((shape (copy-list (!shape tensor))))
+					 (setf (nth (self axis) shape) (self split-size))
+					 shape)
+	      with tmp-areas = (loop for i fixnum upfrom 0 below (self axis)
+				     collect t)
+	      for ith fixnum
+	      upfrom 0
+		below (the fixnum
+			   (multiple-value-bind (k rest)
+			       (round
+				(/
+				 (!shape tensor (self axis))
+				 (self split-size)))
+			     
+			     (declare (type fixnum k))
+			     (if (> rest 0.0)
+				 (1+ k)
+				 k)))
+	      collect (let ((start-index (* ith (self split-size)))
+			    (end-index (* (1+ ith) (self split-size))))
+
+			(if (<= end-index (!shape tensor (self axis)))
+			    (apply
+			     #'%saref
+			     nil
+			     tensor
+			     `(,@tmp-areas (,start-index
+					    ,end-index)))
+			    (let ((res (!zeros each-tensor-shape)))
+			      (copy!
+			       (data
+				(apply
+				 #'%saref
+				 nil
+				 tensor
+				 `(,@tmp-areas
+				   (,start-index
+				    ,(!shape tensor (self axis))))))
+			       (data res))
+			      res)))))
+  :backward ((dy)
+	     (print dy)
+	     (list dy)))
 
 (defmacro defope (name node-object tensor args &optional (doc "") &body body)
   (let ((place node-object))
@@ -965,6 +1012,13 @@ tensors must be of the same shape."
 			  (!unsqueeze tensor axis))
 		      tensors)))
     (apply #'call (ConcatenateTensorNode axis) tensors)))
+
+(defun !split (tensor split-size &key (axis 0))
+  "split tensors"
+  (declare (type waffetensor tensor)
+	   (type fixnum split-size axis)
+	   (optimize (speed 3)))
+  (call (SplitTensorNode split-size axis) tensor))
 
 (defmacro !nconc (&rest tensors)
   "nconc"
