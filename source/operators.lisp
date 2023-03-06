@@ -419,8 +419,10 @@ And utils for broadcasting etc...
 
 (defnode SplitTensorNode (split-size axis)
   :parameters ((split-size split-size :type fixnum)
-	       (axis axis :type fixnum))
+	       (axis axis :type fixnum)
+	       (prev-shape t))
   :forward ((tensor)
+	    (setf (self prev-shape) (!shape tensor))
 	    (loop
 	      with each-tensor-shape = (let ((shape (copy-list (!shape tensor))))
 					 (setf (nth (self axis) shape) (self split-size))
@@ -463,7 +465,8 @@ And utils for broadcasting etc...
 			       (data res))
 			      res)))))
   :backward ((dy)
-	     (print dy)
+	     ; 枝分かれしてるTensorはbackward1関数内でしかaxpyされないはずだから、メモリ節約のためにdisplaceできない？
+	     (error "SplitTensorNodeBackward is not yet implemented.~%Alternatively, !aref, (setf !aref) is available for a while.")
 	     (list dy)))
 
 (defmacro defope (name node-object tensor args &optional (doc "") &body body)
