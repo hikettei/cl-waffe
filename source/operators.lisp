@@ -1153,7 +1153,7 @@ dim indicates the position, when dim=-1, it indicates a last dimension of @cl:pa
 @end[lang=lisp](code)
 @end(section)"
 					; display error when (!dims x) >= dim
-  (let ((s (!shape x)))
+  (let ((s (copy-list (!shape x))))
     (dotimes (_ count)
       (case dim
 	(0  (setq s `(1 ,@s)))
