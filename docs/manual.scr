@@ -4,7 +4,7 @@
 @begin(section)
 @title(Welcome to cl-waffe!)
 
-@image[src=cl-waffe-logo.png]()
+@image[src="https://github.com/hikettei/cl-waffe/blob/main/docs/cl-waffe-logo.png?raw=true"]()
 
 @b(This package is in development.)
 
