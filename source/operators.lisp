@@ -911,6 +911,54 @@ x can be: mat or tensor.
 	   (type fixnum axis repeats))
   (call (RepeatTensor (assure-tensor axis) (assure-tensor repeats)) (assure-tensor x)))
 
+(defun !expands (tensor &rest expand-times)
+  "Todo (!expand x 1 1 2) (its similar to torch's one)"
+  (declare (type waffetensor tensor)
+	   (ignore tensor expand-times)))
+
+; ugh... its performance is so bad compared to numpy ;_;
+(defun !concatenate (axis &rest tensors)
+  "concatenates the given @cl:param(tensors) in specified axis.
+
+@begin(deflist)
+@def(tensors)
+@term(Tensors consisted of list of tensor: a1, a2 ... where each tensor is the same shape.)
+@end(deflist)
+"
+  (declare (optimize (speed 3))
+	   (type fixnum axis))
+  (let ((first-shape (the list (!shape (car tensors)))))
+    (dolist (tensor tensors)
+      (unless (equal
+	       (the list (!shape tensor))
+	       first-shape)
+	(error "cl-waffe.!concatenate: all tensors must be the same shape: ~a but got ~a" first-shape (!shape tensor)))))
+
+  (when (> axis (the fixnum (!dims (car tensors))))
+    (error "cl-waffe.!concatenate: axis is beyond tensor's. If you want to expand dims, please consider using !stack."))
+  (let ((result (!repeats (car tensors) axis (the fixnum (length tensors))))
+	(zero-buffes (loop for i fixnum upfrom 0 below axis
+			   collect t))
+	(stride (the fixnum (!shape (car tensors) axis))))
+    (loop for nth-index fixnum upfrom 1 below (the fixnum (length tensors))
+	  do (loop
+	       with target-tensor = (nth nth-index tensors)
+	       for i fixnum upfrom 0 below (the fixnum (!shape target-tensor axis))
+	       do (let ((index (the fixnum (+ (the fixnum (* nth-index stride)) i))))
+		    (setq result (setf (!areflist result `(,@zero-buffes ,index)) (!areflist target-tensor `(,@zero-buffes ,i)))))))
+    result))
+
+(defun !stack (axis &rest tensors)
+  ""
+  )
+
+(defmacro !nconc (&rest tensors)
+  `(!concatenate 0 ,@tensors))
+
+(defmacro !hstack (&rest tensors))
+
+(defmacro !vstack (&rest tensors))
+
 (defun !transpose (x &optional result)
   "Transpose x where x is a 2d tensor.
 
