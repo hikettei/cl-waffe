@@ -25,6 +25,7 @@ jobs:
           curl -L https://raw.githubusercontent.com/roswell/roswell/master/scripts/install-for-ci.sh | sh
       - name: Run Test Codes
         run: |
+          ros config set dynamic-space-size 4gb
           ros ./roswell/cl-waffe-test.ros
       - name: Generate Documents
         run: |
