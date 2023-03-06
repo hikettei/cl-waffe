@@ -391,12 +391,33 @@ And utils for broadcasting etc...
   :backward ((dy)
 	     (list (!mul dy (self mask)))))
 
-(defnode StackTensorNode (axis)
-  :parameters ((axis axis :type fixnum))
+(defnode ConcatenateTensorNode (axis)
+  :optimize t
+  :parameters ((axis axis :type fixnum)
+	       (shape t))
   :forward ((&rest tensors)
-	    (car tensors))
+	    (let ((first-shape (the list (!shape (car tensors)))))
+	      (loop for i fixnum upfrom 0 below (length tensors)
+		    unless (equal first-shape (the list (!shape (nth i tensors))))
+		      do (error "cl-waffe.stack!: all tensors must be consisted of the same shapes, but got ~a. excepted:~a" (nth i tensors) first-shape))
+	      (let* ((result-shape
+		       (loop for i fixnum
+			     upfrom 0
+			       below (length first-shape)
+			     if (= i (self axis))
+			       collect (the fixnum (* (the fixnum (length tensors)) (the fixnum (nth i first-shape))))
+			     else
+			       collect (nth i first-shape)))
+		     (result (!zeros result-shape)))
+		(stack! (self axis)
+			(map 'list #'data tensors)
+			(data result))
+		result)))
   :backward ((dy)
+	     ; backward??
 	     (list dy)))
+
+; SplitTensor
 
 (defmacro defope (name node-object tensor args &optional (doc "") &body body)
   (let ((place node-object))
@@ -936,7 +957,7 @@ x can be: mat or tensor.
 "
   (declare (optimize (speed 3))
 	   (type fixnum axis))
-  (let ((first-shape (the list (!shape (car tensors)))))
+  #|(let ((first-shape (the list (!shape (car tensors)))))
     (dolist (tensor tensors)
       (unless (equal
 	       (the list (!shape tensor))
@@ -955,7 +976,8 @@ x can be: mat or tensor.
 	       for i fixnum upfrom 0 below (the fixnum (!shape target-tensor axis))
 	       do (let ((index (the fixnum (+ (the fixnum (* nth-index stride)) i))))
 		    (setq result (setf (!areflist result `(,@zero-buffes ,index)) (!areflist target-tensor `(,@zero-buffes ,i)))))))
-    result))
+    result)|#
+  (apply #'call (StackTensorNode axis) tensors))
 
 (defmacro !stack (axis &rest tensors)
   ""
