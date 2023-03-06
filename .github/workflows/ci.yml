@@ -23,13 +23,9 @@ jobs:
           LISP: ${{ matrix.lisp }}
         run: |
           curl -L https://raw.githubusercontent.com/roswell/roswell/master/scripts/install-for-ci.sh | sh
-      - name: Install Lake
-        run: ros install lake
-      - name: Run tests
+      - name: Run Test Codes
         run: |
-          PATH="~/.roswell/bin:$PATH"
-          lake test
+          ros ./roswell/cl-waffe-test.ros
       - name: Generate Documents
         run: |
-          PATH="~/.roswell/bin:$PATH"
-          lake gendoc
+          ros ./roswell/gendoc.ros
