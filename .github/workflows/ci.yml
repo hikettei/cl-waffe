@@ -18,15 +18,24 @@ jobs:
 
     steps:
       - uses: actions/checkout@v1
-      - name: Install Roswell
+      - name: Set up Roswell
         env:
           LISP: ${{ matrix.lisp }}
         run: |
           curl -L https://raw.githubusercontent.com/roswell/roswell/master/scripts/install-for-ci.sh | sh
-      - name: Run Test Codes
+      - name: Run test codes
         run: |
           ros config set dynamic-space-size 4gb
           ros ./roswell/cl-waffe-test.ros
-      - name: Generate Documents
+      - name: Generate documents
         run: |
           ros ./roswell/gendoc.ros
+      - name: Upload generated documents
+        uses: actions/upload-artifact@v3.1.2
+        with:
+          # Artifact name
+          name: build
+          # A file, directory or wildcard pattern that describes what to upload
+          path: docs/build
+          retention-days: 90
+      
