@@ -410,7 +410,7 @@ And utils for broadcasting etc...
 			       collect (nth i first-shape)))
 		     (result (!zeros result-shape)))
 		(stack! (self axis)
-			(map 'list #'data tensors)
+			(map 'list #'value tensors)
 			(data result))
 		result)))
   :backward ((dy)
@@ -944,11 +944,8 @@ x can be: mat or tensor.
   (declare (type waffetensor tensor)
 	   (ignore tensor expand-times)))
 
-; ugh... its performance is so bad compared to numpy ;_; replace->stack!
 (defun !concatenate (axis &rest tensors)
   "concatenates the given @cl:param(tensors) in specified axis.
-
-@b(Not Recommended to use)
 
 @begin(deflist)
 @def(tensors)
@@ -957,33 +954,20 @@ x can be: mat or tensor.
 "
   (declare (optimize (speed 3))
 	   (type fixnum axis))
-  #|(let ((first-shape (the list (!shape (car tensors)))))
-    (dolist (tensor tensors)
-      (unless (equal
-	       (the list (!shape tensor))
-	       first-shape)
-	(error "cl-waffe.!concatenate: all tensors must be the same shape: ~a but got ~a" first-shape (!shape tensor)))))
+  (apply #'call (ConcatenateTensorNode axis) tensors))
 
-  (when (> axis (the fixnum (!dims (car tensors))))
-    (error "cl-waffe.!concatenate: axis is beyond tensor's. If you want to expand dims, please consider using !stack."))
-  (let ((result (!repeats (car tensors) axis (the fixnum (length tensors))))
-	(zero-buffes (loop for i fixnum upfrom 0 below axis
-			   collect t))
-	(stride (the fixnum (!shape (car tensors) axis))))
-    (loop for nth-index fixnum upfrom 1 below (the fixnum (length tensors))
-	  do (loop
-	       with target-tensor = (nth nth-index tensors)
-	       for i fixnum upfrom 0 below (the fixnum (!shape target-tensor axis))
-	       do (let ((index (the fixnum (+ (the fixnum (* nth-index stride)) i))))
-		    (setq result (setf (!areflist result `(,@zero-buffes ,index)) (!areflist target-tensor `(,@zero-buffes ,i)))))))
-    result)|#
-  (apply #'call (StackTensorNode axis) tensors))
-
-(defmacro !stack (axis &rest tensors)
-  ""
-  `(call (StackTensorNode axis) ,@tensors))
+(defun !stack (axis &rest tensors)
+  "Stacks tensors
+tensors must be of the same shape."
+  (let ((tensors (map 'list
+		      #'(lambda (tensor)
+			  (!disallow-destruct tensor)
+			  (!unsqueeze tensor axis))
+		      tensors)))
+    (apply #'call (ConcatenateTensorNode axis) tensors)))
 
 (defmacro !nconc (&rest tensors)
+  "nconc"
   `(!concatenate 0 ,@tensors))
 
 (defmacro !hstack (&rest tensors))
