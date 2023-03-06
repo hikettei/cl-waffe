@@ -141,8 +141,20 @@ Output: Waffetensor of list which comprised of waffetensor."
 		   (if (member-if #'waffetensor-is-ancestor-param args)
 		       t
 		       nil)))
-	    (t
-	     (error "cl-waffe.defnode: Nodes must return a single tensor. Not a list/null otherwise can't build computation node. (list is todo.)")))))
+	    (list
+	     (mapc
+	      #'(lambda (r)
+		  (setf (waffetensor-backward r) t)
+		  (setf (waffetensor-state r) model)
+		  (setf (waffetensor-variables r) args)
+		  (setf (waffetensor-is-ancestor-param r)
+		   (if (member-if #'waffetensor-is-ancestor-param args)
+		       t
+		       nil)))
+	      result))
+	    ;(t
+	     ;(error "cl-waffe.defnode: Nodes must return a single tensor or list which consisted of waffetensor otherwise cl-waffe can't build up computation nodes..."))
+	    )))
     result))
 
 (defmacro with-model-list (&rest models)
