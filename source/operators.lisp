@@ -885,6 +885,8 @@ See also: nil
 (defun !repeats (x axis repeats)
   "Repeats @cl:param(x) along specified @cl:param(axis) by @cl:param(repeats), creating new sysconst.
 
+x can be: mat or tensor.
+
 @begin(section)
 @title(Example)
 @begin[lang=lisp](code)
@@ -900,6 +902,9 @@ See also: nil
 ;        ((0.333... 0.914... 0.260...)         
 ;                   ...
 ;         (0.611... 0.110... 0.113...))) :mgl t :shape (3 3 3))
+
+(!repeats (const 10.0) 3 10)
+;#Const(((((10.0 10.0 ~ 10.0 10.0)))) :mgl t :shape (1 1 1 10))
 @end[lang=lisp](code)
 @end(section)"
   (declare (type waffetensor x)
