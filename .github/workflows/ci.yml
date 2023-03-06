@@ -38,4 +38,11 @@ jobs:
           # A file, directory or wildcard pattern that describes what to upload
           path: docs/build
           retention-days: 90
-      
+      - name: Push Documents
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git checkout -b gh-pages
+          git add ./docs
+          git commit -m "Updated Documentations"
+          git push origin gh-pages
