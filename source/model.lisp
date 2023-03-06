@@ -363,6 +363,7 @@ Example:
 				   (state  (gensym)))
   "The macro for defining node method. (:forward :backward in defmodel, defnode, defoptimizers)
   Also, the code for managing caches."
+  (declare (ignore hide-from-tree object-type))
   ; Note: is-node's meaning is on the around way.
   (let ((f-ident   (gensym (symbol-name name)))
 	(self-heap (gensym (symbol-name name)))
@@ -389,16 +390,16 @@ Example:
 		`(declare (optimize (speed 3) (space 0) (safety 1))
 			  (type ,name ,self-heap))
 		`(declare (type ,name ,self-heap))) ; This is needed to inline call-forwrd/backward.
-	   ,(if hide-from-tree `(declare (type waffetensor ,@vars)) nil)
+;	   ,(if hide-from-tree `(declare (type waffetensor ,@vars)) nil)
 	   ; Utils that can be used in :forward and :backward
 
 	   ; Optimizer is required to use model in arguments
-	   (when (not (eql ,object-type :optimizer))
-	       ,@(map 'list #'(lambda (variable)
-				`(setq ,variable (typecase ,variable
-						   (waffetensor ,variable)
-						   (T (const ,variable)))))
-		      `,vars))
+	   ;(when (not (eql ,object-type :optimizer))
+	   ;    ,@(map 'list #'(lambda (variable)
+		;		`(setq ,variable (typecase ,variable
+		;				   (waffetensor ,variable)
+		;				   (T (const ,variable)))))
+		 ;     `,vars))
 	   
 	   (macrolet ((self (name) `(slot-value ,',self-heap ',name))
 		      (save-for-backward (name value)

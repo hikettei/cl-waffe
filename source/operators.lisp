@@ -391,6 +391,13 @@ And utils for broadcasting etc...
   :backward ((dy)
 	     (list (!mul dy (self mask)))))
 
+(defnode StackTensorNode (axis)
+  :parameters ((axis axis :type fixnum))
+  :forward ((&rest tensors)
+	    (car tensors))
+  :backward ((dy)
+	     (list dy)))
+
 (defmacro defope (name node-object tensor args &optional (doc "") &body body)
   (let ((place node-object))
     `(defun ,name ,args
@@ -916,9 +923,11 @@ x can be: mat or tensor.
   (declare (type waffetensor tensor)
 	   (ignore tensor expand-times)))
 
-; ugh... its performance is so bad compared to numpy ;_;
+; ugh... its performance is so bad compared to numpy ;_; replace->stack!
 (defun !concatenate (axis &rest tensors)
   "concatenates the given @cl:param(tensors) in specified axis.
+
+@b(Not Recommended to use)
 
 @begin(deflist)
 @def(tensors)
@@ -948,9 +957,9 @@ x can be: mat or tensor.
 		    (setq result (setf (!areflist result `(,@zero-buffes ,index)) (!areflist target-tensor `(,@zero-buffes ,i)))))))
     result))
 
-(defun !stack (axis &rest tensors)
+(defmacro !stack (axis &rest tensors)
   ""
-  )
+  `(call (StackTensorNode axis) ,@tensors))
 
 (defmacro !nconc (&rest tensors)
   `(!concatenate 0 ,@tensors))
