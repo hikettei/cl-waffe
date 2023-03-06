@@ -853,7 +853,15 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
 			     ; otherwise (the last dims should be repeated...)
 			     (if (= (the fixnum (!shape x 0)) 1)
 				 (fill! (mat-as-scalar (data x)) (data out))
-				 (copy! (data x) (data out))))))
+				 (let ((stride (the fixnum (!shape x 0))))
+				   (loop for k fixnum upfrom 0 below (the fixnum (!shape out 0)) by stride
+					 do (progn
+					      (reshape-and-displace!
+					       (data out)
+					       x-size
+					       (the fixnum (+ o-begin o-index k)))					      
+					      (copy! (data x)
+						     (data out)))))))))
 		   nil))
 	  (explore-batch 0 x-dim-first o-dim-first 0 0)
 	  (reshape-and-displace! (data x) x-dim-first x-displace-first)
