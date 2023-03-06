@@ -179,6 +179,12 @@
 	   #:Swish
 	   #:!gelu
 
+	   #:!concatenate
+	   #:!split
+	   #:!stack
+	   #:!vstack
+	   #:!hstack
+
 	   #:with-usage
 	   #:mlist
 	   #:mth

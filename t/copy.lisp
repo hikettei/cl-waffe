@@ -40,6 +40,45 @@ Testing !aref, (setf !aref) for multi dims
      (and (M= x y)
 	  (M= storeroom x))))
 
+(defun concatenate-test ()
+  (let* ((tensor1 (!randn `(10 10 10)))
+	 (tensor2 (!randn `(10 10 10)))
+	 (result (!concatenate 0 tensor1 tensor2)))
+    (and
+     (mgl-mat:M=
+      (data tensor1) (data (!aref result '(0 10))))
+     (mgl-mat:M=
+      (data tensor2) (data (!aref result '(10 20)))))))
+
+(defun stack-test ()
+  (let* ((tensor1 (!randn `(10 10 10)))
+	 (tensor2 (!randn `(10 10 10)))
+	 (result (!stack 0 tensor1 tensor2)))
+    (and
+     (mgl-mat:M=
+      (data tensor1) (data (!squeeze (!aref result 0))))
+     (mgl-mat:M=
+      (data tensor2) (data (!squeeze (!aref result 1)))))))
+
+(defun split-test ()
+  (let* ((tensor1 (!randn `(10 10 10 10)))
+	 (result (!split tensor1 2 :axis 0)))
+    (mgl-mat:M= (data tensor1) (data (apply #'!concatenate 0 result)))))
+
+(defun vstack-test ()
+  (let ((a (!randn `(10 10)))
+	(b (!randn `(10 10))))
+    (mgl-mat:M=
+     (data (!concatenate 0 a b))
+     (data (!vstack a b)))))
+
+(defun hstack-test ()
+  (let ((a (!randn `(10 10)))
+	(b (!randn `(10 10))))
+    (mgl-mat:M=
+     (data (!concatenate 1 a b))
+     (data (!hstack a b)))))
+
 (defparameter aref-arg1 (!ones `(10 10)))
 (defparameter aref-arg2 (!ones `(100 10 10)))
 (defparameter aref-arg3 (!ones `(100 100 10 10)))
@@ -135,3 +174,11 @@ Testing !aref, (setf !aref) for multi dims
       (is (setf-aref-test1 (!randn `(10 10 10 10)) '(1 3) '(2 3) '(2 -1) 0)))
 	  
 
+(test concatenates-test
+      (is (concatenate-test))
+      (is (stack-test))
+      (is (vstack-test))
+      (is (hstack-test)))
+
+(test split-test
+      (is (split-test)))

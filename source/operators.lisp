@@ -990,17 +990,25 @@ x can be: mat or tensor.
   (call (RepeatTensor (assure-tensor axis) (assure-tensor repeats)) (assure-tensor x)))
 
 (defun !expands (tensor &rest expand-times)
-  "Todo (!expand x 1 1 2) (its similar to torch's one)"
+  "todo: !expands hehave like pytorch's one.
+(!expands tensor 3 3 3)...
+implement with:... !sum with multiple axis"
   (declare (type waffetensor tensor)
-	   (ignore tensor expand-times)))
+	   (ignore tensor expand-times))
+
+  ;(unless (= (!dims tensor) (length expand-times))
+  ;  (error "!expands: ~a and ~a aren't compatiable. Their dims and length must be the same" tensor expand-times))
+
+  (error "not implemented"))
 
 (defun !concatenate (axis &rest tensors)
-  "concatenates the given @cl:param(tensors) in specified axis.
+  "Concatenates the given sequence of @cl:param(tensors) in the given @cl:param(axis). All tensors must have the same shape.
 
-@begin(deflist)
-@def(tensors)
-@term(Tensors consisted of list of tensor: a1, a2 ... where each tensor is the same shape.)
-@end(deflist)
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+@end[lang=lisp](code)
+@end(section)
 "
   (declare (optimize (speed 3))
 	   (type fixnum axis))
@@ -1008,7 +1016,12 @@ x can be: mat or tensor.
 
 (defun !stack (axis &rest tensors)
   "Stacks tensors
-tensors must be of the same shape."
+tensors must be of the same shape.
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+@end[lang=lisp](code)
+@end(section)"
   (let ((tensors (map 'list
 		      #'(lambda (tensor)
 			  (!disallow-destruct tensor)
@@ -1017,19 +1030,34 @@ tensors must be of the same shape."
     (apply #'call (ConcatenateTensorNode axis) tensors)))
 
 (defun !split (tensor split-size &key (axis 0))
-  "split tensors"
+  "split tensors
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+@end[lang=lisp](code)
+@end(section)"
   (declare (type waffetensor tensor)
 	   (type fixnum split-size axis)
 	   (optimize (speed 3)))
   (call (SplitTensorNode split-size axis) tensor))
 
-(defmacro !nconc (&rest tensors)
-  "nconc"
+(defmacro !vstack (&rest tensors)
+  "concatenate but axis=0
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+@end[lang=lisp](code)
+@end(section)"
   `(!concatenate 0 ,@tensors))
 
-(defmacro !hstack (&rest tensors))
-
-(defmacro !vstack (&rest tensors))
+(defmacro !hstack (&rest tensors)
+  "concatenate but axis=1
+@begin(section)
+@title(Example)
+@begin[lang=lisp](code)
+@end[lang=lisp](code)
+@end(section)"
+  `(!concatenate 1 ,@tensors))
 
 (defun !transpose (x &optional result)
   "Transpose x where x is a 2d tensor.
@@ -1614,8 +1642,7 @@ This is the very fastst but not useful. So use macros in order to make it more u
 			  (apply #'!aref tensor `(,@args ,i))))))
 |#
 (defun !dotensor () "")
-(defun !displace ()
-  "")
+(defun !displace () "")
 
 (defun get-sum-symbols (symbols)
   (let ((symbols (flatten symbols)))
