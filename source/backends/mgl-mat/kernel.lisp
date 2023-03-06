@@ -64,27 +64,27 @@ Here's
 	  (copy-mat args)
 	  (make-mat (mat-dimensions args)))))
 
-; could be optimized with broadcast
 (declaim (ftype (function (mgl-mat:mat fixnum &key (:axis fixnum)) mgl-mat:mat) mgl-repeat))
 (defun mgl-repeat (tensor n &key axis)
-  (declare (optimize (speed 3) (space 0) (safety 0) (debug 0))
+  (declare (optimize (speed 3))
 	   (type mgl-mat:mat tensor)
 	   (type fixnum n axis))
-  (if (>= axis 0)
-      (if (>= (length (the list
-			   (mat-dimensions tensor)))
-	      2)
-	  (mgl-mat:stack
-	   axis
-	   (loop for i below n collect tensor))
-					; when dims=1
-	  (mgl-repeat (mgl-mat:reshape
-		       tensor
-		       `(,@(mgl-mat:mat-dimensions tensor) 1))
- 		      n :axis axis))
-      (error "axis=-1")))
+  (let* ((axis (if (>= axis 0)
+ 		   axis
+		   (+ (length (the list (mat-dimensions tensor))) axis)))
+	 (new-tensor-dim (loop for i fixnum upfrom 0 below (length (the list (mat-dimensions tensor)))
+			       if (= i axis)
+				 collect (the fixnum (* n (the fixnum (mat-dimension tensor i))))
+			       else		
+				 collect (mat-dimension tensor i)))
+	 (new-tensor (!zeros new-tensor-dim))
+	 (base-tensor (sysconst tensor)))
+    (data (cl-waffe::%saref
+	   new-tensor
+	   base-tensor
+	   t))))
 
-					;(declaim (ftype (function (mgl-mat:mat waffesupporteddatatype) mgl-mat:mat) trasposedmgl-full-like mgl-full-like))
+;(declaim (ftype (function (mgl-mat:mat waffesupporteddatatype) mgl-mat:mat) trasposedmgl-full-like mgl-full-like))
 (defun mgl-full-like (tensor value)
   (declare (optimize (speed 3) (safety 0) (debug 0))
 	   (type mat tensor))
@@ -252,7 +252,7 @@ These function are called by broadcasting-apply
 		   (T 0)))
 	 shape)))
 
-(defun broadcasting-apply-mgl (function x y)					; still node debugged but it used mgl-mat's APIs
+(defun broadcasting-apply-mgl (function x y &optional (broadcasts nil))					; still node debugged but it used mgl-mat's APIs
   (declare (optimize (speed 3) (safety 0))
 	   (type symbol function)
 	   (type waffetensor x y))
@@ -260,7 +260,7 @@ These function are called by broadcasting-apply
   (unless (= (!dims x) (!dims y))
     (error "KernelError: Can't broadcasting ~a and ~a" x y))
 
-  (let* ((dims (cl-waffe::broadcasting x y))
+  (let* ((dims (or broadcasts (cl-waffe::broadcasting x y)))
 	 (result-shape (loop for i fixnum upfrom 0 below (!dims x)
 			     collect (let ((dim (nth i dims)))
 				       (cond
