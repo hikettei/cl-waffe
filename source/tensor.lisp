@@ -668,22 +668,36 @@ Todo: Backward."
     dataset))
 
 (defun !aref (tensor &rest dims)
-  "Very fast and useful aref.
+  "!aref creates a new tensor from the area specified by @cl:param(dims) from the given @cl:param(tensor).
 
-This function is setfable.
+This function is setfable and both function produces the computation nodes.
 
-Cuts the area specified by dims from Tensor and generates a new Const.
 
-This function creates computation node.
+dims is consisted of list, and each dimension is described as follow formats:
 
-dims are following:
-@begin(enum)
-@item(fixnum)
-@item(t ... which means 0 ... maxlen)
-@begin(item)
-Cons (e.g. '(1 3) reads 1<=x<3)
-@end(item)
-@end(enum)
+@begin(deflist)
+@def(t)
+@term(t means (0~max-len) in the dimension.)
+@def(fixnum)
+@term(copies the index of fixnum in the dimension.)
+@def(list)
+@term(list must be of (start stop), copying tensors from start to stop in the dimension. that is, the result in the dimension is the copy of: @b(start<=x<stop).
+Using t as @cl:param(stop) means: t is the last element in the dimension.)
+@end(deflist)
+
+The fixnum used in @cl:param(dims) is not only positive numbers but also negative numbers.
+
+For example, -1 is interpreted as (+ maxlen -1), -2 is interpreted as (+ maxlen -2)...
+
+Note: (setf !aref) overwrites the given tensor's mat but won't overwrites its computation node. in order to update nodes, you must write it like: (setq a (setf (!aref a ...) ...))... See Example for the details.
+
+Tensor cut-outs act on:
+@begin(deflist)
+@def(When is not setf)
+@term(act on the given tensor.)
+@def(When is setf)
+@term(act on the target tensor. (e.g.: (setf (!aref target-tensor ...) input-tensor)))
+@end(deflist)
 
 Example:
 @begin[lang=lisp](code)
