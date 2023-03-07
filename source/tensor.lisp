@@ -511,7 +511,7 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
   (if (typep (data tensor) 'mgl-mat:mat)
       (unless (eq (!shape tensor) `(1))
 	(error "grad can be implicitly created only for scalar outputs")))
-  (with-no-grad
+  (let ((*no-grad* t))
     (let ((*lazy-backwards* (make-hash-table)))
       (labels ((backward-by-id (id lazy-tensors)
 		 (remhash id *lazy-backwards*)
@@ -598,8 +598,12 @@ backward1 does following in order to optimize:
 				     0)))
 	 ; Each node has its own specific optimisation described below.
 	 (cond
-	   ((areftensor-p
-	     (waffetensor-state tensor))
+	   ((and
+	     (waffetensor-state
+	      (car
+	       (waffetensor-variables tensor)))
+	     (areftensor-p
+	      (waffetensor-state tensor)))
 	    #| Explain: When Node is Like...
 	    [Node: ArefTensor {A1}]
 	      [Node: AddTensor {0}]|
