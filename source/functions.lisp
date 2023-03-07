@@ -297,7 +297,6 @@ Todo: currently, it returns error.
 ; !aref, (setf !aref) function and nodes:
 
 (defnode ArefTensor (shape)
-;  :regard-as-node nil
   :parameters ((shape shape)
 	       (base-shape T))
   :forward ((x) (setf (self base-shape) (!shape x))
@@ -309,13 +308,11 @@ Todo: currently, it returns error.
 
 (defnode SetfArefTensor (shape)
   :parameters ((shape shape))
- ; :regard-as-node nil
   :forward ((x y)
 	    ; Note: defnode must produce new sysconst otherwise stackoverflow...
 	    (sysconst (data (apply #'!write-faref x y (self shape)))))
   :backward ((dy)
 	     (list dy (apply #'!faref dy (self shape)))))
-
 
 #|
 For those who are reading my ugly code.

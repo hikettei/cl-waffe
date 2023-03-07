@@ -561,16 +561,14 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
 backward1 does following in order to optimize:
 
 1. Nodes like... (Any Node -> !aref) is registered to *lazy-backwards*.
-  Step1. backwardを呼び出して, !arefより上の階層の計算ノードの微分を終わらせる
+  Step1. backward1を呼び出して, !arefより上の階層の計算ノードの微分を終わらせる
   Step2. backward関数内で, *lazy-backwards* にある計算ノードがあったら、それをbackward1で!arefが出現するノードまでか末端まで計算.
 
   Step3. Step2で*lazy-backwards*がNILになるまで繰り返す。
 
-ほぼ!aref専用の最適化
-
-2. *single-value*がtの場合、計算ノードが分岐しないから(Tracing JITで解決しようと必死だったやつ) 破壊的に計算してOK
+2. *single-value*がtの場合、計算ノードが分岐しないから(Tracingで解決しようと必死だったやつ) 破壊的に計算してOK
 "
-  (declare (optimize (speed 3)); (safety 0))
+  (declare (optimize (speed 3) (safety 0))
 	   (type waffetensor tensor))
   
   ; Displaying Backward Nodes, when *verbose* is t.
@@ -611,11 +609,11 @@ backward1 does following in order to optimize:
 	      [Node: AddTensor {0}]
 	    Stops exploring deeper of addtensor until all areftensor will be registered.
 	    |#
-	    (let* ((variables (waffetensor-variables tensor))
+	    (let* ((grad-before (grad-tmp-value grad-tmp-before))
+		   (variables (waffetensor-variables tensor))
 		   (state (waffetensor-state tensor))
 		   (called-from-state (waffetensor-state (car variables)))
 		   (higher-node-id (slot-value called-from-state 'model-ident)))
-
 	      (unless (= 1 (length variables))
 		(error "cl-waffe's internal error: the size of !aref's retent should be 1 but got: ~a" variables))
 		
