@@ -14,8 +14,9 @@ Here's utils for tensor.
   "When t, some node will be ignored. see references below for details. default: nil")
 
 (defparameter *verbose* nil)
+(defparameter *single-node* nil "This parameter becames t when backward, the size of x.variables is 1.")
 (defparameter *backward-indents* 0)
-(declaim (type boolean *verbose*)
+(declaim (type boolean *verbose* *single-node*)
 	 (type fixnum *backward-indents*))
 
 (defparameter *print-char-max-len* 5
@@ -536,8 +537,11 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
 			      (sysconst 1.0))))
 	; calculating backward(state, dy) -> x.grad, y.grad...
 
-	(let ((*backward-indents* (if *verbose*
-				      (+ *backward-indents* 1)
+	(let ((*single-node* (= 1 (length (the list (waffetensor-variables tensor)))))
+	      (*backward-indents* (if *verbose*
+				      (if *single-node*
+					  (+ *backward-indents* 1)
+					  *backward-indents*)
 				      0)))
 	  (let ((grads (funcall
 			(the function
