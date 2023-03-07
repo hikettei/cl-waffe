@@ -562,6 +562,8 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
   "
 backward1 does following in order to optimize:
 
+I'm sorry for writing in Japanese...
+
 1. Nodes like... (Any Node -> !aref) is registered to *lazy-backwards*.
   Step1. backward1を呼び出して, !arefより上の階層の計算ノードの微分を終わらせる
   Step2. backward関数内で, *lazy-backwards* にある計算ノードがあったら、それをbackward1で!arefが出現するノードまでか末端まで計算.
