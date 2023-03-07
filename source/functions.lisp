@@ -334,6 +334,7 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
 
 ; wrapper
 (defun !write-faref (tensor value &rest dims)
+  "Overwrites to tensor, with reading value of dims."
   (unless (= (!dims value) (!dims tensor))
     (error "!write-faref: the size of dim doesn't match. use !unsqueeze and !squeeze to adjust it.: ~a and ~a" (!dims value) (!dims tensor)))
   ;(apply #'%write-faref tensor value dims)

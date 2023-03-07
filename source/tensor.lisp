@@ -80,6 +80,7 @@ cl-waffe automatically coerce them to arbitary types
 
 (defstruct Grad-Tmp
   (value nil)
+  (grad-shape nil :type list)
   (grad-called nil :type boolean))
 
 (defstruct (WaffeNodeThread
@@ -514,7 +515,35 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
     (let ((*lazy-backwards* (make-hash-table)))
       (labels ((backward-by-id (id lazy-tensors)
 		 (remhash id *lazy-backwards*)
-		 (print lazy-tensors)))
+		 ; creates grad-tmp tensor
+
+		 (let* ((first-tensor (cdr (car lazy-tensors)))
+			(result-shape (grad-tmp-grad-shape
+				       (waffetensor-grad-tmp first-tensor)))
+			(result-tmp (!zeros result-shape)))
+		   (dolist (lazy-tensor-info lazy-tensors)
+		     (apply
+		      #'!write-faref
+		      result-tmp
+		      (cdr lazy-tensor-info)
+		      (car lazy-tensor-info)))
+
+		   (setf (waffetensor-backward result-tmp)
+			 (waffetensor-backward first-tensor))
+		   (setf (waffetensor-state result-tmp)
+			 (waffetensor-state first-tensor))
+		   (setf (waffetensor-variables result-tmp)
+			 (waffetensor-variables first-tensor))
+		   (setf (waffetensor-is-ancestor-param result-tmp) t)
+
+		   (when *verbose*
+		     (format t "Resumption from Lazy Evaluated==~%"))
+
+		   (dotimes (i (length (waffetensor-variables result-tmp)))
+		     (setf (waffetensor-thread-data result-tmp)
+			   (waffetensor-thread-data first-tensor))
+		     (setfgradtmp (nth-var result-tmp i) result-tmp)
+		     (step-next-node result-tmp i)))))
 	(backward1 tensor)
 	(loop while (not (= 0 (hash-table-count *lazy-backwards*)))
 	      do (maphash #'backward-by-id *lazy-backwards*)))
@@ -558,9 +587,9 @@ backward1 does following in order to optimize:
 	    (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top
 			     (grad-tmp-value grad-tmp-before)
 			     (sysconst 1.0))))
-					; calculating backward(state, dy) -> x.grad, y.grad...
+       ; calculating backward(state, dy) -> x.grad, y.grad...
 
-					; Update Parameters
+       ; Update Parameters
        (let ((*single-node* (= 1 (length (the list (waffetensor-variables tensor)))))
 	     (*backward-indents* (if *verbose*
 				     (if *single-node*
@@ -585,17 +614,28 @@ backward1 does following in order to optimize:
 
 	      (unless (= 1 (length variables))
 		(error "cl-waffe's internal error: the size of !aref's retent should be 1 but got: ~a" variables))
-
+		
+	      ; Pseudo, moves down one node.
+	      (setf (waffetensor-backward grad-before)
+		    (waffetensor-backward (car variables)))
+	      (setf (waffetensor-state grad-before)
+		    (waffetensor-state (car variables)))
+	      (setf (waffetensor-variables grad-before)
+		    (waffetensor-variables (car variables)))
+	      (setf (waffetensor-is-ancestor-param grad-before) t)
+	      (setf (grad-tmp-grad-shape
+		     (waffetensor-grad-tmp grad-before))
+		    (!shape (car variables)))
 	      (push (cons
 		     (areftensor-shape state)
-		     (car
-		      (funcall
-		       (the function
-			    (call-backward state))
-		       grad-before)))
+		     grad-before)
 		    (gethash
 		     higher-node-id
 		     *lazy-backwards*)))
+	    (when *verbose*
+	      (dotimes (_ (the fixnum *backward-indents*))
+		(format t " "))
+	      (format t "<Lazy Evaluated>~%"))
 	    nil)
 	   ; Otherwise, simply explore deeper nodes if there's param.
 	   (T 
@@ -750,45 +790,6 @@ Excepted Usage.
 (with-view tensor '(0 3) t t
 -> x
 do (exp x))...")
-
-(defun !mask-forward ()
-  "Changes the given tensor's visible areas."
-  
-  )
-
-(defun !mask-backward ()
-  "Changes the given tensor's visible areas.
-Computation Node is:
-TopNode (10 * 10) -> Operations (10 * 10) -> ... -> !aref -> !mask-backward (3 * 3) Tensor
-
-When Backward:
-TopNode (Got (3 * 3) Tensor and mask information(axpy! to visible-areas).) <- Operations (3 * 3) <- ... <- !aref (3 * 3) <-  !mask-backward (3 * 3) Tensor
-
-But if...
-
-TopNode (10 * 10) -> Unsqueeze (1 * 100) -> ... -> !aref -> !mask-backward (1 * 10).
-
-TopNode (10 * 10) <- Unsqueeze (1 * 100) <- ... <- !aref <- !mask-backward (1 * 10).
-
-Another Example of Backward:
-
-TopNode (10 * 10) -> ~~ -> !aref -> !sin -> ... -> end
-                             |-> !cos -> !tan -> !aref -> ... -> end
-                                                   |-> !aref ... -> ... -> end
-
-1.0 <- !sum <- !mul <- (!aref x 0) <- !reshape x
-                 |<- 2
-
-xに.!aref count timesを付与する(grad-tmp)に.
-1.0 <- !sum <- !setf <-            ... x <- !reshape <- !mul <- ...
-                     |<- (RNN) <- (!aref x 0) __(xのgrad.tmpに保存)
-                     |<- (RNN) <- (!aref x 1) __(xのgrad.tmpに保存)
-                     |<- (RNN) <- (!aref x 2) __(xのgrad.tmpに保存)
-
-!reshape knows it.
-ends are sum up by backward1, but each end has `mask-infomation`.
-ugh but matmul?? aaa
-")
 
 (defun !aref (tensor &rest dims)
   "!aref creates a new tensor from the area specified by @cl:param(dims) from the given @cl:param(tensor).
