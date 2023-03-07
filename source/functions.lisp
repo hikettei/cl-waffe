@@ -297,26 +297,22 @@ Todo: currently, it returns error.
 ; !aref, (setf !aref) function and nodes:
 
 (defnode ArefTensor (shape)
-  :regard-as-node nil
   :parameters ((shape shape)
 	       (base-shape T))
-
   :forward ((x) (setf (self base-shape) (!shape x))
 		(apply #'!faref x (self shape))) ;thread-node??
-  :backward ((dy)
+    :backward ((dy)
 	     (let ((dy-n (!zeros (self base-shape))))
 	       (setf (!areflist dy-n (self shape)) dy)
 	       (list dy-n))))
 
 (defnode SetfArefTensor (shape)
   :parameters ((shape shape))
-  :regard-as-node nil
   :forward ((x y)
 	    ; Note: defnode must produce new sysconst otherwise stackoverflow...
 	    (sysconst (data (apply #'!write-faref x y (self shape)))))
   :backward ((dy)
 	     (list dy (apply #'!faref dy (self shape)))))
-
 
 #|
 For those who are reading my ugly code.
@@ -338,6 +334,7 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
 
 ; wrapper
 (defun !write-faref (tensor value &rest dims)
+  "Overwrites to tensor, with reading value of dims."
   (unless (= (!dims value) (!dims tensor))
     (error "!write-faref: the size of dim doesn't match. use !unsqueeze and !squeeze to adjust it.: ~a and ~a" (!dims value) (!dims tensor)))
   ;(apply #'%write-faref tensor value dims)

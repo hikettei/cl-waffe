@@ -414,6 +414,7 @@ Example:
 		 ;     `,vars))
 	   
 	   (macrolet ((self (name) `(slot-value ,',self-heap ',name))
+		      (model () `,',self-heap)
 		      (save-for-backward (name value)
 			`(let ((thread-info (waffetensor-thread-data ,value))
 			       (smaller-value (detach ,value)))
@@ -608,7 +609,7 @@ the object-type indicates the type of document format."
 					  (render-simple-model-structure stream m)))
 		       (:constructor ,name (,@args &aux (model-ident (gensym "WAFFEOBJECT")) ,@(map 'list (lambda (x) `(,(car x) ,(second x))) parameters))))
 	     ,doc-output
-	     (model-ident ,(gensym "WAFFEOBJECT") :type symbol)
+	     (model-ident ,(gensym "W") :type symbol)
 	     (hide-from-tree ,hide-from-tree :type boolean)
 	     (forward t :type boolean)
 	     (backward ,(if backward t nil) :type boolean)
@@ -635,10 +636,12 @@ the object-type indicates the type of document format."
 	 nil))))
 
 (defun render-simple-model-structure (stream model) ; Todo: More Details
-  (format stream "[~a: ~a]" (if (slot-value model 'hide-from-tree)
-				"Node "
-				"Model")
-	  (type-of model)))
+  (format stream "[~a: ~a {~a}]"
+	  (if (slot-value model 'hide-from-tree)
+	      "Node "
+	      "Model")
+	  (type-of model)
+	  (slot-value model 'model-ident)))
 
 (defun print-model (model)
   (fresh-line)
