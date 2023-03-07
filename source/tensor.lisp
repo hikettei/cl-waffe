@@ -13,6 +13,11 @@ Here's utils for tensor.
 (defparameter *no-grad* nil
   "When t, some node will be ignored. see references below for details. default: nil")
 
+(defparameter *verbose* nil)
+(defparameter *backward-indents* 0)
+(declaim (type boolean *verbose*)
+	 (type fixnum *backward-indents*))
+
 (defparameter *print-char-max-len* 5
   "When printing tensor, the character displayed following this param.
 (e.g. When 5, in your terminal, 1.12345d0 => 1.1234...)
@@ -516,6 +521,13 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
 (defun backward1 (tensor)
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type waffetensor tensor))
+  ; Displaying Backward Nodes
+  (when *verbose*
+    (dotimes (_ (the fixnum *backward-indents*))
+      (format t " "))
+    (format t "~a~%" (if (null (waffetensor-state tensor))
+			 "[The End of Node]"
+			 (waffetensor-state tensor))))
   (cond
     ((waffetensor-backward tensor) ;Backward exists?
       (let* ((grad-tmp-before (waffetensor-grad-tmp tensor))
@@ -524,7 +536,9 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
 			      (sysconst 1.0))))
 	; calculating backward(state, dy) -> x.grad, y.grad...
 
-	(progn
+	(let ((*backward-indents* (if *verbose*
+				      (+ *backward-indents* 1)
+				      0)))
 	  (let ((grads (funcall
 			(the function
 			     (call-backward (waffetensor-state tensor)))
@@ -671,7 +685,50 @@ Todo: Backward."
   "Todo:
 Its usage is similar to pytorch's view.
 !view returns a displaced and reshaped tensor but won't produce copies.
-This is useful when you want to apply some operations to the specified area of tensor. !set-batch will be implemented by view.")
+This is useful when you want to apply some operations to the specified area of tensor. !set-batch will be implemented by view.
+Excepted Usage.
+(with-view tensor '(0 3) t t
+-> x
+do (exp x))...")
+
+(defun !mask-forward ()
+  "Changes the given tensor's visible areas."
+  
+  )
+
+(defun !mask-backward ()
+  "Changes the given tensor's visible areas.
+Computation Node is:
+TopNode (10 * 10) -> Operations (10 * 10) -> ... -> !aref -> !mask-backward (3 * 3) Tensor
+
+When Backward:
+TopNode (Got (3 * 3) Tensor and mask information(axpy! to visible-areas).) <- Operations (3 * 3) <- ... <- !aref (3 * 3) <-  !mask-backward (3 * 3) Tensor
+
+But if...
+
+TopNode (10 * 10) -> Unsqueeze (1 * 100) -> ... -> !aref -> !mask-backward (1 * 10).
+
+TopNode (10 * 10) <- Unsqueeze (1 * 100) <- ... <- !aref <- !mask-backward (1 * 10).
+
+Another Example of Backward:
+
+TopNode (10 * 10) -> ~~ -> !aref -> !sin -> ... -> end
+                             |-> !cos -> !tan -> !aref -> ... -> end
+                                                   |-> !aref ... -> ... -> end
+
+1.0 <- !sum <- !mul <- (!aref x 0) <- !reshape x
+                 |<- 2
+
+xに.!aref count timesを付与する(grad-tmp)に.
+1.0 <- !sum <- !setf <-            ... x <- !reshape <- !mul <- ...
+                     |<- (RNN) <- (!aref x 0) __(xのgrad.tmpに保存)
+                     |<- (RNN) <- (!aref x 1) __(xのgrad.tmpに保存)
+                     |<- (RNN) <- (!aref x 2) __(xのgrad.tmpに保存)
+
+!reshape knows it.
+ends are sum up by backward1, but each end has `mask-infomation`.
+ugh but matmul?? aaa
+")
 
 (defun !aref (tensor &rest dims)
   "!aref creates a new tensor from the area specified by @cl:param(dims) from the given @cl:param(tensor).
