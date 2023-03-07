@@ -107,6 +107,7 @@ cl-waffe automatically coerce them to arbitary types
   (thread-idx 0 :type fixnum)
   (cache-n 0 :type fixnum))
 
+; To add: create tensors with (tensor a :debug t) which enables displaying more informations (e.g.: mat's memory-address)
 (defstruct (WaffeTensor (:print-function
 			 (lambda (tensor stream depth)
 			    (declare (ignore depth))
