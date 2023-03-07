@@ -414,6 +414,7 @@ Example:
 		 ;     `,vars))
 	   
 	   (macrolet ((self (name) `(slot-value ,',self-heap ',name))
+		      (model () `,',self-heap)
 		      (save-for-backward (name value)
 			`(let ((thread-info (waffetensor-thread-data ,value))
 			       (smaller-value (detach ,value)))

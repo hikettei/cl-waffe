@@ -65,6 +65,7 @@
   (:export ; macros in waffe-object
            #:model
 	   #:self
+	   #:save-for-backward
 	   #:update
 	   #:zero-grad)
 
@@ -207,3 +208,59 @@
 					:optimizer
 					:dataset)
   "An identifiers of cl-waffe's objects.")
+
+(defmacro save-for-backward (slot tensor)
+  (error "Welcome to cl-waffe.
+Attempting your tensor ~a to a slot ~a, but save-for-backward wasn't called in:
+1. defmodel's forward or backward.
+2. defnode's forward or backward.
+
+save-for-backward is useful when registering temporary tensor depending on the case when copied tensor will be used when backwards.
+
+For example:
+
+(defnode XXX nil
+:forward ((x)
+          (!exp x) ; <- (!exp x) doesn't copies x
+..."
+	 slot
+	 tensor))
+
+(defmacro self (name)
+  (error "Welcome to cl-waffe.
+Attempting to access ~a but couldn't.
+This is because self wasn't called in:
+1. defmodel's forward or backward
+2. defnode's forward or backward
+3. defoptimizer's update
+4. defdataset's slots
+5. deftrainer's slots
+
+By using self, you can access cl-waffe's model parameter.
+For example:
+
+(defmodel XXX nil
+  :parameters ((A 0))
+  :forward ((x)
+            (+ (self A) x)))" name))
+
+(defmacro model ()
+  (error "Welcome to cl-waffe.
+Attempting to access the currently model but (model) wasn't called in:
+1. defmodel/defnode's forward or backward
+2. defoptimizer's slots"))
+
+(defmacro update (&rest args)
+  (declare (ignore args))
+  (error "Welcome to cl-waffe.
+The macro (update) can only be called in deftrainer's slots.
+For details, documentations are available.
+
+https://hikettei.github.io/cl-waffe-docs/docs/cl-waffe.html#3-deftrainer"))
+
+(defmacro zero-grad ()
+  (error "Welcome to cl-waffe.
+The macro (zero-grad) can only be called in deftrainer's slots.
+For details, documentations are available.
+
+https://hikettei.github.io/cl-waffe-docs/docs/cl-waffe.html#3-deftrainer"))
