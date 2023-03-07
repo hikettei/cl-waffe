@@ -543,12 +543,9 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
 
 		   (when *verbose*
 		     (format t "Resumption from Lazy Evaluated==~%"))
-
-		   (dotimes (i (length (waffetensor-variables result-tmp)))
-		     (setf (waffetensor-thread-data result-tmp)
-			   (waffetensor-thread-data first-tensor))
-		     (setfgradtmp (nth-var result-tmp i) result-tmp)
-		     (step-next-node result-tmp i)))))
+		   
+		   (setfgradtmp result-tmp result-tmp)
+		   (backward1 result-tmp))))
 	(backward1 tensor)
 	(loop while (not (= 0 (hash-table-count *lazy-backwards*)))
 	      do (maphash #'backward-by-id *lazy-backwards*)))
@@ -621,7 +618,7 @@ backward1 does following in order to optimize:
 		   (higher-node-id (slot-value called-from-state 'model-ident)))
 	      (unless (= 1 (length variables))
 		(error "cl-waffe's internal error: the size of !aref's retent should be 1 but got: ~a" variables))
-		
+
 	      ; Pseudo, moves down one node.
 	      (setf (waffetensor-backward grad-before)
 		    (waffetensor-backward (car variables)))
