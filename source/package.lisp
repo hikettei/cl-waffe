@@ -12,7 +12,11 @@
   (:export #:waffetensor
 	   #:tensor
 	   #:const
-	   #:sysconst)
+	   #:sysconst
+	   #:parameters
+	   #:hide-from-tree
+	   #:forward
+	   #:backward)
   (:export 
 	   ; An parameters for displaying tensor.
 	   #:*print-char-max-len*
