@@ -1467,8 +1467,10 @@ Return: A tensor of shape that equal to the condition.
     result)))
 
 (defun write-description (res backward backend)
+  (declare (ignore backward res backend))
   ; Parameter { ... <= here }
-  (write-string (format nil " :device :~a :backward ~A" backend backward) res))
+  ;(write-string (format nil " :device :~a" backend) res)
+  )
 
 (defun reduce-str (obj)
   ; align string content of tensor following *print-char-max-len*
@@ -1574,7 +1576,7 @@ Return: A tensor of shape that equal to the condition.
 							 (if (null grad)
 							     (+ indent-size (length "#Const("))
 							     (+ indent-size (length "#Parameter{"))))
-		(write-string (format nil " :mgl t :shape ~a" (mgl-mat:mat-dimensions contents)) res)
+		(write-string (format nil " :mgl t :shape ~a :backward ~a" (mgl-mat:mat-dimensions contents) (waffetensor-state tensor)) res)
 		(unless (null grad)
 		  (write-description res backward backend))
 		(if (null grad)
