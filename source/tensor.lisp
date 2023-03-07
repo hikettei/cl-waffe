@@ -107,6 +107,7 @@ cl-waffe automatically coerce them to arbitary types
   (thread-idx 0 :type fixnum)
   (cache-n 0 :type fixnum))
 
+; To add: create tensors with (tensor a :debug t) which enables displaying more informations (e.g.: mat's memory-address)
 (defstruct (WaffeTensor (:print-function
 			 (lambda (tensor stream depth)
 			    (declare (ignore depth))
@@ -561,6 +562,8 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
 (defun backward1 (tensor)
   "
 backward1 does following in order to optimize:
+
+I'm sorry for writing in Japanese...
 
 1. Nodes like... (Any Node -> !aref) is registered to *lazy-backwards*.
   Step1. backward1を呼び出して, !arefより上の階層の計算ノードの微分を終わらせる
@@ -1465,8 +1468,10 @@ Return: A tensor of shape that equal to the condition.
     result)))
 
 (defun write-description (res backward backend)
+  (declare (ignore backward res backend))
   ; Parameter { ... <= here }
-  (write-string (format nil " :device :~a :backward ~A" backend backward) res))
+  ;(write-string (format nil " :device :~a" backend) res)
+  )
 
 (defun reduce-str (obj)
   ; align string content of tensor following *print-char-max-len*
@@ -1572,7 +1577,7 @@ Return: A tensor of shape that equal to the condition.
 							 (if (null grad)
 							     (+ indent-size (length "#Const("))
 							     (+ indent-size (length "#Parameter{"))))
-		(write-string (format nil " :mgl t :shape ~a" (mgl-mat:mat-dimensions contents)) res)
+		(write-string (format nil " :mgl t :shape ~a :backward ~a" (mgl-mat:mat-dimensions contents) (waffetensor-state tensor)) res)
 		(unless (null grad)
 		  (write-description res backward backend))
 		(if (null grad)
