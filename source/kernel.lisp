@@ -28,15 +28,18 @@ Here's:
        result)))
 
 (defmacro with-jit (&body body)
+  "In the codes below, tracing jit is enabled."
   `(let ((cl-waffe.backends.mgl::*force-disable-jit* nil)
 	 (cl-waffe.backends.mgl:*force-lazy-eval* t)
 	 (cl-waffe.backends.mgl:*verbose* nil))
      ,@body))
 
 (defmacro with-jit-debug (&body body)
+  "In the codes below, tracing jit is enabled.
+Also, compiled codes will be displayed."
   `(let ((cl-waffe.backends.mgl::*force-disable-jit* nil)
 	 (cl-waffe.backends.mgl:*force-lazy-eval* t)
-	 (cl-waffe.backends.mgl:*verbose* t))
+	 (cl-waffe.backends.mgl::*verbose* t))
      ,@body))
 
 (declaim (ftype (function (waffetensor) waffetensor) warranty))
