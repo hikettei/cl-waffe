@@ -13,6 +13,14 @@ Here's utils for tensor.
 (defparameter *no-grad* nil
   "When t, some node will be ignored. see references below for details. default: nil")
 
+(defparameter *verbose* nil "When t, all computation nodes will be displayed to stream t")
+
+(defparameter *single-node* nil "This parameter becames t when backward, the size of x.variables is 1.")
+
+(defparameter *backward-indents* 0)
+(declaim (type boolean *verbose* *single-node*)
+	 (type fixnum *backward-indents*))
+
 (defparameter *print-char-max-len* 5
   "When printing tensor, the character displayed following this param.
 (e.g. When 5, in your terminal, 1.12345d0 => 1.1234...)
@@ -31,6 +39,13 @@ Default: 6")
   "Default backend cl-waffe uses. Default: :mgl")
 
 (defparameter mgl-mat:*DEFAULT-MAT-CTYPE* :float) ; in default, float
+
+(defparameter *lazy-backwards* nil)
+
+(defmacro with-verbose (&body body)
+  "The codes below, the computation nodes will be displayed when backward"
+  `(let ((*verbose* t))
+     ,@body))
 
 (deftype WaffeSupportedDataType ()
   "An type of waffe-tensor's content type,
@@ -70,6 +85,7 @@ cl-waffe automatically coerce them to arbitary types
 
 (defstruct Grad-Tmp
   (value nil)
+  (grad-shape nil :type list)
   (grad-called nil :type boolean))
 
 (defstruct (WaffeNodeThread
@@ -91,6 +107,7 @@ cl-waffe automatically coerce them to arbitary types
   (thread-idx 0 :type fixnum)
   (cache-n 0 :type fixnum))
 
+; To add: create tensors with (tensor a :debug t) which enables displaying more informations (e.g.: mat's memory-address)
 (defstruct (WaffeTensor (:print-function
 			 (lambda (tensor stream depth)
 			    (declare (ignore depth))
@@ -500,11 +517,40 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
   (if (typep (data tensor) 'mgl-mat:mat)
       (unless (eq (!shape tensor) `(1))
 	(error "grad can be implicitly created only for scalar outputs")))
+  (let ((*no-grad* t))
+    (let ((*lazy-backwards* (make-hash-table)))
+      (labels ((backward-by-id (id lazy-tensors)
+		 (remhash id *lazy-backwards*)
+		 ; creates grad-tmp tensor
 
-  (setq *no-grad* t)
-  (backward1 tensor)
-  (setq *no-grad* nil)
-  nil)
+		 (let* ((first-tensor (cdr (car lazy-tensors)))
+			(result-shape (grad-tmp-grad-shape
+				       (waffetensor-grad-tmp first-tensor)))
+			(result-tmp (!zeros result-shape)))
+		   (dolist (lazy-tensor-info lazy-tensors)
+		     (apply
+		      #'!write-faref
+		      result-tmp
+		      (cdr lazy-tensor-info)
+		      (car lazy-tensor-info)))
+
+		   (setf (waffetensor-backward result-tmp)
+			 (waffetensor-backward first-tensor))
+		   (setf (waffetensor-state result-tmp)
+			 (waffetensor-state first-tensor))
+		   (setf (waffetensor-variables result-tmp)
+			 (waffetensor-variables first-tensor))
+		   (setf (waffetensor-is-ancestor-param result-tmp) t)
+
+		   (when *verbose*
+		     (format t "Resumption from Lazy Evaluated==~%"))
+		   
+		   (setfgradtmp result-tmp result-tmp)
+		   (backward1 result-tmp))))
+	(backward1 tensor)
+	(loop while (not (= 0 (hash-table-count *lazy-backwards*)))
+	      do (maphash #'backward-by-id *lazy-backwards*)))
+	nil)))
 
 (declaim (inline step-next-node))
 
@@ -514,32 +560,107 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
 
 (declaim (ftype (function (waffetensor) null) backward1))
 (defun backward1 (tensor)
-  (declare (optimize (speed 3) (space 0) (safety 0))
+  "
+backward1 does following in order to optimize:
+
+I'm sorry for writing in Japanese...
+
+1. Nodes like... (Any Node -> !aref) is registered to *lazy-backwards*.
+  Step1. backward1を呼び出して, !arefより上の階層の計算ノードの微分を終わらせる
+  Step2. backward関数内で, *lazy-backwards* にある計算ノードがあったら、それをbackward1で!arefが出現するノードまでか末端まで計算.
+
+  Step3. Step2で*lazy-backwards*がNILになるまで繰り返す。
+
+2. *single-value*がtの場合、計算ノードが分岐しないから(Tracingで解決しようと必死だったやつ) 破壊的に計算してOK
+"
+  (declare (optimize (speed 3) (safety 0))
 	   (type waffetensor tensor))
+  
+  ; Displaying Backward Nodes, when *verbose* is t.
+  (when *verbose*
+    (dotimes (_ (the fixnum *backward-indents*))
+      (format t " "))
+    (format t "~a~%" (if (null (waffetensor-state tensor))
+			 "<The End of Node>"
+			 (waffetensor-state tensor))))
+  
   (cond
     ((waffetensor-backward tensor) ;Backward exists?
-      (let* ((grad-tmp-before (waffetensor-grad-tmp tensor))
-	     (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top
-			      (grad-tmp-value grad-tmp-before)
-			      (sysconst 1.0))))
-	; calculating backward(state, dy) -> x.grad, y.grad...
+     (let* ((grad-tmp-before (waffetensor-grad-tmp tensor))
+	    (grad-before (if (grad-tmp-grad-called grad-tmp-before) ;check if the node is a top
+			     (grad-tmp-value grad-tmp-before)
+			     (sysconst 1.0))))
+       ; calculating backward(state, dy) -> x.grad, y.grad...
 
-	(progn
-	  (let ((grads (funcall
-			(the function
-			     (call-backward (waffetensor-state tensor)))
-			grad-before)))
-	    (declare (type list grads)) ; Todo: Print Error
-	    (unless (= (length (waffetensor-variables tensor))
-		       (length grads))
-	      (error "backward error: The number of :forward args doesnt correspond with of :backward"))
-	    
-	    (dotimes (n (length grads))
-	      (setf (waffetensor-thread-data (nth n grads))
-		    (waffetensor-thread-data tensor))
-	      (setfgradtmp (nth-var tensor n) (nth n grads))
-	      (step-next-node tensor n)))
-	  nil)))
+       ; Update Parameters
+       (let ((*single-node* (= 1 (length (the list (waffetensor-variables tensor)))))
+	     (*backward-indents* (if *verbose*
+				     (if *single-node*
+					 (+ *backward-indents* 1)
+					 *backward-indents*)
+				     0)))
+	 ; Each node has its own specific optimisation described below.
+	 (cond
+	   ((and
+	     (waffetensor-state
+	      (car
+	       (waffetensor-variables tensor)))
+	     (areftensor-p
+	      (waffetensor-state tensor)))
+	    #| Explain: When Node is Like...
+	    [Node: ArefTensor {A1}]
+	      [Node: AddTensor {0}]|
+	    [Node: ArefTensor {A2}]
+	      [Node: AddTensor {0}]
+	    Stops exploring deeper of addtensor until all areftensor will be registered.
+	    |#
+	    (let* ((grad-before (grad-tmp-value grad-tmp-before))
+		   (variables (waffetensor-variables tensor))
+		   (state (waffetensor-state tensor))
+		   (called-from-state (waffetensor-state (car variables)))
+		   (higher-node-id (slot-value called-from-state 'model-ident)))
+	      (unless (= 1 (length variables))
+		(error "cl-waffe's internal error: the size of !aref's retent should be 1 but got: ~a" variables))
+
+	      ; Pseudo, moves down one node.
+	      (setf (waffetensor-backward grad-before)
+		    (waffetensor-backward (car variables)))
+	      (setf (waffetensor-state grad-before)
+		    (waffetensor-state (car variables)))
+	      (setf (waffetensor-variables grad-before)
+		    (waffetensor-variables (car variables)))
+	      (setf (waffetensor-is-ancestor-param grad-before) t)
+	      (setf (grad-tmp-grad-shape
+		     (waffetensor-grad-tmp grad-before))
+		    (!shape (car variables)))
+	      (push (cons
+		     (areftensor-shape state)
+		     grad-before)
+		    (gethash
+		     higher-node-id
+		     *lazy-backwards*)))
+	    (when *verbose*
+	      (dotimes (_ (the fixnum *backward-indents*))
+		(format t " "))
+	      (format t "<Lazy Evaluated>~%"))
+	    nil)
+	   ; Otherwise, simply explore deeper nodes if there's param.
+	   (T 
+	    (let ((grads (funcall
+			  (the function
+			       (call-backward (waffetensor-state tensor)))
+			  grad-before)))
+	      (declare (type list grads)) ; Todo: Print Error
+	      (unless (= (length (waffetensor-variables tensor))
+			 (length grads))
+		(error "backward error: The number of :forward args doesnt correspond with of :backward"))
+	      
+	      (dotimes (n (length grads))
+		(setf (waffetensor-thread-data (nth n grads))
+		      (waffetensor-thread-data tensor))
+		(setfgradtmp (nth-var tensor n) (nth n grads))
+		(step-next-node tensor n)))
+	    nil)))))
     (T
      ; Collecting :grad-tmp and copying them to: grad
      (when (waffetensor-grad tensor)
@@ -671,7 +792,11 @@ Todo: Backward."
   "Todo:
 Its usage is similar to pytorch's view.
 !view returns a displaced and reshaped tensor but won't produce copies.
-This is useful when you want to apply some operations to the specified area of tensor. !set-batch will be implemented by view.")
+This is useful when you want to apply some operations to the specified area of tensor. !set-batch will be implemented by view.
+Excepted Usage.
+(with-view tensor '(0 3) t t
+-> x
+do (exp x))...")
 
 (defun !aref (tensor &rest dims)
   "!aref creates a new tensor from the area specified by @cl:param(dims) from the given @cl:param(tensor).
@@ -1343,8 +1468,10 @@ Return: A tensor of shape that equal to the condition.
     result)))
 
 (defun write-description (res backward backend)
+  (declare (ignore backward res backend))
   ; Parameter { ... <= here }
-  (write-string (format nil " :device :~a :backward ~A" backend backward) res))
+  ;(write-string (format nil " :device :~a" backend) res)
+  )
 
 (defun reduce-str (obj)
   ; align string content of tensor following *print-char-max-len*
@@ -1450,7 +1577,7 @@ Return: A tensor of shape that equal to the condition.
 							 (if (null grad)
 							     (+ indent-size (length "#Const("))
 							     (+ indent-size (length "#Parameter{"))))
-		(write-string (format nil " :mgl t :shape ~a" (mgl-mat:mat-dimensions contents)) res)
+		(write-string (format nil " :mgl t :shape ~a :backward ~a" (mgl-mat:mat-dimensions contents) (waffetensor-state tensor)) res)
 		(unless (null grad)
 		  (write-description res backward backend))
 		(if (null grad)

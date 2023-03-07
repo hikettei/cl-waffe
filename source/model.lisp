@@ -414,6 +414,7 @@ Example:
 		 ;     `,vars))
 	   
 	   (macrolet ((self (name) `(slot-value ,',self-heap ',name))
+		      (model () `,',self-heap)
 		      (save-for-backward (name value)
 			`(let ((thread-info (waffetensor-thread-data ,value))
 			       (smaller-value (detach ,value)))
@@ -588,6 +589,7 @@ the object-type indicates the type of document format."
 		     (equal (symbol-name x) "hide-from-tree")
 		     (equal (symbol-name x) "parameters")
 		     (equal (symbol-name x) "model-ident")
+		     (equal (symbol-name x) "object-type")
 		     (equal (symbol-name x) "self"))
 		 (error "cl-waffe.defobject: the name ~a is not allowed to use as a parameter" (symbol-name x))
 		 x)))
@@ -606,11 +608,12 @@ the object-type indicates the type of document format."
 		       (:print-function (lambda (m stream k)
 					  (declare (ignore k))
 					  (render-simple-model-structure stream m)))
-		       (:constructor ,name (,@args &aux (model-ident (gensym "WAFFEOBJECT")) ,@(map 'list (lambda (x) `(,(car x) ,(second x))) parameters))))
+		       (:constructor ,name (,@args &aux (model-ident (gensym "W")) ,@(map 'list (lambda (x) `(,(car x) ,(second x))) parameters))))
 	     ,doc-output
-	     (model-ident ,(gensym "WAFFEOBJECT") :type symbol)
+	     (model-ident ,(gensym "W") :type symbol)
 	     (hide-from-tree ,hide-from-tree :type boolean)
 	     (forward t :type boolean)
+	     (object-type ,object-type :type keyword)
 	     (backward ,(if backward t nil) :type boolean)
 	     (parameters ',(map 'list (lambda (x) (assure-args (car x))) parameters))
 	     ,@(map 'list (lambda (x) `(,(assure-args (car x)) ,(second x) ,@(cddr x))) parameters))
@@ -635,10 +638,23 @@ the object-type indicates the type of document format."
 	 nil))))
 
 (defun render-simple-model-structure (stream model) ; Todo: More Details
-  (format stream "[~a: ~a]" (if (slot-value model 'hide-from-tree)
-				"Node "
-				"Model")
-	  (type-of model)))
+  (case (slot-value model 'cl-waffe::object-type)
+    (:node
+     (format stream "<Node: ~a{~a}>"
+	     (type-of model)
+	     (slot-value model 'cl-waffe::model-ident)))
+    (:model
+     (format stream "[Model: ~a :ident {~a}]"
+	     (type-of model)
+	     (slot-value model 'cl-waffe::model-ident)))
+    (:optimizer
+     (format stream "<<Optimizer: ~a :ident {~a}>>"
+	     (type-of model)
+	     (slot-value model 'cl-waffe::model-ident)))
+    (T
+     (format stream "[OBJECT: ~a {~a}]"
+	     (type-of model)
+	     (slot-value model 'cl-waffe::model-ident)))))
 
 (defun print-model (model)
   (fresh-line)

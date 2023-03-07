@@ -292,7 +292,7 @@ And utils for broadcasting etc...
 	    (save-for-backward xi x)
 	    (with-searching-calc-node :sin x))
   :backward ((dy)
-	     (list (!mul dy (!cos (self x))))))
+	     (list (!mul dy (!cos (self xi))))))
 
 (defnode CosTensor ()
   :optimize t
@@ -301,7 +301,7 @@ And utils for broadcasting etc...
 	    (save-for-backward xi x)
 	    (with-searching-calc-node :cos x))
   :backward ((dy)
-	     (list (!mul dy (!mul -1.0 (!sin (self x)))))))
+	     (list (!mul dy (!mul -1.0 (!sin (self xi)))))))
 
 (defnode TanTensor ()
   :optimize t
@@ -310,7 +310,7 @@ And utils for broadcasting etc...
 	    (save-for-backward xi x)
 	    (with-searching-calc-node :tan x))
   :backward ((dy)
-	     (list (!mul dy (!div 1 (!pow (!cos (self x)) 2))))))
+	     (list (!mul dy (!div 1 (!pow (!cos (self xi)) 2))))))
 
 (defnode ASinTensor ()
   :parameters ((xi nil))
@@ -318,7 +318,7 @@ And utils for broadcasting etc...
 	    (save-for-backward xi x)
 	    (with-searching-calc-node :asin x))
   :backward ((dy)
-	     (list (!mul dy (!acos (self x))))))
+	     (list (!mul dy (!acos (self xi))))))
 
 (defnode ACosTensor ()
   :parameters ((xi nil))
@@ -326,7 +326,7 @@ And utils for broadcasting etc...
 	    (save-for-backward xi x)
 	    (with-searching-calc-node :acos x))
   :backward ((dy)
-	     (list (!mul dy (!mul -1.0 (!asin (self x)))))))
+	     (list (!mul dy (!mul -1.0 (!asin (self xi)))))))
 
 (defnode ATanTensor ()
   :parameters ((xi nil))
@@ -334,7 +334,7 @@ And utils for broadcasting etc...
 	    (save-for-backward xi x)
 	    (with-searching-calc-node :atan x))
   :backward ((dy)
-	     (list (!mul dy (!div 1 (!pow (!acos (self x)) 2))))))
+	     (list (!mul dy (!div 1 (!pow (!acos (self xi)) 2))))))
 
 (defnode ASinhTensor ()
   :parameters ((xi nil))
@@ -342,7 +342,7 @@ And utils for broadcasting etc...
 	    (save-for-backward xi x)
 	    (with-searching-calc-node :asinh x))
   :backward ((dy)
-	     (list (!mul dy (!acosh (self x))))))
+	     (list (!mul dy (!acosh (self xi))))))
 
 (defnode ACoshTensor ()
   :parameters ((xi nil))
@@ -350,7 +350,7 @@ And utils for broadcasting etc...
 	    (save-for-backward xi x)
 	    (with-searching-calc-node :acosh x))
   :backward ((dy)
-	     (list (!mul dy (!mul -1.0 (!asinh (self x)))))))
+	     (list (!mul dy (!mul -1.0 (!asinh (self xi)))))))
 
 (defnode ATanhTensor ()
   :parameters ((xi nil))
@@ -358,7 +358,7 @@ And utils for broadcasting etc...
 	    (save-for-backward xi x)
 	    (with-searching-calc-node :atanh x))
   :backward ((dy)
-	     (list (!mul dy (!div 1 (!pow (!acosh (self x)) 2))))))
+	     (list (!mul dy (!div 1 (!pow (!acosh (self xi)) 2))))))
 
 (defnode HyperbolicSinTensor ()
   :optimize t
@@ -367,7 +367,7 @@ And utils for broadcasting etc...
 	    (save-for-backward xi x)
 	    (with-searching-calc-node :sinh x))
   :backward ((dy)
-	     (list (!mul dy (!cosh (self x))))))
+	     (list (!mul dy (!cosh (self xi))))))
 
 (defnode HyperbolicCosTensor ()
   :optimize t
@@ -376,7 +376,7 @@ And utils for broadcasting etc...
 	    (save-for-backward xi x)
 	    (with-searching-calc-node :cosh x))
   :backward ((dy)
-	     (list (!mul dy (!sinh (self x))))))
+	     (list (!mul dy (!sinh (self xi))))))
 
 (defnode AbsTensor ()
   :optimize t
