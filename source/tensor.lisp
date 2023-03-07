@@ -13,8 +13,10 @@ Here's utils for tensor.
 (defparameter *no-grad* nil
   "When t, some node will be ignored. see references below for details. default: nil")
 
-(defparameter *verbose* nil)
+(defparameter *verbose* nil "When t, all computation nodes will be displayed to stream t")
+
 (defparameter *single-node* nil "This parameter becames t when backward, the size of x.variables is 1.")
+
 (defparameter *backward-indents* 0)
 (declaim (type boolean *verbose* *single-node*)
 	 (type fixnum *backward-indents*))
@@ -37,6 +39,8 @@ Default: 6")
   "Default backend cl-waffe uses. Default: :mgl")
 
 (defparameter mgl-mat:*DEFAULT-MAT-CTYPE* :float) ; in default, float
+
+(defparameter *lazy-backwards* nil)
 
 (deftype WaffeSupportedDataType ()
   "An type of waffe-tensor's content type,
@@ -507,10 +511,10 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
       (unless (eq (!shape tensor) `(1))
 	(error "grad can be implicitly created only for scalar outputs")))
 
-  (setq *no-grad* t)
-  (backward1 tensor)
-  (setq *no-grad* nil)
-  nil)
+  (with-no-grad
+    (let ((*lazy-backwards* (make-hash-table)))
+      (backward1 tensor)
+      nil)))
 
 (declaim (inline step-next-node))
 
@@ -520,6 +524,19 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
 
 (declaim (ftype (function (waffetensor) null) backward1))
 (defun backward1 (tensor)
+  "
+backward1 does following in order to optimize:
+
+1. Nodes like... (Any Node -> !aref) is registered to *lazy-backwards*.
+  Step1. backwardを呼び出して, !arefより上の階層の計算ノードの微分を終わらせる
+  Step2. backward関数内で, *lazy-backwards* にある計算ノードがあったら、それをbackward1で!arefが出現するノードまでか末端まで計算.
+
+  Step3. Step2で*lazy-backwards*がNILになるまで繰り返す。
+
+ほぼ!aref専用の最適化
+
+2. *single-value*がtの場合、計算ノードが分岐しないから(Tracing JITで解決しようと必死だったやつ) 破壊的に計算してOK
+"
   (declare (optimize (speed 3) (space 0) (safety 0))
 	   (type waffetensor tensor))
   ; Displaying Backward Nodes
@@ -527,7 +544,7 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
     (dotimes (_ (the fixnum *backward-indents*))
       (format t " "))
     (format t "~a~%" (if (null (waffetensor-state tensor))
-			 "[The End of Node]"
+			 "<The End of Node>"
 			 (waffetensor-state tensor))))
   (cond
     ((waffetensor-backward tensor) ;Backward exists?
