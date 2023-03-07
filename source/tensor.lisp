@@ -42,6 +42,11 @@ Default: 6")
 
 (defparameter *lazy-backwards* nil)
 
+(defmacro with-verbose (&body body)
+  "The codes below, the computation nodes will be displayed when backward"
+  `(let ((*verbose* t))
+     ,@body))
+
 (deftype WaffeSupportedDataType ()
   "An type of waffe-tensor's content type,
 
