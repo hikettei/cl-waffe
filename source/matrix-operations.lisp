@@ -225,14 +225,14 @@ The Batch Filtered Matrix-Matrix product is returned.
 
 
 
-(defun !argmax (tensor &key (dim nil) (keepdims nil))
+(defun !argmax (tensor &key (dim -1) (keepdims nil))
   "Returns the indices of the maximum value of all elements in the input tensor.
 
 @begin(deflist)
 @def(dim)
 @term(The dimension to reduce. If nil, the argmax of the flattened input is returned.)
 @def(keepdims)
-@term(whether the output tensor has dim retained or not. Ignored if dim=nil.)
+@term(whether the output tensor has dim retained or not. Ignored if dim=-1)
 @end(deflist)
 
 @begin(section)
@@ -274,14 +274,14 @@ The Batch Filtered Matrix-Matrix product is returned.
 		(!shape tensor dim))))
 
 
-(defun !argmin (tensor &key (dim nil) (keepdims nil))
+(defun !argmin (tensor &key (dim -1) (keepdims nil))
   "Returns the indices of the minimum value of all elements in the input tensor.
 
 @begin(deflist)
 @def(dim)
 @term(The dimension to reduce. If nil, the argmax of the flattened input is returned.)
 @def(keepdims)
-@term(whether the output tensor has dim retained or not. Ignored if dim=nil.)
+@term(whether the output tensor has dim retained or not. Ignored if dim=-1.)
 @end(deflist)
 
 @begin(section)

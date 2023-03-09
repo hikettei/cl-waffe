@@ -40,7 +40,6 @@
 	    (!repeats result axis nrepeat)
 	    result))))
 
-
 (defun !sum (x &optional (axis nil) (keepdims nil))
   "Sum up x where x is a cl-waffe tensor.
 
