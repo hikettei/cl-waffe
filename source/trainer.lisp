@@ -300,16 +300,18 @@ Input: dataset ... dataset defined by defdataset.
 		    (x (car ds))
 		    (y (second ds))
 		    (out (const (value (call (slot-value trainer 'model) x))))
-		    (out-labels (max-position-column (mgl-mat:mat-to-array (data out))))
-		    (y-labels   (max-position-column (mgl-mat:mat-to-array (data y)))))
-	       (loop for i below (length out-labels)
-		     do (progn
-			  (incf count 1)
-			  (if (= (aref out-labels i) (aref y-labels i))
-			      (incf correct 1)
-			      (incf correct 0))))))
-    (format t "Accuracy:~a~C" (coerce (/ correct count) 'float) #\newline)))
-			
+		    (out-labels (!argmax out))
+		    (y-labels   (!argmax (const (copy-mat (data y))))))
+	       (with-facets ((out-labels ((data out-labels) 'backing-array :direction :input))
+			     (y-labels   ((data y-labels) 'backing-array :direction :input)))
+		 (loop for i below (length out-labels)
+		       do (progn
+			    (incf count 1)
+			    (if (= (aref out-labels i) (aref y-labels i))
+				(incf correct 1)
+				(incf correct 0)))))))
+	     (format t "Accuracy:~a~C" (coerce (/ correct count) 'float) #\newline)))
+  
 (defun train (trainer dataset &key (valid-dataset nil)
 				(valid-each 100)
 				(enable-animation t)

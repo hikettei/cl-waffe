@@ -145,7 +145,7 @@ The Batch Filtered Matrix-Matrix product is returned.
 
 
 
-(defun !argmaxmin (tensor max-or-min &key (dim nil))
+(defun !argmaxmin (tensor max-or-min &key (dim nil) (use-value? nil))
   "Todo: For GPU"
   (declare (optimize (speed 3))
 	   (type waffetensor tensor))
@@ -169,20 +169,22 @@ The Batch Filtered Matrix-Matrix product is returned.
 	       (!dims tensor)
 	       dim
 	       (!dims tensor)))
-    (with-facet (return-array ((data result) 'array :direction :output))
+    (with-facet (return-array ((data result) 'array :direction :io))
       (labels ((apply-tensor (rest-dims apply-dims)
 		 (loop for i fixnum upfrom 0 below (car rest-dims)
 		       do (if (= (length rest-dims) 1)
 					; the tensor now referring is the last.
-			      (let* ((m-val nil)
-				     (m-pos nil)
+			      (let* ((m-val)
+				     (m-pos)
 				     (ts (loop for i fixnum upfrom 0 below dim
 					       collect t))
+				     
 				     (result-dim `(,@apply-dims ,i))
-				     (result-dim1 `(,@ts ,@(cdr result-dim)))
+				     (result-dim1 `(,@ts ,@apply-dims))
 				     (result-dim1 (if (= dim 0)
 						      result-dim1
-						      result-dim)))
+						      result-dim))
+				     (result-dim1 (or result-dim1 `(t))))
 				(with-facet (arr
 					     ((data (apply
 						     #'!faref
@@ -213,7 +215,9 @@ The Batch Filtered Matrix-Matrix product is returned.
 				  
 				  (apply
 				   #'(setf aref)
-				   m-pos
+				   (if use-value?
+				       m-val
+				       m-pos)
 				   return-array
 				   result-dim)))
 					;else			      
@@ -224,9 +228,10 @@ The Batch Filtered Matrix-Matrix product is returned.
 	result))))
 
 
-
-(defun !argmax (tensor &key (dim -1) (keepdims nil))
+(defun !argmax (tensor &key (dim -1) (keepdims nil) (max nil))
   "Returns the indices of the maximum value of all elements in the input tensor.
+
+If max=t, retures the maximun value of dim.
 
 @begin(deflist)
 @def(dim)
@@ -267,15 +272,18 @@ The Batch Filtered Matrix-Matrix product is returned.
 ;         (5.0 5.0 ~ 5.0 5.0))) :mgl t :shape (10 10 10))
 @end[lang=lisp](code)
 @end(section)"
+  (declare (type waffetensor tensor))
   (if (null keepdims)
-      (!argmaxmin tensor :max :dim dim)
-      (!repeats (!unsqueeze (!argmaxmin tensor :max :dim dim) dim)
+      (!argmaxmin tensor :max :dim dim :use-value? max)
+      (!repeats (!unsqueeze (!argmaxmin tensor :max :dim dim :use-value? max) dim)
 		dim
 		(!shape tensor dim))))
 
 
-(defun !argmin (tensor &key (dim -1) (keepdims nil))
+(defun !argmin (tensor &key (dim -1) (keepdims nil) (min nil))
   "Returns the indices of the minimum value of all elements in the input tensor.
+
+If min=t, argmin returns the minimum value of dim.
 
 @begin(deflist)
 @def(dim)
@@ -305,10 +313,10 @@ The Batch Filtered Matrix-Matrix product is returned.
 ;#Const((415.0...) :mgl t :shape (1))
 @end[lang=lisp](code)
 @end(section)"
-  
+  (declare (type waffetensor tensor))
   (if (null keepdims)
-      (!argmaxmin tensor :min :dim dim)
-      (!repeats (!unsqueeze (!argmaxmin tensor :min :dim dim) dim)
+      (!argmaxmin tensor :min :dim dim :use-value? min)
+      (!repeats (!unsqueeze (!argmaxmin tensor :min :dim dim :use-value? min) dim)
 		dim
 		(!shape tensor dim))))
 
