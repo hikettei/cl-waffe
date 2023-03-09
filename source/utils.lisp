@@ -159,3 +159,21 @@ Todo:Write Docs"
 (defun waffe-help (object)
   "waffe-help explains the usage of object, as long as :document is defined"
   (declare (ignore object)))
+
+(defun repeat-n (val n)
+  (let ((a `(,val)))
+    (dotimes (_ (1- n))
+      (push val a))
+    a))
+
+(defun repeat-c (n &key (start 0))
+  (declare (optimize (speed 3))
+	   (type fixnum n))
+  (let ((a `(,start))
+	(i start))
+    (declare (type fixnum i))
+    (dotimes (_ (1- n))
+      (incf i 1)
+      (push i a))
+    (reverse a)))
+
