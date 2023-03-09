@@ -7,27 +7,29 @@
 
 (defmodel fnn (in-features hidden-size &key (activation :relu))
   :parameters ((activation activation)
-	       (dense (denselayer in-features hidden-size t activation))
-	       (norm (BatchNorm2d hidden-size)))
+	       (layer (linearlayer in-features hidden-size t))
+	       (dropout (dropout 0.2)))
   :forward ((x)
 	    (case (self activation)
-	      (:softmax
-	       (!softmax (with-calling-layers x
-			   (dense x)
-			   (norm x))))
+	      (:ignore
+	       (with-calling-layers x
+		 (layer x)
+		 (dropout x)))
 	      (T
 	       (!relu (with-calling-layers x
-			(dense x)
-			(norm x)))))))
+			(layer x)
+			(dropout x)))))))
 
 (defmodel fnn-models (in-features &key (activation :relu))
-  :parameters ((layer1 (FNN in-features 512 :activation activation))
+  :parameters ((dropout (dropout 0.5))
+	       (layer1 (FNN in-features 512 :activation activation))
 	       (layer2 (FNN 512 256 :activation activation))
 	       (layer3 (FNN 256 64 :activation activation))
 	       (layer4 (FNN 64 16 :activation activation))
-	       (layer5 (FNN 16 10 :activation activation)))
+	       (layer5 (FNN 16 10 :activation :ignore)))
   :forward ((x)
 	    (with-calling-layers x
+	      (dropout x)
 	      (layer1 x)
 	      (layer2 x)
 	      (layer3 x)
@@ -74,10 +76,12 @@
     (setq train (WaffeDataSet mnist-dataset
 			      mnist-target
 			      :batch-size batch-size))
+    
     (setq test (WaffeDataSet mnist-dataset-test
 			     mnist-target-test
 			     :batch-size 100))
 
+    ; I wish there were ReduceLROnPlateau ... (When using adam)
     (setq trainer (fnn-mnist-trainer (* 28 28) 1e-3))
     (time
      (train
