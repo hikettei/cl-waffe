@@ -40,6 +40,8 @@ Tasks:
     (sh "cd ./examples && sh install.sh && cd ../"))
   (task ("mnist") ()
     (sh #?"./run-test-model.ros mnist"))
+  (task ("fnn") ()
+    (sh #?"./run-test-model.ros fnn"))
   (task ("rnn") ()
     (sh #?"./run-test-model.ros rnn")))
 
