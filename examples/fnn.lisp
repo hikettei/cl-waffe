@@ -12,29 +12,24 @@
   :forward ((x)
 	    (case (self activation)
 	      (:ignore
-	       (with-calling-layers x
-		 (layer x)
-		 (dropout x)))
+	       (call (self dropout)
+		     (call (self layer) x)))
 	      (T
-	       (!relu (with-calling-layers x
-			(layer x)
-			(dropout x)))))))
+	       (call (self dropout)
+		     (!relu
+		      (call (self layer) x)))))))
 
 (defmodel fnn-models (in-features &key (activation :relu))
-  :parameters ((dropout (dropout 0.5))
-	       (layer1 (FNN in-features 512 :activation activation))
-	       (layer2 (FNN 512 256 :activation activation))
-	       (layer3 (FNN 256 64 :activation activation))
-	       (layer4 (FNN 64 16 :activation activation))
-	       (layer5 (FNN 16 10 :activation :ignore)))
+  :parameters ((dropout (dropout 0.2))
+	       (layer1 (FNN in-features 256 :activation activation))
+	       (layer2 (FNN 256 64 :activation activation))
+	       (layer3 (FNN 64 10 :activation :ignore)))
   :forward ((x)
 	    (with-calling-layers x
 	      (dropout x)
 	      (layer1 x)
 	      (layer2 x)
-	      (layer3 x)
-	      (layer4 x)
-	      (layer5 x))))
+	      (layer3 x))))
 
 (deftrainer fnn-mnist-trainer (in-features lr)
   :model (FNN-Models in-features)
@@ -88,7 +83,7 @@
       trainer
       train
       :max-iterate 600
-      :epoch 10
+      :epoch 30
       :batch-size batch-size
       :valid-dataset test
       :verbose t :random t :print-each 100))))
