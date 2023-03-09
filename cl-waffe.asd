@@ -51,6 +51,8 @@
                (:file "kernel" :depends-on ("tensor"))
 	       (:file "trainer" :depends-on ("optimizers"))
 	       (:file "functions" :depends-on ("model"))
+	       (:file "aref")
+	       (:file "activations")
 	       (:file "operators" :depends-on ("tensor"))
 	       (:module "optimizers"
 		:depends-on ("model")
