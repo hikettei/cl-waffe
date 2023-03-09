@@ -271,26 +271,6 @@ Input: dataset ... dataset defined by defdataset.
     (setf (subseq base start-from (+ start-from (length title))) title)
     base))
 
-(defmacro maxlist (list)
-  `(let ((max-item (apply #'max ,list)))
-     (if (<= max-item 1.0) 1.0 max-item)))
-
-(defun max-position-column (arr)
-  (declare (optimize (speed 3) (space 0) (safety 0) (debug 0))
-           (type (array single-float) arr))
-  (let ((max-arr (make-array (array-dimension arr 0)
-                             :element-type 'single-float
-                             :initial-element most-negative-single-float))
-        (pos-arr (make-array (array-dimension arr 0)
-                             :element-type 'fixnum
-                             :initial-element 0)))
-    (loop for i fixnum from 0 below (array-dimension arr 0) do
-      (loop for j fixnum from 0 below (array-dimension arr 1) do
-        (when (> (aref arr i j) (aref max-arr i))
-          (setf (aref max-arr i) (aref arr i j)
-                (aref pos-arr i) j))))
-    pos-arr))
-
 (defun valid (trainer dataset batch-size)
   "Valid trainer"
   (let ((count 0)
@@ -300,16 +280,18 @@ Input: dataset ... dataset defined by defdataset.
 		    (x (car ds))
 		    (y (second ds))
 		    (out (const (value (call (slot-value trainer 'model) x))))
-		    (out-labels (max-position-column (mgl-mat:mat-to-array (data out))))
-		    (y-labels   (max-position-column (mgl-mat:mat-to-array (data y)))))
-	       (loop for i below (length out-labels)
-		     do (progn
-			  (incf count 1)
-			  (if (= (aref out-labels i) (aref y-labels i))
-			      (incf correct 1)
-			      (incf correct 0))))))
-    (format t "Accuracy:~a~C" (coerce (/ correct count) 'float) #\newline)))
-			
+		    (out-labels (!argmax out))
+		    (y-labels   (!argmax (const (copy-mat (data y))))))
+	       (with-facets ((out-labels ((data out-labels) 'backing-array :direction :input))
+			     (y-labels   ((data y-labels) 'backing-array :direction :input)))
+		 (loop for i below (length out-labels)
+		       do (progn
+			    (incf count 1)
+			    (if (= (aref out-labels i) (aref y-labels i))
+				(incf correct 1)
+				(incf correct 0)))))))
+	     (format t "Accuracy:~a~C" (coerce (/ correct count) 'float) #\newline)))
+  
 (defun train (trainer dataset &key (valid-dataset nil)
 				(valid-each 100)
 				(enable-animation t)

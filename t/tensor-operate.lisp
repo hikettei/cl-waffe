@@ -356,6 +356,13 @@ Testing arithmetic operators
 		    "matmul test failed"))))
   t)
 
+(defun argmax-test ()
+  (let ((a (!randn `(10 10))))
+    (mgl-mat:M=
+     (mgl-mat:array-to-mat
+      (max-position-column (mgl-mat:mat-to-array (data a))))
+     (data (!argmax a)))))
+
 #|
 (defun test-einsum ()
 (let ((r1 (-> (!einsum (i j) (i j) -> (i j))
@@ -413,5 +420,6 @@ b)))
       (is (aref-backward))
       (is (funcall-test))
       (is (setfaref-backward))
+      (is (argmax-test))
       )
 

@@ -1,15 +1,6 @@
 
 (in-package :cl-waffe)
 
-
-(defnode MeanTensor (axis)
-  :optimize t
-  :parameters ((axis axis) (repeats T))
-  :forward ((x)
-	    (setf (self repeats) (assure-tensor (!shape x (self axis))))
-	    (with-searching-calc-node :mean x (cself axis)))
-  :backward ((dy) (list (!repeats dy (self axis) (self repeats)))))
-
 (defnode SumTensor (axis)
   :optimize t
   :parameters ((axis axis) (repeats T))
@@ -19,6 +10,15 @@
   :backward ((dy)
 	     (list (!div (!repeats dy (self axis) (self repeats))
 			 (self repeats)))))
+
+
+(defnode MeanTensor (axis)
+  :optimize t
+  :parameters ((axis axis) (repeats T))
+  :forward ((x)
+	    (setf (self repeats) (assure-tensor (!shape x (self axis))))
+	    (with-searching-calc-node :mean x (self axis)))
+  :backward ((dy) (list (!repeats dy (self axis) (self repeats)))))
 
 (defnode SumUpTensor ()
   :parameters ((total-len) (shape))
@@ -39,7 +39,6 @@
 	(if keepdims
 	    (!repeats result axis nrepeat)
 	    result))))
-
 
 (defun !sum (x &optional (axis nil) (keepdims nil))
   "Sum up x where x is a cl-waffe tensor.
