@@ -53,7 +53,13 @@
 	       (:file "functions" :depends-on ("model"))
 	       (:file "aref")
 	       (:file "activations")
+	       (:file "transpose")
 	       (:file "operators" :depends-on ("tensor"))
+	       (:file "sum")
+	       (:file "shaping")
+	       (:file "mathematicals")
+	       (:file "einsum")
+	       (:file "matrix-operations")
 	       (:module "optimizers"
 		:depends-on ("model")
 		:components ((:file "package")
