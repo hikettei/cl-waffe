@@ -472,25 +472,6 @@ This is the very fastst but not useful. So use macros in order to make it more u
 (defun !dotensor () "")
 (defun !displace () "")
 
-(defun !ravel () "Todo")
-(defun !flatten (tensor)
-  "Flattens input by reshaping it into a one-dimensional tensor.
-
-The operation is the same as @c((!reshape tensor '(t)))
-
-Example:
-@begin[lang=lisp](code)
-
-(setq a (!randn `(10 10)))
-;#Const(((0.688... 0.580... ~ 0.013... 0.461...)        
-;                 ...
-;        (0.214... 0.248... ~ 0.540... 0.416...)) :mgl t :shape (10 10))
-
-(!flatten a)
-;#Const((0.688... 0.580... ~ 0.540... 0.416...) :mgl t :shape (100))
-@end[lang=lisp](code)"
-  (!reshape tensor '(t)))
-
 (declaim (ftype (function ((or mgl-mat:mat waffetensor) keyword &rest (or waffedatatype waffetensor)) waffetensor) !modify))
 (defun !modify (target instruction &rest args)
   (declare (optimize (speed 3) (space 0) (safety 0)))
