@@ -8,8 +8,7 @@
 (defmodel fnn (in-features hidden-size &key (activation :relu))
   :parameters ((activation activation)
 	       (dense (denselayer in-features hidden-size t activation))
-	       (norm (dropout 0.2));(BatchNorm2d hidden-size))
-	       )
+	       (norm (BatchNorm2d hidden-size)))
   :forward ((x)
 	    (case (self activation)
 	      (:softmax
@@ -79,7 +78,7 @@
 			     mnist-target-test
 			     :batch-size 100))
 
-    (setq trainer (fnn-mnist-trainer (* 28 28) 1e-4))
+    (setq trainer (fnn-mnist-trainer (* 28 28) 1e-3))
     (time
      (train
       trainer
