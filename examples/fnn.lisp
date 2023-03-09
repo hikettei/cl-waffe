@@ -5,31 +5,26 @@
 
 (in-package :fnn-example)
 
-(defmodel fnn (in-features hidden-size &key (activation :relu))
-  :parameters ((activation activation)
-	       (layer (linearlayer in-features hidden-size t))
+(defmodel fnn (in-features hidden-size &key (dropout-rate 0.2))
+  :parameters ((layer (linearlayer in-features hidden-size t))
+	       (dropout (dropout dropout-rate)))
+  :forward ((x)
+	    (!relu
+	     (with-calling-layers x
+	       (layer x)
+	       (dropout x)))))
+
+(defmodel fnn-models (in-features)
+  :parameters ((layer1 (FNN in-features 256 :dropout-rate 0.2))
+	       (layer2 (FNN 256 256 :dropout-rate 0.2))
+	       (layer3 (linearlayer 256 10 t))
 	       (dropout (dropout 0.2)))
   :forward ((x)
-	    (case (self activation)
-	      (:ignore
-	       (call (self dropout)
-		     (call (self layer) x)))
-	      (T
-	       (call (self dropout)
-		     (!relu
-		      (call (self layer) x)))))))
-
-(defmodel fnn-models (in-features &key (activation :relu))
-  :parameters ((dropout (dropout 0.2))
-	       (layer1 (FNN in-features 256 :activation activation))
-	       (layer2 (FNN 256 64 :activation activation))
-	       (layer3 (FNN 64 10 :activation :ignore)))
-  :forward ((x)
 	    (with-calling-layers x
-	      (dropout x)
 	      (layer1 x)
 	      (layer2 x)
-	      (layer3 x))))
+	      (layer3 x)
+	      (dropout x))))
 
 (deftrainer fnn-mnist-trainer (in-features lr)
   :model (FNN-Models in-features)

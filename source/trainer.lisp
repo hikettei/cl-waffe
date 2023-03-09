@@ -364,7 +364,8 @@ And this function has a lot of todo."
 
     (fresh-line)
     (if valid-dataset
-	(valid trainer valid-dataset batch-size))))
+	(with-no-grad
+	  (valid trainer valid-dataset batch-size)))))
 
 (defdataset WaffeDataset (train valid &key (batch-size 1))
   :document (with-usage "WaffeDataSet"
