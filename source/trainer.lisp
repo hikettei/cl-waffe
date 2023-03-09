@@ -148,7 +148,8 @@ Example:
 	  (defstruct (,name
 		      (:print-function (lambda (trainer stream _)
 					 (declare (ignore trainer _))
-					 (format stream "[Trainer of ___]")))
+					 (format stream "<Dataset: ~a()>"
+						 (symbol-name ',name))))
 		      (:constructor ,name (,@(map 'list (lambda (x) (assure-args x)) args)
 						       &aux (model ,model)
 							    (optimizer (cl-waffe.optimizers:init-optimizer ,optimizer
@@ -363,7 +364,8 @@ And this function has a lot of todo."
 
     (fresh-line)
     (if valid-dataset
-	(valid trainer valid-dataset batch-size))))
+	(with-no-grad
+	  (valid trainer valid-dataset batch-size)))))
 
 (defdataset WaffeDataset (train valid &key (batch-size 1))
   :document (with-usage "WaffeDataSet"

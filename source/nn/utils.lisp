@@ -13,9 +13,7 @@
 		    (error "cl-waffe.nn: Dropout(x), x must be in the range of 0.0<x<1.0 where x is a single-float.")))
 	       (mask T))
   :forward ((x)
-	    (if (eql (self mask) T) ; is first call?
-		(setf (self mask) (!zeros (!shape x))))
-	    
+	    (setf (self mask) (!zeros (!shape x)))
 	    (if *no-grad* ; predict mode
 		x
 		(progn

@@ -2,20 +2,19 @@
 (in-package :cl-waffe)
 
 
-(defnode PowTensor nil
+(defnode PowTensor (n)
   :optimize t
-  :parameters ((xi T) (yi T))
-  :forward ((x1 y1)
+  :parameters ((xi T)
+	       (n (assure-tensor n)))
+  :forward ((x1)
 	    (save-for-backward xi x1)
-	    (save-for-backward yi y1)
-	    (with-searching-calc-node :pow x1 y1))
+	    (with-searching-calc-node :pow x1 (self n)))
   :backward ((dy)
-	     (list (!mul (!mul dy (self yi))
-			 (!pow (self xi) (- (the single-float (data (self yi))) 1)))
-		   (!mul (!mul
-			  (!log (self xi))
-			  (!pow (self xi) (self yi)))
-			 dy))))
+	     (list (!mul
+		    dy
+		    (!mul
+		     (self n)
+		     (!pow (self xi) (!sub (self n) 1)))))))
 
 (defun !!pow (target-x n)
   "Takes the power of each element in @cl:param(x) with n.
@@ -26,7 +25,7 @@ target-x is destructed."
     (!allow-destruct target-x)
     (!pow target-x n)))
 
-(defope !pow (PowTensor) node (x n)
+(defun !pow (x n)
     "Takes the power of each element in @cl:param(x) with n, returning a new sysconst.
 
 @begin(section)
@@ -39,7 +38,7 @@ target-x is destructed."
 ;        (1.0 1.0 ~ 1.0 1.0)) :mgl t :shape (10 10))
 @end[lang=lisp](code)
 @end(section)"
-  (call node (assure-tensor x) (assure-tensor n)))
+  (call (PowTensor n) (assure-tensor x)))
 
 
 (defnode SqrtTensor nil
