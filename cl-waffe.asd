@@ -56,6 +56,7 @@
 	       (:file "transpose")
 	       (:file "operators" :depends-on ("tensor"))
 	       (:file "sum")
+	       (:file "conc")
 	       (:file "shaping")
 	       (:file "mathematicals")
 	       (:file "einsum")
