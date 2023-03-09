@@ -13,7 +13,7 @@
 	     (with-calling-layers x
 	       (layer x)
 	       (dropout x)))))
-
+; 0.2 0.5 0.5, 100
 (defmodel fnn-models (in-features)
   :parameters ((layer1 (FNN in-features 256 :dropout-rate 0.2))
 	       (layer2 (FNN 256 256 :dropout-rate 0.2))
@@ -41,7 +41,7 @@
   :predict ((x)
 	    (call (model) x)))
 
-(defun demo (&key (batch-size 100))
+(defun demo (&key (batch-size 300))
   (let ((train)
 	(test)
 	(trainer))
