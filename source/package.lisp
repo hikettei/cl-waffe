@@ -206,6 +206,8 @@
 
 	   #:with-usage))
 
+(in-package :cl-waffe)
+
 (defparameter *cl-waffe-object-types* `(:model
 					:node
 					:trainer

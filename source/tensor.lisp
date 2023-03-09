@@ -273,24 +273,6 @@ When the argument that you want to insert is a tensor, this function automatical
       (setf (waffetensor-data tensor) (data val))
       (setf (waffetensor-data tensor) val)))
 
-(defun double-random ()
-  (let ((i (random 1.0)))
-    (if (eq i 0.0)
-	(setq i (double-random)))
-    i))
-
-(defun gaussiandb-random (var mean)
-  (let* ((r (double-random))
-	 (c (sqrt (* -2 (log r)))))
-    (if (< (double-random) 0.5)
-	(+    (* c
-	      (sin (* 2.0 pi (double-random)))
-	      var)
-	      mean)
-	(+    (* c
-	      (cos (* 2.0 pi (double-random)))
-	      var)))))
-
 (defun init-waffe-tensor-data (content)
   ; todo: coerce: simple-array -> mgl-mat
   
@@ -310,10 +292,6 @@ When the argument that you want to insert is a tensor, this function automatical
   (if (null tensor)
       backend
       (waffetensor-backend tensor)))
-
-(defmacro extend-from (new-tensor old-tensor)
-  ; (extend-from (!randn `(10 10)) old-tensor) :backendとかを引き継ぐ
-  (declare (ignore new-tensor old-tensor)))
 
 (defmacro !allow-destruct (tensor)
   "Tensors which path through this macro are allowed to be destructed by cl-waffe's kernel.
@@ -415,10 +393,6 @@ See also: !disallow-destruct which does the opposite.
 @end[lang=lisp](code)"
   `(setf (waffetensor-is-next-destruct? ,tensor) nil))
 
-; is-tensor
-(defun waffe-tensor-p (tensor)
-  (typep tensor 'waffetensor))
-
 (defmacro grad (tensor)
   "Accessing tensor's grad.
 
@@ -468,23 +442,6 @@ Tensor (as usual, defined by (tensor))
 @end(deflist)"
   `(with-slots ((data data) (backend backend)) ,tensor
      (tensor data :backend backend)))
-
-(defun repeat-n (val n)
-  (let ((a `(,val)))
-    (dotimes (_ (1- n))
-      (push val a))
-    a))
-
-(defun repeat-c (n &key (start 0))
-  (declare (optimize (speed 3))
-	   (type fixnum n))
-  (let ((a `(,start))
-	(i start))
-    (declare (type fixnum i))
-    (dotimes (_ (1- n))
-      (incf i 1)
-      (push i a))
-    (reverse a)))
 
 (defmacro nth-var (tensor n)
   `(nth ,n (slot-value ,tensor 'variables)))
@@ -553,7 +510,6 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
 	nil)))
 
 (declaim (inline step-next-node))
-
 (defun step-next-node (tensor n)
   (if (waffetensor-is-ancestor-param (nth-var tensor n))
       (backward1 (nth-var tensor n))))
@@ -684,6 +640,8 @@ I'm sorry for writing in Japanese...
 				 (waffetensor-grad-tmp tensor))))))))))))
   nil)
 
+; Initializer of tensors
+
 (declaim (ftype (function (cons) waffetensor) !zeros !ones))
 (defun !zeros (shape)
   "Initializing constant tensor with given shape, where initial elements are zero.
@@ -798,6 +756,7 @@ Excepted Usage.
 -> x
 do (exp x))...")
 
+(declaim (ftype (function (waffetensor &rest t) waffetensor) !aref))
 (defun !aref (tensor &rest dims)
   "!aref creates a new tensor from the area specified by @cl:param(dims) from the given @cl:param(tensor).
 
@@ -932,337 +891,6 @@ Example:
 (defmacro !with-mgl-operation (tensor var &body body)
   `(let ((,var (data ,tensor)))
      ,@body))
-
-(defun !random (dims limit)
-  "Initialize an tensor of dims (cons)
-
-!random can be called with a varying number of type of arguments:
-
-@begin(section)
-@title(When limit=fixnum)
-init within the range of @c(0<=x<limit)
-
-@begin[lang=lisp](code)
-;#Const(((1.0 2.0 ~ 2.0 1.0)        
-;                 ...
-;        (2.0 2.0 ~ 2.0 2.0)) :mgl t :shape (10 10))
-@end[lang=lisp](code)
-@end(section)
-
-@begin(section)
-@title(When limit=single-float)
-init within the range of @c(0<=x<limit)
-@begin[lang=lisp](code)
-(!random '(10 10) 3.0)
-;#Const(((0.152... 2.203... ~ 2.360... 2.216...)        
-;                 ...
-;        (1.003... 2.257... ~ 2.305... 2.025...)) :mgl t :shape (10 10))
-@end[lang=lisp](code)
-@end(section)
-
-@begin(section)
-@title(When limit=(cons single-float1 single-float2))
-init with single-float1<=x<single-float2, where each element is single-float.
-@begin[lang=lisp](code)
-(!random '(10 10) '(1.0 3.0))
-;#Const(((1.982... 1.526... ~ 1.388... 1.312...)        
-;                 ...
-;        (1.829... 2.676... ~ 1.226... 2.980...)) :mgl t :shape (10 10))
-@end[lang=lisp](code)
-@end(section)
-
-Return: WaffeTensor
-"
-  (let* ((res (!zeros dims))
-         (upper-limit (if (listp limit) (second limit) limit))
-         (lower-limit (if (listp limit) (first limit) 0))
-         (len (if (listp dims) (reduce #'* dims) dims))
-         (tmp-limit (- upper-limit lower-limit)))
-    (loop for n from 0 to (1- len)
-          do (setf (!row-major-aref res n)
-                   (+ (random tmp-limit) lower-limit)))
-    res))
-
-(declaim (ftype (function ((or cons fixnum) function) waffetensor) !random-with))
-(defun !random-with (dims f)
-  "Initializes the tensor of dims. Each element is initialized with @cl:param(f) where f is a lambda exp and called with index.
-
-Warning: Using mref and slow algorithm, @b(it is so slow).
-
-Example:
-@begin[lang=lisp](code)
-(!random-with '(10 10) #'(lambda (n) n))
-;#Const(((0.0 1.0 ~ 8.0 9.0)        
-;                 ...
-;        (90.0 91.0 ~ 98.0 99.0)) :mgl t :shape (10 10))
-@end[lang=lisp](code)
-
-See also: !init-with which is alias for !random-with.
-"
-  (declare (optimize (speed 3) (safety 0) (space 0))
-	   (type function f))
-  (let* ((res (make-array dims :initial-element 0))
-         (len (the fixnum (if (listp dims) (reduce #'* dims) dims))))
-    (loop for n fixnum from 0 to (1- len)
-          do (setf (row-major-aref res n)
-                   (funcall f n)))
-    (const res)))
-
-(declaim (inline !init-with))
-(defun !init-with (dims f)
-  "Alias for !random-with. This function is inlined."
-  (!random-with dims f))
-
-(defun !normal (dims &optional (mean 2.0) (var 1.0))
-  "Init with normal distribution.
-
-Warning: Using mref and slow algorithm, @b(its sooo slow.)
-
-It is recommended to use !randn and transform it instead."
-  (let* ((res (!zeros dims))
-         (len (if (listp dims) (reduce #'* dims) dims)))
-    (loop for n from 0 to (1- len)
-          do (setf (!row-major-aref res n) (gaussiandb-random var mean)))
-    res))
-
-(defun !randn (dims)
-  "Initializes tensor with normal distribution in a faster way where mean=0.0, var=1.0.
-
-Example:
-
-@begin[lang=lisp](code)
-(!randn `(10 10))
-;#Const(((0.677... 0.054... ~ 0.257... 0.261...)        
-;                 ...
-;        (0.063... 0.607... ~ 0.460... 0.730...)) :mgl t :shape (10 10))
-@end[lang=lisp](code)"
-  (!normal dims 0 1))
-
-; To fix: Zero-division error.
-(defun !beta (dims alpha beta)
-  "Initializes tensor with samples of beta distribution in a faster way.
-
-Algorithm: https://dl.acm.org/doi/pdf/10.1145/359460.359482
-
-x=[0,1]
-
-a = min(alpha, beta)
-
-b = max(alpha, beta)
-
-PDF: fX(x)=x^a−1*(1−x)*b−1/B(a,b)
-
-where B(a,b)=∫1,0{x^a−1(1−x)^b−1}dx
-
-@begin[lang=lisp](code)
-(time (!beta '(200) 5.0 1.0))
-;Evaluation took:
-;  0.000 seconds of real time
-;  0.000063 seconds of total run time (0.000063 user, 0.000000 system)
-;  100.00% CPU
-;  143,846 processor cycles
-;  0 bytes consed
-  
-;#Const((0.813... 0.832... ~ 0.865... 0.787...) :mgl t :shape (200))
-@end[lang=lisp](code)"
-
-  (declare (optimize (speed 3))
-	   (type cons dims)
-	   (type single-float alpha beta))
-  (let* ((a (min alpha beta))
- 	 (b (max alpha beta))
-	 (result (!zeros dims))
-	 (size (!size result)))
-    (declare (type fixnum size))
-    (with-facet (array ((data result) 'backing-array :direction :output))
-      (declare (type (simple-array single-float) array))
-      ; Todo For GPU.
-      (loop for i fixnum upfrom 0 below size
-	    do (setf (aref array i)
-		     (if (> a 1)
-			 (!beta-bb alpha a b)
-			 (!beta-bc alpha a b)))))
-    result))
-
-(declaim (ftype (function
-		 (single-float single-float single-float)
-		 single-float)
-		!beta-bb
-		!beta-bc))
-(defun !beta-bb (a0 a b)
-  "Generates beta variances.
-
-Algorithm: https://dl.acm.org/doi/pdf/10.1145/359460.359482
-
-Note: !beta excepts that @c((min a b) > 1)"
-  (declare (optimize (speed 3) (safety 0) (debug 0))
-	   (type single-float a0)
-	   (type (single-float 0e0) a b))
-
-  (unless (> (min a b) 1.0)
-    (error "cl-waffe:!beta failed because of (min a b) > 1."))
-
-  (let* ((alpha (+ a b))
-  	 (beta  (sqrt (the (single-float 0e0)
-			   (/ (- alpha 2.0)
-			      (- (* 2.0 a b) alpha)))))
-	 (gamma (+ a (/ beta)))
-	 (r0 0.0)
-	 (w0 0.0)
-	 (t0 0.0))
-    (labels ((next (&aux
-		      (u1 (random 1.0))
-		      (u2 (random 1.0))
-		      (v (* beta (- (log u1) (log (+ 1.0 (- u1)))))))
-	       (declare (type single-float u1 u2 v))
-	       
-	       (setq w0 (* a (exp v)))
-	       (setq r0 (- (* gamma v) 1.3862944))
-	       
-	       (let* ((z (* u1 u1 u2))
-		      (s (+ a r0 (- w0))))
-		 (declare (type single-float z s))
-		 
-		 (if (>= (+ s 2.609438) (* 5 z))
-		     nil
-		     (progn
-		       (setq t0 (log z))
-		       (if (>= s t0)
-			   nil
-			   t))))))
-      (loop while (and
-		   (next)
-		   (< (+ r0
-			 (* alpha (- (log alpha) (log (+ b w0)))))
-		      t0)))
-
-      (if (= a a0)
-	  (/ w0 (+ b w0))
-	  (/ b (+ b w0))))))
-
-
-(defun !beta-bc (a0 a b)
-  "Generates beta variances.
-
-Algorithm: https://dl.acm.org/doi/pdf/10.1145/359460.359482
-
-Note: !beta excepts that @c((min a b) <= 1)"
-  (declare (optimize (speed 3) (safety 0) (debug 0))
-	   (type single-float a0)
-	   (type (single-float 0e0) a b))
-
-  (unless (<= (min a b) 1.0)
-    (error "cl-waffe:!beta failed because of (min a b) <= 1."))
-
-  (let* ((alpha (+ a b))
-  	 (beta  (/ b))
-	 (gamma (+ 1 a (- b)))
-	 (k1 (* gamma (+ 0.0138889 (* 0.0416667 b)) (/ (+ (* a b)
-							  -0.777778))))
-	 (k2 (+ 0.25 (* b (+ 0.5 (/ 0.258 gamma)))))
-	 (z  0.0)
-	 (y  0.0)
-	 (v 0.0)
-	 (w 0.0)
-	 (f t)
-	 (u1 0.0)
-	 (u2 0.0))
-    (declare (type single-float alpha beta gamma k1 k2 z y w v u1 u2))
-    
-    (labels ((next ()
-	     (setq u1 (random 1.0))
-	     (setq u2 (random 1.0))
-	     (if (>= u1 0.5)
-		 (progn
-		   (setq z (* u1 u1 u2))
-		   (if (<= z 0.25)
-		       (progn
-			 (setq v (* beta
-				    (the single-float
-					 (log (the (single-float 0e0)
-						   (/ u1 (- 1 u1)))))))
-			 (setq w (* a (exp v)))
-			 nil)
-		       (if (>= z k2)
-			   t
-			   nil)))
-		 (progn
-		   (setq y (* u1 u2))
-		   (setq z (* u1 y))
-		   (if (>= (+ (* 0.225 u2) z (- y))
-			   k1)
-		       t
-		       nil)))))
-
-      (loop while (and f (next))
-	    do (progn
-		 (setq v (* beta (log (the (single-float 0e0) (/ u1 (- 1 u1))))))
-		 (setq w (* a (exp v)))
-
-		 (if (< (- (* alpha
-			      (log (the (single-float 0e0) (/ a (+ b w)))))
-			   1.3862944)
-			(log z))
-		     (setq f nil))))
-
-      (if (= a a0)
-	  (/ w (+ b w))
-	  (/ b (+ b w))))))
-
-(defun !gamma (dims k &optional (theta 1.0))
-  "Initialize tensor with samples of gamma distribution.
-
-Todo: Use fast algorithms and approximations in response to @cl:param(k).
-
-Example:
-@begin[lang=lisp](code)
-(!gamma '(10 10) 1.0)
-;#Const(((2.155... 3.374... ~ 1.274... 0.147...)        
-;                 ...
-;        (0.194... 0.081... ~ 0.816... 0.209...)) :mgl t :shape (10 10))
-@end[lang=lisp](code)"
-  (declare ;(optimize (speed 3))
-	   (type cons dims))
-  
-  ; ↓やる気無くした人 適当な早いアルゴリズム実装してぇ~~
-  (const (make-mat dims
-		   :initial-contents (numcl:gamma k theta dims))))
-
-(defun !chisquare (dims df)
-  "@b(Not implemented yet)
-Todo: Use fast algorithms and approximations.
-
-Example:
-@begin[lang=lisp](code)
-@end[lang=lisp](code)"
-  (declare (ignore df dims))
-  (error "Not Implemented."))
-
-(defun !bernoulli (dims rate)
-  "Init a tensor of dims with bernoulli
-
-rate is single-float, and [0 1]
-
-See also: @cl:param(!binomial), alias for it.
-
-Example:
-@begin[lang=lisp](code)
-(!binomial '(10 10) 0.5)
-;#Const(((1.0 0.0 ~ 1.0 1.0)        
-;                 ...
-;        (0.0 1.0 ~ 1.0 0.0)) :mgl t :shape (10 10))
-@end[lang=lisp](code)"
-  (declare (optimize (speed 3))
-	   (type cons dims)
-	   (type (single-float 0e0) rate))
-  (unless (<= rate 1.0)
-    (error "!bernoulli: rate must be in the range of [0 1]"))
-  (!modify (!zeros dims) :bernoulli (const rate)))
-
-(declaim (inline !binomial))
-(defun !binomial (dims rate)
-  "Alias for !bernoulli"
-  (!bernoulli dims rate))
 
 (defun !shape (tensor &optional (nth nil))
   "Returns the shape of tensor when nth=nil.
