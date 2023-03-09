@@ -11,10 +11,10 @@
 			   T))
 	       (epsilon epsilon :type float))
   :forward ((x)
-	    (let* ((average (!mean x 0 t))
-		   (var (!mean (!sub x average)))
-		   (r (!div (!sub average var)
-			    (!sqrt (!add (!pow var 2) (self epsilon))))))
+	    (let* ((average (!mean x 1 nil)) ; minibatch-average
+		   (dist (!mean (!pow (!sub x average) 2))) ; minibatch-dist
+		   (r (!div (!sub x average)
+			    (!sqrt (!add dist (self epsilon))))))
 	      (if (eql (self affine) T)
 		  r
 		  (call (self affine) r)))))
