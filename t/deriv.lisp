@@ -53,9 +53,17 @@
      (data (!fill `(10) 0.1))
      (data (!aref (const (grad a)) 0)))))
 
+(defun batchnorm-backward ()
+  (let* ((tensor (parameter (!randn `(10 10)))))
+    (backward (!sum (call (BatchNorm2D 10) tensor)))
+    (grad tensor)))
+
 (test aref-backwards
       (is (aref-backward1))
       (is (aref-backward2))
       (is (aref-backward3))
       (is (aref-backward4)))
+
+(test batchnorm-backward
+      (is (batchnorm-backward)))
       

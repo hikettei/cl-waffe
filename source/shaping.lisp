@@ -81,8 +81,7 @@ x can be: mat or tensor.
 ;#Const(((((10.0 10.0 ~ 10.0 10.0)))) :mgl t :shape (1 1 1 10))
 @end[lang=lisp](code)
 @end(section)"
-  (declare (type waffetensor x)
-	   (type fixnum axis repeats))
+  (declare (type waffetensor x))
   (call (RepeatTensor (assure-tensor axis) (assure-tensor repeats)) (assure-tensor x)))
 
 (defun !expands (tensor &rest expand-times)

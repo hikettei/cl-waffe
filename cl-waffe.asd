@@ -118,7 +118,8 @@
   :depends-on (:cl-waffe)
   :components ((:module "examples" :components ((:file "mnist")
 						(:file "rnn"
-						       :depends-on ("kftt-data-parser"))
+						    :depends-on ("kftt-data-parser"))
+						(:file "fnn")
 						(:file "kftt-data-parser")))))
 
 (asdf:defsystem :cl-waffe/benchmark
