@@ -12,7 +12,7 @@
 	       (epsilon epsilon :type float))
   :forward ((x)
 	    (let* ((average (!mean x 1 nil)) ; minibatch-average
-		   (dist (!mean (!pow (!sub x average) 2))) ; minibatch-dist
+		   (dist (!mean (!pow (!sub x average) 2.0) 1)) ; minibatch-dist
 		   (r (!div (!sub x average)
 			    (!sqrt (!add dist (self epsilon))))))
 	      (if (eql (self affine) T)
