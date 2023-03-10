@@ -566,7 +566,64 @@ When backward, @b(Automatic differentiation applies).
      :optimize ,optimize
      :object-type :model
      :document ,document))
-			 
+
+(defmacro declare-kernel (backend)
+  `(progn
+     (defgeneric ,(symb 'call-extension-forward-
+			(intern (symbol-name backend)))
+	 (model))
+
+     (defgeneric ,(symb 'call-extension-forward-
+			(intern (symbol-name backend)))
+	 (model))
+
+     (defmethod ,(symb 'call-extension-forward-
+		       (intern (symbol-name backend)))
+	 (model)
+       nil)
+
+     (defmethod ,(symb 'call-extension-forward-
+		       (intern (symbol-name backend)))
+	 (model)
+       nil)))
+
+(defmacro define-node-extension (name
+				 &key
+				   optimize
+				   backend
+				   forward
+				   backward)
+  ""
+  `(progn
+     (define-node-method
+	 ,(symb 'call-extension-forward-
+		(intern (symbol-name backend)))
+	 ,name
+	 ,(car forward)
+	 ,(cdr forward)
+	 nil
+	 ,optimize
+	 :node
+	 nil)
+     (define-node-method
+	 ,(symb 'call-extension-backward-
+		(intern (symbol-name backend)))
+	 ,name
+	 ,(car backward)
+	 ,(cdr backward)
+	 nil
+	 ,optimize
+	 :node
+	 nil)
+     nil))
+
+(define-node-extension AddTensor
+  :backend :numcl
+  :forward ((x y)
+	    (const (+ 1 1)))
+  :backward ((dy)
+	     (list dy dy)))
+
 (defmacro defobject (name
 		     args
 		     &key
