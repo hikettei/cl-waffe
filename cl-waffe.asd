@@ -41,6 +41,7 @@
 			     (:file "kernel")))
 	       (:file "package")
 	       (:file "utils")
+	       (:file "conditions")
 	       (:file "model" :depends-on ("tensor"))
 	       (:file "tensor")
 	       (:file "distributions/random")

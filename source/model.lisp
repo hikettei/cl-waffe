@@ -12,6 +12,7 @@ Utils for defnode/defmodel/defoptimizer
 (define-method-combination backend-dispatcher ()
   ((mgl-node-method  (backend-dispatcher . *))
    (external-methods (:external-node . *)))
+  (:arguments node)
   (let ((extensions-call-form `(or ,@(mapcar
 				      #'(lambda (method)
 					  `(call-method ,method))
@@ -25,7 +26,13 @@ Utils for defnode/defmodel/defoptimizer
 	   (T
 	    `(if *restart-non-exist-backend*
 		 (call-method ,(first mgl-node-method))
-		 (error "A")))))))
+		 (restart-case
+		     (error (make-condition
+			     'Backend-Doesnt-Exists
+			     :kernel *default-backend*
+			     :node ,node))
+		   (restart-with-mgl-kernel ()
+		     (call-method ,(first mgl-node-method))))))))))
 
 (defgeneric call-forward  (self) (:method-combination backend-dispatcher))
 (defgeneric call-backward (self) (:method-combination backend-dispatcher))
