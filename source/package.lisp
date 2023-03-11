@@ -17,6 +17,8 @@
 	   #:hide-from-tree
 	   #:forward
 	   #:backward)
+  (:export #:with-backend
+	   #:define-node-extension)
   (:export 
 	   ; An parameters for displaying tensor.
 	   #:*print-char-max-len*
@@ -43,8 +45,8 @@
 
   (:export
 	   #:with-no-grad
-	   #:*no-grad*)
-
+	   #:*no-grad*
+	   #:*restart-non-exist-backend*)
   (:export
 	   #:with-searching-calc-node
 	   #:defmodel

@@ -6,9 +6,40 @@ Here's
 Utils for defnode/defmodel/defoptimizer
 |#
 (defparameter *in-node-method* nil)
+(defparameter *restart-non-exist-backend* t
+  "When t, in the case when the specified backend doesn't exist, cl-waffe calls a standard implementation backend")
 
-(defgeneric call-forward  (self))
-(defgeneric call-backward (self))
+(define-method-combination backend-dispatcher ()
+  ((mgl-node-method  (backend-dispatcher . *))
+   (external-methods (:external-node . *)))
+  (:arguments node)
+  (let ((extensions-call-form `(or ,@(mapcar
+				      #'(lambda (method)
+					  `(call-method ,method))
+				      external-methods))))
+    `(or ,extensions-call-form
+	 ,(cond
+	    ((null external-methods)
+	     `(call-method ,(first mgl-node-method)))
+	    ((eql *default-backend* :mgl)
+	     `(call-method ,(first mgl-node-method)))
+	    (T
+	     `(if (or
+		   *restart-non-exist-backend*
+		   (eql *default-backend* :mgl))
+		  (call-method ,(first mgl-node-method))
+		  (restart-case
+		      (error (make-condition
+			      'Backend-Doesnt-Exists
+			      :kernel *default-backend*
+			      :node ,node))
+		    (restart-with-mgl-kernel ()
+		      (call-method ,(first mgl-node-method)))))))
+	 (progn
+	   (error "cl-waffe: restarting was failed. ~a" ,node)))))
+
+(defgeneric call-forward  (self) (:method-combination backend-dispatcher))
+(defgeneric call-backward (self) (:method-combination backend-dispatcher))
 
 (defmacro with-no-grad (&body body)
   "This macro is used in order to implict that codes below is ignored:
@@ -369,7 +400,10 @@ Example:
 			      hide-from-tree
 			      optimize
 			      object-type
-			      &optional (is-node nil)
+			      required-backend-symbol
+			      &optional
+				(is-node nil)
+				(backend-name (list 'backend-dispatcher))
 			      &aux (thread (gensym))
 				   (is-top (gensym))
 				   (state  (gensym)))
@@ -502,11 +536,14 @@ Example:
 			   (T
 			    (setf (waffetensor-path-through-node? result) result-next-state)
 			    result))))))))
-	 (defmethod ,fname ((self ,name))
+	 ; ,@backend-name -> backend-dispatcher / :external-node :numcl ...
+	 (defmethod ,fname ,@backend-name ((self ,name))
 	   (declare (optimize (speed 3)))
-	   #'(lambda (&rest node-inputs)
-	       (declare (optimize (speed 3)))
-	       (apply #',f-ident self node-inputs))))))
+	   (when (or
+		  (eql :mgl ,required-backend-symbol)
+		  (eql *default-backend* ,required-backend-symbol))
+	     #'(lambda (&rest node-inputs)
+		 (apply #',f-ident self node-inputs)))))))
 
 (defmacro defmodel (name args
 			 &key
@@ -566,7 +603,70 @@ When backward, @b(Automatic differentiation applies).
      :optimize ,optimize
      :object-type :model
      :document ,document))
-			 
+
+(defmacro define-node-extension (name
+				 &key
+				   optimize
+				   backend
+				   forward
+				   backward)
+  "Adds a new backend to the defined node.
+
+The type of backend is managed by keywords. The backend defined in defnode is always :mgl.
+
+Defined backends can be switched by the macro @c((with-backend backend)).
+
+As long as *restart-non-exist-backend* is t, when a computation node reaches a backend that is not defined, :mgl is called, otherwise the condition backend-doesnt-exists will occurs.
+
+Example:
+
+@begin[lang=lisp](code)
+(define-node-extension cl-waffe::AddTensor
+  :backend :test-backend
+  :forward ((x y)
+        (const (+ 1 1)))
+  :backward ((dy)
+         (list dy dy)))
+
+(with-backend :mgl
+   (print (!add 10 10))) ;=> Const(20)
+
+(with-backend :test-backend
+   (print (!add 10 10))) ;=> Const(2)
+
+(with-backend :hogehoge
+   (print (!add 10 10))) ; => Const(20)
+
+(let ((*restart-non-exist-backend* nil))
+    (with-backend :hogehoge
+        (print (!add 10 10)))) ;=> Evaluation aborted on #<CL-WAFFE::BACKEND-DOESNT-EXISTS {100FA18C43}>.
+@end[lang=lisp](code)
+"
+  `(progn
+     (define-node-method
+	 call-forward
+	 ,name
+	 ,(car forward)
+	 ,(cdr forward)
+	 nil
+	 ,optimize
+	 :node
+	 ,backend
+	 nil
+	 (:external-node ,backend))
+     (define-node-method
+	 call-backward
+	 ,name
+	 ,(car backward)
+	 ,(cdr backward)
+	 nil
+	 ,optimize
+	 :node
+	 ,backend
+	 nil
+	 (:external-node ,backend))
+     nil))
+
 (defmacro defobject (name
 		     args
 		     &key
@@ -625,6 +725,7 @@ the object-type indicates the type of document format."
 	     ,hide-from-tree
 	     ,optimize
 	     ,object-type
+	     :mgl
 	     ,(not regard-as-node))
 	 (define-node-method
 	     call-backward
@@ -634,6 +735,7 @@ the object-type indicates the type of document format."
 	     ,hide-from-tree
 	     ,optimize
 	     ,object-type
+	     :mgl
 	     ,(not regard-as-node))
 	 nil))))
 
