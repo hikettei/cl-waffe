@@ -47,6 +47,11 @@ Default: 6")
   `(let ((*verbose* t))
      ,@body))
 
+(defmacro with-backend (backend &body body)
+  (declare (type keyword backend))
+  `(let ((*default-backend* ,backend))
+     ,@body))
+
 (deftype WaffeSupportedDataType ()
   "An type of waffe-tensor's content type,
 

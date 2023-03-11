@@ -7,8 +7,26 @@ Utils for defnode/defmodel/defoptimizer
 |#
 (defparameter *in-node-method* nil)
 
-(defgeneric call-forward  (self))
-(defgeneric call-backward (self))
+(defun mgl-mat-node-p (qualifiers)
+  (and (eql :mgl (car qualifiers))
+       (= (length qualifiers) 1)))
+
+(defun not-mgl-mat-node-p (qualifiers)
+  (and (not (eql :mgl (car qualifiers)))
+       (= (length qualifiers) 1)))
+
+(define-method-combination backend-dispatcher ()
+  ((mgl-node-method  (backend-dispatcher . *))
+   (external-methods (:external-node . *)))
+  (if (null external-methods)
+      `(call-method ,(first mgl-node-method))
+      `(or
+	,@(mapcar #'(lambda (method)
+		      `(call-method ,method))
+		  `(,@external-methods ,@mgl-node-method)))))
+
+(defgeneric call-forward  (self) (:method-combination backend-dispatcher))
+(defgeneric call-backward (self) (:method-combination backend-dispatcher))
 
 (defmacro with-no-grad (&body body)
   "This macro is used in order to implict that codes below is ignored:
@@ -369,7 +387,10 @@ Example:
 			      hide-from-tree
 			      optimize
 			      object-type
-			      &optional (is-node nil)
+			      required-backend-symbol
+			      &optional
+				(is-node nil)
+				(backend-name (list 'backend-dispatcher))
 			      &aux (thread (gensym))
 				   (is-top (gensym))
 				   (state  (gensym)))
@@ -502,11 +523,12 @@ Example:
 			   (T
 			    (setf (waffetensor-path-through-node? result) result-next-state)
 			    result))))))))
-	 (defmethod ,fname ((self ,name))
+	 ; ,@backend-name -> backend-dispatcher / :external-node :numcl ...
+	 (defmethod ,fname ,@backend-name ((self ,name))
 	   (declare (optimize (speed 3)))
-	   #'(lambda (&rest node-inputs)
-	       (declare (optimize (speed 3)))
-	       (apply #',f-ident self node-inputs))))))
+	   (when (eql *default-backend* ,required-backend-symbol)
+	     #'(lambda (&rest node-inputs)
+		 (apply #',f-ident self node-inputs)))))))
 
 (defmacro defmodel (name args
 			 &key
@@ -567,26 +589,6 @@ When backward, @b(Automatic differentiation applies).
      :object-type :model
      :document ,document))
 
-(defmacro declare-kernel (backend)
-  `(progn
-     (defgeneric ,(symb 'call-extension-forward-
-			(intern (symbol-name backend)))
-	 (model))
-
-     (defgeneric ,(symb 'call-extension-forward-
-			(intern (symbol-name backend)))
-	 (model))
-
-     (defmethod ,(symb 'call-extension-forward-
-		       (intern (symbol-name backend)))
-	 (model)
-       nil)
-
-     (defmethod ,(symb 'call-extension-forward-
-		       (intern (symbol-name backend)))
-	 (model)
-       nil)))
-
 (defmacro define-node-extension (name
 				 &key
 				   optimize
@@ -596,33 +598,28 @@ When backward, @b(Automatic differentiation applies).
   ""
   `(progn
      (define-node-method
-	 ,(symb 'call-extension-forward-
-		(intern (symbol-name backend)))
+	 call-forward
 	 ,name
 	 ,(car forward)
 	 ,(cdr forward)
 	 nil
 	 ,optimize
 	 :node
-	 nil)
+	 ,backend
+	 nil
+	 (:external-node ,backend))
      (define-node-method
-	 ,(symb 'call-extension-backward-
-		(intern (symbol-name backend)))
+	 call-backward
 	 ,name
 	 ,(car backward)
 	 ,(cdr backward)
 	 nil
 	 ,optimize
 	 :node
-	 nil)
+	 ,backend
+	 nil
+	 (:external-node ,backend))
      nil))
-
-(define-node-extension AddTensor
-  :backend :numcl
-  :forward ((x y)
-	    (const (+ 1 1)))
-  :backward ((dy)
-	     (list dy dy)))
 
 (defmacro defobject (name
 		     args
@@ -682,6 +679,7 @@ the object-type indicates the type of document format."
 	     ,hide-from-tree
 	     ,optimize
 	     ,object-type
+	     :mgl
 	     ,(not regard-as-node))
 	 (define-node-method
 	     call-backward
@@ -691,6 +689,7 @@ the object-type indicates the type of document format."
 	     ,hide-from-tree
 	     ,optimize
 	     ,object-type
+	     :mgl
 	     ,(not regard-as-node))
 	 nil))))
 
