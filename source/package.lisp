@@ -45,8 +45,8 @@
 
   (:export
 	   #:with-no-grad
-	   #:*no-grad*)
-
+	   #:*no-grad*
+	   #:*restart-non-exist-backend*)
   (:export
 	   #:with-searching-calc-node
 	   #:defmodel

@@ -6,21 +6,26 @@ Here's
 Utils for defnode/defmodel/defoptimizer
 |#
 (defparameter *in-node-method* nil)
-
-(defun mgl-mat-node-p (qualifiers)
-  (and (eql :mgl (car qualifiers))
-       (= (length qualifiers) 1)))
-
-(defun not-mgl-mat-node-p (qualifiers)
-  (and (not (eql :mgl (car qualifiers)))
-       (= (length qualifiers) 1)))
+(defparameter *restart-non-exist-backend* t
+  "When t, in the case when the specified backend doesn't exist, cl-waffe calls a standard implementation backend")
 
 (define-method-combination backend-dispatcher ()
   ((mgl-node-method  (backend-dispatcher . *))
    (external-methods (:external-node . *)))
-  `(or ,@(mapcar #'(lambda (method) `(call-method ,method))
-		 external-methods)
-       (call-method ,(first mgl-node-method))))
+  (let ((extensions-call-form `(or ,@(mapcar
+				      #'(lambda (method)
+					  `(call-method ,method))
+				      external-methods))))
+    `(or ,extensions-call-form
+	 ,(cond
+	   ((null external-methods)
+	    `(call-method ,(first mgl-node-method)))
+	   ((eql *default-backend* :mgl)
+	    `(call-method ,(first mgl-node-method)))
+	   (T
+	    `(if *restart-non-exist-backend*
+		 (call-method ,(first mgl-node-method))
+		 (error "A")))))))
 
 (defgeneric call-forward  (self) (:method-combination backend-dispatcher))
 (defgeneric call-backward (self) (:method-combination backend-dispatcher))
