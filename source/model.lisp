@@ -18,12 +18,9 @@ Utils for defnode/defmodel/defoptimizer
 (define-method-combination backend-dispatcher ()
   ((mgl-node-method  (backend-dispatcher . *))
    (external-methods (:external-node . *)))
-  (if (null external-methods)
-      `(call-method ,(first mgl-node-method))
-      `(or
-	,@(mapcar #'(lambda (method)
-		      `(call-method ,method))
-		  `(,@external-methods ,@mgl-node-method)))))
+  `(or ,@(mapcar #'(lambda (method) `(call-method ,method))
+		 external-methods)
+       (call-method ,(first mgl-node-method))))
 
 (defgeneric call-forward  (self) (:method-combination backend-dispatcher))
 (defgeneric call-backward (self) (:method-combination backend-dispatcher))
@@ -526,7 +523,9 @@ Example:
 	 ; ,@backend-name -> backend-dispatcher / :external-node :numcl ...
 	 (defmethod ,fname ,@backend-name ((self ,name))
 	   (declare (optimize (speed 3)))
-	   (when (eql *default-backend* ,required-backend-symbol)
+	   (when (or
+		  (eql :mgl ,required-backend-symbol)
+		  (eql *default-backend* ,required-backend-symbol))
 	     #'(lambda (&rest node-inputs)
 		 (apply #',f-ident self node-inputs)))))))
 

@@ -17,6 +17,8 @@
 	   #:hide-from-tree
 	   #:forward
 	   #:backward)
+  (:export #:with-backend
+	   #:define-node-extension)
   (:export 
 	   ; An parameters for displaying tensor.
 	   #:*print-char-max-len*

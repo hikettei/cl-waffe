@@ -96,6 +96,7 @@
   :components ((:module "t" :components ((:file "package")
 					 (:file "utils")
 					 (:file "deriv")
+					 (:file "node-extension")
 					 (:file "copy")
 					 (:file "caches")
 					 (:file "nodes")
