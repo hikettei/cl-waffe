@@ -177,3 +177,11 @@ Todo:Write Docs"
       (push i a))
     (reverse a)))
 
+(defun mkstr (&rest args)
+  "concatenates args by printing into string"
+  (with-output-to-string (s)
+    (dolist (a args) (princ a s))))
+
+(defun symb (&rest args)
+  "interns the mkstr output/returns as symbol"
+  (values (intern (apply #'mkstr args))))

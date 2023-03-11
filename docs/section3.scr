@@ -556,4 +556,23 @@ Using these macros below, you can inform cl-waffe's kernel of which tensors shou
 )
 @end(section)
 @end(section)
+
+@begin(section)
+@title(Logging)
+
+@cl:with-package[name="cl-waffe"](
+  @cl:doc(macro with-verbose)
+)
+@end(section)
+
+@begin(section)
+@title(Backends)
+
+@cl:with-package[name="cl-waffe"](
+  @cl:doc(macro define-node-extension)
+  @cl:doc(macro with-backend)
+  @cl:doc(variable *restart-non-exist-backend*)
+)
+@end(section)
+
 @end(section)
