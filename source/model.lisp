@@ -610,7 +610,38 @@ When backward, @b(Automatic differentiation applies).
 				   backend
 				   forward
 				   backward)
-  "todo docs"
+  "Adds a new backend to the defined node.
+
+The type of backend is managed by keywords. The backend defined in defnode is always :mgl.
+
+Defined backends can be switched by the macro @c((with-backend backend)).
+
+As long as *restart-non-exist-backend* is t, when a computation node reaches a backend that is not defined, :mgl is called, otherwise the condition backend-doesnt-exists will occurs.
+
+Example:
+
+@begin[lang=lisp](code)
+(define-node-extension cl-waffe::AddTensor
+  :backend :test-backend
+  :forward ((x y)
+        (const (+ 1 1)))
+  :backward ((dy)
+         (list dy dy)))
+
+(with-backend :mgl
+   (print (!add 10 10))) ;=> Const(20)
+
+(with-backend :test-backend
+   (print (!add 10 10))) ;=> Const(2)
+
+(with-backend :hogehoge
+   (print (!add 10 10))) ; => Const(20)
+
+(let ((*restart-non-exist-backend* nil))
+    (with-backend :hogehoge
+        (print (!add 10 10)))) ;=> Evaluation aborted on #<CL-WAFFE::BACKEND-DOESNT-EXISTS {100FA18C43}>.
+@end[lang=lisp](code)
+"
   `(progn
      (define-node-method
 	 call-forward

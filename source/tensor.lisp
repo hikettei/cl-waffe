@@ -43,11 +43,14 @@ Default: 6")
 (defparameter *lazy-backwards* nil)
 
 (defmacro with-verbose (&body body)
-  "The codes below, the computation nodes will be displayed when backward"
+  "In the codes below, the computation nodes will be displayed when (backward out)"
   `(let ((*verbose* t))
      ,@body))
 
 (defmacro with-backend (backend &body body)
+  "Switches a backend.
+
+See also: define-node-extension"
   (declare (type keyword backend))
   `(let ((*default-backend* ,backend))
      ,@body))
