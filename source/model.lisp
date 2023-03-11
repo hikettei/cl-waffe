@@ -19,20 +19,22 @@ Utils for defnode/defmodel/defoptimizer
 				      external-methods))))
     `(or ,extensions-call-form
 	 ,(cond
-	   ((null external-methods)
-	    `(call-method ,(first mgl-node-method)))
-	   ((eql *default-backend* :mgl)
-	    `(call-method ,(first mgl-node-method)))
-	   (T
-	    `(if *restart-non-exist-backend*
-		 (call-method ,(first mgl-node-method))
-		 (restart-case
-		     (error (make-condition
-			     'Backend-Doesnt-Exists
-			     :kernel *default-backend*
-			     :node ,node))
-		   (restart-with-mgl-kernel ()
-		     (call-method ,(first mgl-node-method)))))))
+	    ((null external-methods)
+	     `(call-method ,(first mgl-node-method)))
+	    ((eql *default-backend* :mgl)
+	     `(call-method ,(first mgl-node-method)))
+	    (T
+	     `(if (or
+		   *restart-non-exist-backend*
+		   (eql *default-backend* :mgl))
+		  (call-method ,(first mgl-node-method))
+		  (restart-case
+		      (error (make-condition
+			      'Backend-Doesnt-Exists
+			      :kernel *default-backend*
+			      :node ,node))
+		    (restart-with-mgl-kernel ()
+		      (call-method ,(first mgl-node-method)))))))
 	 (progn
 	   (error "cl-waffe: restarting was failed. ~a" ,node)))))
 
@@ -608,7 +610,7 @@ When backward, @b(Automatic differentiation applies).
 				   backend
 				   forward
 				   backward)
-  ""
+  "todo docs"
   `(progn
      (define-node-method
 	 call-forward
