@@ -32,7 +32,9 @@ Utils for defnode/defmodel/defoptimizer
 			     :kernel *default-backend*
 			     :node ,node))
 		   (restart-with-mgl-kernel ()
-		     (call-method ,(first mgl-node-method))))))))))
+		     (call-method ,(first mgl-node-method)))))))
+	 (progn
+	   (error "cl-waffe: restarting was failed. ~a" ,node)))))
 
 (defgeneric call-forward  (self) (:method-combination backend-dispatcher))
 (defgeneric call-backward (self) (:method-combination backend-dispatcher))
