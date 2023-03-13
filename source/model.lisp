@@ -15,12 +15,13 @@ Utils for defnode/defmodel/defoptimizer
   (:arguments node)
   (let ((extensions-call-form (mapcar
 			       #'(lambda (method)
-				   `(call-method ,method))
+				   `(the (or function null)
+					 (call-method ,method)))
 			       external-methods)))
     `(or ,@extensions-call-form
 	 ,(cond
 	    ((null external-methods)
-	     `(call-method ,(first mgl-node-method)))
+	     `(the function (call-method ,(first mgl-node-method))))
 	    ((eql *default-backend* :mgl)
 	     `(call-method ,(first mgl-node-method)))
 	    (T
@@ -159,6 +160,7 @@ Output: Waffetensor of list which comprised of waffetensor."
 	    (list
 	     (mapc
 	      #'(lambda (r)
+		  (declare (type waffetensor r))
 		  (setf (waffetensor-backward r) t)
 		  (setf (waffetensor-state r) model)
 		  (setf (waffetensor-variables r) args)
@@ -517,7 +519,8 @@ Example:
 		  (eql :mgl ,required-backend-symbol)
 		  (eql *default-backend* ,required-backend-symbol))
 	     #'(lambda (&rest node-inputs)
-		 (declare (inline apply ,f-ident))
+		 (declare (optimize (speed 3) (safety 0))
+			  (inline ,f-ident))
 		 (apply #',f-ident self node-inputs)))))))
 
 (defmacro defmodel (name args

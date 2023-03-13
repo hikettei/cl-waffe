@@ -77,7 +77,7 @@ And utils for broadcasting etc...
 		 y))))))
 
 (defun same-shape-p (x y)
-  (declare (optimize (speed 3))
+  (declare (optimize (speed 3) (safety 0))
 	   (type waffetensor x y))
   (or
    (or (not (typep (data x) 'mat))
@@ -158,7 +158,7 @@ And utils for broadcasting etc...
   :optimize t
   :parameters ((xi T) (yi T))
   :forward ((x y)
-	    (unless (= (data x) 1) (error "!div-old: x must be 1"))
+	    (unless (= (the fixnum (data x)) 1) (error "!div-old: x must be 1"))
             (save-for-backward xi x)
 	    (save-for-backward yi y)
 	    (with-searching-calc-node :div x y))
@@ -170,7 +170,7 @@ And utils for broadcasting etc...
   (let ((place node-object))
     `(defun ,name ,args
        ,doc
-       (declare (optimize (speed 3) (safety 1)))
+       (declare (optimize (speed 3) (safety 1) (compilation-speed 0)))
        (let* ((,tensor (if *no-grad* ,place ,node-object)))
 	 ,@body))))
 
