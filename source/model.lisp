@@ -13,11 +13,11 @@ Utils for defnode/defmodel/defoptimizer
   ((mgl-node-method  (backend-dispatcher . *))
    (external-methods (:external-node . *)))
   (:arguments node)
-  (let ((extensions-call-form `(or ,@(mapcar
-				      #'(lambda (method)
-					  `(call-method ,method))
-				      external-methods))))
-    `(or ,extensions-call-form
+  (let ((extensions-call-form (mapcar
+			       #'(lambda (method)
+				   `(call-method ,method))
+			       external-methods)))
+    `(or ,@extensions-call-form
 	 ,(cond
 	    ((null external-methods)
 	     `(call-method ,(first mgl-node-method)))
@@ -130,11 +130,11 @@ Example:
 @end[lang=lisp](code)
 
 Output: Waffetensor of list which comprised of waffetensor."
-  (declare (optimize (speed 3) (safety 0) (space 0))
+  (declare (optimize (speed 3) (safety 0))
 	   (notinline call))
   ; calculating op(x,y) -> result(x, y), state
 
-  (when (typep model 'model-list)
+  (when (model-list-p model)
     (return-from call
       (apply
        #'call
@@ -144,22 +144,6 @@ Output: Waffetensor of list which comprised of waffetensor."
   
   (let* ((result (apply (the function (call-forward model)) args)))
     (declare (type (or null waffetensor list) result))
-
-    #| These code is required when *with-tracing* is enabled but currently cl-waffe doesn't support it.
-    (typecase result
-      (waffetensor
-       (when (and (null (waffetensor-thread-data result))
-		  (not (null (car args))))
-	 (setf (waffetensor-thread-data result)
-	       (waffetensor-thread-data (car args)))))
-      (list (mapcar
-	     #'(lambda (r)
-		 (when (and (null (waffetensor-thread-data r))
-			    (not (null (car args))))
-		   (setf (waffetensor-thread-data r)
-			 (waffetensor-thread-data (car args)))))
-	     result)))
-      |#
 
     (unless *no-grad*
       (if (slot-value model 'hide-from-tree) ;is model defined by defmodel?
@@ -498,23 +482,12 @@ Example:
 		       (typecase result
 			 (list (prog1
 				   result
-				   ;reducible?
-				   ;(map 'list
-					;(lambda (x)
-					 ; (typecase (waffetensor-data x)
-					  ;  (mat
-					   ;  (setf (data x) (data x))))
-					  ;x)
-					;result)
 				 (free-caches ,thread)
 				 (when ,is-top
 				   (set-thread-data nil ,@vars))))
 			 (waffetensor
 			  (prog1
 			      (progn
-				;(typecase (waffetensor-data result)
-				;  (mat
-				;   (setf (data result) (data result))))
 				result)
 			    (free-caches ,thread)
 			    (when ,is-top
@@ -538,11 +511,13 @@ Example:
 			    result))))))))
 	 ; ,@backend-name -> backend-dispatcher / :external-node :numcl ...
 	 (defmethod ,fname ,@backend-name ((self ,name))
-	   (declare (optimize (speed 3)))
+	   (declare (optimize (speed 3) (safety 0))
+		    (type ,name self))
 	   (when (or
 		  (eql :mgl ,required-backend-symbol)
 		  (eql *default-backend* ,required-backend-symbol))
 	     #'(lambda (&rest node-inputs)
+		 (declare (inline apply ,f-ident))
 		 (apply #',f-ident self node-inputs)))))))
 
 (defmacro defmodel (name args

@@ -7,6 +7,7 @@ And utils for broadcasting etc...
 |#
 
 (declaim (ftype (function (t) waffetensor) assure-tensor))
+(declaim (inline assure-tensor))
 (defun assure-tensor (x)
   "This function is used in order to implement this: e.g. (!add 1 1)"
   (typecase x
