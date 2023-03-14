@@ -33,6 +33,7 @@
 	   (dotimes (i (hash-table-count (self params)))
 	     ; v(n+1) = momentum*v(n) - grad*lr
 	     ; w(n+1) = w(n) + v(n+1)
+
 	     (setf (gethash i (self velocities)) (data (!sub (!mul (self momentum) (gethash i (self velocities)))
 							     (!mul (self lr) (grad (gethash i (self params)))))))
 	     (mgl-mat:copy! (data (!add (gethash i (self velocities))
@@ -109,9 +110,11 @@
 							   (self beta2))
 						          (the fixnum
 							       (self n))))))
-				       (- 1.0 (expt
-					       (self beta1)
-					       (self n)))))))
+				       (- 1.0
+					  (the single-float
+					       (expt
+						(self beta1)
+						(self n))))))))
 	     (dotimes (i (hash-table-count (self params)))
 	       (cl-waffe.backends.mgl:adam-update
 		            (gethash i (self m))
