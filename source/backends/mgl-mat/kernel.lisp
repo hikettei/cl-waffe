@@ -607,7 +607,7 @@ These function are called by broadcasting-apply
       :mat-scal ~"
   `(defun ,name (enable-optimize? ,@args &key (output nil) (overwrite nil))
      ,(unless ignore-optimize
-	`(declare (optimize (speed 3) (space 0))
+	`(declare (optimize (speed 3))
 		  (type boolean enable-optimize? overwrite)
 		  (type waffetensor ,@args)))
      ,(unless (null jit)
@@ -745,7 +745,7 @@ These function are called by broadcasting-apply
 ; Note: matmul would return unexcepted value if x or y is displaced.
 ; To prevent this, we probably need to create copy in advance.
 (defun matmul-tensor (enable-optimize? o x y &optional (output-to nil) (trans-a? nil) (trans-b? nil))
-  (declare (optimize (speed 3) (space 0) (safety 1))
+  (declare (optimize (speed 3) (safety 1))
 	   (ignore o)
 	   (type boolean enable-optimize?)
 	   (type waffetensor o x y))
@@ -937,7 +937,7 @@ These function are called by broadcasting-apply
 	   mat)
 	  matmul-tensor-2d))
 (defun matmul-tensor-2d (out x y ta? tb?)
-  (declare (optimize (speed 3) (space 0) (safety 1)))
+  (declare (optimize (speed 3) (safety 1)))
   (gemm! 1.0 x y 0.0 out :transpose-a? ta? :transpose-b? tb?)
   out)
 
@@ -1038,7 +1038,7 @@ These function are called by broadcasting-apply
 	      r)))
 
 (defun compare-tensor (enable-optim out x y)
-  (declare (optimize (speed 3) (space 0) (safety 1))
+  (declare (optimize (speed 3) (safety 1))
 	   (type boolean enable-optim)
            (type waffetensor out x y))
 					; Todo do lazy
@@ -1046,7 +1046,7 @@ These function are called by broadcasting-apply
     (mgl-mat:.<! (value y) o)))
 
 (defun sum-tensor (is-first-time-call? out x y)
-  (declare (optimize (speed 3) (space 0) (safety 0))
+  (declare (optimize (speed 3) (safety 0))
            (type boolean is-first-time-call?)
            (type waffetensor out x y)
 	   (ignore is-first-time-call? out))
@@ -1076,7 +1076,7 @@ These function are called by broadcasting-apply
 	  o))))
 
 (defun mean-tensor (is-first-time-call? out x y)
-  (declare (optimize (speed 3) (space 0) (safety 1))
+  (declare (optimize (speed 3) (safety 1))
            (type boolean is-first-time-call?)
            (type waffetensor out x y)
 	   (ignore is-first-time-call? out))
@@ -1108,7 +1108,7 @@ These function are called by broadcasting-apply
 
 ;(declaim (ftype (function (boolean waffetensor waffetensor waffetensor) mgl-mat:mat) reshape-tensor))
 (defun reshape-tensor (enable-optimize out x y &key (output nil) (overwrite nil))
-  (declare (optimize (speed 3) (space 0) (safety 1))
+  (declare (optimize (speed 3) (safety 1))
 	   (type boolean enable-optimize)
 	   (type waffetensor out x y))
   (let ((x1 (cond
@@ -1259,7 +1259,7 @@ These function are called by broadcasting-apply
 	   (or mgl-mat:mat cl-waffe:waffedatatype))
 	  dispatch-kernel))|#
 (defun dispatch-kernel (function is-first-time-call? destructable-tensor destructable-tensor1 args &key (output nil) (overwrite nil))
-  (declare (optimize (speed 3) (space 0) (safety 0))
+  (declare (optimize (speed 3) (safety 0))
 	   (type keyword function)
 	   (type boolean is-first-time-call?)
 	   (type waffetensor destructable-tensor)

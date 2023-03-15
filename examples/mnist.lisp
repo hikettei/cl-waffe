@@ -33,12 +33,12 @@
 (defun demo () (time (demo1)))
 (defun demo1 ()
   (defparameter batch-size 100)
-  
+
+  (print "Initialized Model")
   (setq trainer (MLPTrainer :relu 1e-4))
 
   (format t "Loading examples/tmp/mnist.scale ...~%")
   
-
   (multiple-value-bind (datamat target)
       (read-libsvm-data "examples/tmp/mnist.scale" 784 10 :most-min-class 0)
     (defparameter mnist-dataset datamat)
@@ -50,7 +50,7 @@
       (read-libsvm-data "examples/tmp/mnist.scale.t" 784 10 :most-min-class 0)
     (defparameter mnist-dataset-test datamat)
     (defparameter mnist-target-test target))
-
+#|
   (sb-profile:profile mgl-mat::blas-sgemm
 		      mgl-mat::blas-scopy
 		      mgl-mat::array-to-mat
@@ -79,7 +79,7 @@
 		      cl-waffe::call-backward
 		      cl-waffe.backends.mgl::adam-update
 		      svmformat:parse-file)
-  
+  |#
   (format t "Training: ~a~%" (!shape mnist-dataset))
   (format t "Valid   : ~a~%" (!shape mnist-target))
   (format t "Test    : ~a~%"  (!shape mnist-dataset-test))
@@ -94,13 +94,13 @@
   (progn
     (mgl-mat:with-mat-counters (:count count :n-bytes n-bytes)
     (time (train trainer train :max-iterate 600
-			       :epoch 20
+			       :epoch 30
 			       :batch-size batch-size
 			       :valid-dataset test
 			       :verbose t :random t :print-each 100))
     (format t "Count: ~a~%" count)
     (format t "Consumed: ~abytes~%" n-bytes)))
 
-  (sb-profile:report)
+  ;(sb-profile:report)
   )
 

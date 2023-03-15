@@ -90,11 +90,13 @@ And utils for broadcasting etc...
     ,kernel-function ,output ,overwrite ,@args))
 
 (defun sumup-tensor (x)
-  (declare (type waffetensor x))
+  (declare (optimize (speed 3))
+	   (type waffetensor x))
   (let ((r 0.0))
     (declare (type single-float r))
     (with-facet (arr ((value x) 'backing-array :direction :input))
-      (let ((size (array-total-size arr)))
+      (declare (type (simple-array single-float) arr))
+      (let ((size (!size x)))
 	(loop for i fixnum upfrom 0 below size
 	      do (incf r (aref arr i)))))
     (sysconst r)))

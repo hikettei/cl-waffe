@@ -32,7 +32,7 @@
   :forward ((x y)
 	    (let ((x-state (call (self encoder) x))
 		  (y1 (!zeros (!shape y))))
-	      (setq y1 (setf (!aref y1) (!aref y '(1 0))))
+	      (setq y1 (setf (!aref y1 t) (!aref y '(1 t))))
 	      (call (self decoder) x-state y1))))
 
 (deftrainer Seq2SeqTrainer (vocab-size embedding-dim hidden-size)

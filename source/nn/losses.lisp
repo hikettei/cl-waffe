@@ -102,6 +102,6 @@ If y is labels, y is fixed to a probability distribution."
       (call
        (SoftMaxCrossEntropy :avoid-overflow avoid-overflow :delta delta)
        x
-       (to-onehot x y epsilon))
+       (with-no-grad (to-onehot x y epsilon)))
       (call (SoftMaxCrossEntropy :avoid-overflow avoid-overflow :delta delta) x y)))
 
