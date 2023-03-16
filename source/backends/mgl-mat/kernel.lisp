@@ -745,7 +745,7 @@ These function are called by broadcasting-apply
 ; Note: matmul would return unexcepted value if x or y is displaced.
 ; To prevent this, we probably need to create copy in advance.
 (defun matmul-tensor (enable-optimize? o x y &optional (output-to nil) (trans-a? nil) (trans-b? nil))
-  (declare (optimize (speed 3) (space 0) (safety 1))
+  (declare (optimize (speed 3) (safety 0))
 	   (ignore o)
 	   (type boolean enable-optimize?)
 	   (type waffetensor o x y))
@@ -937,7 +937,7 @@ These function are called by broadcasting-apply
 	   mat)
 	  matmul-tensor-2d))
 (defun matmul-tensor-2d (out x y ta? tb?)
-  (declare (optimize (speed 3) (space 0) (safety 1)))
+  (declare (optimize (speed 3) (space 0) (safety 0)))
   (gemm! 1.0 x y 0.0 out :transpose-a? ta? :transpose-b? tb?)
   out)
 

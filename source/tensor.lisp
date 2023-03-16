@@ -478,7 +478,8 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
 @term(Output)
 @def(NIL)
 @end(deflist)"
-  (declare (type waffetensor tensor))
+  (declare (optimize (speed 3))
+	   (type waffetensor tensor))
   (if (typep (data tensor) 'mgl-mat:mat)
       (unless (eq (!shape tensor) `(1))
 	(error "grad can be implicitly created only for scalar outputs")))
@@ -509,7 +510,6 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
 
 		   (when *verbose*
 		     (format t "Resumption from Lazy Evaluated==~%"))
-		   
 		   (setfgradtmp result-tmp result-tmp)
 		   (backward1 result-tmp))))
 	(backward1 tensor)
@@ -881,9 +881,18 @@ Example:
 (defun (setf !aref) (value tensor &rest dims)
   "Todo: Define it as macro and (setq tensor ~)"
   (multiple-value-bind (value tensor) (straighten-up (assure-tensor value) (assure-tensor tensor))
-    (call (SetfArefTensor dims)
-	  tensor
-	  value)))
+    (let ((result (call (SetfArefTensor dims)
+			tensor
+			value)))
+      ; (setq tensor (setf (!aref ..)) will destruct model-ident so update it.
+      (when (waffetensor-state tensor)
+	(setf (slot-value
+	       (waffetensor-state result)
+	       'model-ident)
+	      (slot-value
+	       (waffetensor-state tensor)
+	       'model-ident)))
+      result)))
 
 (defun (setf !areflist) (value tensor dims)
   ; For backward, you need to call it like (setq z (setf (!aref x ~) ~))
