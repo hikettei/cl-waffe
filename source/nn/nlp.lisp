@@ -87,4 +87,4 @@
 				     (nth w-i words)
 				     hs)))
 		    (setf (nth w-i words) (!add 0.0 hs)))) ; this `!add` is intended to make a copy.
-	      (call (self wo) (apply #'!concatenate 1 words)))))
+	      (call (self wo) (apply #'!concatenate 1 words))))))
