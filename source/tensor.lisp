@@ -618,12 +618,13 @@ I'm sorry for writing in Japanese...
 	      (unless (= (length (waffetensor-variables tensor))
 			 (length grads))
 		(error "backward error: The number of :forward args doesnt correspond with of :backward"))
-	      
+
 	      (dotimes (n (length grads))
-		(setf (waffetensor-thread-data (nth n grads))
-		      (waffetensor-thread-data tensor))
-		(setfgradtmp (nth-var tensor n) (nth n grads))
-		(step-next-node tensor n)))
+		(unless (eql (data (nth n grads)) nil) ; when nil, ignored.
+		  (setf (waffetensor-thread-data (nth n grads))
+			(waffetensor-thread-data tensor))
+		  (setfgradtmp (nth-var tensor n) (nth n grads))
+		  (step-next-node tensor n))))
 	    nil)))))
     (T
      ; Collecting :grad-tmp and copying them to: grad

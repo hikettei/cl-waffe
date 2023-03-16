@@ -71,18 +71,6 @@
 	    (let* ((batch-size (!shape x 0))
 		   (sentence-length (!shape x 1))
 		   (hs-specified? (not (null (data hs))))
-		   (hs (if (null (value hs))
-			   (!zeros `(,batch-size
-				     1
-				     ,(self hidden-size)))
-			   hs))
-		   (words))
-	      (loop for xn upfrom 0 below sentence-length
-		    do (push (!aref x t xn t) words))
-	      
-	      (unless (self biredical)
-		(setq words (reverse words)))
-
 	      (if hs-specified?
 		  (dotimes (w-i (length words))
 		    (dotimes (rnn-i (self num-layers))
@@ -100,4 +88,3 @@
 				     hs)))
 		    (setf (nth w-i words) (!add 0.0 hs)))) ; this `!add` is intended to make a copy.
 	      (call (self wo) (apply #'!concatenate 1 words)))))
-

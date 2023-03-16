@@ -21,7 +21,7 @@ Here's kernels of optimizers which wanted to get full performance.
 	do (setf (aref m i) (+ (aref m i)
 			       (* (- (aref grads i)
 				     (aref m i))
-				  ( - 1 beta1))))
+				  (- 1 beta1))))
 	   (setf (aref v i) (+ (aref v i)
 			       (* (- 1 beta2)
 				  (- (expt (aref grads i) 2) (aref v i)))))
@@ -39,6 +39,7 @@ Here's kernels of optimizers which wanted to get full performance.
 		    matsize
 		    epsilon
 		    lr-t)
+  (declare (optimize (speed 3)))
   (adam-step-grads
    param
    m
@@ -48,4 +49,5 @@ Here's kernels of optimizers which wanted to get full performance.
    lr-t
    beta1
    beta2
-   matsize))
+   matsize)
+  nil)

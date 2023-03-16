@@ -148,7 +148,7 @@ Example:
 	  (defstruct (,name
 		      (:print-function (lambda (trainer stream _)
 					 (declare (ignore trainer _))
-					 (format stream "<Dataset: ~a()>"
+					 (format stream "<Trainer: ~a()>"
 						 (symbol-name ',name))))
 		      (:constructor ,name (,@(map 'list (lambda (x) (assure-args x)) args)
 						       &aux (model ,model)

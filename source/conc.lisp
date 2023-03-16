@@ -30,9 +30,11 @@
 (defnode SplitTensorNode (split-size axis)
   :parameters ((split-size split-size :type fixnum)
 	       (axis axis :type fixnum)
+	       (grads nil)
 	       (prev-shape t))
   :forward ((tensor)
 	    (setf (self prev-shape) (!shape tensor))
+	    (setf (self grads) nil)
 	    (loop
 	      with each-tensor-shape = (let ((shape (copy-list (!shape tensor))))
 					 (setf (nth (self axis) shape) (self split-size))
@@ -75,9 +77,8 @@
 			       (data res))
 			      res)))))
   :backward ((dy)
-	     ; 枝分かれしてるTensorはbackward1関数内でしかaxpyされないはずだから、メモリ節約のためにdisplaceできない？
-	     (error "SplitTensorNodeBackward is not yet implemented.~%Alternatively, !aref, (setf !aref) is available for a while.")
-	     (list dy)))
+	     (error "SplitNodeTensor: Currently backward is undefined because there's a room to optimize.")
+	     (list (const nil))))
 
 (defun !concatenate (axis &rest tensors)
   "Concatenates the given sequence of @cl:param(tensors) in the given @cl:param(axis). All tensors must have the same shape.
