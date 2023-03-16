@@ -886,7 +886,9 @@ Example:
 			tensor
 			value)))
       ; (setq tensor (setf (!aref ..)) will destruct model-ident so update it.
-      (when (waffetensor-state tensor)
+      (when (and
+	     (waffetensor-state tensor)
+	     (waffetensor-state tensor))
 	(setf (slot-value
 	       (waffetensor-state result)
 	       'model-ident)
