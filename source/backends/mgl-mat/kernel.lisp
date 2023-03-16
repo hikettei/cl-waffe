@@ -1163,14 +1163,12 @@ These function are called by broadcasting-apply
     ((out :mat :output)
      (x :mat :input)
      (weights :mat :input)
-     (n fixnum)
+     (n mgl-mat::index)
      (pad-idx fixnum)
      (embedding-dim fixnum))
   (loop for xi fixnum upfrom 0 below n
-	do (cond
-	     ((= pad-idx (round (aref x xi)))
-	      nil)
-	     (T
+	do (if (= pad-idx (the fixnum (round (aref x xi))))
+	      nil
 	      (loop for ei fixnum upfrom 0 below embedding-dim
 		    do (setf (aref out (the fixnum
 					    (+
@@ -1183,7 +1181,7 @@ These function are called by broadcasting-apply
 					   (the fixnum
 						(* (the fixnum
 							(round (aref x xi)))
-						   embedding-dim)))))))))))
+						   embedding-dim))))))))))
 
 (defun embedding-forward (enable-optimize x weights pad-idx)
   "(with-searching-calc-node :embedding-forward x weights pad-idx) -> embeddings"
@@ -1213,7 +1211,7 @@ These function are called by broadcasting-apply
      (embedding-dim fixnum))
   (loop for xi of-type fixnum upfrom 0 below n
 	do (cond
-	     ((= pad-idx (round (aref x xi)))
+	     ((= pad-idx (the fixnum (round (aref x xi))))
 	      nil)
 	     (T
 	      (loop for ei of-type fixnum upfrom 0 below embedding-dim
@@ -1221,16 +1219,16 @@ These function are called by broadcasting-apply
 				   (+ ei
 				      (the fixnum
 					   (* embedding-dim
-					      (round (aref x xi))))))
+					      (the fixnum (round (aref x xi)))))))
 			     (+ (aref out
 				      (+ ei
 					 (the fixnum
 					      (* embedding-dim
-						 (round (aref x xi))))))
+						 (the fixnum (round (aref x xi)))))))
 				(aref dy (+ ei
 					    (the fixnum
 						 (* xi
-						    embedding-dim)))))))))))
+						    (the fixnum embedding-dim))))))))))))
 
 (defun embedding-backward (enable-optimize x dy weights pad-idx)
   (declare (type boolean enable-optimize)
