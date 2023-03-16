@@ -478,7 +478,8 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
 @term(Output)
 @def(NIL)
 @end(deflist)"
-  (declare (type waffetensor tensor))
+  (declare (optimize (speed 3))
+	   (type waffetensor tensor))
   (if (typep (data tensor) 'mgl-mat:mat)
       (unless (eq (!shape tensor) `(1))
 	(error "grad can be implicitly created only for scalar outputs")))
@@ -509,7 +510,6 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
 
 		   (when *verbose*
 		     (format t "Resumption from Lazy Evaluated==~%"))
-		   
 		   (setfgradtmp result-tmp result-tmp)
 		   (backward1 result-tmp))))
 	(backward1 tensor)
@@ -618,12 +618,13 @@ I'm sorry for writing in Japanese...
 	      (unless (= (length (waffetensor-variables tensor))
 			 (length grads))
 		(error "backward error: The number of :forward args doesnt correspond with of :backward"))
-	      
+
 	      (dotimes (n (length grads))
-		(setf (waffetensor-thread-data (nth n grads))
-		      (waffetensor-thread-data tensor))
-		(setfgradtmp (nth-var tensor n) (nth n grads))
-		(step-next-node tensor n)))
+		(unless (eql (data (nth n grads)) nil) ; when nil, ignored.
+		  (setf (waffetensor-thread-data (nth n grads))
+			(waffetensor-thread-data tensor))
+		  (setfgradtmp (nth-var tensor n) (nth n grads))
+		  (step-next-node tensor n))))
 	    nil)))))
     (T
      ; Collecting :grad-tmp and copying them to: grad
@@ -881,9 +882,20 @@ Example:
 (defun (setf !aref) (value tensor &rest dims)
   "Todo: Define it as macro and (setq tensor ~)"
   (multiple-value-bind (value tensor) (straighten-up (assure-tensor value) (assure-tensor tensor))
-    (call (SetfArefTensor dims)
-	  tensor
-	  value)))
+    (let ((result (call (SetfArefTensor dims)
+			tensor
+			value)))
+      ; (setq tensor (setf (!aref ..)) will destruct model-ident so update it.
+      (when (and
+	     (waffetensor-state tensor)
+	     (waffetensor-state tensor))
+	(setf (slot-value
+	       (waffetensor-state result)
+	       'model-ident)
+	      (slot-value
+	       (waffetensor-state tensor)
+	       'model-ident)))
+      result)))
 
 (defun (setf !areflist) (value tensor dims)
   ; For backward, you need to call it like (setq z (setf (!aref x ~) ~))

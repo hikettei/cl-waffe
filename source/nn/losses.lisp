@@ -4,15 +4,15 @@
 (defmacro assure-fixnum (val)
   `(multiple-value-bind (f _) (round (the single-float ,val))
      (declare (ignore _))
-     f))
+     (the fixnum f)))
 
 (defun mat-labels (base-vec label epsilon)
-  (declare ;(optimize (speed 3))
+  (declare (optimize (speed 3) (safety 0))
 	   (type single-float epsilon))
   (let ((v (!fill `(,(!shape base-vec 2)) epsilon)))
-    (setf (!aref v (the integer
+    (setf (!aref v (the integer ; hm?
 			(assure-fixnum
-			 (mgl-mat:mref (data label) 0 0))))
+			 (mgl-mat:mat-as-scalar (data label)))))
 	  (const (mgl-mat:make-mat '(1)
 				   :initial-element (- 1 epsilon))))
     (!unsqueeze (!unsqueeze v))))
@@ -102,6 +102,6 @@ If y is labels, y is fixed to a probability distribution."
       (call
        (SoftMaxCrossEntropy :avoid-overflow avoid-overflow :delta delta)
        x
-       (to-onehot x y epsilon))
+       (with-no-grad (to-onehot x y epsilon)))
       (call (SoftMaxCrossEntropy :avoid-overflow avoid-overflow :delta delta) x y)))
 

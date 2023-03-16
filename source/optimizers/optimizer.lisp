@@ -30,7 +30,7 @@
 	  (butlast parameters)))))
 
 (defun ls-to-hash (params)
-  (let ((table (make-hash-table)))
+  (let ((table (tg:make-weak-hash-table :weakness :value)))
     (dotimes (i (length params))
       (setf (gethash i table) (nth i params)))
     table))

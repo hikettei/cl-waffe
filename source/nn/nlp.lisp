@@ -5,7 +5,7 @@
 			  hidden-size
 			  reccurent-weight
 			  &key
-			  (activation :tanh)
+			  (activation :relu)
 			  (bias nil)
 			  (dropout nil))
   :parameters ((weight (parameter (!div (!randn `(,input-size
@@ -43,7 +43,7 @@
 	       hidden-size
 	       &key
 	       (num-layers 1)
-	       (activation :tanh)
+	       (activation :relu)
 	       (bias nil)
 	       (dropout nil)
 	       (biredical nil))
@@ -59,45 +59,43 @@
 					   :activation activation
 					   :bias bias
 					   :dropout dropout))))
-	       (num-layers num-layers)
-	       (hidden-size hidden-size)
-	       (biredical biredical)
-	       (wo (linearlayer hidden-size hidden-size)))
+	       (num-layers num-layers :type fixnum)
+	       (hidden-size hidden-size :type fixnum)
+	       (biredical biredical :type boolean)
+	       (wo (linearlayer hidden-size hidden-size) :type linearlayer))
   :forward ((x &optional (hs (const nil)))
 	    "Input: X = (BatchSize SentenceLength Embedding_Dim)
              Output (values x{t+1} h{t+1})"
 
 	    (let* ((batch-size (!shape x 0))
-		   (s-len (!shape x 1))
-		   (hs (if (null (data hs))
-			 (!zeros `(,batch-size
-				   ,s-len
-				   ,(self hidden-size)))
-			 hs)))
+		   (sentence-length (!shape x 1))
+		   (hs-specified? (not (null (data hs))))
+		   (hs (if (null (value hs))
+			   (!zeros `(,batch-size
+				     1
+				     ,(self hidden-size)))
+			   hs))
+		   (words))
+	      (loop for xn upfrom 0 below sentence-length
+		    do (push (!aref x t xn t) words))
 	      
-	      (if (self biredical)
-		  ; when biredical=t, calc in the around way
-		  (loop for xn downfrom (1- s-len) to 0
-			do (let ((h (!zeros `(,batch-size
-					      ,(self hidden-size))))
-				 (xn-s (!squeeze (!aref x t xn t) 1)))
-			     (dotimes (i (self num-layers))
-			       (setq h (call (self rnn-layers)
-					     (const i)
-					     xn-s
-					     h)))
-			     (setq hs (setf (!aref hs t xn) h))))
+	      (unless (self biredical)
+		(setq words (reverse words)))
 
-		  ; when biredical=nil, calc in order.
-		  (loop for xn upfrom 0 below s-len
-			do (let ((h (!squeeze (!aref hs t xn t) 1))
-				 (xn-s (!squeeze (!aref x t xn t) 1)))
-			     (dotimes (i (self num-layers))
-			       (setq h (call (self rnn-layers)
-					     (const i)
-					     xn-s
-					     h)))
-			     (setq hs (setf (!aref hs t xn) h)))))
-	      (call (self wo) hs))))
-
-
+	      (if hs-specified?
+		  (dotimes (w-i (length words))
+		    (dotimes (rnn-i (self num-layers))
+		      (setq hs (setf (!aref hs t w-i)
+			    (call (self rnn-layers)
+				  (const rnn-i)
+				  (nth w-i words)
+				  (!aref hs t w-i)))))
+		    (setf (nth w-i words) (!aref hs t w-i)))
+		  (dotimes (w-i (length words))
+		    (dotimes (rnn-i (self num-layers))
+		      (setq hs (call (self rnn-layers)
+				     (const rnn-i)
+				     (nth w-i words)
+				     hs)))
+		    (setf (nth w-i words) (!add 0.0 hs)))) ; this `!add` is intended to make a copy.
+	      (call (self wo) (apply #'!concatenate 1 words)))))

@@ -372,6 +372,8 @@ Example:
        args))
 
 (defun uncheck-node-tensor (first-states &rest args)
+  (declare (optimize (speed 3))
+	   (type list first-states args))
   (map 'list #'(lambda (x y)
 		 (when (typep x 'waffetensor)
 		   (setf (waffetensor-path-through-node? x) y))
