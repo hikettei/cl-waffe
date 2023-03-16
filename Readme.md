@@ -432,7 +432,7 @@ Here's examples.
 	    (setf (self prev-shape) (!shape x))
 	    (with-facet (array ((value x) 'array :direction :input))
 	      ; In defnode, it is not always necessary to use the cl-waffe API.
-	      ; For this example, defining node with numcl's API.
+	      ; With regard to this example, it defines a transpose with numcl's API.
 	      (sysconst (array-to-mat (numcl:transpose array)))))
   :backward ((dy)
 	     (list (!transpose1 dy (self prev-shape)))))
