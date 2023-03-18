@@ -64,15 +64,14 @@
 			     `(,@tmp-areas (,start-index
 					    ,end-index)))
 			    (let ((res (!zeros each-tensor-shape)))
-			      (copy!
-			       (data
+			      (setf
+			       (!aref res t) ; fill with zeros?
 				(apply
 				 #'!aref
 				 tensor
 				 `(,@tmp-areas
 				   (,start-index
 				    ,(!shape tensor (self axis))))))
-			       (data res))
 			      res))))))
 
 (defun !concatenate (axis &rest tensors)
