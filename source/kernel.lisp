@@ -98,6 +98,25 @@ Note: this is not setfable"
 		      (cl-waffe.backends.mgl:compile-and-run-lazy tensor))))))
     (T (setf (data tensor) (data tensor)))))
 
+(defun lazy-transpose-p (tensor)
+  (declare (optimize (speed 3))
+	   (type waffetensor tensor))
+  
+  (typecase (waffetensor-data tensor)
+    (function
+     (let ((function-info
+	     (funcall
+	      (the
+	       function
+	       (waffetensor-data tensor))
+	      tensor
+	      nil
+	      nil
+	      nil
+	      t)))
+       (eql function-info :lazy-transpose)))
+    (T nil)))
+
 ;(declaim (ftype (function (keyword cons) waffetensor) invoke-mgl-kernel invoke-cpu-kenel))
 (defun invoke-mgl-kernel (kernel-function variables &key (output nil) (overwrite nil))
   (declare (optimize (speed 3) (safety 0))

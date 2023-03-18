@@ -33,13 +33,27 @@
 
 (defnode MatMulTensor ()
   :optimize t
-  :parameters ((xi nil) (yi nil))
+  :parameters ((xi nil)
+	       (yi nil)
+	       (transpose-x? nil)
+	       (transpose-y? nil))
   :forward ((x y) (save-for-backward xi x)
 		  (save-for-backward yi y)
+		  
+		  (setf (self transpose-x?) (lazy-transpose-p x))
+		  (setf (self transpose-y?) (lazy-transpose-p y))
+		  
 		  (with-searching-calc-node :matmul x y))
   :backward ((dy)
-	     (list (!matmul dy (!transpose (self yi)))
-		   (!matmul (!transpose (self xi)) dy))))
+	     (list (!matmul dy (if (self transpose-y?)
+				   (progn
+				     (value (self yi) :ignore-transpose t)
+				     (self yi))
+				   (!transpose (self yi))))
+		   (!matmul (if (self transpose-x?)
+				(const (value (self xi) :ignore-transpose t))
+				(!transpose (self xi)))
+			    dy))))
 
 (defope !matmul (MatmulTensor) node (x y)
     "Multiplying matrices @cl:param(x) and @cl:param(y).

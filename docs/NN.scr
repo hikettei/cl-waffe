@@ -327,8 +327,6 @@ A simple lookup table object to store embedding vectors for NLP Models.
 @title(RNN)
 Applies a multi-layer RNN with tanh or ReLU.
 
-⚠️: RNN has performance problems when backward.
-
 The assumption is that (setf !aref)'s backward contributes to it.
 
 @begin(section)
