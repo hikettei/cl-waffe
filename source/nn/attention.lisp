@@ -35,6 +35,7 @@
 	       (l-out (linearlayer embedding-dim embedding-dim))
 	       (attn (ScaleDotProductAttention embedding-dim)))
   :forward ((q k v &optional (mask (const NIL)))
+	    "q, k, v is given as (BatchSize Sentence-len Embedding-dim)"
 	    (let ((batch-size (!shape q 0))
 		  (seq-len    (!shape q 1))
 		  (head-dim (self head-dim))
@@ -69,5 +70,5 @@
 			       batch-size
 			       :axis 0)))
 		  (call (self l-out) (apply #'!concatenate 2 chunks)))))))
-	       
+
 			      

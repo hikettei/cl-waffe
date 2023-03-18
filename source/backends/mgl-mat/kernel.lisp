@@ -525,6 +525,7 @@ These function are called by broadcasting-apply
 			     ignore?
 			     return-node-info)
 	     (declare (ignore given-tensor))
+	     #+sbcl(declare (sb-ext:muffle-conditions cl:warning)) ; hot to disable warnings T_T
 					; given-tensor is always lazytranspsoed.
 	     (cond
 	       (ignore?
@@ -542,12 +543,16 @@ These function are called by broadcasting-apply
 	       (return-node-info
 		(values :lazy-transpose nil nil nil))
 	       (compile-and-step?
-					; Transpose is evaluated (its slow)
-		(transpose (compile-and-run-lazy (sysconst tensor))))
+		(let ((tns (sysconst (compile-and-run-lazy (sysconst tensor)))))
+		  (if (>= (!dims tns) 3)
+		      (progn
+			(format t "Warning: Transpose1 is called with 3d Tensor which is super slow...(To Fix)~%")
+			(data (!transpose1 tns))) ; This is bottleneck and need to be fixed.
+		      (transpose (data tns)))))
 	       (T
-					; The Last Transpose is skipped, returning untransposed tensor
-					; this block will be called by (value ~ :ignore-transpose t)
-					; so, if tensor should function, this will be evaluated.
+		 ; The Last Transpose is skipped, returning untransposed tensor
+		 ; this block will be called by (value ~ :ignore-transpose t)
+		 ; so, if tensor should function, this will be evaluated.
 		(value (sysconst tensor))))))
     #'LazyTranspose))
 
