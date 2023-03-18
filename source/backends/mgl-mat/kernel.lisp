@@ -542,8 +542,12 @@ These function are called by broadcasting-apply
 	       (return-node-info
 		(values :lazy-transpose nil nil nil))
 	       (compile-and-step?
-					; Transpose is evaluated (its slow)
-		(transpose (compile-and-run-lazy (sysconst tensor))))
+		(let ((tns (sysconst (compile-and-run-lazy (sysconst tensor)))))
+		  (if (>= (!dims tns) 3)
+		      (progn
+			(format t "Warning: Transpose1 is called with 3d Tensor which is super slow...~%")
+			(data (!transpose1 tns)))
+		      (transpose (data tns)))))
 	       (T
 					; The Last Transpose is skipped, returning untransposed tensor
 					; this block will be called by (value ~ :ignore-transpose t)
