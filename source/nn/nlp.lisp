@@ -47,9 +47,6 @@
 	       (bias nil)
 	       (dropout nil)
 	       (biredical nil))
-  :document (with-usage "RNN"
-	      :overview "Todo: docs"
-	      )
   :parameters ((rnn-layers (model-list
 			    (loop for i upfrom 0 below num-layers
 				  collect (RNNHiddenLayer
@@ -76,7 +73,7 @@
 				     ,(self hidden-size)))
 			   hs))
 		   (words))
-	      (loop for xn upfrom 0 below sentence-length
+	      (loop for xn fixnum upfrom 0 below sentence-length
 		    do (push (!aref x t xn t) words))
 	      
 	      (unless (self biredical)

@@ -3,9 +3,7 @@
 
 ## Common Lisp 環境構築
 
-Common Lispに初めて触れる方は`./Install-Environments.ipynb`を参照してください。
-
-SBCL/Roswell/QuickLispの構築等
+Common Lispは初めてですか？その場合まずは`./Install-Environments.ipynb`を参照してください。
 
 ## JupyterからCommon Lispを扱うには？
 

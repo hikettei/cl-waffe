@@ -27,7 +27,7 @@
   :backward ((dy)
 	     (!split dy (self shape) :axis (self axis))))
 
-(defnode SplitTensorNode (split-size axis)
+(defmodel SplitTensorNode (split-size axis)
   :parameters ((split-size split-size :type fixnum)
 	       (axis axis :type fixnum)
 	       (grads nil)
@@ -59,26 +59,20 @@
 
 			(if (<= end-index (!shape tensor (self axis)))
 			    (apply
-			     #'%saref
-			     nil
+			     #'!aref
 			     tensor
 			     `(,@tmp-areas (,start-index
 					    ,end-index)))
 			    (let ((res (!zeros each-tensor-shape)))
-			      (copy!
-			       (data
+			      (setf
+			       (!aref res t) ; fill with zeros?
 				(apply
-				 #'%saref
-				 nil
+				 #'!aref
 				 tensor
 				 `(,@tmp-areas
 				   (,start-index
 				    ,(!shape tensor (self axis))))))
-			       (data res))
-			      res)))))
-  :backward ((dy)
-	     (error "SplitNodeTensor: Currently backward is undefined because there's a room to optimize.")
-	     (list (const nil))))
+			      res))))))
 
 (defun !concatenate (axis &rest tensors)
   "Concatenates the given sequence of @cl:param(tensors) in the given @cl:param(axis). All tensors must have the same shape.

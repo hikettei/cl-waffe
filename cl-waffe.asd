@@ -73,6 +73,7 @@
 		:components ((:file "package")
 			     (:file "utils")
 			     (:file "losses")
+			     (:file "attention")
 			     (:file "functional")
 			     (:file "norms")
 			     (:file "nlp")
