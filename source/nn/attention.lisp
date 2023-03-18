@@ -16,7 +16,7 @@
 		  (error "Mismatched dim (todo more conds)"))
 
 		(setq attention-weight (!mul attention-weight mask)))
-	      (!matmul attention-weight v))))
+	      (!matmul (!softmax attention-weight) v))))
 
 ; Todo: Optimize it with FlashAttention
 (defmodel MultiHeadAttention (embedding-dim
