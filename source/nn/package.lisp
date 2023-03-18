@@ -9,13 +9,14 @@
    :MultiHeadAttention)
   (:export :linear
            :linearlayer
-	   :denselayer
-	   
+	   :denselayer)
+
+  (:export
            :dropout
            :batchnorm2d
 
            :embedding
-           :RNN   
+           :RNN
    
 	   :mse
 	   :softmax-cross-entropy
