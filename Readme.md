@@ -100,6 +100,7 @@ As of this writing:
 - Useful Lazy-Evaluation System
 - Tracing JIT
 - Extensible APIs
+- Switchable Backends
 
 ## Broadcasting.
 
@@ -452,12 +453,45 @@ Here's examples.
 			  (data (gethash i (self params)))))))
 ```
 
+## Switchable Backends
+
+See also: [Documentation](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#backends)
+
+Backends can be extended via `define-node-extensions.`
+
+```lisp
+; in ./t/node-extension.lisp
+(define-node-extension cl-waffe::AddTensor
+  :backend :my-extension
+  :forward ((x y)
+            (const (+ 100 100)))
+  :backward ((dy)
+             (list dy dy)))
+
+(defun operate-in-mgl ()
+  (with-backend :mgl
+    (= (data (!add 1 1)) 2)))
+
+(defun operate-in-extension ()
+  (with-backend :my-extension
+    (= (data (!add 1 1)) 200)))
+
+(defun operate-restart-test () ; if the operation doesn't exists...
+  (with-backend :does-not-exists
+    (= (data (!add 1 1)) 2)))
+```
+    
 # Usage
 
-Please clone this repository and register it as a local-project or just load `cl-waffe.asd`
+It is recommended to install following in advance:
 
-This framework is still **incomplete and experimental**, being not yet ready to register with Quicklisp etc..
+1. [SBCL](https://www.sbcl.org/)
+2. [Roswell](https://github.com/roswell/roswell)
+3. [Lake](https://github.com/takagi/lake)
 
+cl-waffe is available in one of the following ways:
+
+### Install via Github
 For Example:
 ```shell
 $ git clone git@github.com:hikettei/cl-waffe.git
@@ -467,7 +501,21 @@ $ sbcl
 * (ql:quickload :cl-waffe) ; all is done!
 ```
 
-[Lakefile](https://github.com/leanprover/lake) is available. (Also it requires [Roswell](https://github.com/roswell/roswell))
+### Install via Roswell
+
+```shell
+$ ros install hikettei/cl-waffe
+$ ros run
+* (ql:quickload :cl-waffe)
+```
+
+### Install via Ultralisp
+
+[ultralisp](https://ultralisp.org/) dist is available.
+
+# Lakefile
+
+[Lakefile](https://github.com/leanprover/lake) is available at github repository. (Also it requires [Roswell](https://github.com/roswell/roswell))
 
 ```shell
 $ lake
@@ -494,9 +542,9 @@ $ ./run-test-model.ros mnist
 # Currently Problems/Todo
 As of writing, I'm working on:
 
-- 破壊的代入のサポート(Support more destructive operations)
+- ~~破壊的代入のサポート(Support more destructive operations)~~(Done)
 - Neural Networkの追加 (Add cl-waffe.nn models)
-- IterationのBackwardを高速化 (Improve performance of RNN) (e.g.: the backward of (setf !aref) ...)
+- ~~IterationのBackwardを高速化 (Improve performance of RNN) (e.g.: the backward of (setf !aref) ...)~~ (Done)
 - モデルの保存に対応 (Save and restore trained models.)
 - グラフの表示に対応 (Plotting losses and so on)
 - 様々なデータ構造を扱えるように (Support more types of data structure)
@@ -505,6 +553,7 @@ As of writing, I'm working on:
 - CUDAに対応 (Support CUDA)
 - 他の処理系で動くか試す (Try on another systems (e.g.: CCL))
 - Improving the quality of documentation.
+
 # Goals
 
 - Making cl-waffe a modern and fast framework.
