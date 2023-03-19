@@ -101,11 +101,11 @@ See also: !init-with which is alias for !random-with.
   (!random-with dims f))
 
 
-(defun !normal (dims &optional (mean 2.0) (var 1.0))
+(defun !normal (dims &optional (mean 2.0) (stddev 1.0))
   "Initializes tensor with sample of standard distribution."
   (declare (type cons dims))
   (let* ((res (!zeros dims)))
-    (gaussian-random! (data res) :mean mean :stddev var)
+    (gaussian-random! (data res) :mean mean :stddev stddev)
     res))
 
 (defun !randn (dims)
@@ -120,3 +120,11 @@ Example:
 ;        (0.063... 0.607... ~ 0.460... 0.730...)) :mgl t :shape (10 10))
 @end[lang=lisp](code)"
   (!normal dims 0.0 1.0))
+
+(defun !uniform-random (dims &key (limit 1))
+  "Initializes tensor with sampling uniform random.
+
+The returned tensor is filled by random numbers 0<=x<limit"
+  (let ((res (!zeros dims)))
+    (uniform-random! (data res) :limit limit)
+    res))
