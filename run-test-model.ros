@@ -6,7 +6,7 @@ exec ros -Q -- $0 "$@"
 (progn ;;init forms
   (ros:ensure-asdf)
   (load "cl-waffe.asd")
-  #+quicklisp(ql:quickload '(lake cl-waffe cl-waffe/examples) :silent t))
+  #+quicklisp(ql:quickload '(cl-waffe cl-waffe/examples) :silent t))
 
 (defpackage :ros.script.cl-waffe-test.3881993727
   (:use :cl))

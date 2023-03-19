@@ -102,15 +102,10 @@ See also: !init-with which is alias for !random-with.
 
 
 (defun !normal (dims &optional (mean 2.0) (var 1.0))
-  "Init with normal distribution.
-
-Warning: Using mref and slow algorithm, @b(its sooo slow.)
-
-It is recommended to use !randn and transform it instead."
-  (let* ((res (!zeros dims))
-         (len (if (listp dims) (reduce #'* dims) dims)))
-    (loop for n from 0 to (1- len)
-          do (setf (!row-major-aref res n) (gaussiandb-random var mean)))
+  "Initializes tensor with sample of standard distribution."
+  (declare (type cons dims))
+  (let* ((res (!zeros dims)))
+    (gaussian-random! (data res) :mean mean :stddev var)
     res))
 
 (defun !randn (dims)
@@ -124,4 +119,4 @@ Example:
 ;                 ...
 ;        (0.063... 0.607... ~ 0.460... 0.730...)) :mgl t :shape (10 10))
 @end[lang=lisp](code)"
-  (!normal dims 0 1))
+  (!normal dims 0.0 1.0))
