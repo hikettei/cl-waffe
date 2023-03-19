@@ -154,8 +154,6 @@ split-size indicates the strides of each chunk, that is, @cl:param(tensor) will 
 
 split-size must be fixnum.
 
-Note: currently !split's backward returns error. this is because there's a room to optimize backward and until optimized them i wont make it.
-
 Alternatively, !aref, (setf !aref) is available.
 
 @begin(section)
