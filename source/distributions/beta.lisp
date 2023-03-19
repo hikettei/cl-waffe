@@ -31,7 +31,8 @@ where B(a,b)=∫1,0{x^a−1(1−x)^b−1}dx
 
   (declare (optimize (speed 3))
 	   (type cons dims)
-	   (type single-float alpha beta))
+	   (type single-float alpha beta)
+	   (inline !beta-bb !beta-bc))
   (let* ((a (min alpha beta))
  	 (b (max alpha beta))
 	 (result (!zeros dims))
@@ -59,7 +60,7 @@ where B(a,b)=∫1,0{x^a−1(1−x)^b−1}dx
 Algorithm: https://dl.acm.org/doi/pdf/10.1145/359460.359482
 
 Note: !beta excepts that @c((min a b) > 1)"
-  (declare (optimize (speed 3) (safety 0) (debug 0))
+  (declare (optimize (speed 3) (safety 0))
 	   (type single-float a0)
 	   (type (single-float 0e0) a b))
 
@@ -112,7 +113,7 @@ Note: !beta excepts that @c((min a b) > 1)"
 Algorithm: https://dl.acm.org/doi/pdf/10.1145/359460.359482
 
 Note: !beta excepts that @c((min a b) <= 1)"
-  (declare (optimize (speed 3) (safety 0) (debug 0))
+  (declare (optimize (speed 3) (safety 0))
 	   (type single-float a0)
 	   (type (single-float 0e0) a b))
 
@@ -122,8 +123,7 @@ Note: !beta excepts that @c((min a b) <= 1)"
   (let* ((alpha (+ a b))
   	 (beta  (/ b))
 	 (gamma (+ 1 a (- b)))
-	 (k1 (* gamma (+ 0.0138889 (* 0.0416667 b)) (/ (+ (* a b)
-							  -0.777778))))
+	 (k1 (* gamma (+ 0.0138889 (* 0.0416667 b)) (/ (+ (* a beta) -0.777778))))
 	 (k2 (+ 0.25 (* b (+ 0.5 (/ 0.258 gamma)))))
 	 (z  0.0)
 	 (y  0.0)
