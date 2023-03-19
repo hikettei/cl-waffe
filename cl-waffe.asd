@@ -1,8 +1,6 @@
 
 (in-package :cl-user)
 
-(ql:quickload :lparallel :silent t)
-
 (asdf:defsystem :cl-waffe
   :author "hikettei (Twitter:@icnhdm)"
   :licence "MIT"
@@ -11,12 +9,12 @@
   :source-control (:git "https://github.com/hikettei/cl-waffe.git")
   :pathname "source"
   :depends-on (#:numcl
-	       #:lake
 	       #:cl-ansi-text
 	       #:mgl-mat
 	       #:alexandria
 	       #:cl-cuda
 	       #:cl-libsvm-format
+	       #:lparallel
 	       #:inlined-generic-function
 	       #:trivial-garbage
 	       #:bordeaux-threads)
