@@ -90,6 +90,13 @@
 )
 @end(section)
 
+@begin(section)
+@title(!uniform-random)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !uniform-random)
+)
+@end(section)
+
 
 @begin(section)
 @title(!beta)

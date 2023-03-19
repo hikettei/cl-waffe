@@ -129,6 +129,7 @@
 	   #:!beta
 	   #:!gamma
 	   #:!chisquare
+	   #:!uniform-random
 	   #:!shape
 	   #:!dims
 	   #:!size

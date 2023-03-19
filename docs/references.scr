@@ -237,16 +237,16 @@ This package has:
 @link[uri="./operators.html#!random-with"](!random-with)
 
 
-@link[uri="./operators.html#!normal"](!normal)
-
-
-@link[uri="./operators.html#!randn"](!randn)
+@link[uri="./operators.html#!randn"](!uniform-random)
 
 @end(term)
 
 
 @def(Sampling Probability Distributions)
 @begin(term)
+@link[uri="./operators.html#!normal"](!normal)
+
+
 @link[uri="./operators.html#!randn"](!randn)
 
 
