@@ -1,7 +1,6 @@
 
 (in-package :cl-waffe)
 
-; To fix: Zero-division error.
 (defun !beta (dims alpha beta)
   "Initializes tensor with samples of beta distribution in a faster way.
 
@@ -43,7 +42,7 @@ where B(a,b)=∫1,0{x^a−1(1−x)^b−1}dx
       ; Todo For GPU.
       (loop for i fixnum upfrom 0 below size
 	    do (setf (aref array i)
-		     (if (> a 1)
+		     (if (>= a 1)
 			 (!beta-bb alpha a b)
 			 (!beta-bc alpha a b)))))
     result))
@@ -64,7 +63,7 @@ Note: !beta excepts that @c((min a b) > 1)"
 	   (type single-float a0)
 	   (type (single-float 0e0) a b))
 
-  (unless (> (min a b) 1.0)
+  (unless (>= (min a b) 1.0)
     (error "cl-waffe:!beta failed because of (min a b) > 1."))
 
   (let* ((alpha (+ a b))
@@ -131,43 +130,51 @@ Note: !beta excepts that @c((min a b) <= 1)"
 	 (w 0.0)
 	 (f t)
 	 (u1 0.0)
-	 (u2 0.0))
-    (declare (type single-float alpha beta gamma k1 k2 z y w v u1 u2))
+	 (u2 0.0)
+	 (lp t))
+    (declare (type single-float alpha beta gamma k1 k2 z y w v u1 u2)
+	     (type boolean lp f))
     
     (labels ((next ()
-	     (setq u1 (random 1.0))
-	     (setq u2 (random 1.0))
-	     (if (>= u1 0.5)
-		 (progn
-		   (setq z (* u1 u1 u2))
-		   (if (<= z 0.25)
-		       (progn
-			 (setq v (* beta
-				    (the single-float
-					 (log (the (single-float 0e0)
-						   (/ u1 (- 1 u1)))))))
-			 (setq w (* a (exp v)))
-			 nil)
-		       (if (>= z k2)
-			   t
-			   nil)))
-		 (progn
-		   (setq y (* u1 u2))
-		   (setq z (* u1 y))
-		   (if (>= (+ (* 0.225 u2) z (- y))
-			   k1)
-		       t
-		       nil)))))
+	       (setq lp t)
+	       (setq u1 (random 1.0))
+	       (setq u2 (random 1.0))
+	       (if (>= u1 0.5)
+		   (progn
+		     (setq z (* u1 u1 u2))
+		     (if (<= z 0.25)
+			 (progn
+			   (setq v (* beta
+				      (the single-float
+					   (- (log u1) (log (1+ (- u1)))))))
+			   (setq w (* a (exp v)))
+			   nil)
+			 (if (>= z k2)
+			     (progn
+			       (setq lp nil)
+			       t)
+			     t)))
+		   (progn
+		     (setq y (* u1 u2))
+		     (setq z (* u1 y))
+		     (if (>= (+ (* 0.25 u2) z (- y)) k1)
+			 (progn
+			   (setq lp nil)
+			   t)
+			 t)))))
 
       (loop while (and f (next))
-	    do (progn
-		 (setq v (* beta (log (the (single-float 0e0) (/ u1 (- 1 u1))))))
+	    do (when lp
+		 (setq v (* beta
+			    (the single-float
+				 (- (log u1) (log (1+ (- u1)))))))
 		 (setq w (* a (exp v)))
-
-		 (if (< (- (* alpha
-			      (log (the (single-float 0e0) (/ a (+ b w)))))
-			   1.3862944)
-			(log z))
+		 (if (>= (- (* alpha
+			       (+ v
+				  (log alpha)
+				  (- (log (1+ (+ b w))))))
+			    1.3862944)
+			 (log z))
 		     (setq f nil))))
 
       (if (= a a0)
