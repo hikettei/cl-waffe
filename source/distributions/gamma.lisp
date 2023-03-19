@@ -1,6 +1,7 @@
 
 (in-package :cl-waffe)
 
+; when 0<k<1, 
 ; when k>1, use ziggurat.
 
 (defun !gamma (dims k &optional (theta 1.0))
