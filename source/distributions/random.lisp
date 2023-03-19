@@ -124,7 +124,7 @@ Example:
 (defun !uniform-random (dims &key (limit 1))
   "Initializes tensor with sampling uniform random.
 
-The returned tensor is filled by random numbers [0, limit\)"
+The returned tensor is filled by random numbers 0<=x<limit"
   (let ((res (!zeros dims)))
     (uniform-random! (data res) :limit limit)
     res))
