@@ -1,6 +1,8 @@
 
 (in-package :cl-waffe)
 
+; when k>1, use ziggurat.
+
 (defun !gamma (dims k &optional (theta 1.0))
   "Initialize tensor with samples of gamma distribution.
 
