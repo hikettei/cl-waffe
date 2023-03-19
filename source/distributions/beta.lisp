@@ -42,7 +42,7 @@ where B(a,b)=∫1,0{x^a−1(1−x)^b−1}dx
       ; Todo For GPU.
       (loop for i fixnum upfrom 0 below size
 	    do (setf (aref array i)
-		     (if (>= a 1)
+		     (if (>= a 1.0) ; Bug: (!beta ~ 1.0 1.0)
 			 (!beta-bb alpha a b)
 			 (!beta-bc alpha a b)))))
     result))
