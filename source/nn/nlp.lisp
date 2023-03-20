@@ -91,11 +91,13 @@
 					   (or hs1 (!aref hs t w-i))))))
 		    (setf (nth w-i words) hs1))
 		  (dotimes (w-i (length words))
+		    (setq hs1 nil)
 		    (dotimes (rnn-i (self num-layers))
-		      (setq hs (call (self rnn-layers)
-				     (const rnn-i)
-				     (nth w-i words)
-				     hs)))
-		    (setf (nth w-i words) (!add 0.0 hs)))) ; This !add is intended to create a copy.
+		      (setq hs1 (call (self rnn-layers)
+				      (const rnn-i)
+				      (nth w-i words)
+				      (or hs1 (!aref hs t)))))
+		    (setf (!aref hs t) hs1)
+		    (setf (nth w-i words) hs1))) ; This !add is intended to create a copy.
 	      (call (self wo) (apply #'!concatenate 1 words)))))
 
