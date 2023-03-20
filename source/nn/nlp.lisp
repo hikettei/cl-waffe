@@ -72,7 +72,8 @@
 				     1
 				     ,(self hidden-size)))
 			   hs))
-		   (words))
+		   (words)
+		   (hs1))
 	      (loop for xn fixnum upfrom 0 below sentence-length
 		    do (push (!aref x t xn t) words))
 	      
@@ -81,18 +82,20 @@
 
 	      (if hs-specified?
 		  (dotimes (w-i (length words))
+		    (setq hs1 nil)
 		    (dotimes (rnn-i (self num-layers))
-		      (setq hs (setf (!aref hs t w-i)
-			    (call (self rnn-layers)
-				  (const rnn-i)
-				  (nth w-i words)
-				  (!aref hs t w-i)))))
-		    (setf (nth w-i words) (!aref hs t w-i)))
+		      (setq hs1 (setf (!aref hs t w-i)
+				     (call (self rnn-layers)
+					   (const rnn-i)
+					   (nth w-i words)
+					   (or hs1 (!aref hs t w-i))))))
+		    (setf (nth w-i words) hs1))
 		  (dotimes (w-i (length words))
 		    (dotimes (rnn-i (self num-layers))
 		      (setq hs (call (self rnn-layers)
 				     (const rnn-i)
 				     (nth w-i words)
 				     hs)))
-		    (setf (nth w-i words) (!add 0.0 hs)))) ; this `!add` is intended to make a copy.
+		    (setf (nth w-i words) (!add 0.0 hs)))) ; This !add is intended to create a copy.
 	      (call (self wo) (apply #'!concatenate 1 words)))))
+
