@@ -15,9 +15,12 @@
 				  :orthogonal
 				  hidden-size
 				  hidden-size))
-               (bias (if bias
-			 (parameter (!zeros `(1 ,hidden-size)))
-			 nil))
+               (bias1 (if bias
+			  (parameter (!zeros `(1 ,hidden-size)))
+			  nil))
+	       (bias2 (if bias
+			  (parameter (!zeros `(1 ,hidden-size)))
+			  nil))
 	       (dropout (if dropout
 			    (dropout dropout)
 			    nil))
@@ -27,11 +30,15 @@
   :forward ((x h)
 	    "x - x[t]
              h - h_prev"
-	    (let* ((h1 (!add (!matmul x (self weight))
-			     (!matmul h (self reccurent-weight))))
-		   (h1 (if (self bias)
-			   (!add h1 (self bias))
+	    (let* ((x1 (!matmul x (self weight)))
+		   (h1 (!matmul h (self reccurent-weight)))
+		   (x1 (if (self bias1)
+			   (!add x1 (self bias1))
+			   x1))
+		   (h1 (if (self bias2)
+			   (!add h1 (self bias2))
 			   h1))
+		   (h1 (!add x1 h1))
 		   (h1 (if (self dropout)
 			   (call (self dropout) h1)
 			   h1))
@@ -58,8 +65,7 @@
 					   :dropout dropout))))
 	       (num-layers num-layers :type fixnum)
 	       (hidden-size hidden-size :type fixnum)
-	       (biredical bidirectional :type boolean)
-	       (wo (linearlayer hidden-size hidden-size) :type linearlayer))
+	       (biredical bidirectional :type boolean))
   :forward ((x &optional (hs (const nil)))
 	    "Input: X = (BatchSize SentenceLength Embedding_Dim)
              Output (values x{t+1} h{t+1})"
@@ -96,7 +102,7 @@
 				     (nth w-i words)
 				     hs)))
 		    (setf (nth w-i words) hs)))
-	      (call (self wo) (apply #'!concatenate 1 words)))))
+	      (apply #'!concatenate 1 words))))
 
 
 (defmodel LSTMCell (input-size
