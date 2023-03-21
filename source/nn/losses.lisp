@@ -73,12 +73,12 @@ If y is labels, y is fixed to a probability distribution."
   (if (> (!dims x) (!dims y))
       ; When Given y is not a onehot.
       (!div (!mul -1
-		  (!mean (!mul (to-onehot x y epsilon)
+		  (!sum (!mul (to-onehot x y epsilon)
 			      (!log (!add x delta)))))
 	    (!div (!size x) (!shape x -1)))
       ; When Given y is a onehot.
       (!div (!mul -1
-		  (!mean (!mul y (!log (!add x delta)))))
+		  (!sum (!mul y (!log (!add x delta)))))
 	    (!div (!size x) (!shape x -1)))))
 
 (defnode SoftMaxCrossEntropy (&key (delta 1e-7) (avoid-overflow t))
