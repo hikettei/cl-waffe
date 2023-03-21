@@ -7,12 +7,8 @@
 			  (activation :tanh)
 			  (bias nil)
 			  (dropout nil))
-  :parameters ((weight (parameter (!!mul (!randn `(,input-size
-						   ,hidden-size))
-					 0.01)))
-	       (reccurent-weight (parameter
-				  (!!mul (!randn `(,hidden-size ,hidden-size))
-					 0.01)))
+  :parameters ((weight (init-weight `(,input-size ,hidden-size)))
+	       (reccurent-weight (init-weight `(,hidden-size ,hidden-size)))
                (bias (if bias
 			 (parameter (!zeros `(1 ,hidden-size)))
 			 nil))
@@ -72,9 +68,9 @@
 		   (words (!split x 1 :axis 1))
 		   (hs1))
 
-					; Nodes from x is correctly lazy-evaluated regardless of hs.
+	      ; Nodes from x is correctly lazy-evaluated regardless of hs.
 
-					; If bidirectional, W[n] -> W[n-1] -> ... -> W[1]
+	      ; If bidirectional, W[n] -> W[n-1] -> ... -> W[1]
 	      (unless (self biredical)
 		(setq words (reverse words)))
 

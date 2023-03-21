@@ -14,11 +14,11 @@ Input: x (Tensor) where the x is the shape of (batch-size in-features)
 Output: Applied tensor, where the tensor is the shape of (batch-size out-features)"
   :optimize t
   :parameters ((weight
-		(parameter (!mul 0.01 (!randn `(,in-features ,out-features))))
+		(init-weight `(,in-features ,out-features))
 		:type waffetensor)
-	      (bias (if bias
-			(parameter (!zeros `(1 ,out-features)))
-			nil)))
+	       (bias (if bias
+			 (parameter (!zeros `(1 ,out-features)))
+			 nil)))
   :forward ((x)
 	    (cl-waffe.nn:linear x (self weight) (self bias))))
 
