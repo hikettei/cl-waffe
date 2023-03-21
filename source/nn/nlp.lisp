@@ -4,15 +4,15 @@
 (defmodel RNNHiddenLayer (input-size
 			  hidden-size
 			  &key
-			  (activation :relu)
+			  (activation :tanh)
 			  (bias nil)
 			  (dropout nil))
-  :parameters ((weight (parameter (!div (!randn `(,input-size
+  :parameters ((weight (parameter (!!mul (!randn `(,input-size
 						  ,hidden-size))
-					(sqrt hidden-size))))
+					 0.01)))
 	       (reccurent-weight (parameter
-				  (!div (!randn `(,hidden-size ,hidden-size))
-					(sqrt hidden-size))))
+				  (!!mul (!randn `(,hidden-size ,hidden-size))
+					 0.01)))
                (bias (if bias
 			 (parameter (!zeros `(1 ,hidden-size)))
 			 nil))
@@ -23,6 +23,8 @@
 			       activation
 			       (error "cl-waffe.nn.RNNHiddenLayer: available activations are following: :tanh :relu, but got ~a" activation))))
   :forward ((x h)
+	    "x - x[t]
+             h - h_prev"
 	    (let* ((h1 (!add (!matmul x (self weight))
 			     (!matmul h (self reccurent-weight))))
 		   (h1 (if (self bias)
@@ -32,15 +34,15 @@
 			   (call (self dropout) h1)
 			   h1))
 		   (h1 (case (self activation)
-			   (:tanh (!tanh h1))
-			   (:relu (!relu h1)))))
+			 (:tanh (!tanh h1))
+			 (:relu (!relu h1)))))
 	      h1)))
 
 (defmodel RNN (input-size
 	       hidden-size
 	       &key
 	       (num-layers 1)
-	       (activation :relu)
+	       (activation :tanh)
 	       (bias nil)
 	       (dropout nil)
 	       (bidirectional nil))
@@ -91,6 +93,6 @@
 				     (const rnn-i)
 				     (nth w-i words)
 				     hs)))
-		    (setf (nth w-i words) (!add 0.0 hs)))) ; This !add is intended to create a copy.
+		    (setf (nth w-i words) hs)))
 	      (call (self wo) (apply #'!concatenate 1 words)))))
 
