@@ -68,7 +68,7 @@ Using dummy data, i will get assure activation and optimizers are working well.
 (define-test-trainer Trainer5 cl-waffe.optimizers:Adam 1e-3 :tanh)
 (define-test-trainer Trainer6 cl-waffe.optimizers:Adam 1e-3 :sigmoid)
 (define-test-trainer Trainer7 cl-waffe.optimizers:Adam 1e-3 #'!leakey-relu)
-(define-test-trainer Trainer8 cl-waffe.optimizers:Adam 1e-3 #'!gelu)
+(define-test-trainer Trainer8 cl-waffe.optimizers:Adam 1e-4 #'!gelu)
 (define-test-trainer Trainer9 cl-waffe.optimizers:Adam 1e-3 #'!swish)
 
 (test test-training
