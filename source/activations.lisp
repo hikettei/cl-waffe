@@ -51,7 +51,7 @@ Output: Tensor"
 	    (save-for-backward xi x)
 	    (with-searching-calc-node :tanh x))
   :backward ((dy)
-	     (list (!mul dy (!sub (const 1) (!pow (!tanh (self xi)) 2))))))
+	     (list (!mul dy (!div 1 (!pow (!cosh (self xi)) 2))))))
 
 (defun !tanh (x)
   "Applying tanh to x, return a new sysconst with making nodes."
