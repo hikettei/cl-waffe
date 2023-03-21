@@ -10,14 +10,13 @@
   (:export :linear
            :linearlayer
 	   :denselayer)
+  (:export :RNN
+	   :LSTM)
 
   (:export
            :dropout
            :batchnorm2d
-
            :embedding
-           :RNN
-   
 	   :mse
 	   :softmax-cross-entropy
            :cross-entropy))
