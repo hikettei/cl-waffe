@@ -30,11 +30,12 @@ Output: Tensor"
   :optimize t
   :parameters ((xi T))
   :forward ((x)
-	    (save-for-backward xi x)
-            (!div (!add 1 (!tanh (!div x 2)))
-		  (const 2)))
-  :backward ((dy) (let ((p (!sigmoid (self xi))))
-		    (list (!mul p (!mul dy (!sub 1 p)))))))
+	    (let ((result (!!div 1 (!!add (!!exp (!mul -1 x)) 1))))
+	      (save-for-backward xi result)
+	      result))
+  :backward ((dy) (list (!mul dy
+			      (!mul (self xi)
+				    (!sub 1 (self xi)))))))
 
 (defun !sigmoid (x)
   "Applyong sigmoid to x, return a new sysconst with making nodes.
