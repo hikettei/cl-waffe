@@ -7,7 +7,7 @@
 	       (padding-idx padding-idx))
   :forward ((x weights)
 	    (save-for-backward xi x)
-	    (save-for-backward weights weights)
+	    (setf (self weights) weights)
 	    (with-searching-calc-node :embedding-forward
 	      x
 	      weights
@@ -18,7 +18,7 @@
 			 dy
 			 (self weights)
 			 (self padding-idx))))
-	       (list dx ; x is supposed to be const, so usually not used.
+	       (list (const nil) ; x is supposed to be const, so usually not used.
 		     dx))))
 
 (defmodel Embedding (vocab-size
