@@ -35,7 +35,7 @@ Testing defnode and its features
   :backward ((dy) (list dy)))
 
 ; testing side effects never apparented.
-(defun test-model1 ()
+(defun test-model-1 ()
   (let ((a (!randn `(10 10))))
     (not (M= (data a) (value (call (TestModel1) a))))))
 
@@ -195,7 +195,7 @@ defnode内部のdefnode
 |#
 
 (test save-for-backward-test
-      (is (test-model1))
+      (is (test-model-1))
       (is (test-save-for-backward))
       (is (test-save-for-backward1))
       (is (test-save-for-backward2))
