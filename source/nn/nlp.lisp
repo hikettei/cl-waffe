@@ -7,12 +7,12 @@
 			  (activation :tanh)
 			  (bias nil)
 			  (dropout nil))
-  :parameters ((weight (init-activation-weights
-			activation
+  :parameters ((weight (init-weights
+			:orthogonal
 			input-size
 			hidden-size))
-	       (reccurent-weight (init-activation-weights
-				  activation
+	       (reccurent-weight (init-weights
+				  :orthogonal
 				  hidden-size
 				  hidden-size))
                (bias (if bias

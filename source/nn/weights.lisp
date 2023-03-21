@@ -9,7 +9,9 @@
     :xavier-uniform,
 
     :He
-    :normal")
+    :normal
+
+    :orthogonal")
 
 (defun select-initializer (activation)
   "Returns a property initialization method depending on activation. (Todo: More)"
@@ -42,6 +44,9 @@
        (parameter (!!mul (!randn dim) (sqrt (/ 2.0 in-features)))))
       (:normal
        (parameter (!normal dim 0 0.1)))
+      (:orthogonal
+       (let ((result (!zeros dim)))
+	 (parameter (const (mgl-mat:orthogonal-random! (data result) :scale 1.01)))))
       (T
        ; Todo: if *weight-initializer* is a function, call it.
        (error "cl-waffe.nn:init-weights: unknown weight initializer ~a" (or method *weight-initializer*))))))
