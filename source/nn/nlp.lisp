@@ -179,9 +179,6 @@
 					 (nth w-i words)
 					 hs
 					 cs))
-		      (print result)
-		      (print cs)
-		      (print hs)
 		      (setq hs (car result))
 		      (setq cs (second result)))
 		    (setf (nth w-i words) hs)))
