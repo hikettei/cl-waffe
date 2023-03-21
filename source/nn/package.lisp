@@ -8,7 +8,10 @@
    :ScaleDotProductAttention
    :MultiHeadAttention)
   (:export
-   :*weight-initializer*)
+   :*weight-initializer*
+   :init-weights
+   :select-initializer
+   :init-activation-weights)
   (:export :linear
            :linearlayer
 	   :denselayer)

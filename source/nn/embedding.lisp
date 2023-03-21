@@ -36,7 +36,7 @@
 				(const pad-idx)
 				(const -1))
 			    :type waffetensor)
-	       (weights (init-weight `(,vocab-size, embedding-dim))))
+	       (weights (init-weights :normal vocab-size embedding-dim)))
   :forward ((x)
 	    "Embedding(x) where x is the shape of (batch-size length)"
 	    (call (EmbeddingTensor (self padding-idx))

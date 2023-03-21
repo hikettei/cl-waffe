@@ -7,8 +7,14 @@
 			  (activation :tanh)
 			  (bias nil)
 			  (dropout nil))
-  :parameters ((weight (init-weight `(,input-size ,hidden-size)))
-	       (reccurent-weight (init-weight `(,hidden-size ,hidden-size)))
+  :parameters ((weight (init-activation-weights
+			activation
+			input-size
+			hidden-size))
+	       (reccurent-weight (init-activation-weights
+				  activation
+				  hidden-size
+				  hidden-size))
                (bias (if bias
 			 (parameter (!zeros `(1 ,hidden-size)))
 			 nil))
