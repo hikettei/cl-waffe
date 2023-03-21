@@ -19,17 +19,28 @@
 
 (defun to-onehot (ps vec epsilon)
   "ps ... an tensor of possibilites, vec = labels epsilon=for smooth labeling."
-  (declare (optimize (speed 3)))
-  (with-no-grad
-    (let ((result (!zeros (!shape ps))))
-      (loop for batch fixnum upfrom 0 below (!shape ps 0)
-	    do (loop for i fixnum upfrom 0 below (!shape ps 1)
-		     do (let ((classes (mat-labels
-					ps
-					(!aref vec batch i)
-					epsilon)))
-			  (setf (!aref result batch i) classes))))
-    result)))
+  (declare (optimize (speed 3) (safety 0))
+	   (type single-float epsilon))
+
+  (if (= (!dims vec) 1)
+      (with-no-grad
+	(let ((result (!zeros (!shape ps))))
+	  (loop for batch fixnum upfrom 0 below (!shape ps 0)
+		do (setf (!aref result batch)
+			 (let ((mlabel (!fill `(,(!shape ps 1)) (- 1 epsilon))))
+			   (setf (!aref mlabel (assure-fixnum (mgl-mat:mat-as-scalar (data (!aref vec batch))))) (!fill `(1) epsilon))
+			   mlabel)))
+	  result))
+      (with-no-grad
+	(let ((result (!zeros (!shape ps))))
+	  (loop for batch fixnum upfrom 0 below (!shape ps 0)
+		do (loop for i fixnum upfrom 0 below (!shape ps 1)
+			 do (let ((classes (mat-labels
+					    ps
+					    (!aref vec batch i)
+					    epsilon)))
+			      (setf (!aref result batch i) classes))))
+	  result))))
 
 (defun mse (p y)
   "Computes MSE Loss.
@@ -78,7 +89,7 @@ If y is labels, y is fixed to a probability distribution."
 	    (save-for-backward target y)
 	    (let ((z (!softmax x :avoid-overflow (self avoid-overflow))))
 	      (save-for-backward out z)
-	      (cross-entropy z y (self delta))))
+	      (with-no-grad (cross-entropy z y (self delta)))))
   :backward ((dy)
 	     (let* ((z (!sub (self out) (self target)))
 		    (dx (!mul dy (!div z (self batch-size)))))

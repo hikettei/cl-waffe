@@ -10,6 +10,7 @@
 	   #:calc-data-size
 	   #:collect-tokens
 	   #:init-train-datum
+	   #:with-open-kftt-file
 	   #:vector2word))
 
 (in-package :kftt-data-parser)

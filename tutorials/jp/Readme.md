@@ -20,7 +20,7 @@ Common Lispは初めてですか？その場合まずは`./Install-Environments.
 5. [確率分布のサンプリング](https://github.com/hikettei/cl-waffe/blob/main/tutorials/jp/Distributions.ipynb)
 6. 標準の活性化関数など
 7. MNIST
-8. [RNNを用いたSeq2Seqの実装 言語検知](https://github.com/hikettei/cl-waffe/blob/update-tutorials/tutorials/jp/RNN.ipynb)
+8. [Seq2Seqを用いた翻訳モデル](https://github.com/hikettei/cl-waffe/blob/update-tutorials/tutorials/jp/RNN.ipynb)
 9. [Transformer (動くかなぁ〜)](https://github.com/hikettei/cl-waffe/blob/update-tutorials/tutorials/jp/Transformer.ipynb)
 
 ## 番外編

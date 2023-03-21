@@ -7,17 +7,21 @@
   (:export
    :ScaleDotProductAttention
    :MultiHeadAttention)
+  (:export
+   :*weight-initializer*
+   :init-weights
+   :select-initializer
+   :init-activation-weights)
   (:export :linear
            :linearlayer
 	   :denselayer)
+  (:export :RNN
+	   :LSTM)
 
   (:export
            :dropout
            :batchnorm2d
-
            :embedding
-           :RNN
-   
 	   :mse
 	   :softmax-cross-entropy
            :cross-entropy))

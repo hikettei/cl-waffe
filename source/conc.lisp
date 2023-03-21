@@ -4,28 +4,49 @@
 (defnode ConcatenateTensorNode (axis)
   :optimize t
   :parameters ((axis axis :type fixnum)
-	       (shape t))
+	       (shape t)
+	       (arg-size 0 :type fixnum))
   :forward ((&rest tensors)
 	    (let ((first-shape (the list (!shape (car tensors)))))
-	      (loop for i fixnum upfrom 0 below (length tensors)
+	      #|(loop for i fixnum upfrom 0 below (length tensors)
 		    unless (equal first-shape (the list (!shape (nth i tensors))))
-		      do (error "cl-waffe.stack!: all tensors must be consisted of the same shapes, but got ~a. excepted:~a" (nth i tensors) first-shape))
+		      do (unless (= (the fixnum
+					 (!shape (nth i tensors) (self axis)))
+				    (the fixnum
+					 (nth (self axis) first-shape)))
+			   (error "cl-waffe.stack!: all tensors must be consisted of the same shapes, but got ~a. excepted:~a" (nth i tensors) first-shape)))|#
 	      (let* ((result-shape
 		       (loop for i fixnum
 			     upfrom 0
 			       below (length first-shape)
 			     if (= i (self axis))
-			       collect (the fixnum (* (the fixnum (length tensors)) (the fixnum (nth i first-shape))))
+			       collect (apply #'+
+					      (map 'list #'(lambda (tensor)
+							     (!shape tensor i))
+						   tensors))
 			     else
 			       collect (nth i first-shape)))
 		     (result (!zeros result-shape)))
-		(setf (self shape) (!shape (car tensors) (self axis)))
+		(setf (self shape)
+		      (map 'list #'(lambda (x)
+				     (!shape x (self axis)))
+			   tensors))
+		(setf (self arg-size) (length (the list tensors)))
 		(stack! (self axis)
 			(map 'list #'value tensors)
 			(data result))
 		result)))
   :backward ((dy)
-	     (!split dy (self shape) :axis (self axis))))
+	     (let ((count 0)
+		   (tmp-areas (loop for i fixnum upfrom 0 below (self axis)
+				    collect t)))
+	       (loop for i fixnum upfrom 0 below (self arg-size)
+		     collect (apply
+			      #'%saref
+			      nil
+			      dy
+			      `(,@tmp-areas
+				(,count ,(nth i (self shape)))))))))
 
 (defmodel SplitTensorNode (split-size axis)
   :parameters ((split-size split-size :type fixnum)
@@ -152,7 +173,7 @@ Note: Currently, when unsqueezing given tensors, !stack creates copies every tim
 
 split-size indicates the strides of each chunk, that is, @cl:param(tensor) will be split into equalliy size of @cl:param(split-size).
 
-split-size must be fixnum.
+split-size must be fixnum.rr
 
 Alternatively, !aref, (setf !aref) is available.
 
