@@ -25,11 +25,17 @@ Here's Mathematical Functions and Utils:
 		      x))
 	      (z (!sum (!exp x1) 1)))
 	 (!!div (!exp x1) z)))
-    (3 (let* ((result (!zeros (!shape x)))) ; For batched inputs
-	 (dotimes (i (the fixnum (!shape x 0)))
-	   (setq result (setf (!aref result i)
-			      (!softmax-function (!squeeze (!aref x i) 0)))))
-	 result))
+    (3 (let* ((xs (!split x 1 :axis 0)))
+	 ; Todo: Make here destructive.
+	 (apply
+	  #'!concatenate
+	  0
+	  (map 'list #'(lambda (tensor)
+			 (!unsqueeze
+			  (!softmax-function
+			   (!squeeze tensor 0)
+			   :avoid-overflow avoid-overflow)))
+	       xs))))
     (T (error "!softmax: Not implemented. softmax only supports where (!dims tensor) <= 3."))))
 
 (defmodel SoftMaxNode (avoid-overflow)

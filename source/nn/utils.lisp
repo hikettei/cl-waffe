@@ -18,7 +18,7 @@
 		x
 		(progn
 		  (!modify (self mask) :bernoulli (self dropout-rate))
-		  (!modify (!mul (self mask) x) :*= (/ 1 (- 1 (self dropout-rate)))))))
+		  (!modify (!mul (self mask) x) :*= (/ 1 (- 1 (the single-float (self dropout-rate))))))))
 
   :backward ((dy)
 	     (list (!mul (self mask) dy))))

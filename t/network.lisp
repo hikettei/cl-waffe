@@ -45,6 +45,15 @@
     (time (backward (!sum out)))
     (grad i)))
 
+(defun test-model1 (model input)
+  (format t "~%Running test forward and backward of ~a~%" model)
+  (format t "~%Calling Forward:~%")
+  (let* ((i (parameter input))
+	 (out (time (call model i))))
+    (format t "~%Calling Backward:~%")
+    (time (backward (!sum out)))
+    (grad (cl-waffe.nn::embedding-weights model))))
+
 (defmodel Encoder (vocab-size embedding-dim hidden-size)
   :parameters ((embedding (Embedding vocab-size embedding-dim :pad-idx 0))
                (layer     (RNN embedding-dim hidden-size :num-layers 1)))
@@ -125,7 +134,7 @@
       (is (test-model batchnorm2d x)))
 
 (test nlp-test
-      (is (test-model embedding (parameter (!ones `(10 10)))))
+      (is (test-model1 embedding (!ones `(10 10))))
       (is (test-model rnn1 words))
       (is (test-model rnn2 words))
       (is (embedding-and-rnn-test)))
