@@ -69,6 +69,7 @@
 	       (:module "nn"
 		:depends-on ("model")
 		:components ((:file "package")
+			     (:file "weights")
 			     (:file "utils")
 			     (:file "losses")
 			     (:file "attention")
