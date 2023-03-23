@@ -6,6 +6,8 @@ Here's
 Utils for defnode/defmodel/defoptimizer
 |#
 (defparameter *in-node-method* nil)
+(defparameter *model-arg-max-displaying-size* 20 "")
+
 (defparameter *restart-non-exist-backend* t
   "When t, in the case when the specified backend doesn't exist, cl-waffe calls a standard implementation backend")
 
@@ -726,9 +728,28 @@ the object-type indicates the type of document format."
 	     (type-of model)
 	     (slot-value model 'cl-waffe::model-ident)))
     (:model
-     (format stream "[Model: ~a :ident {~a}]"
+     (format stream "<Model: ~a{~a}("
 	     (type-of model)
-	     (slot-value model 'cl-waffe::model-ident)))
+	     (slot-value model 'cl-waffe::model-ident))
+     (when (not (= (length (slot-value model 'cl-waffe::parameters)) 0))
+       (format stream "~%")
+       (dolist (param (slot-value model 'cl-waffe::parameters))
+	 (let ((val (slot-value model param)))
+	   (cond
+	     ((is-waffe-model val)
+	      (format stream "    <Model: ~a{~a} ...>~%"
+		      (type-of val)
+		      (slot-value val 'model-ident)))
+	     (T
+	      (format stream "    ~a : ~a~%"
+		      param
+		      (let ((seq (format nil "~a" val)))
+			(concatenate 'string
+				     (subseq seq 0 (min *model-arg-max-displaying-size* (length seq)))
+				     (if (<= (length seq) *model-arg-max-displaying-size*)
+					 ""
+					 "...")))))))))
+     (format stream ")>"))
     (:optimizer
      (format stream "<<Optimizer: ~a :ident {~a}>>"
 	     (type-of model)
