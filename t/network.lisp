@@ -81,6 +81,8 @@
 	      (setq y1 (setf (!aref y1 t) (!aref y '(1 t))))
 	      (call (self decoder) x-state y1))))
 
+(print-model (seq2seq 100 256 100))
+
 (defun embedding-and-rnn-test ()
   (format t "~%Running Seq2Seq(RNN)~%")
   (let* ((model (Seq2Seq 2 16 10))
