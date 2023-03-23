@@ -737,7 +737,8 @@ the object-type indicates the type of document format."
 	 (let ((val (slot-value model param)))
 	   (cond
 	     ((is-waffe-model val)
-	      (format stream "    <Model: ~a{~a} ...>~%"
+	      (format stream "    <Model: ~a -> ~a{~a} ...>~%"
+		      param
 		      (type-of val)
 		      (slot-value val 'model-ident)))
 	     (T
