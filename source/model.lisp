@@ -328,7 +328,7 @@ Example:
 @end[lang=lisp](code)"
 
   (if (null backward)
-      (error "cl-waffe.defnode: backward slot must be fullfilled."))
+      (warn "The backward slot of ~a is undefined, which returns nil without cl-waffe being noticed." (symbol-name name)))
   
   `(defobject ,name ,args
      :parameters ,parameters
@@ -666,17 +666,15 @@ When regard-as-node is nil, the forward and backward is defined as the node.
 the object-type indicates the type of document format."
   (labels ((assure-args (x)
 	     (declare (type symbol x))
-	     (if (or (equal (symbol-name x) "forward")
-		     (equal (symbol-name x) "backward")
-		     (equal (symbol-name x) "hide-from-tree")
-		     (equal (symbol-name x) "parameters")
-		     (equal (symbol-name x) "model-ident")
-		     (equal (symbol-name x) "object-type")
-		     (equal (symbol-name x) "self"))
-		 (error "cl-waffe.defobject: the name ~a is not allowed to use as a parameter" (symbol-name x))
+	     (if (or (equal (symbol-name x) "FORWARD")
+		     (equal (symbol-name x) "BACKWARD")
+		     (equal (symbol-name x) "HIDE-FROM-TREE")
+		     (equal (symbol-name x) "PARAMETERS")
+		     (equal (symbol-name x) "MODEL-IDENT")
+		     (equal (symbol-name x) "OBJECT-TYPE")
+		     (equal (symbol-name x) "SELF"))
+		 (invaild-slot-error (symbol-name x) object-type)
 		 x)))
-    (unless forward
-      (error ":forward slot is need to be fulfilled. When defining Model [~a]" name))
 
     (let* ((document (eval document))
 	   (doc-output (typecase document
@@ -684,6 +682,10 @@ the object-type indicates the type of document format."
 			(waffeobjectusage
 			 (build-docstring document object-type))
 			(T "None"))))
+
+      (when (null forward)
+	(warn "The forward slot of ~a is undefined, which returns nil without cl-waffe noticing."
+	      (symbol-name name)))
 
       `(progn
 	   (defstruct (,name
@@ -981,7 +983,7 @@ the object-type indicates the type of document format."
 	    (if (= indent-level 0)
 		(progn
 		  (format stream "")))))
-					;in the end of model
+	  ;in the end of model
       (labels ((indent-with ()
 		 (dotimes (_ (+ indent-level *initial-indent-size*))
 		   (format stream " "))))
