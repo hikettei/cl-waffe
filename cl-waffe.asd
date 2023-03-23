@@ -41,6 +41,7 @@
 	       (:file "utils")
 	       (:file "conditions")
 	       (:file "model" :depends-on ("tensor"))
+	       (:file "dtype")
 	       (:file "tensor")
 	       (:file "distributions/random")
 	       (:file "distributions/distribution")
