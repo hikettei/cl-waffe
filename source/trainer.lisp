@@ -191,8 +191,10 @@ Input: Trainer, Args"
     (call (TrainerInputLayer #'predict-lambda))))
 
 (defun print-dataset (trainer stream _)
-  (declare (ignore trainer _))
-  (format stream "[Dataset of ___]"))
+  (declare (ignore _))
+  (format stream "<Dataset: ~a :size ~a>"
+	  (type-of trainer)
+	  (get-dataset-length trainer)))
 
 (defmacro defdataset (name args &key parameters next length (document "An dataset structure defined by cl-waffe."))
   "Defining dataset. (This is kinda pytorch's dataloader)

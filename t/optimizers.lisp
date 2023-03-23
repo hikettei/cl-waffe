@@ -26,6 +26,8 @@ Using dummy data, i will get assure activation and optimizers are working well.
  	      (layer2 x)
 	      (layer3 x))))
 
+(print-model (MLP :tanh))
+
 (defmacro define-test-trainer (name optim lr activation)
   `(progn
    (deftrainer ,name nil
@@ -45,6 +47,7 @@ Using dummy data, i will get assure activation and optimizers are working well.
 
 (defun test-for (trainer &optional (niter 3))
   (let ((losses nil))
+    (print (slot-value trainer 'cl-waffe::optimizer))
     ; iterate for epoch
     (dotimes (epoch niter)
       (!reset-batch train)

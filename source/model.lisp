@@ -6,6 +6,8 @@ Here's
 Utils for defnode/defmodel/defoptimizer
 |#
 (defparameter *in-node-method* nil)
+(defparameter *model-arg-max-displaying-size* 20 "")
+
 (defparameter *restart-non-exist-backend* t
   "When t, in the case when the specified backend doesn't exist, cl-waffe calls a standard implementation backend")
 
@@ -326,7 +328,7 @@ Example:
 @end[lang=lisp](code)"
 
   (if (null backward)
-      (error "cl-waffe.defnode: backward slot must be fullfilled."))
+      (warn "The backward slot of ~a is undefined, which returns nil without cl-waffe being noticed." (symbol-name name)))
   
   `(defobject ,name ,args
      :parameters ,parameters
@@ -664,17 +666,15 @@ When regard-as-node is nil, the forward and backward is defined as the node.
 the object-type indicates the type of document format."
   (labels ((assure-args (x)
 	     (declare (type symbol x))
-	     (if (or (equal (symbol-name x) "forward")
-		     (equal (symbol-name x) "backward")
-		     (equal (symbol-name x) "hide-from-tree")
-		     (equal (symbol-name x) "parameters")
-		     (equal (symbol-name x) "model-ident")
-		     (equal (symbol-name x) "object-type")
-		     (equal (symbol-name x) "self"))
-		 (error "cl-waffe.defobject: the name ~a is not allowed to use as a parameter" (symbol-name x))
+	     (if (or (equal (symbol-name x) "FORWARD")
+		     (equal (symbol-name x) "BACKWARD")
+		     (equal (symbol-name x) "HIDE-FROM-TREE")
+		     (equal (symbol-name x) "PARAMETERS")
+		     (equal (symbol-name x) "MODEL-IDENT")
+		     (equal (symbol-name x) "OBJECT-TYPE")
+		     (equal (symbol-name x) "SELF"))
+		 (invaild-slot-error (symbol-name x) object-type)
 		 x)))
-    (unless forward
-      (error ":forward slot is need to be fulfilled. When defining Model [~a]" name))
 
     (let* ((document (eval document))
 	   (doc-output (typecase document
@@ -682,6 +682,10 @@ the object-type indicates the type of document format."
 			(waffeobjectusage
 			 (build-docstring document object-type))
 			(T "None"))))
+
+      (when (null forward)
+	(warn "The forward slot of ~a is undefined, which returns nil without cl-waffe noticing."
+	      (symbol-name name)))
 
       `(progn
 	   (defstruct (,name
@@ -726,53 +730,260 @@ the object-type indicates the type of document format."
 	     (type-of model)
 	     (slot-value model 'cl-waffe::model-ident)))
     (:model
-     (format stream "[Model: ~a :ident {~a}]"
+     (format stream "<Model: ~a{~a}("
 	     (type-of model)
-	     (slot-value model 'cl-waffe::model-ident)))
+	     (slot-value model 'cl-waffe::model-ident))
+     (when (not (= (length (slot-value model 'cl-waffe::parameters)) 0))
+       (format stream "~%")
+       (dolist (param (slot-value model 'cl-waffe::parameters))
+	 (let ((val (slot-value model param)))
+	   (cond
+	     ((is-waffe-model val)
+	      (format stream "    <Model: ~a -> ~a{~a} ...>~%"
+		      param
+		      (type-of val)
+		      (slot-value val 'model-ident)))
+	     (T
+	      (format stream "    ~a : ~a~%"
+		      param
+		      (let ((seq (format nil "~a" val)))
+			(concatenate 'string
+				     (subseq seq 0 (min *model-arg-max-displaying-size* (length seq)))
+				     (if (<= (length seq) *model-arg-max-displaying-size*)
+					 ""
+					 "...")))))))))
+     (format stream ")>"))
     (:optimizer
-     (format stream "<<Optimizer: ~a :ident {~a}>>"
+     (format stream "<Optimizer: ~a{~a}~%"
 	     (type-of model)
-	     (slot-value model 'cl-waffe::model-ident)))
+	     (slot-value model 'cl-waffe::model-ident))
+     (let ((total-param 0))
+       (dolist (param (slot-value model 'cl-waffe::parameters))
+	 (let ((val (slot-value model param)))
+	   (typecase val
+	     (hash-table
+	      (dotimes (i (hash-table-count val))
+		(typecase (gethash i val)
+		  (waffetensor
+		   (incf total-param (!size (gethash i val))))
+		  (mat
+		   (incf total-param (mat-size (gethash i val))))
+		  (T nil)))
+	      (format stream "    Param: ~a~%" val))
+	     (T
+	      (format stream "    ~a : ~a~%"
+		      param
+		      (let ((seq (format nil "~a" val)))
+			(concatenate 'string
+				     (subseq seq 0 (min *model-arg-max-displaying-size* (length seq)))
+				     (if (<= (length seq) *model-arg-max-displaying-size*)
+					 ""
+					 "..."))))))))
+       (format stream "    [Total Param]: ~a~%>" total-param)))
     (T
      (format stream "[OBJECT: ~a {~a}]"
 	     (type-of model)
 	     (slot-value model 'cl-waffe::model-ident)))))
 
-(defun print-model (model)
-  (fresh-line)
-  (render-model-structure t model))
+(defun print-model (model &optional (stream t))
+  (format stream "~%")
+  (let ((*total-param-size* 0))
+    (render-model-structure stream model)
+    (format stream "~% -(+) Total Param: ~a" *total-param-size*)
+    nil))
+
+(defun trim-string (str max-length)
+  (concatenate 'string
+	       (subseq str 0 (min (length str) max-length))
+	       (if (< max-length (length str))
+		   "..."
+		   "")))
+
+(defun trim-string1 (str max-length)
+  (concatenate 'string
+	       (subseq str 0 (min (length str) max-length))
+	       (if (< max-length (length str))
+		   ".."
+		   "")))
+
+(defun build-table-content (table-size value &key (end-with "|") (space "_"))
+  (let* ((string-to-display (format nil "~a" value))
+	 (size (length string-to-display))
+	 (tsize (- table-size 1)))
+    "min(table-size) = 5"
+    (with-output-to-string (out)
+      (cond
+	((> size (- table-size 2))
+	 ; needs to be trimmed.
+	 (format out "~a"
+		 (let* ((result
+			  (trim-string1
+			   string-to-display
+			   (- table-size 4))))
+		   result)))
+			
+	(T
+	 (let ((displacement
+		 (round (- (/ tsize 2) (/ (length string-to-display) 2)))))
+	   (dotimes (i (1- displacement)) ; first=|
+	     (format out space))
+	   (format out string-to-display)
+	   (dotimes (i (max 0
+			    (- tsize
+				   (+ (length string-to-display)
+				      displacement))))
+	     (format out space)))))
+      (format out end-with)
+      out)))
 
 (defparameter *initial-indent-size* 4)
+(defparameter *total-param-size* 0)
 
-(defun render-model-structure (stream model &optional (indent-level 0) (total-param 0) (model-name "Model") (indent-increase 4) (prefix "Param"))
+(defun render-model-structure (stream model
+			       &optional
+				 (indent-level 0)
+				 (total-param 0)
+				 (model-name "Model")
+				 (indent-increase 4)
+				 (prefix "Param")
+				 (node-points nil))
   ; Todo: More Details
-  (if (and (slot-exists-p model 'parameters)
-	   (slot-exists-p model 'hide-from-tree)
-	   (slot-exists-p model 'forward)
-	   (slot-exists-p model 'backward))
+
+  (if (is-waffe-model model)
       (if (typep (slot-value model 'parameters) 'list)
 	  (labels ((indent-with (code &optional (space NIL))
-		     (dotimes (_ (+ indent-level (if space *initial-indent-size* 0)))
-		       (format stream code))))
+		     (dotimes (nth (+ indent-level (if space *initial-indent-size* 0)))
+		       (if (find nth node-points)
+			   (format stream code)
+			   (format stream code)))))
 	    (indent-with "–")
-	    (format stream "––– {~a (~a)}~C" model-name (type-of model) #\newline)
-	    (indent-with " " T)
-	    (format stream "Input Shape : ( None )~C" #\newline)
-	    (indent-with " " T)
-	    (format stream "Output Shape: ( None )~C" #\newline)
-	    (indent-with " " T)
-	    (format stream "Params      : ( None )~C" #\newline)
-	    (dotimes (i (length (slot-value model 'parameters)))
-	      (let ((p (case i
-			 (0 "Input ")
-			 ;((1- (length (slot-value model 'parameters))) "Param ")
-			 (T "Param ")))
-		    (param (nth i (slot-value model 'parameters))))
-		(render-model-structure stream (slot-value model param) (+ indent-level indent-increase) total-param (symbol-name param) indent-increase p)))
+	    (format stream "––– <~a ~a{~a}>~%"
+		    model-name
+		    (type-of model)
+		    (slot-value model 'cl-waffe::model-ident))
+	    (let ((param-values nil)
+		  (constants    nil)
+		  (next-layers nil))
+	      (dolist (param-name (slot-value model 'cl-waffe::parameters))
+		(let ((value (slot-value model param-name)))
+		  (cond
+		    ((is-waffe-model value)
+		     (setq next-layers `(,@next-layers
+					 (,param-name . ,value))))
+		    ((typep value 'waffetensor)
+		     (setq param-values `(,@param-values
+					  (,param-name . ,value))))
+		    (T
+		     (setq constants `(,@constants
+				       (,param-name . ,value)))))))
+
+	      (when constants
+		(indent-with " " T)
+		(format stream "|")
+		(let ((i 0)
+		      (spaces nil))
+		  (dolist (c constants)
+		    (when c
+		      (unless (= i 0)
+			(format stream "|"))
+		      (incf i 1)
+		      (push (length (format nil "––~a––" (car c))) spaces)
+		      (format stream "-~a-" (car c))))
+		  (format stream "|")
+		  (setq i 0)
+		  (setq spaces (reverse spaces))
+		  (format stream "~%")
+		  (indent-with " " T)
+		  (format stream "|")
+		  (dolist (c constants)
+		    (when c
+		      (format stream
+			      (build-table-content
+			       (pop spaces)
+			       (cdr c))))))
+		(format stream "~%"))
+	      (when param-values
+		(indent-with " " T)
+		(let ((max-param-name-size
+			(loop for i fixnum upfrom 0 below (length param-values)
+			      maximize (length (format nil " ~a  " (car (nth i param-values))))))
+		      (shape-str-size
+			(loop for i fixnum upfrom 0 below (length param-values)
+			      maximize (length (format nil " ~a  " (!shape (cdr (nth i param-values))))))))
+
+		  (mapc #'(lambda (tensor)
+			    (incf *total-param-size* (!size (cdr tensor))))
+			param-values)
+		  
+		  (format stream "|–~a|"
+			  (build-table-content
+			   max-param-name-size
+			   "slot"
+			   :end-with ""
+			   :space "–"))
+		  (format stream "–~a|–trainable–|~%"
+			  (build-table-content
+			   shape-str-size
+			   "shape"
+			   :end-with ""
+			   :space "–"))
+		  (dolist (p param-values)
+		    (indent-with " " T)
+		    (format stream " ~a->"
+			    (build-table-content
+			     max-param-name-size
+			     (format nil "~a" (car p))
+			     :end-with ""
+			     :space " "))
+
+		    (format stream " ~a      ~a~%"
+			    (build-table-content
+			     shape-str-size
+			     (format nil "~a" (!shape (cdr p)))
+			     :end-with ""
+			     :space " ")
+			    (if (null (slot-value (cdr p) 'cl-waffe::grad))
+				"X"
+				"O")))))
+	      (when next-layers
+		(dolist (layer next-layers)
+		  (cond
+		    ((model-list-p (cdr layer))
+		     (let ((models (slot-value (cdr layer) 'cl-waffe::mlist)))
+		       (dotimes (i (length models))
+			 (render-model-structure
+			  stream
+			  (nth i models)
+			  (+ indent-level 2)
+			  total-param
+			  (format nil "~a's ~a[~ath] ="
+				  (symbol-name (type-of model))
+				  (symbol-name (car layer))
+				  i)
+			  indent-increase
+			  ""
+			  nil))))
+		    (T
+		     (render-model-structure
+		      stream
+		      (cdr layer)
+		      (+ indent-level indent-increase)
+		      total-param
+		      (format nil "~a's ~a ="
+			      (symbol-name (type-of model))
+			      (symbol-name (car layer)))
+		      indent-increase
+		      ""
+		      (if (<= (length next-layers) 1)
+			  node-points
+			  (progn
+			    (pop node-points)
+			    `(,@node-points ,(+ indent-increase indent-level))))))))))
 
 	    (if (= indent-level 0)
 		(progn
-		  (format stream ""))))) ;in the end of model
+		  (format stream "")))))
+	  ;in the end of model
       (labels ((indent-with ()
 		 (dotimes (_ (+ indent-level *initial-indent-size*))
 		   (format stream " "))))

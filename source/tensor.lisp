@@ -250,7 +250,7 @@ Note: this function is setfable and inlined"
 	      nil
 	      t)))
        (case function-info
-	 (:lazy-eval (waffetensor-data tensor))
+	 (:lazy-eval      (waffetensor-data tensor))
 	 (:lazy-transpose (waffetensor-data tensor))
 	 (T
 	  (let ((result
@@ -1206,37 +1206,48 @@ Return: A tensor of shape that equal to the condition.
       (if (null grad)
 	  (write-string "#Const(" res)
 	  (write-string "#Parameter{" res))
-      
-      (if (or (typep contents 'array)
-	      (typep contents 'vector))
-	  (progn
-	    (pprint-vector res contents newline (if (null grad)
-						    (+ indent-size (length "#Const("))
-						    (+ indent-size (length "#Parameter{"))))
-	    (write-string (format nil " :mgl nil :shape ~a" (!shape contents)) res)
-	    (unless (null grad)
-	      (write-description res backward backend))
-	    (if (null grad)
-		(write-string ")" res)
-		(write-string "}" res)))
-	  (if (typep contents 'mgl-mat:mat)
-	      (progn
-		(pprint-vector res (mgl-mat:mat-to-array contents) newline
-							 (if (null grad)
-							     (+ indent-size (length "#Const("))
-							     (+ indent-size (length "#Parameter{"))))
-		(write-string (format nil " :mgl t :shape ~a :backward ~a" (mgl-mat:mat-dimensions contents) (waffetensor-state tensor)) res)
-		(unless (null grad)
-		  (write-description res backward backend))
-		(if (null grad)
-		    (write-string ")" res)
-		    (write-string "}" res)))
-	      (progn
-		(write-string (format nil "~A" contents) res)
-		(unless (null grad)
-		  (write-description res backward backend))
-		(if (null grad)
-		    (write-string ")" res)
-		    (write-string "}" res)))))
+
+      (typecase contents
+	(mgl-mat:mat
+	 (pprint-vector res (mgl-mat:mat-to-array contents) newline
+			(if (null grad)
+			    (+ indent-size (length "#Const("))
+			    (+ indent-size (length "#Parameter{"))))
+	 (write-string
+	  (format nil " :dtype :~(~a~) :shape ~a :backward ~a"
+		  (mat-ctype contents)
+		  (mgl-mat:mat-dimensions contents)
+		  (waffetensor-state tensor))
+	  res)
+	 (unless (null grad)
+	   (write-description res backward backend))
+	 (if (null grad)
+	     (write-string ")" res)
+	     (write-string "}" res)))
+	(function
+	 (cond
+	   ((lazy-transpose-p tensor)
+	    (format res "<Transposed Tensor> :shape ~a :backward ~a"
+		    (!shape tensor)
+		    (waffetensor-state tensor)))
+	   (T
+	    (format res "<LazyEvaluatedTensor> :shape ~a :backward ~a"
+		    (!shape tensor)
+		    (waffetensor-state tensor))))
+	 (if (null grad)
+	     (write-string ")" res)
+	     (write-string "}" res)))
+	(T
+	 (write-string (format nil "~A" contents) res)
+	 (write-string
+	  (format nil " :dtype ~a :backward ~a"
+		  (type-of contents)
+		  (waffetensor-state tensor))
+	  res)
+	 (unless (null grad)
+	   (write-description res backward backend))
+	 (if (null grad)
+	     (write-string ")" res)
+	     (write-string "}" res))))
       res)))
 
