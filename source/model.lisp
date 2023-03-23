@@ -751,9 +751,32 @@ the object-type indicates the type of document format."
 					 "...")))))))))
      (format stream ")>"))
     (:optimizer
-     (format stream "<<Optimizer: ~a :ident {~a}>>"
+     (format stream "<Optimizer: ~a{~a}~%"
 	     (type-of model)
-	     (slot-value model 'cl-waffe::model-ident)))
+	     (slot-value model 'cl-waffe::model-ident))
+     (let ((total-param 0))
+       (dolist (param (slot-value model 'cl-waffe::parameters))
+	 (let ((val (slot-value model param)))
+	   (typecase val
+	     (hash-table
+	      (dotimes (i (hash-table-count val))
+		(typecase (gethash i val)
+		  (waffetensor
+		   (incf total-param (!size (gethash i val))))
+		  (mat
+		   (incf total-param (mat-size (gethash i val))))
+		  (T nil)))
+	      (format stream "    Param: ~a~%" val))
+	     (T
+	      (format stream "    ~a : ~a~%"
+		      param
+		      (let ((seq (format nil "~a" val)))
+			(concatenate 'string
+				     (subseq seq 0 (min *model-arg-max-displaying-size* (length seq)))
+				     (if (<= (length seq) *model-arg-max-displaying-size*)
+					 ""
+					 "..."))))))))
+       (format stream "    [Total Param]: ~a~%>" total-param)))
     (T
      (format stream "[OBJECT: ~a {~a}]"
 	     (type-of model)

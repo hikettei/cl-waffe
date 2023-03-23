@@ -37,6 +37,7 @@ Using dummy data, i will get assure activation and optimizers are working well.
 		  (let ((out (cl-waffe.nn:softmax-cross-entropy (call (model) x) y)))
 		    (backward out)
 		    (update)
+		    (print (self cl-waffe::optimizer))
 		    out))
      :predict ((x) (call (model) x)))
 
