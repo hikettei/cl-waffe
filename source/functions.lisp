@@ -7,11 +7,6 @@ Here's Mathematical Functions and Utils:
   2.!aref/(setf !aref)
 |#
 
-(defun !average (x)
-  (let ((z (!sum x 1))
-	(batch-size (!shape x 0)))
-    (!!div z batch-size))) ; slow?
-
 (defun !softmax-function (x &key (avoid-overflow t))
   "Applying softmax.
 
@@ -21,7 +16,7 @@ Here's Mathematical Functions and Utils:
   (case (!dims x)
     (1 (!softmax-function (!unsqueeze x)))
     (2 (let* ((x1 (if avoid-overflow
-		      (!sub x (!average x))
+		      (!sub x (!mean x 1))
 		      x))
 	      (z (!sum (!exp x1) 1)))
 	 (!!div (!exp x1) z)))
