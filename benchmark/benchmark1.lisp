@@ -23,6 +23,8 @@ export OPENBLAS_NUM_THREADS=2
     ;((500 500 1) (1 500 500))
     ))
 
+(defparameter *SLICE_SIZE* `(512 1024 2048 4096 8192))
+
 (defun mean (list)
   (/ (loop for i fixnum upfrom 0 below (length list)
 	   sum (nth i list))
@@ -69,6 +71,24 @@ export OPENBLAS_NUM_THREADS=2
       (mean (loop for i fixnum upfrom 0 below *N*
 		  collect (run-test))))))
 
+(defun slice_2d (k)
+  (format t "[~a/~a]  Testing on ~a*~a Matrix for ~a times~%"
+	  *slice-try-i*
+	  (length *SLICE_SIZE*)
+	  k
+	  k
+	  *N*)
+  (incf *slice-try-i* 1)
+  (let ((tensor (!randn `(,k ,k))))
+    (labels ((run-test ()
+	       (let ((t1 (get-internal-real-time)))
+		 (!aref tensor t '(200 400))
+		 (let ((t2 (get-internal-real-time)))
+		   (/ (- t2 t1) internal-time-units-per-second)))))
+      (mean (loop for i fixnum upfrom 0 below *N*
+		  collect (run-test))))))
+
+
 
 (defparameter *MATMUL_SAVE_DIR* "./benchmark/results/matmul_waffe.png")
 (defparameter *BROADCASTING_SAVE_DIR* "./benchmark/results/broadcasting_waffe.png")
@@ -104,4 +124,20 @@ export OPENBLAS_NUM_THREADS=2
 	:y-label "time (second)"
 	:output *BROADCASTING_SAVE_DIR*
 	:output-format :png)
-      (format t "⭕️ The result is correctly saved at ~a~%~%" *BROADCASTING_SAVE_DIR*))))
+      (format t "⭕️ The result is correctly saved at ~a~%~%" *BROADCASTING_SAVE_DIR*))
+
+    (format t "ℹ️ Running slice_2D...~%~%")
+
+    (let ((result (loop for i fixnum upfrom 0 below (length *SLICE_SIZE*)
+			collect (slice_2d (nth i *SLICE_SIZE*)))))
+      (plot (map 'list #'(lambda (x) (coerce x 'double-float)) result)
+	:x-seq *SLICE_SIZE*
+	:title (format nil "slicing (cl-waffe + ~a) N=~a" *backend-name* *N*)
+	:x-label "Matrix Size"
+	:y-label "time (second)"
+	:output *SLICE_SAVE_DIR*
+	:output-format :png)
+      ; To Add: output-to-csv
+      (format t "⭕️ The result is correctly saved at ~a~%~%" *SLICE_SAVE_DIR*))
+
+    ))

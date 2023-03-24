@@ -24,14 +24,17 @@ BROADCASTING_SHAPE = [[[10, 10, 1], [1, 10, 10]],
                       [[100, 100, 1], [1, 100, 100]],
                       [[200, 200, 1], [1, 200, 100]],
                       [[300, 300, 1], [1, 300, 100]]]
+SLICE_SIZE = [512, 1024, 2048, 4096, 8192]
 
 # Files
 MATMUL_RESULT_DIR = './benchmark/results/matmul_numpy.png'
 BROADCASTING_RESULT_DIR = './benchmark/results/broadcasting_numpy.png'
+SLICING_RESULT_DIR = './benchmark/results/slicing_numpy.png'
 
 # Counters
 matmul_try_n = 1
 broadcasting_try_n = 1
+slicing_try_n = 1
 
 def matmul_2D(K=1000):
     global matmul_try_n
@@ -58,10 +61,26 @@ def broadcasting_2D(K):
         t2 = time()
         return t2 - t1
     return [run_test() for i in range(N)]
-    
 
+def slicing_bench(K):
+    global slicing_try_n
+    print(f"[{slicing_try_n}/{len(SLICE_SIZE)}] Testing on {K}*{K} Matrix for {N} times...")
+    slicing_try_n += 1
+    a = np.random.randn(K, K)
+
+    def run_test():
+        t1 = time()
+        _ = a[:, 200:400]
+        t2 = time()
+        return t2 - t1
+    return [run_test() for i in range(N)]
+
+
+def save_as_csv(name):
+    pass
 
 if __name__ == "__main__":
+    
     print("ℹ️ Running matmul_2D...")
     print("")
     matmul_result = []
@@ -75,6 +94,9 @@ if __name__ == "__main__":
     plt.savefig(MATMUL_RESULT_DIR)
     # Todo Output to CSV and merge graphs
     print(f"⭕️ The result is correctly saved at {MATMUL_RESULT_DIR}")
+
+
+
     print("Running broadcasting...")
     print("")
     plt.cla()
@@ -89,3 +111,22 @@ if __name__ == "__main__":
     plt.savefig(BROADCASTING_RESULT_DIR)
     # Todo Output to CSV and merge graphs
     print(f"⭕️ The result is correctly saved at {BROADCASTING_RESULT_DIR}")
+
+
+    
+    print("Running slicing...")
+    print("")
+    plt.cla()
+    slicing_result = []
+    for case in SLICE_SIZE:
+        result = slicing_bench(case)
+        slicing_result.append(mean(result))
+    plt.plot(SLICE_SIZE, slicing_result)
+    plt.title(f"slicing (numpy + {BACKEND_NAME}) (N={N})")
+    plt.xlabel("Matrix Size")
+    plt.ylabel("time (second)")
+    plt.savefig(SLICING_RESULT_DIR)
+    # Todo Output to CSV and merge graphs
+    print(f"⭕️ The result is correctly saved at {SLICING_RESULT_DIR}")
+
+    
