@@ -3,6 +3,11 @@
 
 ; Here's benchmark compared to numpy.
 
+"""
+Todo: Display Configs/Environments
+memo:
+export OPENBLAS_NUM_THREADS=2
+"""
 (defparameter *N* 100 "Trial N")
 (defparameter *backend-name* "OpenBLAS")
 
@@ -45,7 +50,7 @@
 		      collect (matmul_2d (nth i *MATMUL_SIZE*)))))
     (plot (map 'list #'(lambda (x) (coerce x 'double-float)) result)
       :x-seq *MATMUL_SIZE*
-      :title (format nil "cl-waffe matmul (~a)" *backend-name*)
+      :title (format nil "matmul (cl-waffe + ~a) N=~a" *backend-name* *N*)
       :x-label "Matrix Size"
       :y-label "time (second)"
       :output *MATMUL_SAVE_DIR*
