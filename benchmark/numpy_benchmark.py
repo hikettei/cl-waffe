@@ -40,7 +40,7 @@ def matmul_2D(K=1000):
     global matmul_try_n
     print(f"[{matmul_try_n}/{len(MATMUL_SIZE)}] Testing on {K}*{K} Matrix for {N} times...")
     matmul_try_n += 1
-    x = np.random.randn(K, K)
+    x = np.random.randn(K, K).astype('float32')
     def run_test():
         t1 = time()
         np.matmul(x, x)
@@ -52,8 +52,8 @@ def broadcasting_2D(K):
     global broadcasting_try_n
     print(f"[{broadcasting_try_n}/{len(BROADCASTING_SHAPE)}] Testing on Matrix.size()[1]={K[0][1]} for {N} times...")
     broadcasting_try_n += 1
-    a = np.random.randn(K[0][0], K[0][1], K[0][2])
-    b = np.random.randn(K[1][0], K[1][1], K[1][2])
+    a = np.random.randn(K[0][0], K[0][1], K[0][2]).astype('float32')
+    b = np.random.randn(K[1][0], K[1][1], K[1][2]).astype('float32')
 
     def run_test():
         t1 = time()
@@ -66,7 +66,7 @@ def slicing_bench(K):
     global slicing_try_n
     print(f"[{slicing_try_n}/{len(SLICE_SIZE)}] Testing on {K}*{K} Matrix for {N} times...")
     slicing_try_n += 1
-    a = np.random.randn(K, K)
+    a = np.random.randn(K, K).astype('float32')
 
     def run_test():
         t1 = time()
