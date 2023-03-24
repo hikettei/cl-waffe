@@ -22,15 +22,17 @@ These function are called by broadcasting-apply
 
 (defun broadcasting-apply (function x y)
   ; consider use-cuda-p?
-
+  (declare (optimize (speed 3)))
   (let ((last-dims-x (apply #'* (last (!shape x) 2)))
 	(last-dims-y (apply #'* (last (!shape y) 2))))
-    (if (>= (min last-dims-x last-dims-y) *use-blas-min-size*)
+    (declare (type fixnum last-dims-x last-dims-y))
+    (if (>= (min last-dims-x last-dims-y) (the fixnum *use-blas-min-size*))
 	(broadcasting-apply-mgl   function x y)
 	(broadcasting-apply-facet function x y))))
 
 (declaim (ftype (function (single-float single-float symbol) single-float) applying))
 (defun applying (a b function)
+  "Broadcasting only supports single-float"
   (declare
    (optimize (speed 3) (safety 0))
    (type symbol function)
@@ -223,7 +225,7 @@ These function are called by broadcasting-apply
 			      (repeat-instruction-y (second (nth dim-currently-processing dims))))
 
 			 (if (null lparallel:*kernel*)
-			     (dotimes (i (nth dim-currently-processing result-shape))
+			     (dotimes (i (the fixnum (nth dim-currently-processing result-shape)))
 			       (declare (type fixnum i))
 			       (explore-batch (cdr dims-x)
 					      (cdr dims-y)
@@ -233,7 +235,7 @@ These function are called by broadcasting-apply
 					      (o-step-index o-index i dim-currently-processing)
 					      (1+ dim-currently-processing)))
 					; Todo pdotimes
-			     (dotimes (i (nth dim-currently-processing result-shape))
+			     (dotimes (i (the fixnum (nth dim-currently-processing result-shape)))
 			       (declare (type fixnum i))
 			       (explore-batch (cdr dims-x)
 					      (cdr dims-y)
