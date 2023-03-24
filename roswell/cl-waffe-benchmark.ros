@@ -13,13 +13,15 @@ exec ros -Q -- $0 "$@"
   (:use :cl))
 (in-package :ros.script.cl-waffe-benchmark.3886546903)
 
-(defun main (&rest argv)
+(defun main (&optional target &rest argv)
   (declare (ignorable argv))
-  (case (car argv)
-    ("test"
+  (cond
+    ((equal target "test")
      (cl-waffe-benchmark:start-benchmark
       :dim-n 10
       :loop-n 1))
+    ((equal target "python")
+     (cl-waffe-benchmark:compare-to-python))
     (T
      (cl-waffe-benchmark:start-benchmark))))
 ;;; vim: set ft=lisp lisp:

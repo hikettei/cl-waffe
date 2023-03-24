@@ -1,7 +1,7 @@
 
 (in-package :cl-waffe-benchmark)
 
-; Execute benchmarks
+; Compare to mgl-mat, which is a lisp library.
 
 (with-benchmark "2D_Add"
   :cl-waffe (with-init-2d x y
