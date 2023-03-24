@@ -33,6 +33,8 @@
 		:depends-on ("package" "tensor")
 		:components ((:file "cache")
 			     (:file "package")
+			     (:file "matmul")
+			     (:file "broadcast")
 			     (:file "lazy-evaluate")			     
 			     (:file "utils")
 			     (:file "optimizers")			     

@@ -7,7 +7,6 @@ Here's
   2. And utils for it
 |#
 
-
 (defpackage :cl-waffe.backends.compiled-functions)
 
 (defparameter *jit-compiled* (make-hash-table)
