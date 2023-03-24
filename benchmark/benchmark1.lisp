@@ -3,8 +3,8 @@
 
 ; Here's benchmark compared to numpy.
 
-(defparameter *N* 10000 "Trial N")
-(defparameter *MATMUL_SIZE* `(16 32 64)); 128 256 512 1024 2048 4096 8192))
+(defparameter *N* 100 "Trial N")
+(defparameter *MATMUL_SIZE* `(16 32 64 256 512 1024 2048)); 4096 8192))
 
 (defun mean (list)
   (/ (loop for i fixnum upfrom 0 below (length list)
@@ -13,7 +13,7 @@
 
 ; Counters
 
-(defparameter *mm-try-i* 0)
+(defparameter *mm-try-i* 1)
 
 (defun matmul_2d (k)
   (format t "[~a/~a]  Testing on ~a*~a Matrix for ~a times~%"
@@ -37,7 +37,7 @@
 (defparameter *MATMUL_SAVE_DIR* "./benchmark/results/matmul_waffe.png")
 
 (defun compare-to-python ()
-  (format t "LLA Config:~%~a~~%~%" cl-user::*lla-configuration*)
+  (format t "LLA Config:~%~a~%~%" cl-user::*lla-configuration*)
   (format t "ℹ️ Running matmul_2D...~%~%")
 
   (let ((result (loop for i fixnum upfrom 0 below (length *MATMUL_SIZE*)
