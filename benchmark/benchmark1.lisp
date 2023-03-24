@@ -4,6 +4,8 @@
 ; Here's benchmark compared to numpy.
 
 (defparameter *N* 100 "Trial N")
+(defparameter *backend-name* "OpenBLAS")
+
 (defparameter *MATMUL_SIZE* `(16 32 64 256 512 1024 2048)); 4096 8192))
 
 (defun mean (list)
@@ -28,10 +30,9 @@
 	       (let ((t1 (get-internal-real-time)))
 		 (!matmul tensor tensor)
 		 (let ((t2 (get-internal-real-time)))
-		   (- t2 t1)))))
+		   (/ (- t2 t1) internal-time-units-per-second)))))
       (mean (loop for i fixnum upfrom 0 below *N*
 		  collect (run-test))))))
-
 
 
 (defparameter *MATMUL_SAVE_DIR* "./benchmark/results/matmul_waffe.png")
@@ -44,6 +45,9 @@
 		      collect (matmul_2d (nth i *MATMUL_SIZE*)))))
     (plot (map 'list #'(lambda (x) (coerce x 'double-float)) result)
       :x-seq *MATMUL_SIZE*
+      :title (format nil "cl-waffe matmul (~a)" *backend-name*)
+      :x-label "Matrix Size"
+      :y-label "time (second)"
       :output *MATMUL_SAVE_DIR*
       :output-format :png)
     (format t "⭕️ The result is correctly saved at ~a~%" *MATMUL_SAVE_DIR*)))

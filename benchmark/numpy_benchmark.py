@@ -18,15 +18,15 @@ print(np.show_config())
 
 # Parameters
 BACKEND_NAME = "MKL"
-N = 10000
-MATMUL_SIZE = [16, 32, 64, 256, 512, 1024, 2048, 4096, 8192]
+N = 100
+MATMUL_SIZE = [16, 32, 64, 256, 512, 1024, 2048]#, 4096, 8192]
 
 
 # Files
 MATMUL_RESULT_DIR = './benchmark/results/matmul_numpy.png'
 
 # Counters
-matmul_try_n = 0
+matmul_try_n = 1
 
 def matmul_2D(K=1000):
     global matmul_try_n
