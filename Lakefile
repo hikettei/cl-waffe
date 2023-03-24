@@ -32,6 +32,10 @@ Tasks:
 (task "benchmark" ()
   (sh "./roswell/cl-waffe-benchmark.ros"))
 
+(task "benchmark-python" ()
+  (sh "sh ./scripts/python-benchmark.sh")
+  (sh "./roswell/cl-waffe-benchmark.ros python"))
+
 (task "gendoc" ()
   (sh "./roswell/gendoc.ros"))
 
