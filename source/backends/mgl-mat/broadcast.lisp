@@ -2,7 +2,7 @@
 (in-package :cl-waffe.backends.mgl)
 
 
-(defparameter *use-blas-min-size* 10000 "This thereshold decides what functions to use to broadcast. If the product of the last two dimensions is above this threshold, broadcast with a blas instruction.")
+(defparameter *use-blas-min-size* 100 "This thereshold decides what functions to use to broadcast. If the product of the last two dimensions is above this threshold, broadcast with a blas instruction.")
 
 #|
 For people who is reading my ugly code:
