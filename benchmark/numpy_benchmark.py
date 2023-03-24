@@ -47,7 +47,7 @@ def matmul_2D(K=1000):
 
 def broadcasting_2D(K):
     global broadcasting_try_n
-    print(f"[{broadcasting_try_n}/{len(BROADCASTING_SHAPE)}] Testing on {K[0][1]}*{K[0][1]} Matrix for {N} times...")
+    print(f"[{broadcasting_try_n}/{len(BROADCASTING_SHAPE)}] Testing on Matrix.size()[1]={K[0][1]} for {N} times...")
     broadcasting_try_n += 1
     a = np.random.randn(K[0][0], K[0][1], K[0][2])
     b = np.random.randn(K[1][0], K[1][1], K[1][2])
