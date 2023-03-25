@@ -342,26 +342,28 @@ Supported SIMD extensions in this NumPy install:
 		 (format stream "### ~a~%~%" title))
 	       (content (content)
 		 (format stream "~a~%~%" content))
-	       (show-benchmarks (name nth graph-path comment)
+	       (show-benchmarks (name nth graph-path relatively-path comment)
 		 (subsection name)
 		 (content comment)
 		 (merge-graphs graph-path
 			       name
 			       (nth nth waffe-result)
 			       (nth nth numpy-result))
-		 (format stream "![image](~a)~%" graph-path)))
+		 (format stream "![result](~a)~%" relatively-path)))
 	(title "Results")
 	(section "cl-waffe and numpy")
 	(show-benchmarks
 	 "matmul"
 	 2
 	 "./benchmark/results/mm.png"
+	 "./results/mm.png"
 	 "Multiplying K*K Matrices for N times.")
 
 	(show-benchmarks
 	 "broadcasting"
 	 3
 	 "./benchmark/results/broadcasting.png"
+	 "./results/broadcasting.png"
 	 "Applying broadcasting-add to A[K, K, 1] and B[1, K, K] for N times")
 
 
@@ -369,12 +371,14 @@ Supported SIMD extensions in this NumPy install:
 	 "slice"
 	 4
 	 "./benchmark/results/slice.png"
+	 "./results/slice.png"
 	 "Computes (!aref (!randn `(,K ,K)) t '(200 400)) for N times.")
 
 	(show-benchmarks
 	 "DenseLayer"
 	 5
 	 "./benchmark/results/denselayer.png"
+	 "./results/denselayer.png"
 	 "Computes denselayer (defined as out = `(!relu (!add (!matmul weight x) bias))`) for N times.")
 
 

@@ -1,6 +1,6 @@
 # Benchmarking
 
-The latest benchmark is executed at 14:17:45 of Saturday, 3/25/2023 (GMT+9)
+The latest benchmark is executed at 14:20:23 of Saturday, 3/25/2023 (GMT+9)
 
 First, as a matrix arithmetic library, I measured benchmarks compared to NumPy as impartial as possible..
 
@@ -23,7 +23,7 @@ all benchmark is working on single-float(np.float32)
 ### cl-waffe
 
 - Working on SBCL [2.3.2]
-- cl-waffe (latest, 14:17:45 of Saturday, 3/25/2023 (GMT+9))
+- cl-waffe (latest, 14:20:23 of Saturday, 3/25/2023 (GMT+9))
 
 ```lisp
 cl-user::*lla-configuration*
@@ -76,19 +76,19 @@ Supported SIMD extensions in this NumPy install:
 
 Multiplying K*K Matrices for N times.
 
-![image](./benchmark/results/mm.png)
+![result](./results/mm.png)
 ### broadcasting
 
 Applying broadcasting-add to A[K, K, 1] and B[1, K, K] for N times
 
-![image](./benchmark/results/broadcasting.png)
+![result](./results/broadcasting.png)
 ### slice
 
 Computes (!aref (!randn `(,K ,K)) t '(200 400)) for N times.
 
-![image](./benchmark/results/slice.png)
+![result](./results/slice.png)
 ### DenseLayer
 
 Computes denselayer (defined as out = `(!relu (!add (!matmul weight x) bias))`) for N times.
 
-![image](./benchmark/results/denselayer.png)
+![result](./results/denselayer.png)
