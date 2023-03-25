@@ -393,6 +393,30 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
 			 `(nil nil))))
        (!shape x) (!shape y)))
 
+#|
+A = Matrix to copied.
+
+{+ Elements to be ignored
+{X Elements to be copied.
+
+!aref a t '(0 2)
++++XX+++
++++XX+++ => +++XX++++++XX++++++XX++++++XX++++++XX++++++XX+++
++++XX+++
+
+!aref a '(1 2) t
+++++++++
+XXXXXXXX
+XXXXXXXX => +++++++XXXXXXXXXXXXXX+++++++
+++++++++
+
+!aref a '(1 2) '(4 5)
++++++++
+++++XX+ => +++++++++++XX+++++XX++++++++
+++++XX+
++++++++
+|#
+
 (defun %saref (out x &rest subscripts)
   "saref excepts to be out and x's dims are the same."
   (declare (optimize (speed 3))
@@ -424,7 +448,7 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
 			  x
 			  out)
 			 nil)))
-    (declare (type list x-dim-first o-dim-first))
+    (declare (type cons x-dim-first o-dim-first))
     #|
     setf-mode?=t, -> the copied tensor overwrittes out
     setf-mode?=nil, -> creates new tensor and is overwritted
@@ -471,6 +495,27 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
 		 (explore-batch (dim-index dims-x dims-o x-index o-index)
 		   (declare (type fixnum dim-index x-index o-index)
 			    (type list dims-x dims-o))
+
+		   ; In order to reduce call num of copy!
+		   ; Here's special conditions that can skip below.
+		   (when (= (length dims-x) 2)
+		     (let ((sub1 (nth dim-index subscripts))
+			   (sub2 (nth (1+ dim-index) subscripts)))
+		       (when (and (eql sub1 t)
+				  (eql (the boolean sub1) sub2))
+			 (print t)
+			 (reshape-and-displace!
+			  (data x)
+			  dims-x
+			  x-index)
+			 (reshape-and-displace!
+			  (data out)
+			  dims-o
+			  o-index)
+			 (copy! (data x) (data out))
+			 (return-from explore-batch nil))
+		       ))
+		   
 		   (if (>= (length dims-x) 2)
 		       ; Batch
 		       (let ((sub (nth dim-index subscripts)))
