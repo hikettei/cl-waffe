@@ -10,6 +10,8 @@ export OPENBLAS_NUM_THREADS=1 (or 2? i guess there's no difference...)
 """
 
 (defparameter *RESULT_DIR* "./benchmark/results/waffe_result.json")
+(defparameter *RESULT_DIR_NUMPY* "./benchmark/results/numpy_result.json")
+
 (defparameter *bench-results* nil)
 
 (defparameter *N* 100 "Trial N")
@@ -122,7 +124,7 @@ export OPENBLAS_NUM_THREADS=1 (or 2? i guess there's no difference...)
 
 (defun save-result-as-json ()
   (let ((result (reverse *bench-results*)))
-    (with-open-file (stream *RESULT_DIR* :direction :output :if-exists :supersede :if-does-not-exist :create)
+    (with-open-file (stream *RESULT_DIR* :direction :output :if-exists :rename-and-delete :if-does-not-exist :create)
       (write-json result stream))))
 
 (defparameter *MATMUL_SAVE_DIR* "./benchmark/results/matmul_waffe.png")
@@ -211,3 +213,39 @@ export OPENBLAS_NUM_THREADS=1 (or 2? i guess there's no difference...)
       (format t "⭕️ The result is correctly saved at ~a~%~%" *NN_SAVE_DIR*))
     (save-result-as-json)
     (format t "✅ All benchmark are done and results are saved at ~a as a json file." *RESULT_DIR*)))
+
+(defun load-result (path)
+  (with-open-file (stream path :direction :input :if-does-not-exist :error)
+    (read-json* :stream stream
+		:float-format 'single-float
+		:array-format :list)))
+
+(defun generate-result (&key (result-md "./benchmark/Result.md"))
+  (let ((waffe-result (load-result *RESULT_DIR*))
+	(numpy-result (load-result *RESULT_DIR_NUMPY*)))
+    (with-open-file (stream result-md
+			    :direction :output
+			    :if-exists :rename-and-delete
+			    :if-does-not-exist :create)
+
+      (format stream "# Benchmarking~%")
+      (format stream "First, as a matrix arithmetic library, I measured benchmarks compared to NumPy as impartial as possible..~%~%")
+      (format stream "Also, cl-waffe is also a deep learning framework. Benchmakrs compared to PyTorch is available.~%~%")
+
+
+      (format stream "## Machine Environments~%~%")
+      (format stream "|machine-type|machine-version|software-version|software-type|impl|~%")
+      (format stream "|---|---|---|---|---|~%")
+      (format stream "|~a|~a|~a|~a|~a|~%~%"
+	      (machine-type)
+	      (machine-version)
+	      (software-version)
+	      (software-type)
+	      (format nil "~a [~a]"
+		      (lisp-implementation-type)
+		      (lisp-implementation-version)))
+
+      (format stream "## cl-waffe and numpy~%~%")
+      (format stream "")
+      
+      )))

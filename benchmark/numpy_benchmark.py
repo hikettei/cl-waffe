@@ -15,7 +15,7 @@ from time import time
 from statistics import mean
 import json
 
-#print(np.show_config())
+print(np.show_config())
 
 # Parameters
 BACKEND_NAME = "MKL"
@@ -170,7 +170,7 @@ if __name__ == "__main__":
     print(f"⭕️ The result is correctly saved at {NN_RESULT_DIR}")
 
     
-    RESULTS = [{"backend":f"{np.show_config()}"},
+    RESULTS = [{"backend":f"{BACKEND_NAME}"},
                {"dtype":"single-float(float32)"},
                {"matmul":{"desc":f"{BACKEND_NAME}, N={N}",
                           "x-seq":MATMUL_SIZE,
