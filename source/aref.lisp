@@ -360,8 +360,14 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
 	(next-node dims-indices nil nil)
 	tensor))))
 
+
+(declaim (ftype (function (cons fixnum) cons) fill-with-d))
 (defun fill-with-d (shape i)
+  (declare (optimize (speed 3))
+	   (type cons shape)
+	   (type fixnum i))
   (let ((index -1))
+    (declare (type fixnum index))
     (map 'list (lambda (x)
 		 (declare (ignore x))
 		 (incf index 1)
@@ -489,9 +495,10 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
 			   (list
 			    (loop
 			      with m fixnum = (car sub)
+			      with 1+dim-index fixnum = (1+ dim-index)
 			      for i fixnum upfrom 0 below (- (the fixnum (second sub)) (the fixnum (car sub)))
 				  do (explore-batch
-				      (+ 1 dim-index)
+				      1+dim-index
 				      (cdr dims-x)
 				      (cdr dims-o)
 				      (x-step-index
@@ -507,9 +514,10 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
 					   i)
 				       dim-index))))
 			   (t
-			    (loop for i fixnum upfrom 0 below (car dims-o)
+			    (loop with 1+dim-index fixnum = (1+ dim-index)
+			          for i fixnum upfrom 0 below (car dims-o)
 				  do (explore-batch
-				      (+ 1 dim-index)
+				      1+dim-index
 				      (cdr dims-x)
 				      (cdr dims-o)
 				      (x-step-index
@@ -568,8 +576,8 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
 					       (data out)
 					       x-size
 					       (the fixnum (+ o-begin o-index k)))					      
-					      (copy! (data x)
-						     (data out)))))))))
+					 (copy! (data x)
+						(data out)))))))))
 		   nil))
 	  (explore-batch 0 x-dim-first o-dim-first 0 0)
 	  (reshape-and-displace! (data x) x-dim-first x-displace-first)
