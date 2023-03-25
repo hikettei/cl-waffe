@@ -130,7 +130,7 @@
   :version nil
   :author "hikettei"
   :licence "MIT"
-  :depends-on (:cl-waffe :cl-cram :cl-ppcre :clgplot)
+  :depends-on (:cl-waffe :cl-cram :cl-ppcre :clgplot :shasht)
   :components ((:module "benchmark"
 		:components ((:file "package")
 			     (:file "utils")

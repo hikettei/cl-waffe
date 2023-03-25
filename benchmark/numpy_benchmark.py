@@ -19,6 +19,7 @@ print(np.show_config())
 # Parameters
 BACKEND_NAME = "MKL"
 N = 100
+BATCH_SIZE = 10000
 MATMUL_SIZE = [16, 32, 64, 256, 512, 1024, 2048]
 BROADCASTING_SHAPE = [[[10, 10, 1], [1, 10, 10]],
                       [[100, 100, 1], [1, 100, 100]],
@@ -76,9 +77,9 @@ def broadcasting_2D(K):
 
 def nn_bench(K):
     global nn_try_n
-    print(f"[{nn_try_n}/{len(NN_SIZE)}] Testing on {K}*{K} Matrix for {N} times...")
+    print(f"[{nn_try_n}/{len(NN_SIZE)}] Testing on {BATCH_SIZE}*{K} Matrix for {N} times...")
     nn_try_n += 1
-    x = np.random.randn(K, K).astype('float32')
+    x = np.random.randn(BATCH_SIZE, K).astype('float32')
     model = DenseLayer(K, 10)
 
     def run_test():
@@ -164,7 +165,7 @@ if __name__ == "__main__":
         result = nn_bench(case)
         dense_result.append(mean(result))
     plt.plot(NN_SIZE, dense_result)
-    plt.title(f"DenseLayer(ReLU) (numpy + {BACKEND_NAME}) (N={N})")
+    plt.title(f"DenseLayer(ReLU) (numpy + {BACKEND_NAME}) (N={N}, BATCH_SIZE={BATCH_SIZE})")
     plt.xlabel("Matrix Size")
     plt.ylabel("time (second)")
     plt.savefig(NN_RESULT_DIR)

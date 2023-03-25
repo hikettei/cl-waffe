@@ -6,8 +6,11 @@
 """
 Todo: Display Configs/Environments, output to csv and integrate plots
 memo:
-export OPENBLAS_NUM_THREADS=2
+export OPENBLAS_NUM_THREADS=1 (or 2? i guess there's no difference...)
 """
+
+(defparameter *RESULT_DIR* "./benchmark/results/waffe_result.json")
+(defparameter *bench-results* nil)
 
 (defparameter *N* 100 "Trial N")
 (defparameter *backend-name* "OpenBLAS")
@@ -23,6 +26,8 @@ export OPENBLAS_NUM_THREADS=2
 (defparameter *NN_SIZE* `(256 512 1024 2048)); 4096))
 
 (defparameter *SLICE_SIZE* `(512 1024 2048 4096 8192))
+
+(defparameter *BATCH_SIZE* 10000)
 
 (defun mean (list)
   (/ (loop for i fixnum upfrom 0 below (length list)
@@ -92,11 +97,11 @@ export OPENBLAS_NUM_THREADS=2
   (format t "[~a/~a]  Testing on ~a*~a Matrix for ~a times~%"
 	  *nn-try-i*
 	  (length *NN_SIZE*)
-	  k
+	  *BATCH_SIZE*
 	  k
 	  *N*)
   (incf *nn-try-i* 1)
-  (let ((tensor (!randn `(,k ,k)))
+  (let ((tensor (!randn `(,*BATCH_SIZE* ,k)))
 	(model  (cl-waffe.nn:denselayer k 10 t :relu)))
     (labels ((run-test ()
 	       (let ((t1 (get-internal-real-time)))
@@ -106,6 +111,19 @@ export OPENBLAS_NUM_THREADS=2
       (mean (loop for i fixnum upfrom 0 below *N*
 		  collect (run-test))))))
 
+(defun append-result-json (name desc x-seq y-seq)
+  (push `(,name (:desc ,desc)
+		(:x-seq ,x-seq)
+		(:y-seq ,y-seq))
+	*bench-results*))
+
+(defun append-form-json (name desc)
+  (push `(,name ,desc) *bench-results*))
+
+(defun save-result-as-json ()
+  (let ((result (reverse *bench-results*)))
+    (with-open-file (stream *RESULT_DIR* :direction :output :if-exists :supersede :if-does-not-exist :create)
+      (write-json result stream))))
 
 (defparameter *MATMUL_SAVE_DIR* "./benchmark/results/matmul_waffe.png")
 (defparameter *BROADCASTING_SAVE_DIR* "./benchmark/results/broadcasting_waffe.png")
@@ -114,6 +132,9 @@ export OPENBLAS_NUM_THREADS=2
 
 (defun compare-to-python ()
   (with-no-grad
+    (append-form-json "backend" (format nil "~a" cl-user::*lla-configuration*))
+    (append-form-json "dtype" "single-float(i.e.: float32)")
+
     (format t "LLA Config:~%~a~%~%" cl-user::*lla-configuration*)
     (format t "ℹ️ Running matmul_2D...~%~%")
 
@@ -126,7 +147,10 @@ export OPENBLAS_NUM_THREADS=2
 	:y-label "time (second)"
 	:output *MATMUL_SAVE_DIR*
 	:output-format :png)
-      ; To Add: output-to-csv
+      (append-result-json "matmul"
+			  (format nil "~a, N=~a" *backend-name* *N*)
+			  *MATMUL_SIZE*
+			  result)
       (format t "⭕️ The result is correctly saved at ~a~%~%" *MATMUL_SAVE_DIR*))
 
     (format t "ℹ️ Running broadcasting...~%~%")
@@ -142,6 +166,11 @@ export OPENBLAS_NUM_THREADS=2
 	:y-label "time (second)"
 	:output *BROADCASTING_SAVE_DIR*
 	:output-format :png)
+
+      (append-result-json "broadcasting"
+			  (format nil "~a, N=~a" *backend-name* *N*)
+			  (map 'list #'(lambda (x) (coerce x 'double-float)) result)
+			  result)
       (format t "⭕️ The result is correctly saved at ~a~%~%" *BROADCASTING_SAVE_DIR*))
 
     (format t "ℹ️ Running slice_2D...~%~%")
@@ -155,7 +184,11 @@ export OPENBLAS_NUM_THREADS=2
 	:y-label "time (second)"
 	:output *SLICE_SAVE_DIR*
 	:output-format :png)
-      ; To Add: output-to-csv
+      
+      (append-result-json "slice"
+			  (format nil "~a, N=~a" *backend-name* *N*)
+			  *SLICE_SIZE*
+			  result)
       (format t "⭕️ The result is correctly saved at ~a~%~%" *SLICE_SAVE_DIR*))
 
 
@@ -165,11 +198,16 @@ export OPENBLAS_NUM_THREADS=2
 			collect (compute-nn (nth i *NN_SIZE*)))))
       (plot (map 'list #'(lambda (x) (coerce x 'double-float)) result)
 	:x-seq *NN_SIZE*
-	:title (format nil "DenseLayer(ReLU) (cl-waffe + ~a) N=~a" *backend-name* *N*)
+	:title (format nil "DenseLayer(ReLU) (cl-waffe + ~a) N=~a, BATCH_SIZE=~a" *backend-name* *N* *BATCH_SIZE*)
 	:x-label "Matrix Size"
 	:y-label "time (second)"
 	:output *NN_SAVE_DIR*
 	:output-format :png)
-      ; To Add: output-to-csv
+
+      (append-result-json "DenseLayer"
+			  (format nil "~a, N=~a, BATCH_SIZE=~a" *backend-name* *N* *BATCH_SIZE*)
+			  *NN_SIZE*
+			  result)
       (format t "⭕️ The result is correctly saved at ~a~%~%" *NN_SAVE_DIR*))
-    ))
+    (save-result-as-json)
+    (format t "✅ All benchmark are done and results are saved at ~a as a json file." *RESULT_DIR*)))
