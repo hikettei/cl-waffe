@@ -2,6 +2,7 @@
 (in-package :cl-waffe)
 
 (defnode ArefTensor (shape)
+  :optimize t
   :parameters ((shape shape)
 	       (base-shape T))
   :forward ((x) (setf (self base-shape) (!shape x))
@@ -12,6 +13,7 @@
 	       (list dy-n))))
 
 (defnode SetfArefTensor (shape)
+  :optimize t
   :parameters ((shape shape))
   :forward ((x y)
 	    ; Note: defnode must produce new sysconst otherwise stackoverflow...
@@ -20,29 +22,31 @@
 	     (list dy (apply #'!faref dy (self shape)))))
 
 (defun saref-p (setf-mode? out tensor subscripts broadcasts)
-  (declare (ignore broadcasts))
+  (declare (ignore broadcasts)
+	   (optimize (speed 3) (safety 0)))
   (let ((topic-tensor (if setf-mode?
 			  out
 			  tensor)))
+    (declare (type waffetensor topic-tensor))
     (mapc
      #'(lambda (x y)
 	 (typecase y
 	   (fixnum
 	    (if (>= y x)
-		(error "!aref the index ~a is beyonds ~a.~%~a~%and~%~a~%~% dims are specified in the range of (0 ~a)" y x topic-tensor subscripts (1- x))))
+		(error "!aref the index ~a is beyonds ~a.~%~a~%and~%~a~%~% dims are specified in the range of (0 ~a)" y x topic-tensor subscripts (1- (the fixnum x)))))
 	   (list
-	    (if (> (car y) x)
+	    (if (> (the fixnum (car y)) (the fixnum x))
 		(error "!aref the first index ~a is beyonds ~a.~%~a~%and~%~a~%~% dims are specified in the range of (0 ~a)" y x topic-tensor subscripts (1- x)))
-	    (if (> (second y) x)
+	    (if (> (the fixnum (second y)) x)
 		(error "!aref the second index ~a is beyonds ~a.~%~a~%and~%~a~%~% stops are specified in the range of (0 ~a)" y x topic-tensor subscripts (1- x))))))
      (!shape topic-tensor) subscripts))
   (mapc
    #'(lambda (a b c)
        (typecase b
 	 (fixnum t)
-	 (cons (if (< a (- (second b) (car b)))
-		 (error "!aref: Can't copy ~%~a and ~%~a ~%~%beacuse the subscript ~a will produce the tensor whose shape is (~a)~% but it won't fit into the tensor of (~a)" out tensor b (- (second b) (car b)) a)))
-	 (t (if (< a c)
+	 (cons (if (< (the fixnum a) (the fixnum (- (the fixnum (second b)) (the fixnum (car b)))))
+		 (error "!aref: Can't copy ~%~a and ~%~a ~%~%beacuse the subscript ~a will produce the tensor whose shape is (~a)~% but it won't fit into the tensor of (~a)" out tensor b (the fixnum (- (the fixnum (second b)) (the fixnum (car b)))) a)))
+	 (t (if (< (the fixnum a) (the fixnum c))
 		(error "!aref: Can't copy ~a and ~a ~%~%because the size ~a tensor won't fit into the size ~a tensor.~%That is, the given out is too small to copy the target.~%~%(setf (!aref out subscripts) target) <- out is too small." out tensor c a)))))
    (!shape out) subscripts (!shape tensor)))
 

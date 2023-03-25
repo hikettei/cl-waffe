@@ -2,6 +2,10 @@
 (in-package :cl-waffe)
 
 
-(defun !dotensor () "")
+(defmacro !dotensor (displacement-var tensor)
+  ""
+  ;memo: displacement=0以外でError/Warning
+  )
+
 (defun !displace () "")
 
