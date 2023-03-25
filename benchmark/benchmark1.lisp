@@ -41,6 +41,7 @@ Supported SIMD extensions in this NumPy install:
 
 (defparameter *RESULT_DIR* "./benchmark/results/waffe_result.json")
 (defparameter *RESULT_DIR_NUMPY* "./benchmark/results/numpy_result.json")
+(defparameter *RESULT_DIR_TORCH* "./benchmark/results/torch_result.json")
 
 (defparameter *bench-results* nil)
 
@@ -270,19 +271,24 @@ Supported SIMD extensions in this NumPy install:
 	    year
 	    (- tz))))
 
-(defun merge-graphs (filepath task-name waffe-result numpy-result)
+(defun merge-graphs (filepath task-name waffe-result numpy-result torch-result)
   (if (or (null (gethash task-name waffe-result))
-	  (null (gethash task-name numpy-result)))
+	  (null (gethash task-name numpy-result))
+	  (null (gethash task-name torch-result)))
       (error "the result ~a is missing." task-name))
 
   (let ((waffe-result (gethash task-name waffe-result))
-	(numpy-result (gethash task-name numpy-result)))
+	(numpy-result (gethash task-name numpy-result))
+	(torch-result (gethash task-name torch-result)))
     (plots (list (gethash "Y-SEQ" waffe-result)
-		 (gethash "y-seq" numpy-result))
+		 (gethash "y-seq" numpy-result)
+		 (gethash "y-seq" torch-result))
 	   :x-seqs (list (gethash "X-SEQ" waffe-result)
-			 (gethash "x-seq" numpy-result))
+			 (gethash "x-seq" numpy-result)
+			 (gethash "x-seq" torch-result))
 	   :title-list (list (format nil "cl-waffe ~a" (gethash "DESC" waffe-result))
-			     (format nil "numpy ~a" (gethash "desc" numpy-result)))
+			     (format nil "numpy ~a" (gethash "desc" numpy-result))
+			     (format nil "torch ~a" (gethash "desc" torch-result)))
 	   :y-label "time (second)"
 	   :x-label "Matrix Size"
 	   :output filepath)))
@@ -290,6 +296,7 @@ Supported SIMD extensions in this NumPy install:
 (defun generate-result (&key (result-md "./benchmark/Result.md"))
   (let ((waffe-result (load-result *RESULT_DIR*))
 	(numpy-result (load-result *RESULT_DIR_NUMPY*))
+	(torch-result (load-result *RESULT_DIR_TORCH*))
 	(currently-time (now)))
     (format t "Generating ./benchmark/Result.md...~%")
     (with-open-file (stream result-md
@@ -349,7 +356,8 @@ Supported SIMD extensions in this NumPy install:
 		 (merge-graphs graph-path
 			       name
 			       (nth nth waffe-result)
-			       (nth nth numpy-result))
+			       (nth nth numpy-result)
+			       (nth nth torch-result))
 		 (format stream "![result](~a)~%" relatively-path)))
 	(title "Results")
 	(section "cl-waffe and numpy")
@@ -382,5 +390,6 @@ Supported SIMD extensions in this NumPy install:
 	 "./results/denselayer.png"
 	 "Computes denselayer (defined as out = `(!relu (!add (!matmul weight x) bias))`) for N times.")
 
-
+	(section "cl-waffe and PyTorch")
+	(content "coming soon...")
 	nil))))

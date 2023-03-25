@@ -1,6 +1,6 @@
 # Benchmarking
 
-The latest benchmark is executed at 14:20:23 of Saturday, 3/25/2023 (GMT+9)
+The latest benchmark is executed at 14:54:50 of Saturday, 3/25/2023 (GMT+9)
 
 First, as a matrix arithmetic library, I measured benchmarks compared to NumPy as impartial as possible..
 
@@ -22,8 +22,8 @@ all benchmark is working on single-float(np.float32)
 
 ### cl-waffe
 
-- Working on SBCL [2.3.2]
-- cl-waffe (latest, 14:20:23 of Saturday, 3/25/2023 (GMT+9))
+- Working on SBCL [2.1.0]
+- cl-waffe (latest, 14:54:50 of Saturday, 3/25/2023 (GMT+9))
 
 ```lisp
 cl-user::*lla-configuration*
@@ -92,3 +92,7 @@ Computes (!aref (!randn `(,K ,K)) t '(200 400)) for N times.
 Computes denselayer (defined as out = `(!relu (!add (!matmul weight x) bias))`) for N times.
 
 ![result](./results/denselayer.png)
+## cl-waffe and PyTorch
+
+coming soon...
+
