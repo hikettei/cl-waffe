@@ -13,8 +13,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from time import time
 from statistics import mean
+import json
 
-print(np.show_config())
+#print(np.show_config())
 
 # Parameters
 BACKEND_NAME = "MKL"
@@ -28,6 +29,9 @@ BROADCASTING_SHAPE = [[[10, 10, 1], [1, 10, 10]],
 
 SLICE_SIZE = [512, 1024, 2048, 4096, 8192]
 NN_SIZE   =  [256, 512, 1024, 2048]
+
+RESULT_DIR = './benchmark/results/numpy_result.json'
+RESULTS = []
 
 # Files
 MATMUL_RESULT_DIR = './benchmark/results/matmul_numpy.png'
@@ -102,10 +106,6 @@ def slicing_bench(K):
         return t2 - t1
     return [run_test() for i in range(N)]
 
-
-def save_as_csv(name):
-    pass
-
 if __name__ == "__main__":
     
     print("ℹ️ Running matmul_2D...")
@@ -119,7 +119,6 @@ if __name__ == "__main__":
     plt.xlabel("Matrix Size")
     plt.ylabel("time (second)")
     plt.savefig(MATMUL_RESULT_DIR)
-    # Todo Output to CSV and merge graphs
     print(f"⭕️ The result is correctly saved at {MATMUL_RESULT_DIR}")
 
 
@@ -153,9 +152,8 @@ if __name__ == "__main__":
     plt.xlabel("Matrix Size")
     plt.ylabel("time (second)")
     plt.savefig(SLICING_RESULT_DIR)
-    # Todo Output to CSV and merge graphs
     print(f"⭕️ The result is correctly saved at {SLICING_RESULT_DIR}")
-
+    
 
     print("Running Dense...")
     print("")
@@ -169,7 +167,24 @@ if __name__ == "__main__":
     plt.xlabel("Matrix Size")
     plt.ylabel("time (second)")
     plt.savefig(NN_RESULT_DIR)
-    # Todo Output to CSV and merge graphs
     print(f"⭕️ The result is correctly saved at {NN_RESULT_DIR}")
 
+    
+    RESULTS = [{"backend":f"{np.show_config()}"},
+               {"dtype":"single-float(float32)"},
+               {"matmul":{"desc":f"{BACKEND_NAME}, N={N}",
+                          "x-seq":MATMUL_SIZE,
+                          "y-seq":matmul_result}},
+               {"broadcasting":{"desc":f"{BACKEND_NAME}, N={N}",
+                                "x-seq":[K[0][1] for K in BROADCASTING_SHAPE],
+                                "y-seq":broadcasting_result}},
+               {"slice":{"desc":f"{BACKEND_NAME}, N={N}",
+                          "x-seq":SLICE_SIZE,
+                          "y-seq":slicing_result}},
+               {"DenseLayer":{"desc":f"{BACKEND_NAME}, (RELU), N={N}",
+                              "x-seq":NN_SIZE,
+                              "y-seq":dense_result}}]
+
+    with open(RESULT_DIR, mode='w') as f:
+        f.write(json.dumps(RESULTS))
     

@@ -112,13 +112,13 @@ export OPENBLAS_NUM_THREADS=1 (or 2? i guess there's no difference...)
 		  collect (run-test))))))
 
 (defun append-result-json (name desc x-seq y-seq)
-  (push `(,name (:desc ,desc)
-		(:x-seq ,x-seq)
-		(:y-seq ,y-seq))
+  (push `(:object-alist (,name . (:object-alist (:desc . ,desc)
+						(:x-seq . ,x-seq)
+						(:y-seq . ,y-seq))))
 	*bench-results*))
 
 (defun append-form-json (name desc)
-  (push `(,name ,desc) *bench-results*))
+  (push `(:object-alist (,name . ,desc)) *bench-results*))
 
 (defun save-result-as-json ()
   (let ((result (reverse *bench-results*)))
