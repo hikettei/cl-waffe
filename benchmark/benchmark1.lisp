@@ -237,7 +237,7 @@ Supported SIMD extensions in this NumPy install:
 	:output-format :png)
 
       (append-result-json "DenseLayer"
-			  (format nil "~a, N=~a, BATCH_SIZE=~a" *backend-name* *N* *BATCH_SIZE*)
+			  (format nil "~a, N=~a" *backend-name* *N*)
 			  *NN_SIZE*
 			  result)
       (format t "⭕️ The result is correctly saved at ~a~%~%" *NN_SAVE_DIR*))
@@ -291,6 +291,7 @@ Supported SIMD extensions in this NumPy install:
   (let ((waffe-result (load-result *RESULT_DIR*))
 	(numpy-result (load-result *RESULT_DIR_NUMPY*))
 	(currently-time (now)))
+    (format t "Generating ./benchmark/Result.md...~%")
     (with-open-file (stream result-md
 			    :direction :output
 			    :if-exists :rename-and-delete

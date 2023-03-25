@@ -21,7 +21,8 @@ exec ros -Q -- $0 "$@"
       :dim-n 10
       :loop-n 1))
     ((equal target "python")
-     (cl-waffe-benchmark:compare-to-python))
+     (cl-waffe-benchmark:compare-to-python)
+     (cl-waffe-benchmark:generate-result))
     (T
      (cl-waffe-benchmark:start-benchmark))))
 ;;; vim: set ft=lisp lisp:

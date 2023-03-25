@@ -5,4 +5,5 @@
   (:use :cl :cl-waffe :mgl-mat :clgplot :shasht)
   (:export
    #:start-benchmark
-   #:compare-to-python))
+   #:compare-to-python
+   #:generate-result))

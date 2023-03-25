@@ -6,7 +6,7 @@ Sections
 1. Matmul (2D * 2D)
 2. Broadcasting
 3. Slicing Tensor
-4. Complicated Exps (e.g.: sigmoid)
+4. Complicated Exps (denselayer)
 """
 
 import numpy as np
@@ -181,7 +181,7 @@ if __name__ == "__main__":
                {"slice":{"desc":f"{BACKEND_NAME}, N={N}",
                           "x-seq":SLICE_SIZE,
                           "y-seq":slicing_result}},
-               {"DenseLayer":{"desc":f"{BACKEND_NAME}, (RELU), N={N}",
+               {"DenseLayer":{"desc":f"{BACKEND_NAME}, N={N}",
                               "x-seq":NN_SIZE,
                               "y-seq":dense_result}}]
 
