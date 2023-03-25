@@ -565,15 +565,24 @@ incx/incyを用いればコピーの方向を縦とかにできるはず。
 				(declare (type fixnum
 					       element-start-index
 					       element-end-index))
-				(let ((tmp-dim `(,element-start-index
-						 ,element-end-index)))
+				(let ((tmp-dim `(,(the fixnum
+						       (- element-end-index
+							  element-start-index)))))
+				  (print tmp-dim)
+				  (print ld)
+				  (print stride1)
+				  (print stride)
 				  (reshape-and-displace!
 				   (data x)
 				   tmp-dim
 				   element-start-index)
-				  (copy! (data x)
-					 (data out))
-				  ))
+				  
+				  (copy!
+				   (data x)
+				   (data out)
+				   :n 2
+				   :incx stride
+				   :incy out-stride)))
 			 else
 			   do (explore-batch
 			       rest-costs
