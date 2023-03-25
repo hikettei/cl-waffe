@@ -497,61 +497,90 @@ incx/incyを用いればコピーの方向を縦とかにできるはず。
       (let* ((x-strides (loop for i fixnum upfrom 0 below (!dims x)
 			      collect (get-stride (!shape x) i)))
 	     (out-strides (loop for i fixnum upfrom 0 below (!dims out)
-				collect (get-stride out-shape i)))
-	     (applying-dim (map 'list #'(lambda (a) (!shape x (cdr a)))
-				(last costs)))) ; applying-dim変えないといけない
+				collect (get-stride out-shape i))))
 	(labels ((explore-batch (rest-costs
 				 &optional
 				   (total-displacements 0)
 				   (total-displacements-out 0)
 				 &aux (last-cost (pop rest-costs)))
 		   (declare (type fixnum total-displacements
-				         total-displacements-out))
-		   (loop with axis fixnum = (cdr last-cost)
-			 with stride fixnum = (nth axis x-strides)
-			 with out-stride fixnum = (nth axis out-strides)
-			 with start fixnum = (typecase (nth axis subscripts)
-					       (fixnum (nth axis subscripts))
-					       (list   (the fixnum
-							    (car (nth axis subscripts))))
-					       (t 0))
-			 with dim cons = `(,(caar rest-costs) 1)
-		         for i fixnum
-			 upfrom start
-			   below (typecase (nth axis subscripts)
-				   (fixnum (1+ (the fixnum
-						    (nth axis subscripts))))
-				   (list   (the fixnum
-						(second (nth axis subscripts))))
-				   (t      (1+ (the fixnum (nth axis x-first-dim)))))
-			 if (<= (length (the list rest-costs)) 1)
-			   do (let* ((axis1 (cdr (car rest-costs)))
-				     (stride1 (the fixnum (nth axis1 x-strides)))
-				     (stride2 (the fixnum (nth axis1 out-strides)))
-				     (ld (nth axis x-strides))
-				     (total-displacements-out (the fixnum (+ total-displacements-out
-									     (the fixnum (* (the fixnum (- i start)) stride2)))))
-				     (total-displacements (the fixnum (+ total-displacements
-									 (the fixnum (* i stride1))))))
-				(reshape-and-displace!
-				 (data x)
-				 applying-dim
-				 total-displacements)
-				(print total-displacements-out)
-				(reshape-and-displace!
-				 (data out)
-				 applying-dim
-				 total-displacements-out) ;ld=1 is required
-				(copy! (data x)
-				       (data out))
-				)
+				  total-displacements-out))
+		   (loop with axis fixnum = (cdr last-cost) ; axis
+			 with axis1 fixnum = (cdr (car rest-costs)) ;axis[n-1]
+			 with stride fixnum     = (nth axis1 x-strides) ; batch
+			 with out-stride fixnum = (nth axis1 out-strides) ; batch
+
+			 with stride1 fixnum = (nth axis x-strides) ; elements
+			 with stride2 fixnum = (nth axis out-strides) ;elements
+			 with ld fixnum = (nth axis1 x-strides) ;each elements
+			 with applying-dim cons = (let ((last-dim (cdr last-cost)))
+						    (loop for s fixnum
+							  upfrom 0
+							    below last-dim ;should be 1+
+							  collect (nth last-dim x-first-dim)))
+			 with total-strides fixnum = (apply #'* x-strides)
+			 with start-batch
+			   fixnum = (typecase (nth axis1 subscripts)
+				      (fixnum (nth axis1 subscripts))
+				      (list   (the fixnum
+						   (car (nth axis1 subscripts))))
+				      (t 0))
+			 with end-batch
+			 
+			 fixnum = (typecase (nth axis1 subscripts)
+				    (fixnum (1+ (the fixnum
+						     (nth axis1 subscripts))))
+				    (list   (the fixnum
+						 (the fixnum (second (nth axis1 subscripts)))))
+				    (t      (the fixnum (nth axis1 x-first-dim))))
+			 with element-start fixnum = (typecase (nth axis subscripts)
+						(fixnum (nth axis subscripts))
+						(list   (the fixnum
+							     (car (nth axis subscripts))))
+						(t 0))
+			 with element-end fixnum = (typecase (nth axis subscripts)
+					      (fixnum (1+ (the fixnum
+							       (nth axis subscripts))))
+					      (list   (the fixnum
+							   (the fixnum (second (nth axis subscripts)))))
+					      (t      (the fixnum (nth axis x-first-dim))))
+
+			 with continue-p = (<= (length (the list rest-costs)) 1)
+			 for i fixnum
+			 upfrom (if continue-p
+				    0
+				    start-batch)
+			   below (if continue-p
+				     1
+				     end-batch)
+			 if continue-p
+			   do (let ((element-start-index
+				      (+ total-displacements
+					 (the fixnum
+					      (* stride1 element-start))))
+				    (element-end-index
+				      (+ total-displacements
+					 (the fixnum
+					      (* total-strides element-end)))))
+				(declare (type fixnum
+					       element-start-index
+					       element-end-index))
+				(let ((tmp-dim `(,element-start-index
+						 ,element-end-index)))
+				  (reshape-and-displace!
+				   (data x)
+				   tmp-dim
+				   element-start-index)
+				  (copy! (data x)
+					 (data out))
+				  ))
 			 else
 			   do (explore-batch
 			       rest-costs
 			       (+ total-displacements
 				  (the fixnum (* i stride)))
 			       (+ total-displacements-out
-				  (the fixnum (* (the fixnum (- i start)) out-stride)))))))
+				  (the fixnum (* (the fixnum (- i start-batch)) out-stride)))))))
 	  (explore-batch costs)
 	  (reshape-and-displace!
 	   (data x)
