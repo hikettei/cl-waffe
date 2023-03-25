@@ -513,11 +513,6 @@ incx/incyを用いればコピーの方向を縦とかにできるはず。
 			 with stride1 fixnum = (nth axis x-strides) ; elements
 			 with stride2 fixnum = (nth axis out-strides) ;elements
 			 with ld fixnum = (nth axis1 x-strides) ;each elements
-			 with applying-dim cons = (let ((last-dim (cdr last-cost)))
-						    (loop for s fixnum
-							  upfrom 0
-							    below last-dim ;should be 1+
-							  collect (nth last-dim x-first-dim)))
 			 with total-strides fixnum = (apply #'* x-strides)
 			 with start-batch
 			   fixnum = (typecase (nth axis1 subscripts)
@@ -548,10 +543,10 @@ incx/incyを用いればコピーの方向を縦とかにできるはず。
 			 with continue-p = (<= (length (the list rest-costs)) 1)
 			 for i fixnum
 			 upfrom (if continue-p
-				    0
+				    element-start
 				    start-batch)
 			   below (if continue-p
-				     1
+				     element-end
 				     end-batch)
 			 if continue-p
 			   do (let ((element-start-index
@@ -561,13 +556,16 @@ incx/incyを用いればコピーの方向を縦とかにできるはず。
 				    (element-end-index
 				      (+ total-displacements
 					 (the fixnum
-					      (* total-strides element-end)))))
+					      (* stride1 element-end)))))
 				(declare (type fixnum
 					       element-start-index
 					       element-end-index))
 				(let ((tmp-dim `(,(the fixnum
 						       (- element-end-index
 							  element-start-index)))))
+				  
+				  (print element-start)
+				  (print total-strides)
 				  (print tmp-dim)
 				  (print ld)
 				  (print stride1)
@@ -589,7 +587,8 @@ incx/incyを用いればコピーの方向を縦とかにできるはず。
 			       (+ total-displacements
 				  (the fixnum (* i stride)))
 			       (+ total-displacements-out
-				  (the fixnum (* (the fixnum (- i start-batch)) out-stride)))))))
+				  (the fixnum (* (the fixnum (- i start-batch))
+						 out-stride)))))))
 	  (explore-batch costs)
 	  (reshape-and-displace!
 	   (data x)
