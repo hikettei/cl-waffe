@@ -394,29 +394,176 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
        (!shape x) (!shape y)))
 
 #|
+%slice-2D
 A = Matrix to copied.
 
 {+ Elements to be ignored
 {X Elements to be copied.
 
+12+++++
+34+++++
+56+++++ => 12+++++34+++++56+++++
+
 !aref a t '(0 2)
-+++XX+++
-+++XX+++ => +++XX++++++XX++++++XX++++++XX++++++XX++++++XX+++
-+++XX+++
++++12+++
++++34+++ => +++12++++++34++++++56+++
++++56+++
+
+12
+34
+56
+
+incy=1, incx=3 (displace=1, 2)
+
+COSTS(その軸のStrideについて一回CopyするとCopyできるXの数):
+(3 . 0) (2 . 1)
+
+This is slow in term of performance. because in this example, cl-waffe calls foreign function for 6 times, while this could be done in one time like below.
 
 !aref a '(1 2) t
 ++++++++
-XXXXXXXX
-XXXXXXXX => +++++++XXXXXXXXXXXXXX+++++++
+12345678
+12345678 => +++++++1234567812345678+++++++
 ++++++++
+上の条件はstrideからわかりそう
+
+COSTS:
+(8 . 0) (2 . 1)
 
 !aref a '(1 2) '(4 5)
 +++++++
-++++XX+ => +++++++++++XX+++++XX++++++++
-++++XX+
+++++12+ => +++++++++++12+++++34++++++++
+++++34+
 +++++++
+
+  +++++
++++++ +
+++1++ +
++++++
+
+displaceする回数は？
+
+計算は
+for displaces:
+    incx = ?
+    incy = 10
+    copy! みたいに行けそう
+
+incx/incyを用いればコピーの方向を縦とかにできるはず。
 |#
 
+(defun %fast-copy (x &rest subscripts)
+  "When out=waffetensor, setf-mode? is enabled which subscripts slice out, not a x."
+  (declare (optimize (speed 3))
+	   (type waffetensor x)
+	   (type cons subscripts))
+  (let* ((subscripts (parse-subscripts x subscripts))
+	 (out-shape (loop for i fixnum upfrom 0 below (length (the list subscripts))
+			  collect (let ((sub (nth i subscripts)))
+				    (typecase sub
+				      (fixnum 1)
+				      (cons (the fixnum (- (the fixnum (second sub))
+							   (the fixnum (car sub)))))
+				      (T (!shape x i))))))
+	 (out (!zeros out-shape))
+	 (costs (loop for i fixnum upfrom 0 below (length (the list out-shape))
+
+		      collect `(,(typecase (nth i subscripts)
+				   (fixnum 1)
+				   (list (let ((subs (nth i subscripts)))
+					   (the fixnum
+						(- (the fixnum (second subs))
+						   (the fixnum (car subs))))))
+				   (T (!shape x i)))
+				.
+				,i)))
+	 (costs (sort costs #'< :key #'car))
+	 (x-first-dim (mat-dimensions (data x)))
+	 (x-first-displacement (mat-displacement (data x))))
+    (saref-p
+     nil
+     out
+     x
+     subscripts
+     nil)
+    (labels ((get-stride (shape dim)
+	       (let ((subscripts (fill-with-d shape dim)))
+		 (apply #'+ (maplist #'(lambda (x y)
+					 (the fixnum
+					      (* (the fixnum (car x))
+						 (the fixnum (apply #'* (cdr y))))))
+				     subscripts
+				     shape)))))
+      (let* ((x-strides (loop for i fixnum upfrom 0 below (!dims x)
+			      collect (get-stride (!shape x) i)))
+	     (out-strides (loop for i fixnum upfrom 0 below (!dims out)
+				collect (get-stride out-shape i)))
+	     (applying-dim (map 'list #'(lambda (a) (!shape x (cdr a)))
+				(last costs)))) ; applying-dim変えないといけない
+	(labels ((explore-batch (rest-costs
+				 &optional
+				   (total-displacements 0)
+				   (total-displacements-out 0)
+				 &aux (last-cost (pop rest-costs)))
+		   (declare (type fixnum total-displacements
+				         total-displacements-out))
+		   (loop with axis fixnum = (cdr last-cost)
+			 with stride fixnum = (nth axis x-strides)
+			 with out-stride fixnum = (nth axis out-strides)
+			 with start fixnum = (typecase (nth axis subscripts)
+					       (fixnum (nth axis subscripts))
+					       (list   (the fixnum
+							    (car (nth axis subscripts))))
+					       (t 0))
+			 with dim cons = `(,(caar rest-costs) 1)
+		         for i fixnum
+			 upfrom start
+			   below (typecase (nth axis subscripts)
+				   (fixnum (1+ (the fixnum
+						    (nth axis subscripts))))
+				   (list   (the fixnum
+						(second (nth axis subscripts))))
+				   (t      (1+ (the fixnum (nth axis x-first-dim)))))
+			 if (<= (length (the list rest-costs)) 1)
+			   do (let* ((axis1 (cdr (car rest-costs)))
+				     (stride1 (the fixnum (nth axis1 x-strides)))
+				     (stride2 (the fixnum (nth axis1 out-strides)))
+				     (ld (nth axis x-strides))
+				     (total-displacements-out (the fixnum (+ total-displacements-out
+									     (the fixnum (* (the fixnum (- i start)) stride2)))))
+				     (total-displacements (the fixnum (+ total-displacements
+									 (the fixnum (* i stride1))))))
+				(reshape-and-displace!
+				 (data x)
+				 applying-dim
+				 total-displacements)
+				(print total-displacements-out)
+				(reshape-and-displace!
+				 (data out)
+				 applying-dim
+				 total-displacements-out) ;ld=1 is required
+				(copy! (data x)
+				       (data out))
+				)
+			 else
+			   do (explore-batch
+			       rest-costs
+			       (+ total-displacements
+				  (the fixnum (* i stride)))
+			       (+ total-displacements-out
+				  (the fixnum (* (the fixnum (- i start)) out-stride)))))))
+	  (explore-batch costs)
+	  (reshape-and-displace!
+	   (data x)
+	   x-first-dim
+	   x-first-displacement)
+	  (reshape-and-displace!
+	   (data out)
+	   out-shape
+	   0)
+	  out)))))
+
+	     
 (defun %saref (out x &rest subscripts)
   "saref excepts to be out and x's dims are the same."
   (declare (optimize (speed 3))
@@ -495,29 +642,9 @@ XXXXXXXX => +++++++XXXXXXXXXXXXXX+++++++
 		 (explore-batch (dim-index dims-x dims-o x-index o-index)
 		   (declare (type fixnum dim-index x-index o-index)
 			    (type list dims-x dims-o))
-
-		   ; In order to reduce call num of copy!
-		   ; Here's special conditions that can skip below.
-		   (when (= (length dims-x) 2)
-		     (let ((sub1 (nth dim-index subscripts))
-			   (sub2 (nth (1+ dim-index) subscripts)))
-		       (when (and (eql sub1 t)
-				  (eql (the boolean sub1) sub2))
-			 (print t)
-			 (reshape-and-displace!
-			  (data x)
-			  dims-x
-			  x-index)
-			 (reshape-and-displace!
-			  (data out)
-			  dims-o
-			  o-index)
-			 (copy! (data x) (data out))
-			 (return-from explore-batch nil))
-		       ))
 		   
 		   (if (>= (length dims-x) 2)
-		       ; Batch
+		       ; Setting Batch
 		       (let ((sub (nth dim-index subscripts)))
 			 (typecase sub
 			   (fixnum
@@ -621,8 +748,8 @@ XXXXXXXX => +++++++XXXXXXXXXXXXXX+++++++
 					       (data out)
 					       x-size
 					       (the fixnum (+ o-begin o-index k)))					      
-					 (copy! (data x)
-						(data out)))))))))
+					      (copy! (data x)
+						     (data out)))))))))
 		   nil))
 	  (explore-batch 0 x-dim-first o-dim-first 0 0)
 	  (reshape-and-displace! (data x) x-dim-first x-displace-first)
