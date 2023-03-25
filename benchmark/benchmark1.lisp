@@ -9,6 +9,36 @@ memo:
 export OPENBLAS_NUM_THREADS=1 (or 2? i guess there's no difference...)
 """
 
+(defparameter *NUMPY_CONFIG* ; i didn't know how to get it as a string in python...
+  "blas_armpl_info:
+  NOT AVAILABLE
+blas_mkl_info:
+    libraries = ['mkl_rt', 'pthread']
+    library_dirs = ['/Users/hikettei/opt/anaconda3/lib']
+    define_macros = [('SCIPY_MKL_H', None), ('HAVE_CBLAS', None)]
+    include_dirs = ['/Users/hikettei/opt/anaconda3/include']
+blas_opt_info:
+    libraries = ['mkl_rt', 'pthread']
+    library_dirs = ['/Users/hikettei/opt/anaconda3/lib']
+    define_macros = [('SCIPY_MKL_H', None), ('HAVE_CBLAS', None)]
+    include_dirs = ['/Users/hikettei/opt/anaconda3/include']
+lapack_armpl_info:
+  NOT AVAILABLE
+lapack_mkl_info:
+    libraries = ['mkl_rt', 'pthread']
+    library_dirs = ['/Users/hikettei/opt/anaconda3/lib']
+    define_macros = [('SCIPY_MKL_H', None), ('HAVE_CBLAS', None)]
+    include_dirs = ['/Users/hikettei/opt/anaconda3/include']
+lapack_opt_info:
+    libraries = ['mkl_rt', 'pthread']
+    library_dirs = ['/Users/hikettei/opt/anaconda3/lib']
+    define_macros = [('SCIPY_MKL_H', None), ('HAVE_CBLAS', None)]
+    include_dirs = ['/Users/hikettei/opt/anaconda3/include']
+Supported SIMD extensions in this NumPy install:
+    baseline = SSE,SSE2,SSE3
+    found = SSSE3,SSE41,POPCNT,SSE42,AVX,F16C,FMA3,AVX2
+    not found = AVX512F,AVX512CD,AVX512_KNL,AVX512_SKX,AVX512_CLX,AVX512_CNL,AVX512_ICL")
+
 (defparameter *RESULT_DIR* "./benchmark/results/waffe_result.json")
 (defparameter *RESULT_DIR_NUMPY* "./benchmark/results/numpy_result.json")
 
@@ -171,8 +201,8 @@ export OPENBLAS_NUM_THREADS=1 (or 2? i guess there's no difference...)
 
       (append-result-json "broadcasting"
 			  (format nil "~a, N=~a" *backend-name* *N*)
-			  (map 'list #'(lambda (x) (coerce x 'double-float)) result)
-			  result)
+			  (map 'list #'(lambda (x) (second (car x))) *BROADCAST_SHAPE*)
+			  (map 'list #'(lambda (x) (coerce x 'single-float)) result))
       (format t "⭕️ The result is correctly saved at ~a~%~%" *BROADCASTING_SAVE_DIR*))
 
     (format t "ℹ️ Running slice_2D...~%~%")
@@ -212,7 +242,7 @@ export OPENBLAS_NUM_THREADS=1 (or 2? i guess there's no difference...)
 			  result)
       (format t "⭕️ The result is correctly saved at ~a~%~%" *NN_SAVE_DIR*))
     (save-result-as-json)
-    (format t "✅ All benchmark are done and results are saved at ~a as a json file." *RESULT_DIR*)))
+    (format t "✅ All benchmark are done and results are saved at ~a as a json file.~%" *RESULT_DIR*)))
 
 (defun load-result (path)
   (with-open-file (stream path :direction :input :if-does-not-exist :error)
@@ -220,32 +250,132 @@ export OPENBLAS_NUM_THREADS=1 (or 2? i guess there's no difference...)
 		:float-format 'single-float
 		:array-format :list)))
 
+(defparameter *weeks*
+  '("Monday" "Tuesday" "Wednesday"
+    "Thursday" "Friday" "Saturday"
+    "Sunday"))
+
+(defun now ()
+  (multiple-value-bind
+        (second minute hour day month year day-of-week dst-p tz)
+      (get-decoded-time)
+    (declare (ignore dst-p))
+    (format nil "~2,'0d:~2,'0d:~2,'0d of ~a, ~d/~2,'0d/~d (GMT~@d)"
+	    hour
+	    minute
+	    second
+	    (nth day-of-week *weeks*)
+	    month
+	    day
+	    year
+	    (- tz))))
+
+(defun merge-graphs (filepath task-name waffe-result numpy-result)
+  (if (or (null (gethash task-name waffe-result))
+	  (null (gethash task-name numpy-result)))
+      (error "the result ~a is missing." task-name))
+
+  (let ((waffe-result (gethash task-name waffe-result))
+	(numpy-result (gethash task-name numpy-result)))
+    (plots (list (gethash "Y-SEQ" waffe-result)
+		 (gethash "y-seq" numpy-result))
+	   :x-seqs (list (gethash "X-SEQ" waffe-result)
+			 (gethash "x-seq" numpy-result))
+	   :title-list (list (format nil "cl-waffe ~a" (gethash "DESC" waffe-result))
+			     (format nil "numpy ~a" (gethash "desc" numpy-result)))
+	   :y-label "time (second)"
+	   :x-label "Matrix Size"
+	   :output filepath)))
+
 (defun generate-result (&key (result-md "./benchmark/Result.md"))
   (let ((waffe-result (load-result *RESULT_DIR*))
-	(numpy-result (load-result *RESULT_DIR_NUMPY*)))
+	(numpy-result (load-result *RESULT_DIR_NUMPY*))
+	(currently-time (now)))
     (with-open-file (stream result-md
 			    :direction :output
 			    :if-exists :rename-and-delete
 			    :if-does-not-exist :create)
 
       (format stream "# Benchmarking~%")
+      (format stream "~%The latest benchmark is executed at ~a~%~%" currently-time)
       (format stream "First, as a matrix arithmetic library, I measured benchmarks compared to NumPy as impartial as possible..~%~%")
       (format stream "Also, cl-waffe is also a deep learning framework. Benchmakrs compared to PyTorch is available.~%~%")
-
+      (format stream "⚠️ cl-waffe and numpy are working on a different backends, openblas and mkl respectively. The author didn't know how to use numpy in OpenBLAS... So the result may be inaccuracy...~%~%")
+      
 
       (format stream "## Machine Environments~%~%")
-      (format stream "|machine-type|machine-version|software-version|software-type|impl|~%")
-      (format stream "|---|---|---|---|---|~%")
-      (format stream "|~a|~a|~a|~a|~a|~%~%"
+      (format stream "|machine-type|machine-version|software-version|software-type|~%")
+      (format stream "|---|---|---|---|~%")
+      (format stream "|~a|~a|~a|~a|~%~%"
 	      (machine-type)
 	      (machine-version)
 	      (software-version)
-	      (software-type)
+	      (software-type))
+
+      (format stream "## Software Environments~%~%")
+      (format stream "~%~%all benchmark is working on single-float(np.float32)~%~%")
+      (format stream "### cl-waffe~%~%")
+      
+      (format stream "- Working on ~a~%"
 	      (format nil "~a [~a]"
 		      (lisp-implementation-type)
 		      (lisp-implementation-version)))
+      (format stream "- cl-waffe (latest, ~a)~%~%" currently-time)
+      (format stream "```lisp~%cl-user::*lla-configuration*~%~a~%```~%"
+	      (gethash "backend" (car waffe-result)))
 
-      (format stream "## cl-waffe and numpy~%~%")
-      (format stream "")
-      
-      )))
+      (format stream "### numpy~%~%")
+      (format stream "- Working on ~a~%"
+	      (ppcre:regex-replace-all
+	       (format nil "~C(\n)?" #\return)
+	       (with-output-to-string (out)
+		 (uiop:run-program "python --version" :output out))
+	       "\n"))
+      (format stream "- ~a~%~%" (gethash "backend" (car numpy-result)))
+      (format stream "```python~%import numpy as np~%np.show_config()~%~a~%```~%~%" *NUMPY_CONFIG*)
+
+      (labels ((title (title)
+		 (format stream "# ~a~%~%" title))
+	       (section (title)
+		 (format stream "## ~a~%~%" title))
+	       (subsection (title)
+		 (format stream "### ~a~%~%" title))
+	       (content (content)
+		 (format stream "~a~%~%" content))
+	       (show-benchmarks (name nth graph-path comment)
+		 (subsection name)
+		 (content comment)
+		 (merge-graphs graph-path
+			       name
+			       (nth nth waffe-result)
+			       (nth nth numpy-result))
+		 (format stream "![image](~a)~%" graph-path)))
+	(title "Results")
+	(section "cl-waffe and numpy")
+	(show-benchmarks
+	 "matmul"
+	 2
+	 "./benchmark/results/mm.png"
+	 "Multiplying K*K Matrices for N times.")
+
+	(show-benchmarks
+	 "broadcasting"
+	 3
+	 "./benchmark/results/broadcasting.png"
+	 "Applying broadcasting-add to A[K, K, 1] and B[1, K, K] for N times")
+
+
+	(show-benchmarks
+	 "slice"
+	 4
+	 "./benchmark/results/slice.png"
+	 "Computes (!aref (!randn `(,K ,K)) t '(200 400)) for N times.")
+
+	(show-benchmarks
+	 "DenseLayer"
+	 5
+	 "./benchmark/results/denselayer.png"
+	 "Computes denselayer (defined as out = `(!relu (!add (!matmul weight x) bias))`) for N times.")
+
+
+	nil))))

@@ -170,7 +170,7 @@ if __name__ == "__main__":
     print(f"⭕️ The result is correctly saved at {NN_RESULT_DIR}")
 
     
-    RESULTS = [{"backend":f"{BACKEND_NAME}"},
+    RESULTS = [{"backend":f"numpy version: {np.__version__}, works on {BACKEND_NAME}"},
                {"dtype":"single-float(float32)"},
                {"matmul":{"desc":f"{BACKEND_NAME}, N={N}",
                           "x-seq":MATMUL_SIZE,
