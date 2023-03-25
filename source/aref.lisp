@@ -507,26 +507,26 @@ incx/incyを用いればコピーの方向を縦とかにできるはず。
 				  total-displacements-out))
 		   (loop with axis fixnum = (cdr last-cost) ; axis
 			 with axis1 fixnum = (cdr (car rest-costs)) ;axis[n-1]
+			 with rest-size fixnum = (caar rest-costs)
 			 with stride fixnum     = (nth axis1 x-strides) ; batch
 			 with out-stride fixnum = (nth axis1 out-strides) ; batch
 
 			 with stride1 fixnum = (nth axis x-strides) ; elements
 			 with stride2 fixnum = (nth axis out-strides) ;elements
-			 with ld fixnum = (nth axis1 x-strides) ;each elements
-			 with total-strides fixnum = (apply #'* x-strides)
+			 
 			 with start-batch
 			   fixnum = (typecase (nth axis1 subscripts)
 				      (fixnum (nth axis1 subscripts))
 				      (list   (the fixnum
 						   (car (nth axis1 subscripts))))
 				      (t 0))
-			 with end-batch
-			 
+			 with end-batch 
 			 fixnum = (typecase (nth axis1 subscripts)
 				    (fixnum (1+ (the fixnum
 						     (nth axis1 subscripts))))
 				    (list   (the fixnum
-						 (the fixnum (second (nth axis1 subscripts)))))
+						 (the fixnum
+						      (second (nth axis1 subscripts)))))
 				    (t      (the fixnum (nth axis1 x-first-dim))))
 			 with element-start fixnum = (typecase (nth axis subscripts)
 						(fixnum (nth axis subscripts))
@@ -540,55 +540,52 @@ incx/incyを用いればコピーの方向を縦とかにできるはず。
 							   (the fixnum (second (nth axis subscripts)))))
 					      (t      (the fixnum (nth axis x-first-dim))))
 
-			 with continue-p = (<= (length (the list rest-costs)) 1)
+			 with continue-p = (<= (length (the list rest-costs)) 1) ;process 2d in one time
 			 for i fixnum
 			 upfrom (if continue-p
 				    element-start
-				    start-batch)
+				    element-start)
 			   below (if continue-p
 				     element-end
-				     end-batch)
+				     element-end)
 			 if continue-p
 			   do (let ((element-start-index
 				      (+ total-displacements
 					 (the fixnum
-					      (* stride1 element-start))))
+					      (* stride i))))
 				    (element-end-index
 				      (+ total-displacements
 					 (the fixnum
-					      (* stride1 element-end)))))
+					      (* stride (1+ i))))))
 				(declare (type fixnum
 					       element-start-index
 					       element-end-index))
 				(let ((tmp-dim `(,(the fixnum
 						       (- element-end-index
 							  element-start-index)))))
-				  
-				  (print element-start)
-				  (print total-strides)
-				  (print tmp-dim)
-				  (print ld)
-				  (print stride1)
-				  (print stride)
+
+				  (print rest-costs)
 				  (reshape-and-displace!
 				   (data x)
-				   tmp-dim
+				   `(,rest-size)
 				   element-start-index)
+				  (print (data x))
 				  
-				  (copy!
-				   (data x)
-				   (data out)
-				   :n 2
-				   :incx stride
-				   :incy out-stride)))
+				  ;(copy!
+				  ; (data x)
+				  ; (data out)
+				  ; :n 2
+				  ; :incx stride
+				  ; :incy out-stride)
+				  ))
 			 else
 			   do (explore-batch
 			       rest-costs
 			       (+ total-displacements
-				  (the fixnum (* i stride)))
+				  (the fixnum (* i stride1)))
 			       (+ total-displacements-out
 				  (the fixnum (* (the fixnum (- i start-batch))
-						 out-stride)))))))
+						 stride2)))))))
 	  (explore-batch costs)
 	  (reshape-and-displace!
 	   (data x)
