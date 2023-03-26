@@ -8,7 +8,7 @@ Also, cl-waffe is also a deep learning framework. Benchmakrs compared to PyTorch
 
 ⚠️ cl-waffe and numpy are working on a different backends, openblas and mkl respectively. The author didn't know how to use numpy in OpenBLAS... So the result may be inaccuracy...
 
-** I think this benchmark is unfair in term of threads. Keep in mind that in practice cl-waffe still has a lot of room for optimisation and numpy/python can perform better**
+**I think this benchmark is unfair in term of threads, and doesn't make any sence. Keep in mind that in practice cl-waffe still has a lot of room for optimisation and numpy/python can perform better.**
 
 Also, cl-waffe is still under development and yet parallelised enough.
 
@@ -80,8 +80,10 @@ Supported SIMD extensions in this NumPy install:
 
 ## Variables
 
-```export OPENBLAS_NUM_THREADS=4
-export MKL_NUM_THREADS=4```
+```shell
+export OPENBLAS_NUM_THREADS=4
+export MKL_NUM_THREADS=4
+```
 
 # Results
 
