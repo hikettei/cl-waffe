@@ -27,7 +27,7 @@ As of this writing, available tutorials are written in Japanese and their writin
 
 - [MNIST Example](#mnist-example)
 - [Features](#features)
-  - [Broadcasting.](#broadcasting)
+  - [Broadcasting](#broadcasting)
   - [Destructive APIs with a Simple Rule.](#destructive-apis-with-a-simple-rule)
   - [Useful APIs like Numpy/PyTorch.](#useful-apis-like-numpypytorch)
   - [Automatic Differentiation](#automatic-differentiation)
