@@ -497,96 +497,70 @@ incx/incyを用いればコピーの方向を縦とかにできるはず。
       (let* ((x-strides (loop for i fixnum upfrom 0 below (!dims x)
 			      collect (get-stride (!shape x) i)))
 	     (out-strides (loop for i fixnum upfrom 0 below (!dims out)
-				collect (get-stride out-shape i))))
-	(labels ((explore-batch (rest-costs
-				 &optional
-				   (total-displacements 0)
-				   (total-displacements-out 0)
-				 &aux (last-cost (pop rest-costs)))
-		   (declare (type fixnum total-displacements
-				  total-displacements-out))
-		   (loop with axis fixnum = (cdr last-cost) ; axis
-			 with axis1 fixnum = (cdr (car rest-costs)) ;axis[n-1]
-			 with rest-size fixnum = (caar rest-costs)
-			 with stride fixnum     = (nth axis1 x-strides) ; batch
-			 with out-stride fixnum = (nth axis1 out-strides) ; batch
-
-			 with stride1 fixnum = (nth axis x-strides) ; elements
-			 with stride2 fixnum = (nth axis out-strides) ;elements
-			 
-			 with start-batch
-			   fixnum = (typecase (nth axis1 subscripts)
-				      (fixnum (nth axis1 subscripts))
-				      (list   (the fixnum
-						   (car (nth axis1 subscripts))))
-				      (t 0))
-			 with end-batch 
-			 fixnum = (typecase (nth axis1 subscripts)
-				    (fixnum (1+ (the fixnum
-						     (nth axis1 subscripts))))
-				    (list   (the fixnum
-						 (the fixnum
-						      (second (nth axis1 subscripts)))))
-				    (t      (the fixnum (nth axis1 x-first-dim))))
-			 with element-start fixnum = (typecase (nth axis subscripts)
-						(fixnum (nth axis subscripts))
-						(list   (the fixnum
-							     (car (nth axis subscripts))))
-						(t 0))
-			 with element-end fixnum = (typecase (nth axis subscripts)
-					      (fixnum (1+ (the fixnum
-							       (nth axis subscripts))))
-					      (list   (the fixnum
-							   (the fixnum (second (nth axis subscripts)))))
-					      (t      (the fixnum (nth axis x-first-dim))))
-
-			 with continue-p = (<= (length (the list rest-costs)) 1) ;process 2d in one time
-			 for i fixnum
-			 upfrom (if continue-p
-				    element-start
-				    element-start)
-			   below (if continue-p
-				     element-end
-				     element-end)
-			 if continue-p
-			   do (let ((element-start-index
-				      (+ total-displacements
-					 (the fixnum
-					      (* stride i))))
-				    (element-end-index
-				      (+ total-displacements
-					 (the fixnum
-					      (* stride (1+ i))))))
-				(declare (type fixnum
-					       element-start-index
-					       element-end-index))
-				(let ((tmp-dim `(,(the fixnum
-						       (- element-end-index
-							  element-start-index)))))
-
-				  (print rest-costs)
-				  (reshape-and-displace!
-				   (data x)
-				   `(,rest-size)
-				   element-start-index)
-				  (print (data x))
-				  
-				  ;(copy!
-				  ; (data x)
-				  ; (data out)
-				  ; :n 2
-				  ; :incx stride
-				  ; :incy out-stride)
-				  ))
-			 else
-			   do (explore-batch
-			       rest-costs
-			       (+ total-displacements
-				  (the fixnum (* i stride1)))
-			       (+ total-displacements-out
-				  (the fixnum (* (the fixnum (- i start-batch))
-						 stride2)))))))
-	  (explore-batch costs)
+				collect (get-stride out-shape i)))
+	     (x-size (the fixnum (!size x)))
+	     (o-size (the fixnum (!size out))))
+	(print costs)
+	(labels ((move-x (d)
+		   (declare (type fixnum d))
+		   (reshape-and-displace!
+		    (data x)
+		    `(,(the fixnum (- x-size d)))
+		    d))
+		 (move-o (d)
+		   (declare (type fixnum d))
+		   (reshape-and-displace!
+		    (data out)
+		    `(,(the fixnum (- o-size d)))
+		    d))
+		 (explore (costs
+			   &optional
+			     (td 0)
+			     (tdo 0)
+			   &aux
+			     (last-cost (pop costs))
+			     (last-dim (cdr last-cost))
+			     (last-iter-num (car last-cost)))
+		   (declare (type fixnum td tdo))
+		   (if (= (length (the (or list null) costs)) 0)
+		       (let ((stride (the fixnum (nth last-dim x-strides)))
+			     (ostride (the fixnum (nth last-dim out-strides)))
+			     (n (the fixnum (car last-cost))))
+			 ;Goal1: 開始地点を正しく求める
+			 ;Goal2: nの指定 -> iternumから導出
+			 ;Goal3: subscriptを考慮したnとdisplacementの指定
+			 (print tdo)
+			 (move-x td)
+			 (move-o tdo)
+			 (print (data x))
+			 (print (data out))
+			 (copy! (data x)
+				(data out)
+				:n n
+				:incx stride
+				:incy ostride)
+			 nil)
+		       (loop with stride fixnum = (nth last-dim x-strides)
+			     with ostride fixnum = (nth last-dim out-strides)
+			     with start fixnum = (typecase (nth last-dim subscripts)
+						   (fixnum (the fixnum (nth last-dim subscripts)))
+						   (list (the fixnum (car (nth last-dim subscripts))))
+						   (t 0))
+			     with end fixnum = (typecase (nth last-dim subscripts)
+						 (fixnum (1+ (the fixnum (nth last-dim subscripts))))
+						 (list (the fixnum (second (nth last-dim subscripts))))
+						 (t (the fixnum (nth last-dim x-first-dim))))
+			     for axis-iter fixnum
+			     upfrom start
+			       below end
+			     do (let ((displacement (the fixnum
+							 (* axis-iter stride)))
+				      (dout (the fixnum
+						 (* (the fixnum (- axis-iter start)) ostride))))
+				  (explore costs
+					   (+ td displacement)
+					   (+ tdo dout)))))))
+	  (explore costs)
 	  (reshape-and-displace!
 	   (data x)
 	   x-first-dim
