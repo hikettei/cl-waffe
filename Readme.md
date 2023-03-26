@@ -11,6 +11,10 @@ This is 100% written in Common Lisp (ignoring BLAS/CUBLAS). So it is super easy 
 
 Not having GPUs, I can't test my framework on cuda ><. CUDA support is a little further along. (Ignoring some operations like Embedding, most operations are performed via [mgl-mat](https://github.com/melisgl/mgl-mat), so it should work without any modifications.)
 
+# News
+
+- (2023/03/26) I published the benchmark compared to Numpy/PyTorch. Available at [Here](https://github.com/hikettei/cl-waffe/blob/main/benchmark/Result.md). (Not quite up to my goal.) cl-waffe should peform better... however I guess there's a room to optimize in cl-waffe's source...
+
 # Documents
 
 [Documentation](https://hikettei.github.io/cl-waffe-docs) is available.
@@ -27,7 +31,7 @@ As of this writing, available tutorials are written in Japanese and their writin
 
 - [MNIST Example](#mnist-example)
 - [Features](#features)
-  - [Broadcasting](#broadcasting)
+  - [Broadcasting.](#broadcasting)
   - [Destructive APIs with a Simple Rule.](#destructive-apis-with-a-simple-rule)
   - [Useful APIs like Numpy/PyTorch.](#useful-apis-like-numpypytorch)
   - [Automatic Differentiation](#automatic-differentiation)
@@ -364,9 +368,9 @@ The lazy-evaluated tensors are evaluated via function `(value tensor)`. Once thi
 
 ## Tracing JIT
 
-This is still experimental but...
+This is still experimental...
 
-In `(with-jit)` macro, cl-waffe dynamically defines the kernel functions with lazy-evaluation system. (currently only for blas)
+In the `(with-jit)` macro, cl-waffe dynamically defines the kernel functions with a lazy-evaluation system. (currently, it is only when blas).
 
 ```lisp
 
@@ -388,7 +392,7 @@ In `(with-jit)` macro, cl-waffe dynamically defines the kernel functions with la
   (with-jit
      (time (const (value (!log (!exp a)))))))
 
-; The first call of trace-operate, it seems slow because cl-waffe traces and compiles code.
+; The first call of trace-operate, it seems slower because cl-waffe traces and compiles code.
 (trace-operate)
 ;Evaluation took:
 ;  0.000 seconds of real time
@@ -422,10 +426,17 @@ In `(with-jit)` macro, cl-waffe dynamically defines the kernel functions with la
 
 See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/extend-library.html)
 
-As you can see from `./source/optimizers/optimizers.lisp`, or `./source/operators.lisp`,  the features like `defnode`, `defoptimizer` is exported for users.
-Here's examples.
+cl-waffe's features are based on these macro:
 
-(For details about with-facet, numcl: [with-facet](https://github.com/melisgl/mgl-mat#x-28MGL-MAT-3A-40MAT-FACET-API-20MGL-PAX-3ASECTION-29), [numcl](https://github.com/numcl/numcl))
+- `defmodel` (describes forward process and parameters that to be optimized.)
+- `defnode`  (describes forward process and backward process, that not necessary to use cl-waffe/mgl-mat, you can use libraries you like.)
+- `deftrainer` (describes the predict/training process. (e.g.: criterion, optimizer's setting), which contributes to reduce the amount of total codes.)
+- `defoptimizer` (describes the optimizing function)
+- `defdataset` (describes how the dataset is itearted.)
+
+True, almost implementations are using it (See also: `./source/optimizers/optimizers.lisp`, or `./source/operators.lisp`). In the same way, All macros are exported, and users can make extensions of the framework as required. 
+
+(The codes below is using mgl-mat and numcl. For details about with-facet, numcl: [with-facet(mgl-mat)](https://github.com/melisgl/mgl-mat#x-28MGL-MAT-3A-40MAT-FACET-API-20MGL-PAX-3ASECTION-29), [numcl](https://github.com/numcl/numcl))
 
 ```lisp
 ; in ./source/operators.lisp at 202th line
@@ -455,6 +466,36 @@ Here's examples.
 	     (copy! (data (!sub (gethash i (self params))
 					   (!mul (self lr) (grad (gethash i (self params))))))
 			  (data (gethash i (self params)))))))
+```
+
+## Switchable Backends
+
+See also: [Documentation](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#backends)
+
+It is allowed to redefine the original node in cl-waffe. Such nodes are managed by using `backend`.
+
+`define-node-extension` is available to extend the existing nodes.
+
+```lisp
+; in ./t/node-extension.lisp
+(define-node-extension cl-waffe::AddTensor
+  :backend :my-extension
+  :forward ((x y)
+            (const (+ 100 100)))
+  :backward ((dy)
+             (list dy dy)))
+
+(defun operate-in-mgl ()
+  (with-backend :mgl
+    (= (data (!add 1 1)) 2)))
+
+(defun operate-in-extension ()
+  (with-backend :my-extension
+    (= (data (!add 1 1)) 200)))
+
+(defun operate-restart-test () ; if the operation doesn't exists...
+  (with-backend :does-not-exists
+    (= (data (!add 1 1)) 2)))
 ```
 
 # Usage
