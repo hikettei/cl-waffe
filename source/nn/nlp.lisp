@@ -7,6 +7,7 @@
 			  (activation :tanh)
 			  (bias nil)
 			  (dropout nil))
+  :optimize t
   :parameters ((weight (init-weights
 			:orthogonal
 			input-size
@@ -55,6 +56,7 @@
 	       (bias nil)
 	       (dropout nil)
 	       (bidirectional nil))
+  :optimize t
   :parameters ((rnn-layers (model-list
 			    (loop for i upfrom 0 below num-layers
 				  collect (RNNHiddenLayer
@@ -79,6 +81,7 @@
 			   hs))
 		   (words (!split x 1 :axis 1))
 		   (hs1))
+	      (declare (type list words))
 
 	      ; Nodes from x is correctly lazy-evaluated regardless of hs.
 
@@ -87,7 +90,7 @@
 		(setq words (reverse words)))
 
 	      (if hs-specified?
-		  (dotimes (w-i (length words))
+		  (dotimes (w-i (the fixnum (length words)))
 		    (setq hs1 (!aref hs t w-i t))
 		    (dotimes (rnn-i (self num-layers))
 		      (setq hs1 (call (self rnn-layers)
@@ -95,7 +98,7 @@
 				      (nth w-i words)
 				      hs1)))
 		    (setf (nth w-i words) hs1))
-		  (dotimes (w-i (length words))
+		  (dotimes (w-i (the fixnum (length words)))
 		    (dotimes (rnn-i (self num-layers))
 		      (setq hs (call (self rnn-layers)
 				     (const rnn-i)

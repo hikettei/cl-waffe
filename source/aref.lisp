@@ -98,7 +98,8 @@
   ; Todo: Add handler condition because reshaped tensor won't fixed.
   ;(apply #'%faref tensor dims)
   ;(apply #'%saref nil tensor dims)
-  (apply #'%fast-copy tensor dims))
+  (apply #'%fast-copy tensor dims)
+  )
 
 ; wrapper
 (defun !write-faref (tensor value &rest dims)
@@ -387,62 +388,11 @@
        (!shape x) (!shape y)))
 
 #|
-%slice-2D
-A = Matrix to copied.
+The perforamance of AREF:
 
-{+ Elements to be ignored
-{X Elements to be copied.
-
-12+++++
-34+++++
-56+++++ => 12+++++34+++++56+++++
-
-!aref a t '(0 2)
-+++12+++
-+++34+++ => +++12++++++34++++++56+++
-+++56+++
-
-12
-34
-56
-
-incy=1, incx=3 (displace=1, 2)
-
-COSTS(その軸のStrideについて一回CopyするとCopyできるXの数):
-(3 . 0) (2 . 1)
-
-This is slow in term of performance. because in this example, cl-waffe calls foreign function for 6 times, while this could be done in one time like below.
-
-!aref a '(1 2) t
-++++++++
-12345678
-12345678 => +++++++1234567812345678+++++++
-++++++++
-上の条件はstrideからわかりそう
-
-COSTS:
-(8 . 0) (2 . 1)
-
-!aref a '(1 2) '(4 5)
-+++++++
-++++12+ => +++++++++++12+++++34++++++++
-++++34+
-+++++++
-
-  +++++
-+++++ +
-++1++ +
-+++++
-
-displaceする回数は？
-
-計算は
-for displaces:
-    incx = ?
-    incy = 10
-    copy! みたいに行けそう
-
-incx/incyを用いればコピーの方向を縦とかにできるはず。
+The deeper aref cuts, the less performance aref does.
+e.g.: (!aref tensor `(0 10) t t) [FAST]
+      (!aref tensor t t `(0 10)) [SLOWER] (Compared to the above, approximately 5~10 times slower)
 |#
 
 (defun %fast-copy (x &rest subscripts)
@@ -458,7 +408,6 @@ incx/incyを用いればコピーの方向を縦とかにできるはず。
 				      (cons (the fixnum (- (the fixnum (second sub))
 							   (the fixnum (car sub)))))
 				      (T (!shape x i))))))
-	 (out (!zeros out-shape))
 	 (costs (loop for i fixnum upfrom 0 below (length (the list out-shape))
 
 		      collect `(,(typecase (nth i subscripts)
@@ -470,6 +419,7 @@ incx/incyを用いればコピーの方向を縦とかにできるはず。
 				   (T (!shape x i)))
 				.
 				,i)))
+	 (out (!zeros out-shape))
 	 (costs (sort costs #'< :key #'car))
 	 (x-first-dim (mat-dimensions (data x)))
 	 (x-first-displacement (mat-displacement (data x))))
@@ -569,9 +519,10 @@ incx/incyを用いればコピーの方向を縦とかにできるはず。
 	   (data out)
 	   out-shape
 	   0)
-	  out)))))
+	  out)
+	out))))
 
-	     
+
 (defun %saref (out x &rest subscripts)
   "saref excepts to be out and x's dims are the same."
   (declare (optimize (speed 3))
