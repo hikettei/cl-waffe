@@ -94,7 +94,7 @@ def slicing_bench(K):
 
     def run_test():
         t1 = time()
-        _ = a[:, 200:400]
+        _ = a[200:400, :]
         t2 = time()
         return t2 - t1
     return [run_test() for i in range(N)]

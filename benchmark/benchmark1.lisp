@@ -120,7 +120,7 @@ Supported SIMD extensions in this NumPy install:
   (let ((tensor (!randn `(,k ,k))))
     (labels ((run-test ()
 	       (let ((t1 (get-internal-real-time)))
-		 (!aref tensor t '(200 400))
+		 (!aref tensor '(200 400) t) ; t `(200 400)
 		 (let ((t2 (get-internal-real-time)))
 		   (/ (- t2 t1) internal-time-units-per-second)))))
       (mean (loop for i fixnum upfrom 0 below *N*
