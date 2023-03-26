@@ -103,6 +103,7 @@ I set aside %faref for testing %saref
 Note: !aref/(setf !aref) definitions are located at tensor.lisp
 |#
 
+(defparameter lparallel:*kernel* (lparallel:make-kernel 4))
 ; wrapper
 (defun !faref (tensor &rest dims)
   (value tensor)
@@ -776,7 +777,7 @@ incx/incyを用いればコピーの方向を縦とかにできるはず。
 	  out)))))
 
 (defun test-copy (x &rest subscripts)
-  (declare (optimize (speed 3))
+  (declare (optimize (speed 3) (safety 0))
 	   (type waffetensor x)
 	   (type cons subscripts))
   (let* ((subscripts (parse-subscripts x subscripts))
@@ -827,10 +828,9 @@ incx/incyを用いればコピーの方向を縦とかにできるはず。
 			  (o* ((data out) 'backing-array :direction :output)))
 	      (declare (type (simple-array single-float) x* o*))
 	      (labels ((explore (costs
-				 &optional
+				 &key
 				   (td 0)
 				   (tdo 0)
-				 &aux ; remains to be optimized.
 				   (last-cost (pop costs))
 				   (last-dim  (cdr last-cost))
 				   (n         (car last-cost))
@@ -863,14 +863,18 @@ incx/incyを用いればコピーの方向を縦とかにできるはず。
 				:n n
 				:incx stride
 				:incy ostride))
-			     (let ((x-pointer (+ td start))
-				   (o-pointer tdo))
-			       (declare (type array-index-type x-pointer o-pointer))
+			     (let* ((x-pointer (+ td start))
+				    (o-pointer tdo)
+				    (next-cost (pop costs)))
+			       (declare (type array-index-type
+					      x-pointer
+					      o-pointer))
 			       (lparallel:pdotimes (i n)
 				 (declare (ignore i))
 				 (explore costs
-					  x-pointer
-					  o-pointer)
+					  :td x-pointer
+					  :tdo o-pointer
+					  :last-cost next-cost)
 				 (incf x-pointer stride)
 				 (incf o-pointer ostride))))
 			 nil))
