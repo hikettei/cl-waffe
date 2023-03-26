@@ -830,7 +830,7 @@ incx/incyを用いればコピーの方向を縦とかにできるはず。
 				 &optional
 				   (td 0)
 				   (tdo 0)
-				 &aux
+				 &aux ; remains to be optimized.
 				   (last-cost (pop costs))
 				   (last-dim  (cdr last-cost))
 				   (n         (car last-cost))
@@ -868,11 +868,11 @@ incx/incyを用いればコピーの方向を縦とかにできるはず。
 			       (declare (type array-index-type x-pointer o-pointer))
 			       (lparallel:pdotimes (i n)
 				 (declare (ignore i))
-				 (incf x-pointer stride)
-				 (incf o-pointer ostride)
 				 (explore costs
 					  x-pointer
-					  o-pointer))))
+					  o-pointer)
+				 (incf x-pointer stride)
+				 (incf o-pointer ostride))))
 			 nil))
 		(explore costs)
 		;(disassemble #'explore)
@@ -892,9 +892,9 @@ incx/incyを用いればコピーの方向を縦とかにできるはず。
     (declare (type array-index-type x-pointer y-pointer))
     (loop for i fixnum upfrom 0 below n
 	  do (progn
+	       (setf (aref y y-pointer) (aref x x-pointer))
 	       (incf x-pointer incx)
-	       (incf y-pointer incy)
-	       (setf (aref y y-pointer) (aref x x-pointer))))))
+	       (incf y-pointer incy)))))
 
 #|
 (defun lisp-hcopy (x y &key
