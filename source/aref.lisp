@@ -776,19 +776,20 @@ incx/incyを用いればコピーの方向を縦とかにできるはず。
 	  out)))))
 
 (defun test-copy (x &rest subscripts)
-  "When out=waffetensor, setf-mode? is enabled which subscripts slice out, not a x."
-  (declare (optimize (speed 3) (safety 0))
+  (declare (optimize (speed 3))
 	   (type waffetensor x)
 	   (type cons subscripts))
   (let* ((subscripts (parse-subscripts x subscripts))
-	 (out-shape (loop for i fixnum upfrom 0 below (length (the list subscripts))
-			  collect (let ((sub (nth i subscripts)))
-				    (typecase sub
-				      (fixnum 1)
-				      (cons (the fixnum (- (the fixnum (second sub))
-							   (the fixnum (car sub)))))
-				      (T (!shape x i))))))
-	 (out (!zeros out-shape))
+	 (out-shape (loop for i fixnum
+			  upfrom 0
+			    below (length (the list subscripts))
+			  collect
+			  (let ((sub (nth i subscripts)))
+			    (typecase sub
+			      (fixnum 1)
+			      (cons (the fixnum (- (the fixnum (second sub))
+						   (the fixnum (car sub)))))
+			      (T (!shape x i))))))
 	 (costs (loop for i fixnum upfrom 0 below (length (the list out-shape))
 
 		      collect `(,(typecase (nth i subscripts)
@@ -801,78 +802,81 @@ incx/incyを用いればコピーの方向を縦とかにできるはず。
 				.
 				,i)))
 	 (costs (sort costs #'< :key #'car)))
-    (saref-p
-     nil
-     out
-     x
-     subscripts
-     nil)
-    (labels ((get-stride (shape dim)
-	       (let ((subscripts (fill-with-d shape dim)))
-		 (apply #'+ (maplist #'(lambda (x y)
-					 (the fixnum
-					      (* (the fixnum (car x))
-						 (the fixnum (apply #'* (cdr y))))))
-				     subscripts
-				     shape)))))
-      (let* ((x-strides (loop for i fixnum upfrom 0 below (!dims x)
-			      collect (get-stride (!shape x) i)))
-	     (out-strides (loop for i fixnum upfrom 0 below (!dims out)
-				collect (get-stride out-shape i))))
-	(with-facets ((x* ((data x) 'backing-array :direction :input))
-		      (o* ((data out) 'backing-array :direction :output)))
-	  (declare (type (simple-array single-float) x* o*))
-	  (labels ((explore (costs
-			     &optional
-			       (td 0)
-			       (tdo 0)
-			     &aux
-			       (last-cost (pop costs))
-			       (last-dim  (cdr last-cost))
-			       (n         (car last-cost))
-			       (stride    (nth last-dim x-strides))
-			       (ostride   (nth last-dim out-strides))
-			       (subscript (nth last-dim subscripts))
-			       (start
-				(* stride (the array-index-type
-					       (typecase subscript
-						 (fixnum subscript)
-						 (list   (car subscript))
-						 (t 0))))))
-		     (declare (type array-index-type
-				    td
-				    tdo
-				    n
-				    stride
-				    ostride
-				    start)
-			      (inline lisp-scopy))
-		     (if (or (null costs)
-			     (= (length (the list costs)) 0))
-			 (let* ((tds (+ td start)))
-			   (declare (type fixnum tds))
-			   (lisp-scopy
-			    x*
-			    o*
-			    :x-offset tds
-			    :y-offset tdo
-			    :n n
-			    :incx stride
-			    :incy ostride)
-			   nil)
-			 (let ((x-pointer (+ td start))
-			       (o-pointer tdo))
-			   (declare (type fixnum x-pointer o-pointer))
-			   (lparallel:pdotimes (i n)
-			     (declare (ignore i))
-			     (incf x-pointer stride)
-			     (incf o-pointer ostride)
-			     (explore costs
-				      x-pointer
-				      o-pointer))))))
-	    (explore costs)
-	    ;(disassemble #'explore)
-	    out))))))
+
+    (with-ones (out out-shape :place :aref)
+      (let ((out (const out)))
+	(saref-p
+	 nil
+	 out
+	 x
+	 subscripts
+	 nil)
+	(labels ((get-stride (shape dim)
+		   (let ((subscripts (fill-with-d shape dim)))
+		     (apply #'+ (maplist #'(lambda (x y)
+					     (the fixnum
+						  (* (the fixnum (car x))
+						     (the fixnum (apply #'* (cdr y))))))
+					 subscripts
+					 shape)))))
+	  (let* ((x-strides (loop for i fixnum upfrom 0 below (!dims x)
+				  collect (get-stride (!shape x) i)))
+		 (out-strides (loop for i fixnum upfrom 0 below (!dims out)
+				    collect (get-stride out-shape i))))
+	    (with-facets ((x* ((data x) 'backing-array :direction :input))
+			  (o* ((data out) 'backing-array :direction :output)))
+	      (declare (type (simple-array single-float) x* o*))
+	      (labels ((explore (costs
+				 &optional
+				   (td 0)
+				   (tdo 0)
+				 &aux
+				   (last-cost (pop costs))
+				   (last-dim  (cdr last-cost))
+				   (n         (car last-cost))
+				   (stride    (nth last-dim x-strides))
+				   (ostride   (nth last-dim out-strides))
+				   (subscript (nth last-dim subscripts))
+				   (start
+				    (* stride (the array-index-type
+						   (typecase subscript
+						     (fixnum subscript)
+						     (list   (car subscript))
+						     (t 0))))))
+			 (declare (type array-index-type
+					td
+					tdo
+					n
+					stride
+					ostride
+					start)
+				  (inline lisp-scopy))
+			 (if (or (null costs)
+				 (= (length (the list costs)) 0))
+			     (let* ((tds (+ td start)))
+			       (declare (type fixnum tds))
+			       (lisp-scopy
+				x*
+				o*
+				:x-offset tds
+				:y-offset tdo
+				:n n
+				:incx stride
+				:incy ostride))
+			     (let ((x-pointer (+ td start))
+				   (o-pointer tdo))
+			       (declare (type array-index-type x-pointer o-pointer))
+			       (lparallel:pdotimes (i n)
+				 (declare (ignore i))
+				 (incf x-pointer stride)
+				 (incf o-pointer ostride)
+				 (explore costs
+					  x-pointer
+					  o-pointer))))
+			 nil))
+		(explore costs)
+		;(disassemble #'explore)
+		(const (reshape (data out) out-shape))))))))))
 
 (defun lisp-scopy (x y &key
 			 (n 0)
