@@ -20,6 +20,7 @@ Usage: lake [command]
 Tasks:
   test                     Operate tests
   benchmark                Start Benchmarking
+  benchmark-python         Start Benchmarking with cl-waffe and numpy.
   gendoc                   Generating Documentations
   example:install          Install training data for examples
   example:mnist            Run example model with MNIST
@@ -31,6 +32,11 @@ Tasks:
 
 (task "benchmark" ()
   (sh "./roswell/cl-waffe-benchmark.ros"))
+
+(task "benchmark-python" ()
+  (sh "ros build ./roswell/cl-waffe-benchmark.ros")
+  (sh "sh ./scripts/python-benchmark.sh")
+  (sh "./roswell/cl-waffe-benchmark python"))
 
 (task "gendoc" ()
   (sh "./roswell/gendoc.ros"))
