@@ -40,6 +40,10 @@ As of this writing, available tutorials are written in Japanese and their writin
   - [Extensible APIs](#extensible-apis)
   - [Switchable Backends](#switchable-backends)
 - [Usage](#usage)
+    - [Install via Github](#install-via-github)
+    - [Install via Roswell](#install-via-roswell)
+    - [Install via Ultralisp](#install-via-ultralisp)
+- [Lakefile](#lakefile)
 - [Run MNIST With Roswell](#run-mnist-with-roswell)
 - [Currently Problems/Todo](#currently-problemstodo)
 - [Goals](#goals)
@@ -54,6 +58,7 @@ As of this writing, available tutorials are written in Japanese and their writin
 See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/mnist-tutorial.html)
 
 cl-waffe aimed to reduce the amount of total code written.
+
 ```lisp
 ; Full Code is in ./examples/mnist.lisp
 
@@ -95,6 +100,7 @@ As of this writing:
 - Useful Lazy-Evaluation System
 - Tracing JIT
 - Extensible APIs
+- Switchable Backends
 
 ## Broadcasting
 
@@ -499,12 +505,17 @@ It is allowed to redefine the original node in cl-waffe. Such nodes are managed 
     (= (data (!add 1 1)) 2)))
 ```
 
-# Usage
+# Install
 
-Please clone this repository and register it as a local-project or just load `cl-waffe.asd`
+It is recommended to install following in advance:
 
-This framework is still **incomplete and experimental**, being not yet ready to register with Quicklisp etc..
+1. [SBCL](https://www.sbcl.org/)
+2. [Roswell](https://github.com/roswell/roswell) (If you're new to Common Lisp, I recommend you to install it first.)
+3. [Lake](https://github.com/takagi/lake)
 
+cl-waffe is available in one of the following ways:
+
+### Install via Github
 For Example:
 ```shell
 $ git clone git@github.com:hikettei/cl-waffe.git
@@ -514,7 +525,21 @@ $ sbcl
 * (ql:quickload :cl-waffe) ; all is done!
 ```
 
-[Lakefile](https://github.com/leanprover/lake) is available. (Also it requires [Roswell](https://github.com/roswell/roswell))
+### Install via Roswell
+
+```shell
+$ ros install hikettei/cl-waffe
+$ ros run
+* (ql:quickload :cl-waffe)
+```
+
+### Install via Ultralisp
+
+[ultralisp](https://ultralisp.org/) dist is available.
+
+# Lakefile
+
+[Lakefile](https://github.com/leanprover/lake) is available at github repository. (Also it requires [Roswell](https://github.com/roswell/roswell))
 
 ```shell
 $ lake
@@ -523,6 +548,7 @@ Usage: lake [command]
 Tasks:
   test                     Operate tests
   benchmark                Start Benchmarking
+  benchmark-python         Start Benchmarking with cl-waffe and numpy/pytorch.
   gendoc                   Generating Documentations
   example:install          Install training data for examples
   example:mnist            Run example model with MNIST
@@ -531,19 +557,29 @@ Tasks:
 
 # Run MNIST With Roswell
 
-```
+
+```shell
 $ cd examples
 $ sh install.sh
 $ cd ..
 $ ./run-test-model.ros mnist
 ```
 
+or
+
+```shell
+$ lake example:install
+$ lake example:fnn
+```
+
+should work. `lake example:mnist` is also OK.
+
 # Currently Problems/Todo
 As of writing, I'm working on:
 
-- 破壊的代入のサポート(Support more destructive operations)
+- ~~破壊的代入のサポート(Support more destructive operations)~~(Done)
 - Neural Networkの追加 (Add cl-waffe.nn models)
-- IterationのBackwardを高速化 (Improve performance of RNN) (e.g.: the backward of (setf !aref) ...)
+- RNNs are too much slower than PyTorch...
 - モデルの保存に対応 (Save and restore trained models.)
 - グラフの表示に対応 (Plotting losses and so on)
 - 様々なデータ構造を扱えるように (Support more types of data structure)
@@ -552,6 +588,7 @@ As of writing, I'm working on:
 - CUDAに対応 (Support CUDA)
 - 他の処理系で動くか試す (Try on another systems (e.g.: CCL))
 - Improving the quality of documentation.
+
 # Goals
 
 - Making cl-waffe a modern and fast framework.
