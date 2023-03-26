@@ -74,7 +74,9 @@ Supported SIMD extensions in this NumPy install:
 (defparameter *slice-try-i* 1)
 (defparameter *nn-try-i* 1)
 
+(declaim (type fixnum *mm-try-i* *broadcast-try-i* *slice-try-i* *nn-try-i*))
 (defun matmul_2d (k)
+  (declare (optimize (speed 3)))
   (format t "[~a/~a]  Testing on ~a*~a Matrix for ~a times~%"
 	  *mm-try-i*
 	  (length *MATMUL_SIZE*)
@@ -359,6 +361,10 @@ Supported SIMD extensions in this NumPy install:
 			       (nth nth numpy-result)
 			       (nth nth torch-result))
 		 (format stream "![result](~a)~%" relatively-path)))
+	(section "Variables")
+	(content "```export OPENBLAS_NUM_THREADS=4
+export MKL_NUM_THREADS=4```")
+	
 	(title "Results")
 	(section "cl-waffe and numpy")
 	(show-benchmarks
@@ -375,13 +381,12 @@ Supported SIMD extensions in this NumPy install:
 	 "./results/broadcasting.png"
 	 "Applying broadcasting-add to A[K, K, 1] and B[1, K, K] for N times")
 
-
 	(show-benchmarks
 	 "slice"
 	 4
 	 "./benchmark/results/slice.png"
 	 "./results/slice.png"
-	 "Computes (!aref (!randn `(,K ,K)) t '(200 400)) for N times.")
+	 "Computes (!aref (!randn `(,K ,K)) '(200 400) t) for N times.")
 
 	(show-benchmarks
 	 "DenseLayer"

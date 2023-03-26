@@ -1,12 +1,22 @@
 # Benchmarking
 
-The latest benchmark is executed at 16:04:55 of Sunday, 3/26/2023 (GMT+9)
+The latest benchmark is executed at 20:26:37 of Sunday, 3/26/2023 (GMT+9)
 
 First, as a matrix arithmetic library, I measured benchmarks compared to NumPy as impartial as possible..
 
 Also, cl-waffe is also a deep learning framework. Benchmakrs compared to PyTorch is available.
 
 ⚠️ cl-waffe and numpy are working on a different backends, openblas and mkl respectively. The author didn't know how to use numpy in OpenBLAS... So the result may be inaccuracy...
+
+** I think this benchmark is unfair in term of threads. Keep in mind that in practice cl-waffe still has a lot of room for optimisation and numpy/python can perform better**
+
+Also, cl-waffe is still under development and yet parallelised enough.
+
+To run benchmark on your computer:
+
+```shell
+$ lake benchmark-python
+```
 
 ## Machine Environments
 
@@ -23,7 +33,7 @@ all benchmark is working on single-float(np.float32)
 ### cl-waffe
 
 - Working on SBCL [2.1.0]
-- cl-waffe (latest, 16:04:55 of Sunday, 3/26/2023 (GMT+9))
+- cl-waffe (latest, 20:26:37 of Sunday, 3/26/2023 (GMT+9))
 
 ```lisp
 cl-user::*lla-configuration*
@@ -68,6 +78,11 @@ Supported SIMD extensions in this NumPy install:
     not found = AVX512F,AVX512CD,AVX512_KNL,AVX512_SKX,AVX512_CLX,AVX512_CNL,AVX512_ICL
 ```
 
+## Variables
+
+```export OPENBLAS_NUM_THREADS=4
+export MKL_NUM_THREADS=4```
+
 # Results
 
 ## cl-waffe and numpy
@@ -84,7 +99,7 @@ Applying broadcasting-add to A[K, K, 1] and B[1, K, K] for N times
 ![result](./results/broadcasting.png)
 ### slice
 
-Computes (!aref (!randn `(,K ,K)) t '(200 400)) for N times.
+Computes (!aref (!randn `(,K ,K)) '(200 400) t) for N times.
 
 ![result](./results/slice.png)
 ### DenseLayer
@@ -92,6 +107,7 @@ Computes (!aref (!randn `(,K ,K)) t '(200 400)) for N times.
 Computes denselayer (defined as out = `(!relu (!add (!matmul weight x) bias))`) for N times.
 
 ![result](./results/denselayer.png)
+
 ## cl-waffe and PyTorch
 
 coming soon...
