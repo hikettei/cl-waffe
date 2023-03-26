@@ -500,7 +500,6 @@ incx/incyを用いればコピーの方向を縦とかにできるはず。
 				collect (get-stride out-shape i)))
 	     (x-size (the fixnum (!size x)))
 	     (o-size (the fixnum (!size out))))
-	(print costs)
 	(labels ((move-x (d)
 		   (declare (type fixnum d))
 		   (reshape-and-displace!
@@ -521,7 +520,7 @@ incx/incyを用いればコピーの方向を縦とかにできるはず。
 			     (last-cost (pop costs))
 			     (last-dim (cdr last-cost))
 			     (n (car last-cost)))
-		   (declare (type fixnum td tdo))
+		   (declare (type fixnum td tdo n))
 		   (if (= (length (the (or list null) costs)) 0)
 		       (let* ((stride (the fixnum (nth last-dim x-strides)))
 			      (ostride (the fixnum (nth last-dim out-strides)))
@@ -529,24 +528,24 @@ incx/incyを用いればコピーの方向を縦とかにできるはず。
 				       (fixnum (the fixnum (nth last-dim subscripts)))
 				       (list (the fixnum (car (nth last-dim subscripts))))
 				       (t 0)))
-			      (start (* (the fixnum start) stride)))
-			 (declare (type fixnum stride ostride start))
-			 (print start)
-			 (print n)
-			 (print stride)
-			 ;Goal1: 開始地点を正しく求める
-			 ;Goal2: nの指定 -> iternumから導出
-			 ;Goal3: subscriptを考慮したnとdisplacementの指定
-			 ;(print tdo)
-			 (move-x (+ td start))
+			      (start (* (the fixnum start) stride))
+			      (tds (+ td start)))
+			 (declare (type fixnum stride ostride start tds))
+			 (move-x tds)
 			 (move-o tdo)
-			 (print x)
-			 (print out)
-			 (copy! (data x)
-				(data out)
-				:n n
-				:incx stride
-				:incy ostride)
+			 (if (use-cuda-p (data x))
+			     (mgl-mat::cublas-copy ; not tested
+			      (the fixnum n)
+			      (data x)
+			      stride
+			      (data out)
+			      ostride)
+			     (mgl-mat::blas-scopy
+			      (the fixnum n)
+			      (data x)
+			      stride
+			      (data out)
+			      ostride))
 			 nil)
 		       (loop with stride fixnum = (nth last-dim x-strides)
 			     with ostride fixnum = (nth last-dim out-strides)
@@ -566,7 +565,7 @@ incx/incyを用いればコピーの方向を縦とかにできるはず。
 				      (dout (the fixnum
 						 (* (the fixnum (- axis-iter start)) ostride))))
 				  (explore costs
-					   (+ td displacement)
+					   (+ td  displacement)
 					   (+ tdo dout)))))))
 	  (explore costs)
 	  (reshape-and-displace!
