@@ -39,7 +39,7 @@ As of this writing, available tutorials are written in Japanese and their writin
   - [Tracing JIT](#tracing-jit)
   - [Extensible APIs](#extensible-apis)
   - [Switchable Backends](#switchable-backends)
-- [Usage](#usage)
+- [Install](#install)
     - [Install via Github](#install-via-github)
     - [Install via Roswell](#install-via-roswell)
     - [Install via Ultralisp](#install-via-ultralisp)
