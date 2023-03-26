@@ -3,15 +3,21 @@
 [![CI](https://github.com/hikettei/cl-waffe/actions/workflows/ci.yml/badge.svg)](https://github.com/hikettei/cl-waffe/actions/workflows/ci.yml)
 ![cl-waffe](https://hikettei.github.io/cl-waffe-docs/docs/cl-waffe-logo.png)
 
-**This package is still under development, and its features are far from practical.**
+**This package is still under development and experimental, so don't use this in your product.**
 
 cl-waffe is a deep learning framework with modern APIs for Common Lisp.
 
-Having not GPUs, I can't test my framework on cuda ><. CUDA support is a little further along.
+This is 100% written in Common Lisp (ignoring BLAS/CUBLAS). So it is easy to extend kernel as you will.
+
+Not having GPUs, I can't test my framework on cuda ><. CUDA support is a little further along. (Ignoring some operations like Embedding, most operations are performed via [mgl-mat](https://github.com/melisgl/mgl-mat), so it should work without any modifications.)
 
 # Documents
 
 [Documentation](https://hikettei.github.io/cl-waffe-docs) is available.
+
+Also, I started to prepare [Tutorials(Written in Japanese)](https://github.com/hikettei/cl-waffe/tree/main/tutorials/jp).
+
+As of this writing, available tutorials are written in Japanese and their writing continues, but eventually, I'm willing to complete and translate them into English. So don't worry if you don't speak Japanese.
 
 # TOC
 
