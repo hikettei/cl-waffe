@@ -1,7 +1,7 @@
 
 (in-package :cl-waffe-benchmark)
 
-; Execute benchmarks
+; Compare to mgl-mat, which is a lisp library.
 
 (with-benchmark "2D_Add"
   :cl-waffe (with-init-2d x y
@@ -206,7 +206,7 @@
 		     (copy! (data x) (data y))))))
 
 
-(defun start-benchmark (&key (dim-n 100) (loop-n 1000) (directory "./benchmark/benchmark.md") (speed-alert-min 1.5) (space-alert-min 1.5))
+(defun start-benchmark (&key (dim-n 256) (loop-n 1000) (directory "./benchmark/benchmark.md") (speed-alert-min 1.5) (space-alert-min 1.5))
   (format t "✅ Benchmarking :cl-waffe~%")
   (format t "✅ The number of benchmarks is : ~a~%" (length *benchmarks*))
   

@@ -109,8 +109,7 @@
 					 (:file "tensor-operate")
 					 (:file "network")
 					 (:file "operators")
-					 (:file "optimizers")
-					 )))
+					 (:file "optimizers"))))
   :perform (test-op (o s)
 		    (symbol-call :fiveam :run! :test)))
 
@@ -131,9 +130,10 @@
   :version nil
   :author "hikettei"
   :licence "MIT"
-  :depends-on (:cl-waffe :cl-cram :cl-ppcre)
+  :depends-on (:cl-waffe :cl-cram :cl-ppcre :clgplot :shasht)
   :components ((:module "benchmark"
 		:components ((:file "package")
 			     (:file "utils")
 			     (:file "output")
-			     (:file "benchmark")))))
+			     (:file "benchmark")
+			     (:file "benchmark1")))))

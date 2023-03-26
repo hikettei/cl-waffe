@@ -1,7 +1,11 @@
 
 (in-package :cl-waffe)
 
+(deftype array-index-type ()
+    `(integer 0 4611686018427387903))
+
 (defnode ArefTensor (shape)
+  :optimize t
   :parameters ((shape shape)
 	       (base-shape T))
   :forward ((x) (setf (self base-shape) (!shape x))
@@ -12,6 +16,7 @@
 	       (list dy-n))))
 
 (defnode SetfArefTensor (shape)
+  :optimize t
   :parameters ((shape shape))
   :forward ((x y)
 	    ; Note: defnode must produce new sysconst otherwise stackoverflow...
@@ -20,29 +25,31 @@
 	     (list dy (apply #'!faref dy (self shape)))))
 
 (defun saref-p (setf-mode? out tensor subscripts broadcasts)
-  (declare (ignore broadcasts))
+  (declare (ignore broadcasts)
+	   (optimize (speed 3) (safety 0)))
   (let ((topic-tensor (if setf-mode?
 			  out
 			  tensor)))
+    (declare (type waffetensor topic-tensor))
     (mapc
      #'(lambda (x y)
 	 (typecase y
 	   (fixnum
 	    (if (>= y x)
-		(error "!aref the index ~a is beyonds ~a.~%~a~%and~%~a~%~% dims are specified in the range of (0 ~a)" y x topic-tensor subscripts (1- x))))
+		(error "!aref the index ~a is beyonds ~a.~%~a~%and~%~a~%~% dims are specified in the range of (0 ~a)" y x topic-tensor subscripts (1- (the fixnum x)))))
 	   (list
-	    (if (> (car y) x)
+	    (if (> (the fixnum (car y)) (the fixnum x))
 		(error "!aref the first index ~a is beyonds ~a.~%~a~%and~%~a~%~% dims are specified in the range of (0 ~a)" y x topic-tensor subscripts (1- x)))
-	    (if (> (second y) x)
+	    (if (> (the fixnum (second y)) x)
 		(error "!aref the second index ~a is beyonds ~a.~%~a~%and~%~a~%~% stops are specified in the range of (0 ~a)" y x topic-tensor subscripts (1- x))))))
      (!shape topic-tensor) subscripts))
   (mapc
    #'(lambda (a b c)
        (typecase b
 	 (fixnum t)
-	 (cons (if (< a (- (second b) (car b)))
-		 (error "!aref: Can't copy ~%~a and ~%~a ~%~%beacuse the subscript ~a will produce the tensor whose shape is (~a)~% but it won't fit into the tensor of (~a)" out tensor b (- (second b) (car b)) a)))
-	 (t (if (< a c)
+	 (cons (if (< (the fixnum a) (the fixnum (- (the fixnum (second b)) (the fixnum (car b)))))
+		 (error "!aref: Can't copy ~%~a and ~%~a ~%~%beacuse the subscript ~a will produce the tensor whose shape is (~a)~% but it won't fit into the tensor of (~a)" out tensor b (the fixnum (- (the fixnum (second b)) (the fixnum (car b)))) a)))
+	 (t (if (< (the fixnum a) (the fixnum c))
 		(error "!aref: Can't copy ~a and ~a ~%~%because the size ~a tensor won't fit into the size ~a tensor.~%That is, the given out is too small to copy the target.~%~%(setf (!aref out subscripts) target) <- out is too small." out tensor c a)))))
    (!shape out) subscripts (!shape tensor)))
 
@@ -85,23 +92,14 @@
 		     t)))))
 
 
-#|
-For those who are reading my ugly code.
-There's two !aref:
-  1. %faref/%write-faref (old implementation using facets)
-  2. %saref (new implementation using BLAS Operations
-%faref %write-faref is not used anymore but it supports simple-array.
-I set aside %faref for testing %saref
-
-Note: !aref/(setf !aref) definitions are located at tensor.lisp
-|#
-
 ; wrapper
 (defun !faref (tensor &rest dims)
   (value tensor)
   ; Todo: Add handler condition because reshaped tensor won't fixed.
   ;(apply #'%faref tensor dims)
-  (apply #'%saref nil tensor dims))
+  ;(apply #'%saref nil tensor dims)
+  (apply #'%fast-copy tensor dims)
+  )
 
 ; wrapper
 (defun !write-faref (tensor value &rest dims)
@@ -356,8 +354,14 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
 	(next-node dims-indices nil nil)
 	tensor))))
 
+
+(declaim (ftype (function (cons fixnum) cons) fill-with-d))
 (defun fill-with-d (shape i)
+  (declare (optimize (speed 3))
+	   (type cons shape)
+	   (type fixnum i))
   (let ((index -1))
+    (declare (type fixnum index))
     (map 'list (lambda (x)
 		 (declare (ignore x))
 		 (incf index 1)
@@ -382,6 +386,142 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
 			 `(nil nil)
 			 `(nil nil))))
        (!shape x) (!shape y)))
+
+#|
+The perforamance of AREF:
+
+The deeper aref cuts, the less performance aref does.
+e.g.: (!aref tensor `(0 10) t t) [FAST]
+      (!aref tensor t t `(0 10)) [SLOWER] (Compared to the above, approximately 5~10 times slower)
+|#
+
+(defun %fast-copy (x &rest subscripts)
+  "When out=waffetensor, setf-mode? is enabled which subscripts slice out, not a x."
+  (declare (optimize (speed 3) (safety 0))
+	   (type waffetensor x)
+	   (type cons subscripts))
+  (let* ((subscripts (parse-subscripts x subscripts))
+	 (out-shape (loop for i fixnum upfrom 0 below (length (the list subscripts))
+			  collect (let ((sub (nth i subscripts)))
+				    (typecase sub
+				      (fixnum 1)
+				      (cons (the fixnum (- (the fixnum (second sub))
+							   (the fixnum (car sub)))))
+				      (T (!shape x i))))))
+	 (costs (loop for i fixnum upfrom 0 below (length (the list out-shape))
+
+		      collect `(,(typecase (nth i subscripts)
+				   (fixnum 1)
+				   (list (let ((subs (nth i subscripts)))
+					   (the fixnum
+						(- (the fixnum (second subs))
+						   (the fixnum (car subs))))))
+				   (T (!shape x i)))
+				.
+				,i)))
+	 (out (!zeros out-shape))
+	 (costs (sort costs #'< :key #'car))
+	 (x-first-dim (mat-dimensions (data x)))
+	 (x-first-displacement (mat-displacement (data x))))
+    (saref-p
+     nil
+     out
+     x
+     subscripts
+     nil)
+    (labels ((get-stride (shape dim)
+	       (let ((subscripts (fill-with-d shape dim)))
+		 (apply #'+ (maplist #'(lambda (x y)
+					 (the fixnum
+					      (* (the fixnum (car x))
+						 (the fixnum (apply #'* (cdr y))))))
+				     subscripts
+				     shape)))))
+      (let* ((x-strides (loop for i fixnum upfrom 0 below (!dims x)
+			      collect (get-stride (!shape x) i)))
+	     (out-strides (loop for i fixnum upfrom 0 below (!dims out)
+				collect (get-stride out-shape i)))
+	     (x-size (the fixnum (!size x)))
+	     (o-size (the fixnum (!size out))))
+	(labels ((move-x (d)
+		   (declare (type fixnum d))
+		   (reshape-and-displace!
+		    (data x)
+		    `(,(the fixnum (- x-size d)))
+		    d))
+		 (move-o (d)
+		   (declare (type fixnum d))
+		   (reshape-and-displace!
+		    (data out)
+		    `(,(the fixnum (- o-size d)))
+		    d))
+		 (explore (costs
+			   &optional
+			     (td 0)
+			     (tdo 0)
+			   &aux
+			     (last-cost (pop costs))
+			     (last-dim (cdr last-cost))
+			     (n (car last-cost)))
+		   (declare (type fixnum td tdo n))
+		   (if (= (length (the (or list null) costs)) 0)
+		       (let* ((stride (the fixnum (nth last-dim x-strides)))
+			      (ostride (the fixnum (nth last-dim out-strides)))
+			      (start (typecase (nth last-dim subscripts)
+				       (fixnum (the fixnum (nth last-dim subscripts)))
+				       (list (the fixnum (car (nth last-dim subscripts))))
+				       (t 0)))
+			      (start (* (the fixnum start) stride))
+			      (tds (+ td start)))
+			 (declare (type fixnum stride ostride start tds))
+			 (move-x tds)
+			 (move-o tdo)
+			 (if (use-cuda-p (data x))
+			     (mgl-mat::cublas-copy ; not tested on cuda
+			      (the fixnum n)
+			      (data x)
+			      stride
+			      (data out)
+			      ostride) ; only single-float
+			     (mgl-mat::blas-scopy
+			      (the fixnum n)
+			      (data x)
+			      stride
+			      (data out)
+			      ostride))
+			 nil)
+		       (loop with stride fixnum = (nth last-dim x-strides)
+			     with ostride fixnum = (nth last-dim out-strides)
+			     with start fixnum = (typecase (nth last-dim subscripts)
+						   (fixnum (the fixnum (nth last-dim subscripts)))
+						   (list (the fixnum (car (nth last-dim subscripts))))
+						   (t 0))
+			     with end fixnum = (typecase (nth last-dim subscripts)
+						 (fixnum (1+ (the fixnum (nth last-dim subscripts))))
+						 (list (the fixnum (second (nth last-dim subscripts))))
+						 (t (the fixnum (nth last-dim x-first-dim))))
+			     for axis-iter fixnum
+			     upfrom start
+			       below end
+			     do (let ((displacement (the fixnum
+							 (* axis-iter stride)))
+				      (dout (the fixnum
+						 (* (the fixnum (- axis-iter start)) ostride))))
+				  (explore costs
+					   (+ td  displacement)
+					   (+ tdo dout)))))))
+	  (explore costs)
+	  (reshape-and-displace!
+	   (data x)
+	   x-first-dim
+	   x-first-displacement)
+	  (reshape-and-displace!
+	   (data out)
+	   out-shape
+	   0)
+	  out)
+	out))))
+
 
 (defun %saref (out x &rest subscripts)
   "saref excepts to be out and x's dims are the same."
@@ -414,7 +554,7 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
 			  x
 			  out)
 			 nil)))
-    (declare (type list x-dim-first o-dim-first))
+    (declare (type cons x-dim-first o-dim-first))
     #|
     setf-mode?=t, -> the copied tensor overwrittes out
     setf-mode?=nil, -> creates new tensor and is overwritted
@@ -461,8 +601,9 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
 		 (explore-batch (dim-index dims-x dims-o x-index o-index)
 		   (declare (type fixnum dim-index x-index o-index)
 			    (type list dims-x dims-o))
+		   
 		   (if (>= (length dims-x) 2)
-		       ; Batch
+		       ; Setting Batch
 		       (let ((sub (nth dim-index subscripts)))
 			 (typecase sub
 			   (fixnum
@@ -485,9 +626,10 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
 			   (list
 			    (loop
 			      with m fixnum = (car sub)
+			      with 1+dim-index fixnum = (1+ dim-index)
 			      for i fixnum upfrom 0 below (- (the fixnum (second sub)) (the fixnum (car sub)))
 				  do (explore-batch
-				      (+ 1 dim-index)
+				      1+dim-index
 				      (cdr dims-x)
 				      (cdr dims-o)
 				      (x-step-index
@@ -503,9 +645,10 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
 					   i)
 				       dim-index))))
 			   (t
-			    (loop for i fixnum upfrom 0 below (car dims-o)
+			    (loop with 1+dim-index fixnum = (1+ dim-index)
+			          for i fixnum upfrom 0 below (car dims-o)
 				  do (explore-batch
-				      (+ 1 dim-index)
+				      1+dim-index
 				      (cdr dims-x)
 				      (cdr dims-o)
 				      (x-step-index
@@ -571,3 +714,147 @@ Note: !aref/(setf !aref) definitions are located at tensor.lisp
 	  (reshape-and-displace! (data x) x-dim-first x-displace-first)
 	  (reshape-and-displace! (data out) o-dim-first o-displace-first)
 	  out)))))
+
+(defun test-copy (x &rest subscripts)
+  (declare (optimize (speed 3) (safety 0))
+	   (type waffetensor x)
+	   (type cons subscripts))
+  (let* ((subscripts (parse-subscripts x subscripts))
+	 (out-shape (loop for i fixnum
+			  upfrom 0
+			    below (length (the list subscripts))
+			  collect
+			  (let ((sub (nth i subscripts)))
+			    (typecase sub
+			      (fixnum 1)
+			      (cons (the fixnum (- (the fixnum (second sub))
+						   (the fixnum (car sub)))))
+			      (T (!shape x i))))))
+	 (costs (loop for i fixnum upfrom 0 below (length (the list out-shape))
+
+		      collect `(,(typecase (nth i subscripts)
+				   (fixnum 1)
+				   (list (let ((subs (nth i subscripts)))
+					   (the fixnum
+						(- (the fixnum (second subs))
+						   (the fixnum (car subs))))))
+				   (T (!shape x i)))
+				.
+				,i)))
+	 (costs (sort costs #'< :key #'car)))
+
+    (with-ones (out out-shape :place :aref)
+      (let ((out (const out)))
+	(saref-p
+	 nil
+	 out
+	 x
+	 subscripts
+	 nil)
+	(labels ((get-stride (shape dim)
+		   (let ((subscripts (fill-with-d shape dim)))
+		     (apply #'+ (maplist #'(lambda (x y)
+					     (the fixnum
+						  (* (the fixnum (car x))
+						     (the fixnum (apply #'* (cdr y))))))
+					 subscripts
+					 shape)))))
+	  (let* ((x-strides (loop for i fixnum upfrom 0 below (!dims x)
+				  collect (get-stride (!shape x) i)))
+		 (out-strides (loop for i fixnum upfrom 0 below (!dims out)
+				    collect (get-stride out-shape i))))
+	    (with-facets ((x* ((data x) 'backing-array :direction :input))
+			  (o* ((data out) 'backing-array :direction :output)))
+	      (declare (type (simple-array single-float) x* o*))
+	      (labels ((explore (costs
+				 &key
+				   (td 0)
+				   (tdo 0)
+				   (last-cost (pop costs))
+				   (last-dim  (cdr last-cost))
+				   (n         (car last-cost))
+				   (stride    (nth last-dim x-strides))
+				   (ostride   (nth last-dim out-strides))
+				   (subscript (nth last-dim subscripts))
+				   (start
+				    (* stride (the array-index-type
+						   (typecase subscript
+						     (fixnum subscript)
+						     (list   (car subscript))
+						     (t 0))))))
+			 (declare (type array-index-type
+					td
+					tdo
+					n
+					stride
+					ostride
+					start)
+				  (inline lisp-scopy))
+			 (if (or (null costs)
+				 (= (length (the list costs)) 0))
+			     (let* ((tds (+ td start)))
+			       (declare (type fixnum tds))
+			       (lisp-scopy
+				x*
+				o*
+				:x-offset tds
+				:y-offset tdo
+				:n n
+				:incx stride
+				:incy ostride))
+			     (let* ((x-pointer (+ td start))
+				    (o-pointer tdo)
+				    (next-cost (pop costs)))
+			       (declare (type array-index-type
+					      x-pointer
+					      o-pointer))
+			       (lparallel:pdotimes (i n)
+				 (declare (ignore i))
+				 (explore costs
+					  :td x-pointer
+					  :tdo o-pointer
+					  :last-cost next-cost)
+				 (incf x-pointer stride)
+				 (incf o-pointer ostride))))
+			 nil))
+		(explore costs)
+		;(disassemble #'explore)
+		(const (reshape (data out) out-shape))))))))))
+
+(defun lisp-scopy (x y &key
+			 (n 0)
+			 (incx 1)
+			 (incy 1)
+			 (x-offset 0)
+			 (y-offset 0))
+  (declare (optimize (speed 3) (safety 0))
+           (type (simple-array single-float) x y)
+	   (type array-index-type incx incy n x-offset y-offset))
+  (let ((x-pointer x-offset)
+	(y-pointer y-offset))
+    (declare (type array-index-type x-pointer y-pointer))
+    (loop for i fixnum upfrom 0 below n
+	  do (progn
+	       (setf (aref y y-pointer) (aref x x-pointer))
+	       (incf x-pointer incx)
+	       (incf y-pointer incy)))))
+
+#|
+(defun lisp-hcopy (x y &key
+			 (n 0)
+			 (incx 1)
+			 (incy 1)
+			 (x-offset 0)
+			 (y-offset 0))
+  (declare (optimize (speed 3) (safety 0))
+           (type (simple-array single-float) x y)
+	   (type array-index-type incx incy n x-offset y-offset))
+  (let ((x-pointer x-offset)
+	(y-pointer y-offset))
+    (declare (type array-index-type x-pointer y-pointer))
+    (loop for i fixnum upfrom 0 below n
+	  do (progn
+	       (incf x-pointer incx)
+	       (incf y-pointer incy)
+	       (setf (aref y y-pointer) (aref x x-pointer))))))
+|#
