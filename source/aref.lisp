@@ -92,18 +92,6 @@
 		     t)))))
 
 
-#|
-For those who are reading my ugly code.
-There's two !aref:
-  1. %faref/%write-faref (old implementation using facets)
-  2. %saref (new implementation using BLAS Operations
-%faref %write-faref is not used anymore but it supports simple-array.
-I set aside %faref for testing %saref
-
-Note: !aref/(setf !aref) definitions are located at tensor.lisp
-|#
-
-(defparameter lparallel:*kernel* (lparallel:make-kernel 4))
 ; wrapper
 (defun !faref (tensor &rest dims)
   (value tensor)
