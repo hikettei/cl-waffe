@@ -7,7 +7,7 @@
 
 cl-waffe is a deep learning framework with modern APIs for Common Lisp.
 
-This is 100% written in Common Lisp (ignoring BLAS/CUBLAS). So it is easy to extend kernel as you will.
+This is 100% written in Common Lisp (ignoring BLAS/CUBLAS). So it is super easy to extend kernel as you will. (In real, properly optimised and parallelised Common Lisp code is surprisingly fast, and not impossible to compete with C/C++.)
 
 Not having GPUs, I can't test my framework on cuda ><. CUDA support is a little further along. (Ignoring some operations like Embedding, most operations are performed via [mgl-mat](https://github.com/melisgl/mgl-mat), so it should work without any modifications.)
 
@@ -15,7 +15,7 @@ Not having GPUs, I can't test my framework on cuda ><. CUDA support is a little 
 
 [Documentation](https://hikettei.github.io/cl-waffe-docs) is available.
 
-Also, I started to prepare [Tutorials(Written in Japanese)](https://github.com/hikettei/cl-waffe/tree/main/tutorials/jp).
+Also, I started writing [Tutorials(Written in Japanese)](https://github.com/hikettei/cl-waffe/tree/main/tutorials/jp).
 
 As of this writing, available tutorials are written in Japanese and their writing continues, but eventually, I'm willing to complete and translate them into English. So don't worry if you don't speak Japanese.
 
@@ -48,21 +48,19 @@ As of this writing, available tutorials are written in Japanese and their writin
 
 See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/mnist-tutorial.html)
 
+cl-waffe aimed to reduce the amount of total code written.
 ```lisp
-; full code is in examples/mnist.lisp
+; Full Code is in ./examples/mnist.lisp
 
-
-; define cl-waffe model.  it can be accessed from a trainer-object defined by deftrainer
 (defmodel MLP (activation)
-  :parameters ((layer1 (cl-waffe.nn:denselayer (* 28 28) 512 T activation))
-	       (layer2 (cl-waffe.nn:denselayer 512 256 T activation))
-	       (layer3 (cl-waffe.nn:linearlayer 256 10 T)))
+  :parameters ((layer1   (denselayer (* 28 28) 512 t activation))
+	       (layer2   (denselayer 512 256 t activation))
+	       (layer3   (linearlayer 256 10 t)))
   :forward ((x)
-            (with-calling-layers x
-	        (layer1 x)
-		(layer2 x)
-		(layer3 x))))
-
+	    (with-calling-layers x
+	      (layer1 x)
+ 	      (layer2 x)
+	      (layer3 x))))
 
 (deftrainer MLPTrainer (activation lr)
   :model          (MLP activation)
@@ -74,29 +72,15 @@ See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/mnist-tutoria
 		 (backward out)
 		 (update)
 		 out))
-  :predict ((x) (call (model) x)))
-
-
-(defdataset Mnistdata (train valid batch-size)
-  :parameters ((train train) (valid valid) (batch-size batch-size))
-  :forward ((index)
-	    (list (!set-batch (self train) index (self batch-size))
-		  (!set-batch (self valid) index (self batch-size))))
-  :length (() (car (!shape (self train)))))
-
-
-...
-
-(setq trainer (MLPTrainer :relu 1e-4))
-
-(setq train (MnistData mnist-dataset mnist-target 100))
-(setq test (MnistData mnist-dataset-test mnist-target-test 100))
-
-(time (train trainer train :max-iterate 600 :epoch 10 :batch-size 100 :valid-dataset test :verbose t :random t))
-
+ :predict ((x) (call (model) x)))
+ 
+(let ((model (MLPTrainer :relu 1e-3)))
+  (step-model model (!randn `(10 784))))
 ```
 
 # Features
+
+I've only just started developing it, so I'm trying out a lot of features by hand. (That is some features below may well work, some may not.)
 
 As of this writing:
 - Broadcasting
@@ -107,9 +91,11 @@ As of this writing:
 - Tracing JIT
 - Extensible APIs
 
-## Broadcasting.
+## Broadcasting
 
 See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#broadcasting)
+
+cl-waffe has a broadcasting operations like other frameworks.
 
 ```lisp
 (setq a (!randn `(1 100 200)))
@@ -146,6 +132,8 @@ See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.
 
 See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#compute-tensors-in-a-destructive-way)
 
+Internally, Just add to your code `(!allow-destruct tensor)`, cl-waffe regards the tensor as unnecessary and destruct it. This is how implemented destructive operations are.
+
 ```lisp
 (setq a (!randn `(100 100 100)))
 (setq b (!randn `(100 100 100)))
@@ -169,7 +157,11 @@ See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.
 
 ## Useful APIs like Numpy/PyTorch.
 
-See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/cl-waffe.html)
+See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/cl-waffe.html), Here's the list of all APIs in cl-waffe.
+
+Here's API like `SliceTensor` in Numpy/PyTorch. Of course, they're differentiable.
+
+However, in practical, using offsets (in lisp, we call it displacement) will perform better. (e.g.: setting batch, applying word-by-word processing in RNN). so it is just extra.
 
 ```lisp
 (setq a (!randn `(100 100 100)))
@@ -258,6 +250,8 @@ See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/cl-waffe.html
 
 See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#basic-tensor-operations)
 
+Once forward is defined, backward is also automatically defined. This feature is indispensable for Deep Learning Framework. Of course it is available.
+
 ```lisp
 (setq a (parameter (!randn `(10 10))))
 (setq b (parameter (!randn `(10 10))))
@@ -292,11 +286,13 @@ See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.
 
 See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#lazy-evaluation)
 
-cl-waffe's lazy-evaluation system doesn't require any additional code.
+cl-waffe provides zero-cost transpose by using lazy-evaluation.
 
-Just call `(value tensor)` to accept lazy evaluation.
+Just use `!transpose` before `!matmul`, `!matmul` automatically recognises it and the retuend tensor is applied `transpose`.
 
-`!transpose` will produce lazy-evaluated tensor, while `!transpose1` will do not.
+Here's `!transpose1` for the case when you just want a transposed tensor.
+
+The lazy-evaluated tensors are evaluated via function `(value tensor)`. Once this function called. the content of tensor is fulfilled with a new evaluated matrix. Don't worry, `(value tensor)` are scattered all over the place in cl-waffe's code, so no additional codes are required.
 
 ```lisp
 (setq a (!randn `(10 3)))
@@ -340,6 +336,9 @@ Just call `(value tensor)` to accept lazy evaluation.
 ;#Const(((8.227... -1.29... ~ -4.10... 1.458...)        
 ;                 ...
 ;        (1.458... 0.180... ~ -2.59... 4.273...)) :mgl t :shape (10 10))
+
+; PS (2023/05/26). The lazy-evaluated tensors have been modified to display more elegant.
+(print a) ; #Const(<Transposed Tensor> :shape (10 10) :backward <Node: TRANSPOSETENSOR{W2126}>)
 ```
 
 ```lisp
