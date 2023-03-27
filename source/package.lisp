@@ -10,7 +10,7 @@
 	   #:with-jit-debug)
   (:export #:*single-value*)
   (:export #:*lparallel-kernel*
-	   #:*set-lparallel-kernel*)
+	   #:set-lparallel-kernel)
   (:export #:waffetensor
 	   #:tensor
 	   #:const

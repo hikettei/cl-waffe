@@ -6,15 +6,22 @@
 
 (defparameter *lparallel-already-called?* nil)
 
-(defmacro maybe-pdotimes ((var iter-num) &body body)
+(defmacro maybe-pdotimes ((iter-num) &body body &aux (var (gensym)))
   `(if *lparallel-already-called?*
        (dotimes (,var ,iter-num)
 	 ,@body)
-       (let ((*lparallel-already-called?* t))
-	 (dotimes (,var ,iter-num)
+       (let ((*lparallel-already-called?* t)
+	     (lparallel:*kernel* cl-waffe:*lparallel-kernel*))
+	 (lparallel:pdotimes (,var ,iter-num)
+	   (declare (ignore ,var))
 	   ,@body))))
 #|
-Broadcastingが高速化される説明追加しておく
+Threadを作成・・・
+二次元じゃなくて3次元で並列化するべき。
+TODO: Broadcastingが高速化される説明追加しておく
+Broadcastingの関数呼び出しの方法を説明する。
+1. thread.lispを作成 (NUM_THREAD_OPEN_BLASの数との区別)
+2. 
 |#
 
 (defun broadcasting-apply (function x y)
@@ -479,7 +486,7 @@ simd-rsub32
 
 
 (defmacro call-specified-instruction (scal? rev? operation dtype &rest args)
-  (declare (optimize (speed 3))
+  (declare (optimize (speed 3) (safety 0))
 	   (type boolean scal? rev?)
 	   (type keyword dtype))
   (if scal?
@@ -714,7 +721,7 @@ simd-rsub32
    repeat-x1 -> The first dim of x is repeated. The rest is the same as it.
      
   This function doesn't create a new thread."
-  (declare (optimize (speed 3))
+  (declare (optimize (speed 3) (safety 0))
 	   (type keyword operation dtype)
 	   (ignore dtype)
 	   (type boolean
@@ -776,7 +783,7 @@ simd-rsub32
 	   (yi y-offsets)
 	   (oi out-offsets))
        (declare (type index-type xi yi oi))
-       (maybe-pdotimes (i out-size1)
+       (dotimes (i out-size1)
 	 (declare (type index-type i))
 	 (call-specified-instruction
 	  nil
@@ -802,7 +809,7 @@ The less thread cl-waffe creates, the more performance we got. So here's a room 
 	   (yi y-offsets)
 	   (oi out-offsets))
        (declare (type index-type xi yi oi))
-       (maybe-pdotimes (i out-size2)
+       (dotimes (i out-size2)
 	 (declare (type index-type i))
 	 (call-specified-instruction
 	  nil
@@ -827,7 +834,7 @@ The less thread cl-waffe creates, the more performance we got. So here's a room 
 	   (yi y-offsets)
 	   (oi out-offsets))
        (declare (type index-type xi yi oi))
-       (maybe-pdotimes (i out-size1)
+       (dotimes (i out-size1)
 	 (declare (type index-type i))
 	 (call-specified-instruction
 	  nil
@@ -852,7 +859,7 @@ The less thread cl-waffe creates, the more performance we got. So here's a room 
 	   (yi y-offsets)
 	   (oi out-offsets))
        (declare (type index-type xi yi oi))
-       (maybe-pdotimes (i out-size2)
+       (dotimes (i out-size2)
 	 (declare (type index-type i))
 	 (call-specified-instruction
 	  nil
@@ -877,7 +884,7 @@ The less thread cl-waffe creates, the more performance we got. So here's a room 
 	   (yi y-offsets)
 	   (oi out-offsets))
        (declare (type index-type xi yi oi))
-       (maybe-pdotimes (i out-size1)
+       (dotimes (i out-size1)
 	 (declare (type index-type i))
 	 (call-specified-instruction
 	  nil
@@ -902,7 +909,7 @@ The less thread cl-waffe creates, the more performance we got. So here's a room 
 	   (yi y-offsets)
 	   (oi out-offsets))
        (declare (type index-type xi yi oi))
-       (maybe-pdotimes (i out-size2)
+       (dotimes (i out-size2)
 	 (declare (type index-type i))
 	 (call-specified-instruction
 	  nil
@@ -922,19 +929,125 @@ The less thread cl-waffe creates, the more performance we got. So here's a room 
 	 (incf xi 1)
 	 (incf oi 1))))
     (T (error "cl-waffe's internal error of broadcasting. (Are you surrer that the operation is called through cl-waffe's API?)"))))
-  
+
+(defun %with-broadcasting-nd-cpu
+    (dtype
+     function
+     x*
+     y*
+     o*
+     broadcast-dims
+     x-strides
+     y-strides
+     o-strides
+     result-shape)
+  (declare (optimize (speed 3) (safety 0))
+	   (type keyword dtype function)
+	   (type cons
+		 broadcast-dims x-strides y-strides o-strides result-shape))
+  (let ((total-dims (length result-shape)))
+    (labels ((explore (dim-index
+		       x-offsets
+		       y-offsets
+		       o-offsets
+		       &aux
+			 (broadcasting-at-n (nth dim-index broadcast-dims)))
+	       (declare (type index-type dim-index x-offsets y-offsets o-offsets)
+			(type cons broadcasting-at-n))
+	       (if (= (- total-dims dim-index) 2)
+		   (let* ((dim-index+1 (1+ dim-index))
+			  (broadcasting-at-n+1 (nth dim-index+1 broadcast-dims)))
+		     (%with-build-broadcasting-2d-cpu
+		      dtype
+		      x*
+		      x-offsets
+		      y*
+		      y-offsets
+		      o*
+		      o-offsets
+		      function
+		      (car broadcasting-at-n)
+		      (second broadcasting-at-n)
+		      (car broadcasting-at-n+1)
+		      (second broadcasting-at-n+1)
+		      (nth dim-index x-strides)
+		      (nth dim-index+1 x-strides)
+		      (nth dim-index y-strides)
+		      (nth dim-index+1 y-strides)
+		      (nth dim-index o-strides)
+		      (nth dim-index+1 o-strides)
+		      (nth dim-index result-shape)
+		      (nth dim-index+1 result-shape))
+		     nil)
+		   (let* ((x-total-offsets x-offsets)
+			  (y-total-offsets y-offsets)
+			  (o-total-offsets y-offsets)
+			  (x-stride (nth dim-index x-strides))
+			  (y-stride (nth dim-index y-strides))
+			  (o-stride (nth dim-index o-strides))
+			  (element-n (nth dim-index result-shape))
+			  (x-repeat? (car broadcasting-at-n))
+			  (y-repeat? (second broadcasting-at-n)))
+		     (declare (type index-type
+				    x-total-offsets
+				    y-total-offsets
+				    o-total-offsets
+				    x-stride
+				    y-stride
+				    o-stride
+				    element-n))
+		     (cond
+		       ((and (not x-repeat?)
+			     (not y-repeat?))
+			(maybe-pdotimes (element-n)
+			  (explore
+			   (1+ dim-index)
+			   x-total-offsets
+			   y-total-offsets
+			   o-total-offsets)
+			  (incf x-total-offsets x-stride)
+			  (incf y-total-offsets y-stride)
+			  (incf o-total-offsets o-stride)))
+		       (x-repeat?
+			(maybe-pdotimes (element-n)
+			  (explore
+			   (1+ dim-index)
+			   x-total-offsets
+			   y-total-offsets
+			   o-total-offsets)
+			  (incf y-total-offsets y-stride)
+			  (incf o-total-offsets o-stride)))
+		       (y-repeat?
+			(maybe-pdotimes (element-n)
+			  (explore
+			   (1+ dim-index)
+			   x-total-offsets
+			   y-total-offsets
+			   o-total-offsets)
+			  (incf x-total-offsets x-stride)
+			  (incf o-total-offsets o-stride)))
+		       (T
+			(error "")))))
+	       nil))
+      (explore 0 0 0 0)
+      nil)))
+
 (defun %broadcasting-single-float-cpu (function x y &key (dtype :fp32))
   "X and Y's dims must be the same."
-  (declare (optimize (speed 3))
+  (declare (optimize (speed 3)) ; safety0
 	   (type waffetensor x y)
 	   (type keyword function dtype)
 	   (inline %with-build-broadcasting-2d-cpu))
 
   (unless (= (!dims x) (!dims y))
-    (error "can't broadcasting") ; Todo: Add conditions like (broadcasting-error)
+    (error "cl-waffe's internal error. can't broadcasting two matrices") ; Todo: Add conditions like (broadcasting-error)
     )
 
-  ; calc strides.
+  (when (= (!dims x) 1)
+    (return-from %broadcasting-single-float-cpu
+      (broadcasting-apply-mgl function x y)))
+
+  ; The code below asserts (!dims x) >= 2
   (let* ((dims (broadcasting-tlist x y))
 	 (result-shape (loop for i fixnum upfrom 0 below (!dims x)
 			     collect (let ((dim (nth i dims)))
@@ -960,8 +1073,6 @@ The less thread cl-waffe creates, the more performance we got. So here's a room 
       (declare (type fp32-simple-array x* y* o*))
       (declare (type fp32-simple-array o*))
       (case (!dims x)
-	(1
-	 )
 	(2
 	 (%with-build-broadcasting-2d-cpu
 	  dtype
@@ -985,8 +1096,18 @@ The less thread cl-waffe creates, the more performance we got. So here's a room 
 	  (car result-shape)
 	  (second result-shape)))
 	(T
-	 )))
-    o))
+	 (%with-broadcasting-nd-cpu
+	  dtype
+	  function
+	  x*
+	  y*
+	  o*
+	  dims
+	  x-strides
+	  y-strides
+	  o-strides
+	 result-shape))))
+    o)) ; Dont Forget: (data o)
 
 
   (defun testb ()
