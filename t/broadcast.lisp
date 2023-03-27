@@ -11,27 +11,58 @@
 (defparameter arg2 (!randn `(1000 1)))
 
 (defun broadcast-1 (func a b)
-  (cl-waffe.backends.mgl::broadcasting-apply-facet func a b))
+  (multiple-value-bind (a b) (cl-waffe::straighten-up a b)
+			(cl-waffe.backends.mgl::broadcasting-apply-facet func a b)))
 
 (defun broadcast-2 (func a b)
-  (cl-waffe.backends.mgl::broadcasting-apply-mgl func a b))
+  (multiple-value-bind (a b) (cl-waffe::straighten-up a b)
+    (cl-waffe.backends.mgl::broadcasting-apply-mgl func a b)))
+
+(defun broadcast-3 (func a b)
+  (multiple-value-bind (a b) (cl-waffe::straighten-up a b)
+    (cl-waffe.backends.mgl::%broadcasting-single-float-cpu func a b)))
+
+(defun brc (ope a b)
+  (case ope
+    (:add
+     (let ((x1 (broadcast-1 :+ a b))
+	   (x2 (broadcast-1 :+ a b))
+	   (x3 (broadcast-1 :+ a b)))
+       (if (and (M= x1 x2)
+		(M= x1 x3))
+	   (const x1)
+	   (error "The result of broadcasting didn't match."))))
+    (:sub
+     (let ((x1 (broadcast-1 :- a b))
+	   (x2 (broadcast-1 :- a b))
+	   (x3 (broadcast-1 :- a b)))
+       (if (and (M= x1 x2)
+		(M= x1 x3))
+	   (const x1)
+	   (error "The result of broadcasting didn't match."))))
+    (:mul
+     (let ((x1 (broadcast-1 :* a b))
+	   (x2 (broadcast-1 :* a b))
+	   (x3 (broadcast-1 :* a b)))
+       (if (and (M= x1 x2)
+		(M= x1 x3))
+	   (const x1)
+	   (error "The result of broadcasting didn't match."))))))
 
 (defun broadcast-test (a b)
-  (let ((a1 (broadcast-1 :+ a b))
-	(b1 (broadcast-2 :+ a b))
-	(a2 (broadcast-1 :- a b))
-	(b2 (broadcast-2 :- a b))
-	(a3 (broadcast-1 :* a b))
-	(b3 (broadcast-2 :* a b)))
-     (and (M= a1 b1)
-	  (M= a2 b2)
-	  (M= a3 b3))))
-  
+  (and
+   (brc :add a b)
+   (brc :add b a)
+   (brc :sub a b)
+   (brc :sub b a)
+   (brc :mul a b)
+   (brc :mul b a)))
+
 ; most basic
 (defun simple-test1 ()
   (format t "Test1: broadcasting (!add arg1 arg2)...")
   (let* ((arg2-r (!repeats arg2 1 1000))
-	 (result (time (!add arg1 arg2)))
+	 (result (time (brc :add arg1 arg2)))
 	 (result1 (time (!add arg1 arg2-r))))
     (M= (value result) (value result1))))
 
@@ -39,7 +70,7 @@
 (defun simple-test2 ()
   (format t "Test2: broadcasting (!add arg2 arg1)...")
   (let* ((arg2-r (!repeats arg2 1 1000))
-	 (result (time (!add arg2 arg1)))
+	 (result (time (brc :add arg2 arg1)))
 	 (result1 (time (!add arg1 arg2-r))))
     (M= (value result) (value result1))))
 
@@ -47,7 +78,7 @@
 (defun simple-test3 ()
   (format t "Test3: broadcasting (!sub arg2 arg1)...")
   (let* ((arg2-r (!repeats arg2 1 1000))
-	 (result (time (!sub arg1 arg2)))
+	 (result (time (brc :sub arg1 arg2)))
 	 (result1 (time (!sub arg1 arg2-r))))
     (M= (value result) (value result1))))
 
@@ -55,7 +86,7 @@
 (defun simple-test4 ()
   (format t "Test4: broadcasting (!mul arg2 arg1)...")
   (let* ((arg2-r (!repeats arg2 1 1000))
-	 (result (time (!mul arg2 arg1)))
+	 (result (time (brc :mul arg2 arg1)))
 	 (result1 (time (!mul arg1 arg2-r))))
     (M= (value result) (value result1))))
 
@@ -64,7 +95,7 @@
   (format t "Test5:")
   (let* ((k 1.0)
 	 (k-tensor (!fill `(1) k))
-	 (result  (time (!add arg1 k-tensor)))
+	 (result  (time (brc :add arg1 k-tensor)))
 	 (result1 (time (!add arg1 k))))
     (M= (value result) (value result1))))
 
@@ -74,8 +105,12 @@
   (let* ((m (!randn `(100 100 1)))
 	 (k (!repeats m 2 100))
 	 (l (!randn `(100 100 100)))
-	 (result  (time (!add m l)))
-	 (result1 (time (!add k l))))
+	 (result  (time (brc :add m l)))
+	 (result1 (time (brc :add k l))))
+    (brc :sub m l)
+    (brc :mul m l)
+    (brc :sub k l)
+    (brc :mul k l)
     (M= (value result) (value result1))))
 
 
