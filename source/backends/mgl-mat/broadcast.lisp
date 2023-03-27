@@ -2,9 +2,13 @@
 (in-package :cl-waffe.backends.mgl)
 
 
-(defparameter *use-blas-min-size* 100 "This thereshold decides what functions to use to broadcast. If the product of the last two dimensions is above this threshold, broadcast with a blas instruction.")
+(defparameter *use-blas-min-size* 100 "This thereshold decides what tensors to use to broadcast. If the product of the last two dimensions is above this threshold, broadcast with a blas instruction.")
 
 #|
+破壊的なBroadcast(BIASの計算よう)
+右側の行列<-そのまま
+左側 <- 1の軸は破壊的に
+
 For people who is reading my ugly code:
 
 There's two broadcasting functions.
@@ -416,4 +420,373 @@ These function are called by broadcasting-apply
 	  (reshape-and-displace! (data out) result-shape 0)
 	  (data out))))))
 
+(deftype index-type ()
+  `(INTEGER 0 4611686018427387903))
 
+(deftype fp32-simple-array ()
+  `(simple-array single-float (*)))
+
+(declaim (ftype (function (cons fixnum) cons) fd))
+(defun fd (shape i)
+  (declare (optimize (speed 3) (safety 0))
+	   (type cons shape)
+	   (type index-type i))
+  (let ((index -1))
+    (declare (type fixnum index))
+    (map 'list (lambda (x)
+		 (declare (ignore x))
+		 (incf index 1)
+		 (cond
+		   ((= i index)
+		    1)
+		   (T 0)))
+	 shape)))
+
+#|
+All combinations:
+1. T NIL
+2. NIL T
+3. NIL NIL
+
+C(3, 3)
+|#
+
+(defun broadcasting-tlist (x y)
+  "returns broadcasting instructions but won't return error"
+  (declare (optimize (speed 3) (safety 0))
+	   (type waffetensor x y))
+  (map 'list #'(lambda (xi yi)
+		 (declare (type fixnum xi yi))
+		 (if (and (or (= xi 1) (= yi 1))
+			  (not (= xi yi)))
+		     (if (= xi 1)
+			 `(t nil)
+			 `(nil t))
+		     (if (= xi yi)
+			 `(nil nil)
+			 `(nil nil))))
+       (the list (!shape x)) (the list (!shape y))))
+
+(defun calc-stride (shape dim)
+  (declare (optimize (speed 3) (safety 0)))
+  (let ((subscripts (fd shape dim)))
+    (apply #'+ (maplist #'(lambda (x y)
+			    (the index-type
+				 (* (the index-type (car x))
+				    (the index-type (apply #'* (cdr y))))))
+			subscripts
+			shape))))
+#|
+simd-add32
+simd-add16
+simd-add8
+simd-sub32
+simd-rsub32
+|#
+
+
+(defmacro call-specified-instruction (scal? rev? operation dtype &rest args)
+  (declare (optimize (speed 3))
+	   (type boolean scal? rev?)
+	   (type keyword dtype))
+  (if scal?
+      `(case ,operation
+	 (:+
+	  ,(case dtype
+	     (:fp32
+	      `(simd-scalar-add32 ,@args))
+	     (:fp16
+	      `(error ""))))
+	 (:-
+	  ,(case dtype
+	     (:fp32
+	      (if rev?
+		  `(simd-scalar-sub32-rev ,@args)
+		  `(simd-scalar-sub32     ,@args)))
+	     (:fp16
+	      `(error ""))))
+	 (:*
+	  ,(case dtype
+	     (:fp32
+	      `(simd-scalar-mul32 ,@args))
+	     (:fp16
+	      `(error "")))))
+      `(case ,operation
+	 (:+
+	  ,(case dtype
+	     (:fp32
+	      `(simd-add32 ,@args))
+	     (:fp16
+	      )))
+	 (:-
+	  )
+	 (:*
+	  ))))
+
+(defun simd-add32 (x y o n &key
+			     (x-offsets 0)
+			     (y-offsets 0)
+			     (o-offsets 0)
+			     (incx 1)
+			     (incy 1)
+			     (inco 1))
+  "Adds x and y, overwriting o. Iteration depends on n."
+  (declare (optimize (speed 3) (safety 0))
+	   (type fp32-simple-array x y o)
+	   (type index-type n x-offsets y-offsets o-offsets incx incy inco))
+  (let ((x-pointer x-offsets)
+	(y-pointer y-offsets)
+	(o-pointer o-offsets))
+    (declare (type index-type x-pointer y-pointer o-pointer))
+    (dotimes (i n)
+      (setf (aref o o-pointer)
+	    (+ (aref x x-pointer)
+	       (aref y y-pointer)))
+      (incf x-pointer incx)
+      (incf y-pointer incy)
+      (incf o-pointer inco)
+      nil)))
+
+#|
+(disassemble #'simd-add32)
+|#
+(defun simd-scalar-add32 (scalar x o n scalar-index
+			  &key
+			    (x-offsets 0)
+			    (o-offsets 0)
+			    (incx 1)
+			    (inco 1))
+  (declare (optimize (speed 3) (safety 0))
+	   (type fp32-simple-array x o scalar)
+	   (type index-type n x-offsets o-offsets incx inco))
+  (let ((x-pointer x-offsets)
+	(o-pointer o-offsets)
+	(scalar (aref scalar scalar-index)))
+    (declare (type index-type x-pointer o-pointer)
+	     (type single-float scalar))
+    (dotimes (i n)
+      (setf (aref o o-pointer)
+	    (+ (aref x x-pointer) scalar))
+      (incf x-pointer incx)
+      (incf o-pointer inco)
+      nil)))
+
+(defun simd-scalar-sub32 (scalar x o n scalar-index
+			  &key
+			    (x-offsets 0)
+			    (o-offsets 0)
+			    (incx 1)
+			    (inco 1))
+  (declare (optimize (speed 3) (safety 0))
+	   (type fp32-simple-array x o scalar)
+	   (type index-type n x-offsets o-offsets incx inco))
+  (let ((x-pointer x-offsets)
+	(o-pointer o-offsets)
+	(scalar (aref scalar scalar-index)))
+    (declare (type index-type x-pointer o-pointer)
+	     (type single-float scalar))
+    (dotimes (i n)
+      (setf (aref o o-pointer)
+	    (- (aref x x-pointer) scalar))
+      (incf x-pointer incx)
+      (incf o-pointer inco)
+      nil)))
+
+(defun simd-scalar-sub32-rev (scalar x o n scalar-index
+			      &key
+				(x-offsets 0)
+				(o-offsets 0)
+				(incx 1)
+				(inco 1))
+  (declare (optimize (speed 3) (safety 0))
+	   (type fp32-simple-array x o scalar)
+	   (type index-type n x-offsets o-offsets incx inco))
+  (let ((x-pointer x-offsets)
+	(o-pointer o-offsets)
+	(scalar (aref scalar scalar-index)))
+    (declare (type index-type x-pointer o-pointer)
+	     (type single-float scalar))
+    (dotimes (i n)
+      (setf (aref o o-pointer)
+	    (- scalar (aref x x-pointer)))
+      (incf x-pointer incx)
+      (incf o-pointer inco)
+      nil)))
+
+(defun simd-scalar-mul32 (scalar x o n scalar-index
+			  &key
+			    (x-offsets 0)
+			    (o-offsets 0)
+			    (incx 1)
+			    (inco 1))
+  (declare (optimize (speed 3) (safety 0))
+	   (type fp32-simple-array x o scalar)
+	   (type index-type n x-offsets o-offsets incx inco))
+  (let ((x-pointer x-offsets)
+	(o-pointer o-offsets)
+	(scalar (aref scalar scalar-index)))
+    (declare (type index-type x-pointer o-pointer)
+	     (type single-float scalar))
+    (dotimes (i n)
+      (setf (aref o o-pointer)
+	    (* (aref x x-pointer) scalar))
+      (incf x-pointer incx)
+      (incf o-pointer inco)
+      nil)))
+
+(defparameter *parallelized-p* nil)
+
+(defun %with-build-broadcasting-2d-cpu
+    (dtype
+     x
+     x-offsets
+     y
+     y-offsets
+     out
+     out-offsets
+     operation
+     repeat-x1
+     repeat-y1
+     repeat-x2
+     repeat-y2
+     xstride-1
+     xstride-2
+     ystride-1
+     ystride-2
+     out-size1
+     out-size2)
+  "Note: Inline me ;)
+   Error check is skipped.
+   x, y - a simple-array to be calculated (simple-array single-float)
+   out  - a simple-array to be fulfilled with the result
+   operation - a operation to be executed: :+ :- :*
+   repeat-x1 -> The first dim of x is repeated. The rest is the same as it.
+     
+  This function doesn't create a new thread."
+  (declare (optimize (speed 3))
+	   (type keyword operation dtype)
+	   (ignore dtype)
+	   (type boolean
+		 repeat-x1
+		 repeat-y1
+		 repeat-x2
+		 repeat-y2)
+	   (type index-type
+		 xstride-1
+		 xstride-2
+		 ystride-1
+		 ystride-2
+		 out-size1
+		 out-size2))
+  (print repeat-x1)
+  (print repeat-x2)
+  (cond
+    ((and repeat-x1 repeat-x2)
+     #| (1 1) and (N M)|#
+     (call-specified-instruction
+      t
+      t
+      operation
+      :fp32
+      x
+      y
+      out
+      (the index-type (* out-size1 out-size2))
+      x-offsets
+      :x-offsets y-offsets
+      :o-offsets out-offsets
+      :incx 1
+      :inco 1))
+    ((and repeat-y2 repeat-y2)
+     #| (N M) and (1 1) |#
+     (call-specified-instruction
+      t
+      nil
+      operation
+      :fp32
+      y
+      x
+      out
+      (the index-type (* out-size1 out-size2))
+      x-offsets
+      :x-offsets y-offsets
+      :o-offsets out-offsets
+      :incx 1
+      :inco 1))
+     ))
+  
+(defun %broadcasting-single-float-cpu (function x y &key (dtype :fp32))
+  "X and Y's dims must be the same."
+  (declare (optimize (speed 3))
+	   (type waffetensor x y)
+	   (type keyword function dtype)
+	   (inline %with-build-broadcasting-2d-cpu))
+
+  (unless (= (!dims x) (!dims y))
+    (error "can't broadcasting") ; Todo: Add conditions like (broadcasting-error)
+    )
+
+  ; calc strides.
+  (let* ((dims (broadcasting-tlist x y))
+	 (result-shape (loop for i fixnum upfrom 0 below (!dims x)
+			     collect (let ((dim (nth i dims)))
+				       (cond
+					 ((and (null (car dim))
+					       (null (second dim)))
+					  (!shape x i))
+					 ((null (car dim))
+					  (!shape x i))
+					 ((null (second dim))
+					  (!shape y i))))))
+	 (x-strides (loop for i fixnum upfrom 0 below (!dims x)
+			  collect (calc-stride (!shape x) i)))
+	 (y-strides (loop for i fixnum upfrom 0 below (!dims y)
+			  collect (calc-stride (!shape y) i)))
+	 (o (!zeros result-shape)))
+    (declare (type cons x-strides y-strides result-shape))
+    (with-facets ((x* ((data x) 'backing-array :direction :input))
+		  (y* ((data y) 'backing-array :direction :input))
+		  (o* ((data o) 'backing-array :direction :output)))
+      (declare (type fp32-simple-array x* y* o*))
+      (declare (type fp32-simple-array o*))
+      (case (!dims x)
+	(1
+	 )
+	(2
+	 (%with-build-broadcasting-2d-cpu
+	  dtype
+	  x*
+	  0
+	  y*
+	  0
+	  o*
+	  0
+	  function
+	  (caar dims)
+	  (second (car dims))
+	  (car (second dims))
+	  (second (second dims))
+	  (car x-strides)
+	  (second x-strides)
+	  (car y-strides)
+	  (second y-strides)
+	  (car result-shape)
+	  (second result-shape)))
+	(T
+	 )))
+    o))
+
+
+  (defun testb ()
+  (declare (optimize (speed 3))
+	   (inline simd-add32))
+  (let ((a (!randn `(3000 3000)))
+	(b (!randn `(1   3000)))
+	(o (!zeros `(3000 3000)))
+	(lparallel:*kernel* (lparallel:make-kernel 4)))
+    (with-facets ((a* ((data a) 'backing-array :direction :input))
+		  (b* ((data b) 'backing-array :direction :input))
+		  (o* ((data o) 'backing-array :direction :output)))
+      (time (dotimes (i 3)
+	      (simd-add32 a* b* o* 3000)
+	      nil)))))
