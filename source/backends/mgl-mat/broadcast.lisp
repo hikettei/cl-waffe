@@ -2,7 +2,7 @@
 (in-package :cl-waffe.backends.mgl)
 
 
-(defparameter *use-blas-min-size* 100 "This thereshold decides what tensors to use to broadcast. If the product of the last two dimensions is above this threshold, broadcast with a blas instruction.")
+(defparameter *use-blas-min-size* 20 "This thereshold decides what tensors to use to broadcast. If the product of the last two dimensions is above this threshold, broadcast with a blas instruction.")
 
 (defparameter *lparallel-already-called?* nil)
 
@@ -14,24 +14,25 @@
 	     (lparallel:*kernel* cl-waffe:*lparallel-kernel*))
 	 (lparallel:pdotimes (,var ,iter-num)
 	   ,@body))))
-#|
-Threadを作成・・・
-二次元じゃなくて3次元で並列化するべき。
-TODO: Broadcastingが高速化される説明追加しておく
-Broadcastingの関数呼び出しの方法を説明する。
-1. thread.lispを作成 (NUM_THREAD_OPEN_BLASの数との区別)
-2. 
-|#
 
+#| This is the toplevel of broadcasting system. read it here first.|#
 (defun broadcasting-apply (function x y)
-  ; consider use-cuda-p?
-  (declare (optimize (speed 3)))
-  (let ((last-dims-x (apply #'* (last (!shape x) 2)))
-	(last-dims-y (apply #'* (last (!shape y) 2))))
-    (declare (type fixnum last-dims-x last-dims-y))
-    (if (>= (min last-dims-x last-dims-y) (the fixnum *use-blas-min-size*))
-	(broadcasting-apply-mgl   function x y)
-	(broadcasting-apply-facet function x y))))
+  "cl-waffe has a three implementation of broadcasting. And they're switched depending on the conditions.
+
+1. %broadcasting-single-float-cpu
+2. broadcasting-apply-mgl
+3. broadcasting-apply-facet"
+  (declare (optimize (speed 3) (safety 0)))
+
+  (if (use-cuda-p (data x))
+      (broadcasting-apply-mgl function x y)
+      (let ((last-dims-x (apply #'* (last (!shape x) 2)))
+	    (last-dims-y (apply #'* (last (!shape y) 2))))
+	(declare (type fixnum last-dims-x last-dims-y))
+	(if (>= (the fixnum (+ last-dims-x last-dims-y))
+		(the fixnum *use-blas-min-size*))
+	    (broadcasting-apply-mgl function x y)
+	    (broadcasting-apply-facet function x y)))))
 
 (declaim (ftype (function (single-float single-float symbol) single-float) applying))
 (defun applying (a b function)
@@ -189,7 +190,6 @@ Broadcastingの関数呼び出しの方法を説明する。
     (declare (type list dims x-dims-first y-dims-first))
     (reshape-and-displace! (data x) `(,(!size x)) x-displacement-first)
     (reshape-and-displace! (data y) `(,(!size y)) y-displacement-first)
-    
     (labels ((get-stride (shape dim)
 	       (let ((subscripts (fill-with-d1 shape dim)))
 		 (apply #'+ (maplist #'(lambda (x y)
@@ -346,7 +346,7 @@ Broadcastingの関数呼び出しの方法を説明する。
 				     (fill! 1.0 (data out))
 				     (scale-columns! (data row) (data out))
 				     (axpy! -1.0 (data mat) (data out))
-					; x and y are reversed?
+				     ; x and y are reversed?
 				     (if (null rx)
 					 (scal! -1.0 (data out))))
 				    (:*
@@ -358,9 +358,9 @@ Broadcastingの関数呼び出しの方法を説明する。
 				      (null ry))
 				 (or  (null rx1)
 				      (null ry1)))
-					; broadcasting will be done at dim=1, not dim=0
-					; iterate by rows
-					; tensor is (n 1) (n m)
+				; broadcasting will be done at dim=1, not dim=0
+				; iterate by rows
+				; tensor is (n 1) (n m)
 				(let ((column (if (null rx1)
 					          y
 					          x))
@@ -384,34 +384,59 @@ Broadcastingの関数呼び出しの方法を説明する。
 				     (scale-rows! (data column) (data out))
 				     (geem! 1.0 (data out) (data mat) 0.0 (data out))))))
 			       (T
-					; 2D Mat is (1 n) (m 1) or (n 1) (1 m)
-				(let ((row-x (if (= (the fixnum (!shape x 0)) 1)
-						 x
-						 y))
-				      (columns-y (if (= (the fixnum (!shape x 0)) 1)
-						     y
-						     x))
-				      (on-the-around-way?
-					(= (the fixnum (!shape x 0)) 1)))
+				;2D Mat is (1 n) (m 1) or (n 1) (1 m)
+				(let* ((row-x (if (= (the fixnum (!shape x 0)) 1)
+						  x
+						  y))
+				       (columns-y (if (= (the fixnum (!shape x 0)) 1)
+						      y
+						      x))
+				       (on-the-around-way?
+					 (= (the fixnum (!shape x 0)) 1))
+				       (scalar-p (= (the fixnum (mat-size (data row-x))) 1)))
 				  (mgl-mat:with-ones (tmp tmp-size)
 				    (fill! 1.0 tmp)
 				    (case function
 				      (:+
 				       (fill! 1.0 (data out))
-				       (scale-columns! (data row-x) tmp)
-				       (scale-rows! (data columns-y) (data out))
+				       (if scalar-p
+					   (scal! (mat-as-scalar (data row-x))
+						  tmp)
+					   (scale-columns! (data row-x) tmp))
+				       (if scalar-p
+					   (geem! 1.0 (data columns-y) (data out) 0.0 (data out))
+					   (scale-rows! (data columns-y) (data out)))
 				       (axpy! 1.0 tmp (data out)))
 				      (:-
 				       (fill! 1.0 (data out))
-				       (scale-columns! (data row-x) tmp)
-				       (scale-rows! (data columns-y) (data out))
+				       (if scalar-p
+					   (scal! (mat-as-scalar (data row-x))
+						  tmp)
+					   (scale-columns! (data row-x) tmp))
+				       (if scalar-p
+					   (geem! 1.0 (data columns-y) (data out) 0.0 (data out))
+					   (scale-rows! (data columns-y) (data out)))
 				       (axpy! -1.0 tmp (data out))
 				       (when on-the-around-way?
 					 (scal! -1.0 (data out))))
 				      (:*
 				       (fill! 1.0 (data out))
-				       (scale-columns! (data row-x) (data out))
-				       (scale-rows! (data columns-y) (data out)))))))))))
+				       (if scalar-p
+					   (scal!
+					    (mat-as-scalar (data row-x))
+					    (data out))
+					   (scale-columns!
+					    (data row-x)
+					    (data out)))
+				       (if scalar-p
+					   (geem! 1.0
+						  (data columns-y)
+						  (data out)
+						  0.0
+						  (data out))
+					   (scale-rows!
+					    (data columns-y)
+					    (data out))))))))))))
 		   nil))
 	  (explore-batch x-dims-first y-dims-first result-shape 0 0 0 0)
 	  (reshape-and-displace! (data x) x-dims-first x-displacement-first)
@@ -440,15 +465,6 @@ Broadcastingの関数呼び出しの方法を説明する。
 		    1)
 		   (T 0)))
 	 shape)))
-
-#|
-All combinations:
-1. T NIL
-2. NIL T
-3. NIL NIL
-
-C(3, 3)
-|#
 
 (defun broadcasting-tlist (x y)
   "returns broadcasting instructions but won't return error"
@@ -1184,19 +1200,4 @@ The less thread cl-waffe creates, the more performance we got. So here's a room 
 	  y-strides
 	  o-strides
 	 result-shape))))
-    o)) ; Dont Forget: (data o)
-
-
-  (defun testb ()
-  (declare (optimize (speed 3))
-	   (inline simd-add32))
-  (let ((a (!randn `(3000 3000)))
-	(b (!randn `(1   3000)))
-	(o (!zeros `(3000 3000)))
-	(lparallel:*kernel* (lparallel:make-kernel 4)))
-    (with-facets ((a* ((data a) 'backing-array :direction :input))
-		  (b* ((data b) 'backing-array :direction :input))
-		  (o* ((data o) 'backing-array :direction :output)))
-      (time (dotimes (i 3)
-	      (simd-add32 a* b* o* 3000)
-	      nil)))))
+    (data o)))
