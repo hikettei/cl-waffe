@@ -58,12 +58,11 @@ def matmul_2D(K=1000):
     print(f"[{matmul_try_n}/{len(MATMUL_SIZE)}] Testing on {K}*{K} Matrix for {N} times...")
     matmul_try_n += 1
     x = np.random.randn(K, K).astype('float32')
-    def run_test():
-        t1 = time()
+    t1 = time()
+    for i in range(N):
         np.matmul(x, x)
-        t2 = time()
-        return t2 - t1
-    return [run_test() for i in range(N)]
+    t2 = time()
+    return (t2 - t1) / N
 
 def broadcasting_2D(K):
     global broadcasting_try_n
@@ -72,12 +71,11 @@ def broadcasting_2D(K):
     a = np.random.randn(K[0][0], K[0][1], K[0][2]).astype('float32')
     b = np.random.randn(K[1][0], K[1][1], K[1][2]).astype('float32')
 
-    def run_test():
-        t1 = time()
+    t1 = time()
+    for i in range(N):
         np.add(a, b)
-        t2 = time()
-        return t2 - t1
-    return [run_test() for i in range(N)]
+    t2 = time()
+    return (t2 - t1) / N
 
 def nn_bench(K):
     global nn_try_n
@@ -86,12 +84,11 @@ def nn_bench(K):
     x = np.random.randn(BATCH_SIZE, K).astype('float32')
     model = DenseLayer(K, 10)
 
-    def run_test():
-        t1 = time()
+    t1 = time()
+    for i in range(N):
         model.forward(x)
-        t2 = time()
-        return t2 - t1
-    return [run_test() for i in range(N)]
+    t2 = time()
+    return (t2 - t1) / N
     
 def slicing_bench(K):
     global slicing_try_n
@@ -99,12 +96,11 @@ def slicing_bench(K):
     slicing_try_n += 1
     a = np.random.randn(K, K).astype('float32')
 
-    def run_test():
-        t1 = time()
+    t1 = time()
+    for i in range(N):
         _ = a[200:400, :].copy()
-        t2 = time()
-        return t2 - t1
-    return [run_test() for i in range(N)]
+    t2 = time()
+    return (t2 - t1) / N
 
 if __name__ == "__main__":
     
@@ -113,7 +109,7 @@ if __name__ == "__main__":
     matmul_result = []
     for case in MATMUL_SIZE:
         result = matmul_2D(K=case)
-        matmul_result.append(mean(result))
+        matmul_result.append(result)
     plt.plot(MATMUL_SIZE, matmul_result)
     plt.title(f"matmul (numpy + {BACKEND_NAME}) (N={N})")
     plt.xlabel("Matrix Size")
@@ -129,7 +125,7 @@ if __name__ == "__main__":
     broadcasting_result = []
     for case in BROADCASTING_SHAPE:
         result = broadcasting_2D(case)
-        broadcasting_result.append(mean(result))
+        broadcasting_result.append(result)
     plt.plot([K[0][1] for K in BROADCASTING_SHAPE], broadcasting_result)
     plt.title(f"broadcasting (numpy + {BACKEND_NAME}) (N={N})")
     plt.xlabel("Matrix Size")
@@ -146,7 +142,7 @@ if __name__ == "__main__":
     slicing_result = []
     for case in SLICE_SIZE:
         result = slicing_bench(case)
-        slicing_result.append(mean(result))
+        slicing_result.append(result)
     plt.plot(SLICE_SIZE, slicing_result)
     plt.title(f"slicing (numpy + {BACKEND_NAME}) (N={N})")
     plt.xlabel("Matrix Size")
@@ -161,7 +157,7 @@ if __name__ == "__main__":
     dense_result = []
     for case in NN_SIZE:
         result = nn_bench(case)
-        dense_result.append(mean(result))
+        dense_result.append(result)
     plt.plot(NN_SIZE, dense_result)
     plt.title(f"DenseLayer(ReLU) (numpy + {BACKEND_NAME}) (N={N}, BATCH_SIZE={BATCH_SIZE})")
     plt.xlabel("Matrix Size")

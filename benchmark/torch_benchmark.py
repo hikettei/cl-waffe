@@ -50,12 +50,13 @@ def matmul_2D(K=1000):
     print(f"[{matmul_try_n}/{len(MATMUL_SIZE)}] Testing on {K}*{K} Matrix for {N} times...")
     matmul_try_n += 1
     x = torch.randn(K, K)
-    def run_test():
-        t1 = time()
+    
+    t1 = time()
+    for i in range(N):
         torch.matmul(x, x)
-        t2 = time()
-        return t2 - t1
-    return [run_test() for i in range(N)]
+    t2 = time()
+    
+    return (t2 - t1) / N
 
 def broadcasting_2D(K):
     global broadcasting_try_n
@@ -64,12 +65,11 @@ def broadcasting_2D(K):
     a = torch.randn(K[0][0], K[0][1], K[0][2])
     b = torch.randn(K[1][0], K[1][1], K[1][2])
 
-    def run_test():
-        t1 = time()
+    t1 = time()
+    for i in range(N):
         torch.add(a, b)
-        t2 = time()
-        return t2 - t1
-    return [run_test() for i in range(N)]
+    t2 = time()
+    return (t2 - t1) / N
 
 def nn_bench(K):
     global nn_try_n
@@ -79,12 +79,11 @@ def nn_bench(K):
     model = torch.nn.Linear(K, 10)
     relu  = torch.nn.ReLU()
     
-    def run_test():
-        t1 = time()
+    t1 = time()
+    for i in range(N):
         relu(model(x))
-        t2 = time()
-        return t2 - t1
-    return [run_test() for i in range(N)]
+    t2 = time()
+    return (t2 - t1) / N
     
 def slicing_bench(K):
     global slicing_try_n
@@ -92,12 +91,11 @@ def slicing_bench(K):
     slicing_try_n += 1
     a = torch.randn(K, K)
 
-    def run_test():
-        t1 = time()
+    t1 = time()
+    for i in range(N):
         _ = a[200:400, :]
-        t2 = time()
-        return t2 - t1
-    return [run_test() for i in range(N)]
+    t2 = time()
+    return (t2 - t1) / N
 
 def main():
     print("Benchmarking PyTorch...")
@@ -106,7 +104,7 @@ def main():
     matmul_result = []
     for case in MATMUL_SIZE:
         result = matmul_2D(K=case)
-        matmul_result.append(mean(result))
+        matmul_result.append(result)
     plt.plot(MATMUL_SIZE, matmul_result)
     plt.title(f"matmul (Torch + {BACKEND_NAME}) (N={N})")
     plt.xlabel("Matrix Size")
@@ -122,7 +120,7 @@ def main():
     broadcasting_result = []
     for case in BROADCASTING_SHAPE:
         result = broadcasting_2D(case)
-        broadcasting_result.append(mean(result))
+        broadcasting_result.append(result)
     plt.plot([K[0][1] for K in BROADCASTING_SHAPE], broadcasting_result)
     plt.title(f"broadcasting (Torch + {BACKEND_NAME}) (N={N})")
     plt.xlabel("Matrix Size")
@@ -139,7 +137,7 @@ def main():
     slicing_result = []
     for case in SLICE_SIZE:
         result = slicing_bench(case)
-        slicing_result.append(mean(result))
+        slicing_result.append(result)
     plt.plot(SLICE_SIZE, slicing_result)
     plt.title(f"slicing (Torch + {BACKEND_NAME}) (N={N})")
     plt.xlabel("Matrix Size")
@@ -154,7 +152,7 @@ def main():
     dense_result = []
     for case in NN_SIZE:
         result = nn_bench(case)
-        dense_result.append(mean(result))
+        dense_result.append(result)
     plt.plot(NN_SIZE, dense_result)
     plt.title(f"DenseLayer(ReLU) (Torch + {BACKEND_NAME}) (N={N}, BATCH_SIZE={BATCH_SIZE})")
     plt.xlabel("Matrix Size")
