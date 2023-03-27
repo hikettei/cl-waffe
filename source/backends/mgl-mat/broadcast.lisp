@@ -4,24 +4,17 @@
 
 (defparameter *use-blas-min-size* 100 "This thereshold decides what tensors to use to broadcast. If the product of the last two dimensions is above this threshold, broadcast with a blas instruction.")
 
+(defparameter *lparallel-already-called?* nil)
+
+(defmacro maybe-pdotimes ((var iter-num) &body body)
+  (if *lparallel-already-called?*
+      `(dotimes (,var ,iter-num)
+	 ,@body)
+      `(let ((*lparallel-already-called?* t))
+	 (dotimes (,var ,iter-num)
+	   ,@body))))
 #|
-破壊的なBroadcast(BIASの計算よう)
-右側の行列<-そのまま
-左側 <- 1の軸は破壊的に
-
-For people who is reading my ugly code:
-
-There's two broadcasting functions.
-  1. broadcasting-apply-facet
-  2. broadcasting-apply-mgl
-
-The first one uses with-facet, on the other hand the second one uses BLAS/CUDA Operations.
-
-When cuda is enabled or the last two dims are larger than *use-blas-broadcast-min*, using the second one.
-
-However, unless, use the first one because using BLAS Operations is a little extravagance for small matrixs.
-
-These function are called by broadcasting-apply
+Broadcastingが高速化される説明追加しておく
 |#
 
 (defun broadcasting-apply (function x y)
@@ -519,9 +512,18 @@ simd-rsub32
 	     (:fp16
 	      )))
 	 (:-
+	  ,(case dtype
+	     (:fp32
+	      `(simd-sub32 ,@args))
+	     (:fp16
+	      `(error "")))
 	  )
 	 (:*
-	  ))))
+	  ,(case dtype
+	     (:fp32
+	      `(simd-mul32 ,@args))
+	     (:fp16
+	      `(error "")))))))
 
 (defun simd-add32 (x y o n &key
 			     (x-offsets 0)
@@ -541,6 +543,54 @@ simd-rsub32
     (dotimes (i n)
       (setf (aref o o-pointer)
 	    (+ (aref x x-pointer)
+	       (aref y y-pointer)))
+      (incf x-pointer incx)
+      (incf y-pointer incy)
+      (incf o-pointer inco)
+      nil)))
+
+(defun simd-sub32 (x y o n &key
+			     (x-offsets 0)
+			     (y-offsets 0)
+			     (o-offsets 0)
+			     (incx 1)
+			     (incy 1)
+			     (inco 1))
+  "Adds x and y, overwriting o. Iteration depends on n."
+  (declare (optimize (speed 3) (safety 0))
+	   (type fp32-simple-array x y o)
+	   (type index-type n x-offsets y-offsets o-offsets incx incy inco))
+  (let ((x-pointer x-offsets)
+	(y-pointer y-offsets)
+	(o-pointer o-offsets))
+    (declare (type index-type x-pointer y-pointer o-pointer))
+    (dotimes (i n)
+      (setf (aref o o-pointer)
+	    (- (aref x x-pointer)
+	       (aref y y-pointer)))
+      (incf x-pointer incx)
+      (incf y-pointer incy)
+      (incf o-pointer inco)
+      nil)))
+
+(defun simd-mul32 (x y o n &key
+			     (x-offsets 0)
+			     (y-offsets 0)
+			     (o-offsets 0)
+			     (incx 1)
+			     (incy 1)
+			     (inco 1))
+  "Adds x and y, overwriting o. Iteration depends on n."
+  (declare (optimize (speed 3) (safety 0))
+	   (type fp32-simple-array x y o)
+	   (type index-type n x-offsets y-offsets o-offsets incx incy inco))
+  (let ((x-pointer x-offsets)
+	(y-pointer y-offsets)
+	(o-pointer o-offsets))
+    (declare (type index-type x-pointer y-pointer o-pointer))
+    (dotimes (i n)
+      (setf (aref o o-pointer)
+	    (* (aref x x-pointer)
 	       (aref y y-pointer)))
       (incf x-pointer incx)
       (incf y-pointer incy)
@@ -634,8 +684,6 @@ simd-rsub32
       (incf o-pointer inco)
       nil)))
 
-(defparameter *parallelized-p* nil)
-
 (defun %with-build-broadcasting-2d-cpu
     (dtype
      x
@@ -654,7 +702,8 @@ simd-rsub32
      ystride-1
      ystride-2
      out-size1
-     out-size2)
+     out-size2
+     &aux (n (* out-size1 out-size2)))
   "Note: Inline me ;)
    Error check is skipped.
    x, y - a simple-array to be calculated (simple-array single-float)
@@ -672,14 +721,20 @@ simd-rsub32
 		 repeat-x2
 		 repeat-y2)
 	   (type index-type
+		 x-offsets
+		 y-offsets
+		 out-offsets
 		 xstride-1
 		 xstride-2
 		 ystride-1
 		 ystride-2
 		 out-size1
-		 out-size2))
-  (print repeat-x1)
-  (print repeat-x2)
+		 out-size2
+		 n))
+  ;(print repeat-x1)
+  ;(print repeat-x2)
+  ;(print repeat-y1)
+  ;(print repeat-y2)
   (cond
     ((and repeat-x1 repeat-x2)
      #| (1 1) and (N M)|#
@@ -691,7 +746,7 @@ simd-rsub32
       x
       y
       out
-      (the index-type (* out-size1 out-size2))
+      n
       x-offsets
       :x-offsets y-offsets
       :o-offsets out-offsets
@@ -707,13 +762,39 @@ simd-rsub32
       y
       x
       out
-      (the index-type (* out-size1 out-size2))
+      n
       x-offsets
       :x-offsets y-offsets
       :o-offsets out-offsets
       :incx 1
       :inco 1))
-     ))
+    (repeat-x1
+     #| (1 M) and (N M)|#
+     (let ((xi x-offsets)
+	   (yi y-offsets)
+	   (oi out-offsets))
+       (declare (type index-type xi yi oi))
+       (maybe-pdotimes (i out-size2)
+	 (declare (type index-type i))
+	 (call-specified-instruction
+	  nil
+	  nil
+	  operation
+	  :fp32
+	  x
+	  y
+	  out
+	  out-size1
+	  :x-offsets xi
+	  :y-offsets yi
+	  :o-offsets oi
+	  :incx 1
+	  :incy 1
+	  :inco 1)
+	 (incf yi ystride-1)
+	 (incf oi ystride-1))))
+
+    ))
   
 (defun %broadcasting-single-float-cpu (function x y &key (dtype :fp32))
   "X and Y's dims must be the same."
