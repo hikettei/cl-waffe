@@ -7,7 +7,10 @@
 Todo: Display Configs/Environments, output to csv and integrate plots
 memo:
 export OPENBLAS_NUM_THREADS=1 (or 2? i guess there's no difference...)
+(set-lparallel-kernel 4)
 """
+
+(set-lparallel-kernel 4)
 
 (defparameter *NUMPY_CONFIG* ; i didn't know how to get it as a string in python...
   "blas_armpl_info:
@@ -362,8 +365,10 @@ Supported SIMD extensions in this NumPy install:
 			       (nth nth torch-result))
 		 (format stream "![result](~a)~%" relatively-path)))
 	(section "Variables")
-	(content "```export OPENBLAS_NUM_THREADS=4
-export MKL_NUM_THREADS=4```")
+	(content "```shell
+export OPENBLAS_NUM_THREADS=4
+export MKL_NUM_THREADS=4
+```")
 	
 	(title "Results")
 	(section "cl-waffe and numpy")

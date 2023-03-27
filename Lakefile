@@ -34,9 +34,9 @@ Tasks:
   (sh "./roswell/cl-waffe-benchmark.ros"))
 
 (task "benchmark-python" ()
-  (sh "ros build ./roswell/cl-waffe-benchmark.ros")
-  (sh "sh ./scripts/python-benchmark.sh")
-  (sh "./roswell/cl-waffe-benchmark python"))
+  ;(sh "export OPENBLAS_NUM_THREADS=4 && ros build ./roswell/cl-waffe-benchmark.ros")
+  (sh "export MKL_NUM_THREADS=4 && sh ./scripts/python-benchmark.sh")
+  (sh "export OPENBLAS_NUM_THREADS=4 && ./roswell/cl-waffe-benchmark.ros python"))
 
 (task "gendoc" ()
   (sh "./roswell/gendoc.ros"))
