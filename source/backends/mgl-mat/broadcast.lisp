@@ -7,10 +7,10 @@
 (defparameter *lparallel-already-called?* nil)
 
 (defmacro maybe-pdotimes ((var iter-num) &body body)
-  (if *lparallel-already-called?*
-      `(dotimes (,var ,iter-num)
+  `(if *lparallel-already-called?*
+       (dotimes (,var ,iter-num)
 	 ,@body)
-      `(let ((*lparallel-already-called?* t))
+       (let ((*lparallel-already-called?* t))
 	 (dotimes (,var ,iter-num)
 	   ,@body))))
 #|
@@ -701,6 +701,8 @@ simd-rsub32
      xstride-2
      ystride-1
      ystride-2
+     ostride-1
+     ostride-2
      out-size1
      out-size2
      &aux (n (* out-size1 out-size2)))
@@ -728,13 +730,16 @@ simd-rsub32
 		 xstride-2
 		 ystride-1
 		 ystride-2
+		 ostride-1
+		 ostride-2
 		 out-size1
 		 out-size2
-		 n))
-  ;(print repeat-x1)
-  ;(print repeat-x2)
-  ;(print repeat-y1)
-  ;(print repeat-y2)
+		 n)
+	   (ignore xstride-2 ystride-2 ostride-2))
+  (print repeat-x1)
+  (print repeat-x2)
+  (print repeat-y1)
+  (print repeat-y2)
   (cond
     ((and repeat-x1 repeat-x2)
      #| (1 1) and (N M)|#
@@ -751,8 +756,8 @@ simd-rsub32
       :x-offsets y-offsets
       :o-offsets out-offsets
       :incx 1
-      :inco 1))
-    ((and repeat-y2 repeat-y2)
+      :inco 1)) ; 1t t1 toka
+    ((and repeat-y1 repeat-y2)
      #| (N M) and (1 1) |#
      (call-specified-instruction
       t
@@ -774,6 +779,31 @@ simd-rsub32
 	   (yi y-offsets)
 	   (oi out-offsets))
        (declare (type index-type xi yi oi))
+       (maybe-pdotimes (i out-size1)
+	 (declare (type index-type i))
+	 (call-specified-instruction
+	  nil
+	  nil
+	  operation
+	  :fp32
+	  x
+	  y
+	  out
+	  out-size2
+	  :x-offsets xi
+	  :y-offsets yi
+	  :o-offsets oi
+	  :incx 1
+	  :incy 1
+	  :inco 1)
+	 (incf yi out-size2)
+	 (incf oi out-size2))))
+    (repeat-x2
+     #| (N 1) and (N M)|#
+     (let ((xi x-offsets)
+	   (yi y-offsets)
+	   (oi out-offsets))
+       (declare (type index-type xi yi oi))
        (maybe-pdotimes (i out-size2)
 	 (declare (type index-type i))
 	 (call-specified-instruction
@@ -788,13 +818,61 @@ simd-rsub32
 	  :x-offsets xi
 	  :y-offsets yi
 	  :o-offsets oi
+	  :incx xstride-1
+	  :incy ystride-1
+	  :inco ostride-1)
+	 (incf yi 1)
+	 (incf oi 1))))
+    (repeat-y1
+     #| (N M) and (1 M)|#
+     (let ((xi x-offsets)
+	   (yi y-offsets)
+	   (oi out-offsets))
+       (declare (type index-type xi yi oi))
+       (maybe-pdotimes (i out-size1)
+	 (declare (type index-type i))
+	 (call-specified-instruction
+	  nil
+	  t
+	  operation
+	  :fp32
+	  x
+	  y
+	  out
+	  out-size2
+	  :x-offsets xi
+	  :y-offsets yi
+	  :o-offsets oi
 	  :incx 1
 	  :incy 1
 	  :inco 1)
-	 (incf yi ystride-1)
-	 (incf oi ystride-1))))
-
-    ))
+	 (incf xi out-size2)
+	 (incf oi out-size2))))
+    (repeat-y2
+     #| (N M) and (1 M)|#
+     (let ((xi x-offsets)
+	   (yi y-offsets)
+	   (oi out-offsets))
+       (declare (type index-type xi yi oi))
+       (maybe-pdotimes (i out-size2)
+	 (declare (type index-type i))
+	 (call-specified-instruction
+	  nil
+	  t
+	  operation
+	  :fp32
+	  x
+	  y
+	  out
+	  out-size1
+	  :x-offsets xi
+	  :y-offsets yi
+	  :o-offsets oi
+	  :incx xstride-1
+	  :incy ystride-1
+	  :inco ostride-1)
+	 (incf xi 1)
+	 (incf oi 1))))))
   
 (defun %broadcasting-single-float-cpu (function x y &key (dtype :fp32))
   "X and Y's dims must be the same."
@@ -823,8 +901,10 @@ simd-rsub32
 			  collect (calc-stride (!shape x) i)))
 	 (y-strides (loop for i fixnum upfrom 0 below (!dims y)
 			  collect (calc-stride (!shape y) i)))
+	 (o-strides (loop for i fixnum upfrom 0 below (!dims y)
+			  collect (calc-stride result-shape i)))
 	 (o (!zeros result-shape)))
-    (declare (type cons x-strides y-strides result-shape))
+    (declare (type cons x-strides y-strides o-strides result-shape))
     (with-facets ((x* ((data x) 'backing-array :direction :input))
 		  (y* ((data y) 'backing-array :direction :input))
 		  (o* ((data o) 'backing-array :direction :output)))
@@ -851,6 +931,8 @@ simd-rsub32
 	  (second x-strides)
 	  (car y-strides)
 	  (second y-strides)
+	  (car o-strides)
+	  (second o-strides)
 	  (car result-shape)
 	  (second result-shape)))
 	(T
