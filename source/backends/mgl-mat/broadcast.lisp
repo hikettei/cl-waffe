@@ -736,10 +736,7 @@ simd-rsub32
 		 out-size2
 		 n)
 	   (ignore xstride-2 ystride-2 ostride-2))
-  (print repeat-x1)
-  (print repeat-x2)
-  (print repeat-y1)
-  (print repeat-y2)
+  #| Note:  SBCL doesn't optimize the n way case into jump. True, here's about 30 way case... T_T I hope they're inlined...|# 
   (cond
     ((and repeat-x1 repeat-x2)
      #| (1 1) and (N M)|#
@@ -756,7 +753,7 @@ simd-rsub32
       :x-offsets y-offsets
       :o-offsets out-offsets
       :incx 1
-      :inco 1)) ; 1t t1 toka
+      :inco 1))
     ((and repeat-y1 repeat-y2)
      #| (N M) and (1 1) |#
      (call-specified-instruction
@@ -773,6 +770,57 @@ simd-rsub32
       :o-offsets out-offsets
       :incx 1
       :inco 1))
+    ((and repeat-x1 repeat-y2) ;A
+     #| (1 M) and (N 1)|#
+     (let ((xi x-offsets)
+	   (yi y-offsets)
+	   (oi out-offsets))
+       (declare (type index-type xi yi oi))
+       (maybe-pdotimes (i out-size1)
+	 (declare (type index-type i))
+	 (call-specified-instruction
+	  nil
+	  nil
+	  operation
+	  :fp32
+	  x
+	  y
+	  out
+	  out-size2
+	  :x-offsets xi
+	  :y-offsets yi
+	  :o-offsets oi
+	  :incx 1
+	  :incy 0
+	  :inco 1)
+	 (incf yi 1)
+	 (incf oi out-size2))))
+    ((and repeat-x2 repeat-y1) ;B
+     #| (M 1) and (1 N)) Note: ;A and ;B does the same things.
+The less thread cl-waffe creates, the more performance we got. So here's a room to optimize. Comparing out-size1 and out-size2, the longer one should computed latter.|#
+     (let ((xi x-offsets)
+	   (yi y-offsets)
+	   (oi out-offsets))
+       (declare (type index-type xi yi oi))
+       (maybe-pdotimes (i out-size2)
+	 (declare (type index-type i))
+	 (call-specified-instruction
+	  nil
+	  nil
+	  operation
+	  :fp32
+	  x
+	  y
+	  out
+	  out-size1
+	  :x-offsets xi
+	  :y-offsets yi
+	  :o-offsets oi
+	  :incx xstride-1
+	  :incy 0
+	  :inco ostride-1)
+	 (incf yi 1)
+	 (incf oi 1))))
     (repeat-x1
      #| (1 M) and (N M)|#
      (let ((xi x-offsets)
@@ -872,7 +920,8 @@ simd-rsub32
 	  :incy ystride-1
 	  :inco ostride-1)
 	 (incf xi 1)
-	 (incf oi 1))))))
+	 (incf oi 1))))
+    (T (error "cl-waffe's internal error of broadcasting. (Are you surrer that the operation is called through cl-waffe's API?)"))))
   
 (defun %broadcasting-single-float-cpu (function x y &key (dtype :fp32))
   "X and Y's dims must be the same."
