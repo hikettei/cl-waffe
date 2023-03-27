@@ -475,14 +475,6 @@ C(3, 3)
 				    (the index-type (apply #'* (cdr y))))))
 			subscripts
 			shape))))
-#|
-simd-add32
-simd-add16
-simd-add8
-simd-sub32
-simd-rsub32
-|#
-
 
 (defmacro call-specified-instruction (scal? rev? operation dtype &rest args)
   (declare (optimize (speed 3) (safety 0))
@@ -516,20 +508,44 @@ simd-rsub32
 	     (:fp32
 	      `(simd-add32 ,@args))
 	     (:fp16
-	      )))
+	      `(error ""))))
 	 (:-
 	  ,(case dtype
 	     (:fp32
 	      `(simd-sub32 ,@args))
 	     (:fp16
-	      `(error "")))
-	  )
+	      `(error ""))))
 	 (:*
 	  ,(case dtype
 	     (:fp32
 	      `(simd-mul32 ,@args))
 	     (:fp16
 	      `(error "")))))))
+
+(declaim (ftype (function
+		 (fp32-simple-array
+		  fp32-simple-array
+		  fp32-simple-array
+		  index-type
+		  &key
+		  (:x-offsets index-type)
+		  (:y-offsets index-type)
+		  (:o-offsets index-type)
+		  (:incx index-type)
+		  (:incy index-type)
+		  (:inco index-type))
+		 null)
+		simd-add32
+		simd-sub32
+		simd-mul32))
+
+(declaim (inline
+	  simd-add32
+	  simd-sub32
+	  simd-mul32
+	  simd-scalar-add32
+	  simd-scalar-sub32
+	  simd-scalar-mul32))
 
 (defun simd-add32 (x y o n &key
 			     (x-offsets 0)
@@ -603,9 +619,21 @@ simd-rsub32
       (incf o-pointer inco)
       nil)))
 
-#|
-(disassemble #'simd-add32)
-|#
+(declaim (ftype (function (fp32-simple-array
+			   fp32-simple-array
+			   fp32-simple-array
+			   index-type
+			   index-type
+			   &key
+			   (:x-offsets index-type)
+			   (:o-offsets index-type)
+			   (:incx index-type)
+			   (:inco index-type))
+			  null)
+		simd-scalar-add32
+		simd-scalar-sub32
+		simd-scalar-mul32))
+
 (defun simd-scalar-add32 (scalar x o n scalar-index
 			  &key
 			    (x-offsets 0)
@@ -690,6 +718,30 @@ simd-rsub32
       (incf o-pointer inco)
       nil)))
 
+(declaim (ftype (function
+		 (keyword
+		  fp32-simple-array
+		  index-type
+		  fp32-simple-array
+		  index-type
+		  fp32-simple-array
+		  index-type
+		  keyword
+		  boolean
+		  boolean
+		  boolean
+		  boolean
+		  index-type
+		  index-type
+		  index-type
+		  index-type
+		  index-type
+		  index-type
+		  index-type
+		  index-type)
+		 null)
+		%with-build-broadcasting-2d-cpu))
+		  
 (defun %with-build-broadcasting-2d-cpu
     (dtype
      x
@@ -741,7 +793,13 @@ simd-rsub32
 		 out-size1
 		 out-size2
 		 n)
-	   (ignore xstride-2 ystride-2 ostride-2))
+	   (ignore xstride-2 ystride-2 ostride-2)
+	   (inline simd-add32
+		   simd-sub32
+		   simd-mul32
+		   simd-scalar-add32
+		   simd-scalar-sub32
+		   simd-scalar-mul32))
   #| Note:  SBCL doesn't optimize the n way case into jump. True, here's about 30 way case... T_T I hope they're inlined...|# 
   (cond
     ((and repeat-x1 repeat-x2)
@@ -945,6 +1003,8 @@ The less thread cl-waffe creates, the more performance we got. So here's a room 
       :inco 1)))
   nil)
 
+(declaim (ftype (function (keyword keyword fp32-simple-array fp32-simple-array fp32-simple-array cons cons cons cons cons) null)
+		%with-broadcasting-nd-cpu))
 (defun %with-broadcasting-nd-cpu
     (dtype
      function
@@ -959,7 +1019,8 @@ The less thread cl-waffe creates, the more performance we got. So here's a room 
   (declare (optimize (speed 3) (safety 0))
 	   (type keyword dtype function)
 	   (type cons
-		 broadcast-dims x-strides y-strides o-strides result-shape))
+		 broadcast-dims x-strides y-strides o-strides result-shape)
+	   (inline %with-build-broadcasting-2d-cpu))
   (let ((total-dims (length result-shape)))
     (labels ((explore (dim-index
 		       x-offsets
@@ -1049,10 +1110,11 @@ The less thread cl-waffe creates, the more performance we got. So here's a room 
 
 (defun %broadcasting-single-float-cpu (function x y &key (dtype :fp32))
   "X and Y's dims must be the same."
-  (declare (optimize (speed 3)) ; safety0
+  (declare (optimize (speed 3) (safety 0))
 	   (type waffetensor x y)
 	   (type keyword function dtype)
-	   (inline %with-build-broadcasting-2d-cpu))
+	   (inline %with-build-broadcasting-2d-cpu
+		   %with-broadcasting-nd-cpu))
 
   (unless (= (!dims x) (!dims y))
     (error "cl-waffe's internal error. can't broadcasting two matrices") ; Todo: Add conditions like (broadcasting-error)
