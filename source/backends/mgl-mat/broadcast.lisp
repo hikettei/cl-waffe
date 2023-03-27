@@ -2,7 +2,7 @@
 (in-package :cl-waffe.backends.mgl)
 
 
-(defparameter *use-blas-min-size* 20 "This thereshold decides what tensors to use to broadcast. If the product of the last two dimensions is above this threshold, broadcast with a blas instruction.")
+(defparameter *use-blas-min-size* 100 "This thereshold decides what tensors to use to broadcast. If the product of the last two dimensions is above this threshold, broadcast with a blas instruction.")
 
 (defparameter *lparallel-already-called?* nil)
 
@@ -31,7 +31,9 @@
 	(declare (type fixnum last-dims-x last-dims-y))
 	(if (>= (the fixnum (+ last-dims-x last-dims-y))
 		(the fixnum *use-blas-min-size*))
-	    (broadcasting-apply-mgl function x y)
+	    (if cl-waffe:*lparallel-kernel*
+		(%broadcasting-single-float-cpu function x y)
+		(broadcasting-apply-mgl function x y))
 	    (broadcasting-apply-facet function x y)))))
 
 (declaim (ftype (function (single-float single-float symbol) single-float) applying))
