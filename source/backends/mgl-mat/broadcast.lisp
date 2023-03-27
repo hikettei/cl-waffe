@@ -6,14 +6,13 @@
 
 (defparameter *lparallel-already-called?* nil)
 
-(defmacro maybe-pdotimes ((iter-num) &body body &aux (var (gensym)))
+(defmacro maybe-pdotimes ((var iter-num) &body body)
   `(if *lparallel-already-called?*
        (dotimes (,var ,iter-num)
 	 ,@body)
        (let ((*lparallel-already-called?* t)
 	     (lparallel:*kernel* cl-waffe:*lparallel-kernel*))
 	 (lparallel:pdotimes (,var ,iter-num)
-	   (declare (ignore ,var))
 	   ,@body))))
 #|
 Threadを作成・・・
@@ -928,7 +927,23 @@ The less thread cl-waffe creates, the more performance we got. So here's a room 
 	  :inco ostride-1)
 	 (incf xi 1)
 	 (incf oi 1))))
-    (T (error "cl-waffe's internal error of broadcasting. (Are you surrer that the operation is called through cl-waffe's API?)"))))
+    (T
+     (call-specified-instruction
+      nil
+      nil
+      operation
+      :fp32
+      x
+      y
+      out
+      (the index-type (* out-size1 out-size2))
+      :x-offsets x-offsets
+      :y-offsets y-offsets
+      :o-offsets out-offsets
+      :incx 1
+      :incy 1
+      :inco 1)))
+  nil)
 
 (defun %with-broadcasting-nd-cpu
     (dtype
@@ -979,56 +994,56 @@ The less thread cl-waffe creates, the more performance we got. So here's a room 
 		      (nth dim-index result-shape)
 		      (nth dim-index+1 result-shape))
 		     nil)
-		   (let* ((x-total-offsets x-offsets)
-			  (y-total-offsets y-offsets)
-			  (o-total-offsets y-offsets)
-			  (x-stride (nth dim-index x-strides))
+		   (let* ((x-stride (nth dim-index x-strides))
 			  (y-stride (nth dim-index y-strides))
 			  (o-stride (nth dim-index o-strides))
+			  (1+dim-index (1+ dim-index))
 			  (element-n (nth dim-index result-shape))
 			  (x-repeat? (car broadcasting-at-n))
 			  (y-repeat? (second broadcasting-at-n)))
 		     (declare (type index-type
-				    x-total-offsets
-				    y-total-offsets
-				    o-total-offsets
 				    x-stride
 				    y-stride
 				    o-stride
+				    1+dim-index
 				    element-n))
 		     (cond
 		       ((and (not x-repeat?)
 			     (not y-repeat?))
-			(maybe-pdotimes (element-n)
+			(maybe-pdotimes (i element-n)
+			  (declare (type index-type i))
 			  (explore
-			   (1+ dim-index)
-			   x-total-offsets
-			   y-total-offsets
-			   o-total-offsets)
-			  (incf x-total-offsets x-stride)
-			  (incf y-total-offsets y-stride)
-			  (incf o-total-offsets o-stride)))
+			   1+dim-index
+			   (+ x-offsets
+			      (the index-type (* i x-stride)))
+			   (+ y-offsets
+			      (the index-type (* i y-stride)))
+			   (+ o-offsets
+			      (the index-type (* i o-stride))))))
 		       (x-repeat?
-			(maybe-pdotimes (element-n)
+			(maybe-pdotimes (i element-n)
+			  (declare (type index-type i))
 			  (explore
-			   (1+ dim-index)
-			   x-total-offsets
-			   y-total-offsets
-			   o-total-offsets)
-			  (incf y-total-offsets y-stride)
-			  (incf o-total-offsets o-stride)))
+			   1+dim-index
+			   x-offsets
+			   (+ y-offsets
+			      (the index-type (* i y-stride)))
+			   (+ o-offsets
+			      (the index-type (* i o-stride))))))
 		       (y-repeat?
-			(maybe-pdotimes (element-n)
+			(maybe-pdotimes (i element-n)
+			  (declare (type index-type i))
 			  (explore
-			   (1+ dim-index)
-			   x-total-offsets
-			   y-total-offsets
-			   o-total-offsets)
-			  (incf x-total-offsets x-stride)
-			  (incf o-total-offsets o-stride)))
+			   1+dim-index
+			   (+ x-offsets
+			      (the index-type (* i x-stride)))
+			   y-offsets
+			   (+ o-offsets
+			      (the index-type (* i o-stride))))))
 		       (T
-			(error "")))))
+			(error "cl-waffe's internal error.")))))
 	       nil))
+      ;(disassemble #'explore)
       (explore 0 0 0 0)
       nil)))
 
