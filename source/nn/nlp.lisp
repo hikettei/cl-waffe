@@ -6,14 +6,15 @@
 			  &key
 			  (activation :tanh)
 			  (bias nil)
-			  (dropout nil))
+			  (dropout nil)
+			  (initializing-method :orthogonal))
   :optimize t
   :parameters ((weight (init-weights
-			:orthogonal
+			initializing-method
 			input-size
 			hidden-size))
 	       (reccurent-weight (init-weights
-				  :orthogonal
+				  initializing-method
 				  hidden-size
 				  hidden-size))
                (bias1 (if bias
@@ -55,7 +56,8 @@
 	       (activation :tanh)
 	       (bias nil)
 	       (dropout nil)
-	       (bidirectional nil))
+	       (bidirectional nil)
+	       (initializing-method :orthogonal))
   :optimize t
   :parameters ((rnn-layers (model-list
 			    (loop for i upfrom 0 below num-layers
@@ -64,7 +66,8 @@
 					   hidden-size
 					   :activation activation
 					   :bias bias
-					   :dropout dropout))))
+					   :dropout dropout
+					   :initializing-method initializing-method))))
 	       (num-layers num-layers :type fixnum)
 	       (hidden-size hidden-size :type fixnum)
 	       (biredical bidirectional :type boolean))
