@@ -45,6 +45,7 @@
 	       (:file "model" :depends-on ("tensor"))
 	       (:file "dtype")
 	       (:file "tensor")
+	       (:file "thread")
 	       (:file "distributions/random")
 	       (:file "distributions/distribution")
 	       (:file "distributions/beta")
