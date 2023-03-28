@@ -7,7 +7,10 @@
 Todo: Display Configs/Environments, output to csv and integrate plots
 memo:
 export OPENBLAS_NUM_THREADS=1 (or 2? i guess there's no difference...)
+(set-lparallel-kernel 4)
 """
+
+;(set-lparallel-kernel 4)
 
 (defparameter *NUMPY_CONFIG* ; i didn't know how to get it as a string in python...
   "blas_armpl_info:
@@ -87,13 +90,14 @@ Supported SIMD extensions in this NumPy install:
   (let ((tensor (!randn `(,k ,k))))
     (labels ((run-test ()
 	       (let ((t1 (get-internal-real-time)))
-		 (!matmul tensor tensor)
+		 (loop for i fixnum upfrom 0 below *N*
+		       do (!matmul tensor tensor))
 		 (let ((t2 (get-internal-real-time)))
-		   (/ (- t2 t1) internal-time-units-per-second)))))
-      (mean (loop for i fixnum upfrom 0 below *N*
-		  collect (run-test))))))
+		   (/ (- t2 t1) *N* internal-time-units-per-second)))))
+      (run-test))))
 
 (defun broadcast-bench (shape)
+  (declare (optimize (speed 3)))
   (format t "[~a/~a]  Testing on Matrix.size()[1]=~a for ~a times~%"
 	  *broadcast-try-i*
 	  (length *broadcast_shape*)
@@ -105,13 +109,14 @@ Supported SIMD extensions in this NumPy install:
 	(b (!randn (second shape))))
     (labels ((run-test ()
 	       (let ((t1 (get-internal-real-time)))
-		 (!add a b)
+		 (loop for i fixnum upfrom 0 below *N*
+		       do (!add a b))
 		 (let ((t2 (get-internal-real-time)))
-		   (/ (- t2 t1) internal-time-units-per-second)))))
-      (mean (loop for i fixnum upfrom 0 below *N*
-		  collect (run-test))))))
+		   (/ (- t2 t1) *N* internal-time-units-per-second)))))
+      (run-test))))
 
 (defun slice_2d (k)
+  (declare (optimize (speed 3)))
   (format t "[~a/~a]  Testing on ~a*~a Matrix for ~a times~%"
 	  *slice-try-i*
 	  (length *SLICE_SIZE*)
@@ -122,13 +127,14 @@ Supported SIMD extensions in this NumPy install:
   (let ((tensor (!randn `(,k ,k))))
     (labels ((run-test ()
 	       (let ((t1 (get-internal-real-time)))
-		 (!aref tensor '(200 400) t) ; t `(200 400)
+		 (loop for i fixnum upfrom 0 below *N*
+		       do (!aref tensor '(200 400) t)) ; t `(200 400)
 		 (let ((t2 (get-internal-real-time)))
-		   (/ (- t2 t1) internal-time-units-per-second)))))
-      (mean (loop for i fixnum upfrom 0 below *N*
-		  collect (run-test))))))
+		   (/ (- t2 t1) *N* internal-time-units-per-second)))))
+      (run-test))))
 
 (defun compute-nn (k)
+  (declare (optimize (speed 3)))
   (format t "[~a/~a]  Testing on ~a*~a Matrix for ~a times~%"
 	  *nn-try-i*
 	  (length *NN_SIZE*)
@@ -140,11 +146,11 @@ Supported SIMD extensions in this NumPy install:
 	(model  (cl-waffe.nn:denselayer k 10 t :relu)))
     (labels ((run-test ()
 	       (let ((t1 (get-internal-real-time)))
-		 (call model tensor)
+		 (loop for i fixnum upfrom 0 below *N*
+		       do (call model tensor))
 		 (let ((t2 (get-internal-real-time)))
-		   (/ (- t2 t1) internal-time-units-per-second)))))
-      (mean (loop for i fixnum upfrom 0 below *N*
-		  collect (run-test))))))
+		   (/ (- t2 t1) *N* internal-time-units-per-second)))))
+      (run-test))))
 
 (defun append-result-json (name desc x-seq y-seq)
   (push `(:object-alist (,name . (:object-alist (:desc . ,desc)
@@ -362,8 +368,10 @@ Supported SIMD extensions in this NumPy install:
 			       (nth nth torch-result))
 		 (format stream "![result](~a)~%" relatively-path)))
 	(section "Variables")
-	(content "```export OPENBLAS_NUM_THREADS=4
-export MKL_NUM_THREADS=4```")
+	(content "```shell
+export OPENBLAS_NUM_THREADS=4
+export MKL_NUM_THREADS=4
+```")
 	
 	(title "Results")
 	(section "cl-waffe and numpy")
