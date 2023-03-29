@@ -36,21 +36,21 @@
 	 (typecase y
 	   (fixnum
 	    (if (>= y x)
-		(error "!aref the index ~a is beyonds ~a.~%~a~%and~%~a~%~% dims are specified in the range of (0 ~a)" y x topic-tensor subscripts (1- (the fixnum x)))))
+		(aref-shaping-error "!aref the index ~a is beyonds ~a.~%~a~%and~%~a~%~% dims are specified in the range of (0 ~a)" y x topic-tensor subscripts (1- (the fixnum x)))))
 	   (list
 	    (if (> (the fixnum (car y)) (the fixnum x))
-		(error "!aref the first index ~a is beyonds ~a.~%~a~%and~%~a~%~% dims are specified in the range of (0 ~a)" y x topic-tensor subscripts (1- x)))
+		(aref-shaping-error "!aref the first index ~a is beyonds ~a.~%~a~%and~%~a~%~% dims are specified in the range of (0 ~a)" y x topic-tensor subscripts (1- x)))
 	    (if (> (the fixnum (second y)) x)
-		(error "!aref the second index ~a is beyonds ~a.~%~a~%and~%~a~%~% stops are specified in the range of (0 ~a)" y x topic-tensor subscripts (1- x))))))
+		(aref-shaping-error "!aref the second index ~a is beyonds ~a.~%~a~%and~%~a~%~% stops are specified in the range of (0 ~a)" y x topic-tensor subscripts (1- x))))))
      (!shape topic-tensor) subscripts))
   (mapc
    #'(lambda (a b c)
        (typecase b
 	 (fixnum t)
 	 (cons (if (< (the fixnum a) (the fixnum (- (the fixnum (second b)) (the fixnum (car b)))))
-		 (error "!aref: Can't copy ~%~a and ~%~a ~%~%beacuse the subscript ~a will produce the tensor whose shape is (~a)~% but it won't fit into the tensor of (~a)" out tensor b (the fixnum (- (the fixnum (second b)) (the fixnum (car b)))) a)))
+		 (aref-shaping-error "!aref: Can't copy ~%~a and ~%~a ~%~%beacuse the subscript ~a will produce the tensor whose shape is (~a)~% but it won't fit into the tensor of (~a)" out tensor b (the fixnum (- (the fixnum (second b)) (the fixnum (car b)))) a)))
 	 (t (if (< (the fixnum a) (the fixnum c))
-		(error "!aref: Can't copy ~a and ~a ~%~%because the size ~a tensor won't fit into the size ~a tensor.~%That is, the given out is too small to copy the target.~%~%(setf (!aref out subscripts) target) <- out is too small." out tensor c a)))))
+		(aref-shaping-error "!aref: Can't copy ~a and ~a ~%~%because the size ~a tensor won't fit into the size ~a tensor.~%That is, the given out is too small to copy the target.~%~%(setf (!aref out subscripts) target) <- out is too small." out tensor c a)))))
    (!shape out) subscripts (!shape tensor)))
 
 (defun parse-subscripts (tensor subscripts)
@@ -58,7 +58,7 @@
 	   (type waffetensor tensor)
 	   (type (or null cons) subscripts))
   (unless (>= (!dims tensor) (length subscripts))
-    (error "!aref: The number of subscripts is larger than given tensor: ~a and ~a" (!shape tensor) subscripts))
+    (aref-shaping-error "!aref: The number of subscripts is larger than given tensor: ~a and ~a" (!shape tensor) subscripts))
   (loop for i fixnum upfrom 0 below (!dims tensor)
 	collect (let ((subscript (or (nth i subscripts) t))
 		      (shape (!shape tensor i)))
@@ -70,7 +70,7 @@
 			 (the fixnum (+ shape (the fixnum subscript)))))
 		    (list
 		     (unless (= (length subscript) 2)
-		       (error "!aref: The subscript is invaild: Subscripts are given by '(start stop) but got ~a." subscripts))
+		       (aref-shaping-error "!aref: The subscript is invaild: Subscripts are given by '(start stop) but got ~a." subscripts))
 		     (let ((subscript (map 'list #'(lambda (a)
 						     (typecase a
 						       (fixnum
@@ -79,16 +79,16 @@
 							    (the fixnum (+ shape a))))
 						       (t
 							(unless (eql a t)
-							  (error "!aref: The subscript is invaild: cons arguments are given by fixnum but got ~a, at ~a" a subscript))
+							  (aref-shaping-error "!aref: The subscript is invaild: cons arguments are given by fixnum but got ~a, at ~a" a subscript))
 							shape)))
 					   subscript)))
 
 		       (unless (< (the fixnum (car subscript)) (the fixnum (second subscript)))
-			 (error "!aref: The subscript is invaild: Got ~a but the first argument is larget than the second one." subscript))
+			 (aref-shaping-error "!aref: The subscript is invaild: Got ~a but the first argument is larget than the second one." subscript))
 		       subscript))
 		    (t
 		     (unless (eql subscript t)
-		       (error "!aref: The format is invaild. Subscripts are given by following format: fixnum cons t but got ~a" subscript))
+		       (aref-shaping-error "!aref: The format is invaild. Subscripts are given by following format: fixnum cons t but got ~a" subscript))
 		     t)))))
 
 
@@ -125,7 +125,7 @@
 						   (length dims)))))))
 		 ((= (!dims tensor) (length dims)) dims)
 		 (T
-		  (error "!aref: dim ~a beyonds tensor's dim ~a"
+		  (aref-shaping-error "!aref: dim ~a beyonds tensor's dim ~a"
 			 dims
 			 (!shape tensor)))))
 	 (dims (loop for i fixnum upfrom 0 below (length dims)
@@ -159,7 +159,7 @@
 		  (fixnum 1)
 		  (list
 		   (unless (= (length x) 2)
-		     (error "!faref: the range is specified by list, but length != 2. at ~a" dims))
+		     (aref-shaping-error "!faref: the range is specified by list, but length != 2. at ~a" dims))
 		   (the fixnum (- (the fixnum (second x))
 				  (the fixnum (first x)))))
 		  (T y)))
@@ -182,16 +182,16 @@
 		 (fixnum
 		  (if (or (< x 0)
 			  (> x (the fixnum (!shape tensor i))))
-		      (error "!faref: dims must be in the range of 0<=x<=~a, but got ~a. when processing ~a, called with ~a" (!shape tensor i) x tensor dims)))
+		      (aref-shaping-error "!faref: dims must be in the range of 0<=x<=~a, but got ~a. when processing ~a, called with ~a" (!shape tensor i) x tensor dims)))
 		 (list
 		  (if (or (< (the fixnum (car x)) 0)
 			  (> (the fixnum (car x))
 			     (the fixnum (!shape tensor i))))
-		      (error "!faref: dims must be in the range of 0<=x<=~a, but got ~a. when processing ~a, called with ~a" (!shape tensor i) (car x) tensor dims))
+		      (aref-shaping-error "!faref: dims must be in the range of 0<=x<=~a, but got ~a. when processing ~a, called with ~a" (!shape tensor i) (car x) tensor dims))
 		  (if (or (< (the fixnum (second x)) 0)
 			  (> (the fixnum (second x))
 			     (the fixnum (!shape tensor i))))
-		      (error "!faref: dims must be in the range of 0<=x<=~a, but got ~a. when processing ~a, called with ~a" (!shape tensor i) (second x) tensor dims))))))
+		      (aref-shaping-error "!faref: dims must be in the range of 0<=x<=~a, but got ~a. when processing ~a, called with ~a" (!shape tensor i) (second x) tensor dims))))))
     
     (with-facets ((from-array   ((data tensor) 'array :direction :input))
 		  (result-array ((data result) 'array :direction :output)))
@@ -233,7 +233,7 @@
   (declare (optimize (speed 3))
 	   (type waffetensor tensor))
   (unless (= (!dims value) (!dims tensor))
-    (error "!write-faref: the size of dim doesn't match. use !unsqueeze and !squeeze to adjust it.: ~a and ~a" (!dims value) (!dims tensor)))
+    (aref-shaping-error "!write-faref: the size of dim doesn't match. use !unsqueeze and !squeeze to adjust it.: ~a and ~a" (!dims value) (!dims tensor)))
   (value value)
   (value tensor)
   (let* ((tensor-dims (!shape tensor))
@@ -247,7 +247,7 @@
 						   (length dims)))))))
 		 ((= (!dims tensor) (length dims)) dims)
 		 (T
-		  (error "!aref: dim ~a beyonds tensor's dim ~a"
+		  (aref-shaping-error "!aref: dim ~a beyonds tensor's dim ~a"
 			 dims
 			 (!shape tensor)))))
 	 (dims (loop for i fixnum upfrom 0 below (length dims)
@@ -281,7 +281,7 @@
 		  (fixnum 1)
 		  (list
 		   (unless (= (length x) 2)
-		     (error "!faref: the range is specified by list, but length != 2. at ~a" dims))
+		     (aref-shaping-error "!faref: the range is specified by list, but length != 2. at ~a" dims))
 		   (the fixnum (- (the fixnum (second x))
 				  (the fixnum (first x)))))
 		  (T y)))
@@ -303,16 +303,16 @@
 		 (fixnum
 		  (if (or (< x 0)
 			  (> x (the fixnum (!shape tensor i))))
-		      (error "!faref: dims must be in the range of 0<=x<=~a, but got ~a. when processing ~a, called with ~a" (!shape tensor i) x tensor dims)))
+		      (aref-shaping-error "!faref: dims must be in the range of 0<=x<=~a, but got ~a. when processing ~a, called with ~a" (!shape tensor i) x tensor dims)))
 		 (list
 		  (if (or (< (the fixnum (car x)) 0)
 			  (> (the fixnum (car x))
 			     (the fixnum (!shape tensor i))))
-		      (error "!faref: dims must be in the range of 0<=x<=~a, but got ~a. when processing ~a, called with ~a" (!shape tensor i) (car x) tensor dims))
+		      (aref-shaping-error "!faref: dims must be in the range of 0<=x<=~a, but got ~a. when processing ~a, called with ~a" (!shape tensor i) (car x) tensor dims))
 		  (if (or (< (the fixnum (second x)) 0)
 			  (> (the fixnum (second x))
 			     (the fixnum (!shape tensor i))))
-		      (error "!faref: dims must be in the range of 0<=x<=~a, but got ~a. when processing ~a, called with ~a" (!shape tensor i) (second x) tensor dims))))))
+		      (aref-shaping-error "!faref: dims must be in the range of 0<=x<=~a, but got ~a. when processing ~a, called with ~a" (!shape tensor i) (second x) tensor dims))))))
 
     (with-facets ((from-array ((data reshaped-tensor) ; todo for cuda.
 			       'array :direction :input))
