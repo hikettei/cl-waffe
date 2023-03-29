@@ -8,7 +8,7 @@ Also, cl-waffe is also a deep learning framework. Benchmakrs compared to PyTorch
 
 ⚠️ cl-waffe and numpy are working on a different backends, openblas and mkl respectively. The author didn't know how to use numpy in OpenBLAS... So the result may be inaccuracy...
 
-The main purpose of this benchmark is to measure the difference between cl-waffe and numpy/pytorch.
+The main purpose of this benchmark is to measure the difference between cl-waffe and numpy/pytorch. **Not to indicate which is a superior and inferior**
 
 From this result, we can learn:
 
