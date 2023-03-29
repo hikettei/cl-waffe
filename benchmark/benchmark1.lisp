@@ -299,6 +299,8 @@ Supported SIMD extensions in this NumPy install:
 			     (format nil "torch ~a" (gethash "desc" torch-result)))
 	   :y-label "time (second)"
 	   :x-label "Matrix Size"
+	   :x-logscale t
+	   :y-logscale t
 	   :output filepath)))
 
 (defun generate-result (&key (result-md "./benchmark/Result.md"))
