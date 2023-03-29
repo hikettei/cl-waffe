@@ -23,7 +23,7 @@ Speaking of the former, cl-waffe aimed to wrap the existing Common Lisp matrix o
 
 So, If you are considering contributing to cl-waffe in terms of boosting its performance, the first thing you should do is **to contribute libraries cl-waffe uses**, especially, [mgl-mat](https://github.com/melisgl/mgl-mat).
 
-As I refered at [this reddit post](https://www.reddit.com/r/Common_Lisp/comments/124da1l/does_anyone_have_any_interest_in_my_deeplearning/?utm_source=share&utm_medium=web2x&context=3), `a solid foundation must first be in place` to accomplish deep learning on Common Lisp.
+As I mentioned at [this reddit post](https://www.reddit.com/r/Common_Lisp/comments/124da1l/does_anyone_have_any_interest_in_my_deeplearning/?utm_source=share&utm_medium=web2x&context=3), `a solid foundation must first be in place` to accomplish deep learning on Common Lisp.
 
 What cl-waffe cannot currently do on its own:
 
@@ -114,7 +114,10 @@ As of this writing, available tutorials are written in Japanese and their writin
     - [Install via Github](#install-via-github)
     - [Install via Roswell](#install-via-roswell)
     - [Install via Ultralisp](#install-via-ultralisp)
-- [Lakefile](#lakefile)
+- [Contributing](#contributing)
+    - [Prerequisites](#prerequisites)
+    - [Running the tests](#running-the-tests)
+  - [Lakefile](#lakefile)
 - [Run MNIST With Roswell](#run-mnist-with-roswell)
 - [Currently Problems/Todo](#currently-problemstodo)
 - [Goals](#goals)
@@ -608,7 +611,26 @@ $ ros run
 
 [ultralisp](https://ultralisp.org/) dist is available.
 
-# Lakefile
+# Contributing
+
+Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests to us. Don't hesitate to send me issues if you have any trouble!
+
+### Prerequisites
+
+1. SBCL
+2. Roswell
+3. Lakefile
+4. Quicklisp
+
+### Running the tests
+
+```shell
+$ lake test
+```
+
+should work.
+
+## Lakefile
 
 [Lakefile](https://github.com/leanprover/lake) is available at github repository. (Also it requires [Roswell](https://github.com/roswell/roswell))
 
