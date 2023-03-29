@@ -4,13 +4,9 @@
 ; Here's benchmark compared to numpy.
 
 """
-Todo: Display Configs/Environments, output to csv and integrate plots
 memo:
 export OPENBLAS_NUM_THREADS=1 (or 2? i guess there's no difference...)
-(set-lparallel-kernel 4)
 """
-
-;(set-lparallel-kernel 4)
 
 (defparameter *NUMPY_CONFIG* ; i didn't know how to get it as a string in python...
   "blas_armpl_info:
@@ -48,18 +44,19 @@ Supported SIMD extensions in this NumPy install:
 
 (defparameter *bench-results* nil)
 
-(defparameter *N* 100 "Trial N")
+(defparameter *N* 200 "Trial N")
 (defparameter *backend-name* "OpenBLAS")
 
-(defparameter *MATMUL_SIZE* `(16 32 64 256 512 1024 2048))
+(defparameter *MATMUL_SIZE* `(16 32 64 128 256 512 1024 2048))
 
 (defparameter *BROADCAST_SHAPE*
   `(((10 10 1) (1 10 10))
     ((100 100 1) (1 100 100))
     ((200 200 1) (1 200 200))
-    ((300 300 1) (1 300 300))))
+    ((300 300 1) (1 300 300))
+    ((400 400 1) (1 400 400))))
 
-(defparameter *NN_SIZE* `(256 512 1024 2048)); 4096))
+(defparameter *NN_SIZE* `(2 4 8 16 32 64 128 256 512 1024 2048))
 
 (defparameter *SLICE_SIZE* `(512 1024 2048 4096 8192))
 
@@ -298,7 +295,7 @@ Supported SIMD extensions in this NumPy install:
 			     (format nil "numpy ~a" (gethash "desc" numpy-result))
 			     (format nil "torch ~a" (gethash "desc" torch-result)))
 	   :y-label "time (second)"
-	   :x-label "Matrix Size"
+	   :x-label "Matrix Size (N)"
 	   :x-logscale t
 	   :y-logscale t
 	   :output filepath)))
