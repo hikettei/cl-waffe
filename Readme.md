@@ -699,7 +699,7 @@ Also, bug reports and more are welcome!
 
 # Acknowledgements
 
-- The author of [mgl-mat](https://github.com/melisgl/mgl-mat), since the cl-waffe tensor depends on this. (Without it, the cl-waffe's performance was the worst.)
+- The author of [mgl-mat](https://github.com/melisgl/mgl-mat), and anyone who has contributed to it. 
 - To all those who gave me ideas, helps and knowledgement.
 
 # Author
