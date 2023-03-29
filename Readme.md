@@ -13,11 +13,13 @@ Not having GPUs, I can't test my framework on cuda ><. CUDA support is a little 
 
 # What cl-waffe does?
 
-cl-waffe is both a **matrix operation library** and a **deep learning framework**.
+cl-waffe is the two sides of the coin:
+1. As a **matrix operation library**.
+2. As a **deep learning framework**.
 
 ## cl-waffe as a matrix operation library
 
-Speaking of the former, cl-waffe aimed to wrap the existing Common Lisp matrix operation libraries with simple and useful APIs. And reduce their overheads.
+Speaking of the former, cl-waffe aimed to wrap the existing Common Lisp matrix operation libraries with Numpy/PyTorch like APIs. And reduce overheads between cl-waffe and these libraries.
 
 So, If you are considering contributing to cl-waffe in terms of boosting its performance, the first thing you should do is **to contribute libraries cl-waffe uses**, especially, [mgl-mat](https://github.com/melisgl/mgl-mat).
 
@@ -28,16 +30,26 @@ What cl-waffe cannot currently do on its own:
 1. FP16 Operation (It's important for LLMs)
 2. Full GPU acceleration
 
-mgl-mat which cl-waffe mainly depends on provides [Facet API](https://github.com/melisgl/mgl-mat#x-28MGL-MAT-3A-40MAT-FACET-API-20MGL-PAX-3ASECTION-29), and The `Facet API` enables the mgl-mat array to be accessed from CL array. That is, (according to my benchmark, there is some overhead but), existing other matrix operation libraries could be utilised. This is why cl-waffe depends on mgl-mat.
+mgl-mat on which cl-waffe mainly depends provides [Facet API](https://github.com/melisgl/mgl-mat#x-28MGL-MAT-3A-40MAT-FACET-API-20MGL-PAX-3ASECTION-29), and The `Facet API` enables the mgl-mat array to be accessed from CL array. That is, (according to my benchmark, there is some overhead but), existing other matrix operation libraries could be utilised. This is why cl-waffe depends on mgl-mat.
 
+True, cl-waffe works like in the relationship shown in this flow.
 
-### cl-waffe as a deep learning framework
+```
+[cl-waffe]->[mgl-mat]->[Any library in Common Lisp]
+                     ->[My implementation]
+		     ->[OpenBLAS]
+		     ->[CUDA]
+		     ....
+```
+
+## cl-waffe as a deep learning framework
+
 
 
 
 # News
 
-- (2023/03/26) I published the benchmark compared to Numpy/PyTorch. Available at [Here](https://github.com/hikettei/cl-waffe/blob/main/benchmark/Result.md). (Not quite up to my goal.) cl-waffe should peform better... however I guess there's a room to optimize in cl-waffe's source...
+- (2023/03/26) I published the benchmark compared to Numpy/PyTorch. Available at [Here](https://github.com/hikettei/cl-waffe/blob/main/benchmark/Result.md). (Not quite up to my goal.) cl-waffe should peform better... however I guess there's a room to optimize in the cl-waffe's codes...
 
 # Documents
 
