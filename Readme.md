@@ -44,8 +44,43 @@ True, cl-waffe works like in the relationship shown in this flow.
 
 ## cl-waffe as a deep learning framework
 
+We wrap such existing libraries and define forward and backward propagation via the macro `defnode`, thus enabling automatic differentiation.
 
+I think this is not an ideal situation because `array-to-mat` and `numcl:transpose` is both creating copies, but this is simultaneously good example to show what I want to do:
 
+```lisp
+(defnode TransposeOriginalTensor (shape)
+  :parameters ((prev-shape nil)
+               (shape shape :type cons))
+  :forward ((x)
+	    (setf (self prev-shape) (!shape x))
+	    (with-facet (array ((value x) 'array :direction :input))
+	      ; In defnode, it is not always necessary to use the cl-waffe API.
+	      ; With regard to this example, it defines a transpose with numcl's API.
+	      (sysconst (array-to-mat (numcl:transpose array)))))
+  :backward ((dy)
+	     (list (!transpose1 dy (self prev-shape)))))
+
+(defun !transpose1 (tensor &rest dims)
+  ; defined nodes are called with call
+  (call (TransposeOriginalTensor dims) tensor))
+
+(!transpose (!randn `(10 3)))
+
+;#Const(((-0.21... -1.92... ~ 0.560... -0.90...)        
+;                 ...
+;        (0.580... 0.197... ~ -0.86... 0.765...)) :dtype :float :shape (3 10) :backward <Node: TRANSPOSEORIGINALTENSOR{W2995}>)
+```
+
+This is the basic idea behind cl-waffe's automatic differentiation.
+
+These nodes are combined to define a `model` (via defmodel macro). Also, the model has `trainable parameters` and they're optimized by optimizers, defined by `defoptimizer`.
+
+(P.S.: I know not everyone likes this Chainer-like system (define-by-run), so I'm thinking of providing Keras-like APIs.)
+
+Anyway, these features have been developed as **extensible APIs** and do not need to be known by everyone.
+
+There are still **very few standard implementations of NNs(As of this writing, only supports RNN/Linear and so on...)/**, as I think it is important to get the computational fundamentals in place before implementing various deep learning methods. (but contributions are welcome!)
 
 # News
 
