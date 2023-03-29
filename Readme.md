@@ -13,16 +13,26 @@ Not having GPUs, I can't test my framework on cuda ><. CUDA support is a little 
 
 # What cl-waffe does?
 
-First, cl-waffe is both a **matrix operation library** and a **deep learning framework**.
+cl-waffe is both a **matrix operation library** and a **deep learning framework**.
 
-Speaking of the former, cl-waffe aimed to wrap the existing Common Lisp matrix operation library with simple and useful APIs. And reduce their overheads.
+## cl-waffe as a matrix operation library
 
-So, If you are considering contributing to cl-waffe in terms of boosting its performance, the first thing you should do is **to contribute libraries cl-waffe uses**, especially, [mgl-mat](https://github.com/melisgl/mgl-mat). As I refered at [this reddit post](https://www.reddit.com/r/Common_Lisp/comments/124da1l/does_anyone_have_any_interest_in_my_deeplearning/?utm_source=share&utm_medium=web2x&context=3), `a solid foundation must first be in place.` in order to accomplish deep learning on Common Lisp.
+Speaking of the former, cl-waffe aimed to wrap the existing Common Lisp matrix operation libraries with simple and useful APIs. And reduce their overheads.
+
+So, If you are considering contributing to cl-waffe in terms of boosting its performance, the first thing you should do is **to contribute libraries cl-waffe uses**, especially, [mgl-mat](https://github.com/melisgl/mgl-mat).
+
+As I refered at [this reddit post](https://www.reddit.com/r/Common_Lisp/comments/124da1l/does_anyone_have_any_interest_in_my_deeplearning/?utm_source=share&utm_medium=web2x&context=3), `a solid foundation must first be in place` to accomplish deep learning on Common Lisp.
 
 What cl-waffe cannot currently do on its own:
 
 1. FP16 Operation (It's important for LLMs)
 2. Full GPU acceleration
+
+mgl-mat which cl-waffe mainly depends on provides [Facet API](https://github.com/melisgl/mgl-mat#x-28MGL-MAT-3A-40MAT-FACET-API-20MGL-PAX-3ASECTION-29), and The `Facet API` enables the mgl-mat array to be accessed from CL array. That is, (according to my benchmark, there is some overhead but), existing other matrix operation libraries could be utilised. This is why cl-waffe depends on mgl-mat.
+
+
+### cl-waffe as a deep learning framework
+
 
 
 # News
