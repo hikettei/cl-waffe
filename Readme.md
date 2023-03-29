@@ -5,11 +5,25 @@
 
 **This package is still under development and experimental, so don't use this in your product.**
 
-cl-waffe is a deep learning framework with modern APIs for Common Lisp.
+cl-waffe is a deep learning framework with modern APIs for Common Lisp based on [mgl-mat](https://github.com/melisgl/mgl-mat). 
 
-This is 100% written in Common Lisp (ignoring BLAS/CUBLAS). So it is super easy to extend kernel as you will. (In real, properly optimised and parallelised Common Lisp code is surprisingly fast, and not impossible to compete with C/C++.)
+This is 100% written in Common Lisp (ignoring BLAS/CUBLAS parts). So it is super easy to extend kernel as you will. (In real, properly optimised and parallelised Common Lisp code is surprisingly fast, and not impossible to compete with C/C++.)
 
 Not having GPUs, I can't test my framework on cuda ><. CUDA support is a little further along. (Ignoring some operations like Embedding, most operations are performed via [mgl-mat](https://github.com/melisgl/mgl-mat), so it should work without any modifications.)
+
+# What cl-waffe does?
+
+First, cl-waffe is both a **matrix operation library** and a **deep learning framework**.
+
+Speaking of the former, cl-waffe aimed to wrap the existing Common Lisp matrix operation library with simple and useful APIs. And reduce their overheads.
+
+So, If you are considering contributing to cl-waffe in terms of boosting its performance, the first thing you should do is **to contribute libraries cl-waffe uses**, especially, [mgl-mat](https://github.com/melisgl/mgl-mat). As I refered at [this reddit post](https://www.reddit.com/r/Common_Lisp/comments/124da1l/does_anyone_have_any_interest_in_my_deeplearning/?utm_source=share&utm_medium=web2x&context=3), `a solid foundation must first be in place.` in order to accomplish deep learning on Common Lisp.
+
+What cl-waffe cannot currently do on its own:
+
+1. FP16 Operation (It's important for LLMs)
+2. Full GPU acceleration
+
 
 # News
 
