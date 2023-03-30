@@ -1,7 +1,7 @@
 
 (in-package :cl-waffe)
 
-(defun !beta (dims alpha beta)
+(define-with-typevar !beta u (dims alpha beta)
   "Initializes tensor with samples of beta distribution in a faster way.
 
 Algorithm: https://dl.acm.org/doi/pdf/10.1145/359460.359482
@@ -30,15 +30,17 @@ where B(a,b)=∫1,0{x^a−1(1−x)^b−1}dx
 
   (declare (optimize (speed 3))
 	   (type cons dims)
-	   (type single-float alpha beta)
+	   (type u alpha beta)
 	   (inline !beta-bb !beta-bc))
-  (let* ((a (min alpha beta))
+  (let* ((alpha (coerce alpha (quote u)))
+	 (beta  (coerce beta  (quote u)))
+	 (a (min alpha beta))
  	 (b (max alpha beta))
 	 (result (!zeros dims))
 	 (size (!size result)))
     (declare (type fixnum size))
     (with-facet (array ((data result) 'backing-array :direction :output))
-      (declare (type (simple-array single-float) array))
+      (declare (type (simple-array u) array))
       ; Todo For GPU.
       (loop for i fixnum upfrom 0 below size
 	    do (setf (aref array i)
@@ -49,25 +51,34 @@ where B(a,b)=∫1,0{x^a−1(1−x)^b−1}dx
 
 
 (declaim (ftype (function
-		 (single-float single-float single-float)
+		 (single-float
+		  single-float
+		  single-float)
 		 single-float)
-		!beta-bb
-		!beta-bc))
-(defun !beta-bb (a0 a b)
+		!beta-bb-f
+		!beta-bc-f))
+(declaim (ftype (function
+		 (double-float
+		  double-float
+		  double-float)
+		 double-float)
+		!beta-bb-d
+		!beta-bc-d))
+(define-with-typevar !beta-bb u (a0 a b)
   "Generates beta variances.
 
 Algorithm: https://dl.acm.org/doi/pdf/10.1145/359460.359482
 
 Note: !beta excepts that @c((min a b) > 1)"
   (declare (optimize (speed 3) (safety 0))
-	   (type single-float a0)
-	   (type (single-float 0e0) a b))
+	   (type u a0)
+	   (type (u 0e0) a b))
 
   (unless (>= (min a b) 1.0)
     (error "cl-waffe:!beta failed because of (min a b) > 1."))
 
   (let* ((alpha (+ a b))
-  	 (beta  (sqrt (the (single-float 0e0)
+  	 (beta  (sqrt (the (u 0e0)
 			   (/ (- alpha 2.0)
 			      (- (* 2.0 a b) alpha)))))
 	 (gamma (+ a (/ beta)))
@@ -78,14 +89,14 @@ Note: !beta excepts that @c((min a b) > 1)"
 		      (u1 (random 1.0))
 		      (u2 (random 1.0))
 		      (v (* beta (- (log u1) (log (+ 1.0 (- u1)))))))
-	       (declare (type single-float u1 u2 v))
+	       (declare (type u u1 u2 v))
 	       
 	       (setq w0 (* a (exp v)))
 	       (setq r0 (- (* gamma v) 1.3862944))
 	       
 	       (let* ((z (* u1 u1 u2))
 		      (s (+ a r0 (- w0))))
-		 (declare (type single-float z s))
+		 (declare (type u z s))
 		 
 		 (if (>= (+ s 2.609438) (* 5 z))
 		     nil
@@ -105,16 +116,15 @@ Note: !beta excepts that @c((min a b) > 1)"
 	  (/ b (+ b w0))))))
 
 
-
-(defun !beta-bc (a0 a b)
+(define-with-typevar !beta-bc utype (a0 a b)
   "Generates beta variances.
 
 Algorithm: https://dl.acm.org/doi/pdf/10.1145/359460.359482
 
 Note: !beta excepts that @c((min a b) <= 1)"
   (declare (optimize (speed 3) (safety 0))
-	   (type single-float a0)
-	   (type (single-float 0e0) a b))
+	   (type utype a0)
+	   (type (utype 0e0) a b))
 
   (unless (<= (min a b) 1.0)
     (error "cl-waffe:!beta failed because of (min a b) <= 1."))
@@ -132,7 +142,7 @@ Note: !beta excepts that @c((min a b) <= 1)"
 	 (u1 0.0)
 	 (u2 0.0)
 	 (lp t))
-    (declare (type single-float alpha beta gamma k1 k2 z y w v u1 u2)
+    (declare (type utype alpha beta gamma k1 k2 z y w v u1 u2)
 	     (type boolean lp f))
     
     (labels ((next ()
@@ -145,7 +155,7 @@ Note: !beta excepts that @c((min a b) <= 1)"
 		     (if (<= z 0.25)
 			 (progn
 			   (setq v (* beta
-				      (the single-float
+				      (the utype
 					   (- (log u1) (log (1+ (- u1)))))))
 			   (setq w (* a (exp v)))
 			   nil)
@@ -166,7 +176,7 @@ Note: !beta excepts that @c((min a b) <= 1)"
       (loop while (and f (next))
 	    do (when lp
 		 (setq v (* beta
-			    (the single-float
+			    (the utype
 				 (- (log u1) (log (1+ (- u1)))))))
 		 (setq w (* a (exp v)))
 		 (if (>= (- (* alpha

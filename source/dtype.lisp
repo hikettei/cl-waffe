@@ -108,14 +108,6 @@
 	   (T
 	    (error "No dtype")))))))
 
-(print (macroexpand
-	`(define-with-typevar xxx u (a &key (x 1))
-	   "aa"
-	   (declare (optimize (speed 3))
-		    (type u a))
-	   (print a))))
-#|
-(define-with-typevar xxx u (a)
-  "aa"
-	   (declare (type u a))
-  (print a))|#
+(defmacro dtypecase (&rest cases)
+  `(case mgl-mat:*DEFAULT-MAT-CTYPE*
+     ,@cases))
