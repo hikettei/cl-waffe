@@ -20,10 +20,6 @@
 	       #:bordeaux-threads)
   :in-order-to ((test-op (test-op cl-waffe-test)))
   :components ((:file "cl-cram")
-	       (:module "cl-termgraph"
-		:components ((:file "package")
-			     (:file "cl-termgraph")
-			     (:file "figure")))
 	       (:module "backends/cpu"
 		:depends-on ("package"
 			     "backends/mgl-mat")
