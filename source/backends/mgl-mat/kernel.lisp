@@ -102,6 +102,15 @@ Here's
 (defparameter *v2v-operations* `(:add :sub :mul :div :dot :matmul))
 (defparameter *abort-delay-instruction* :matmul)
 
+
+(defmacro define-onearg-fn (name function)
+  `(define-with-typevar ,name u (mat)
+     (with-facet (r (mat 'backing-array :direction :input))
+       (declare (type (simple-array u) r))
+       (loop for i fixnum upfrom 0 below (mat-size mat)
+	     do (setf (aref r i) (,function (aref r i))))
+       r)))
+
 (defun lazy-eval-transpose (tensor args)
   "Lazy eval's format is following: (free-args shape? return-calculated-value?)"
   (declare (ignore args))
@@ -114,7 +123,7 @@ Here's
 			     ignore?
 			     return-node-info)
 	     (declare (ignore given-tensor))
-	     #+sbcl(declare (sb-ext:muffle-conditions cl:warning)) ; hot to disable warnings T_T
+	     #+sbcl(declare (sb-ext:muffle-conditions cl:warning)) ; how to disable warnings T_T
 					; given-tensor is always lazytranspsoed.
 	     (cond
 	       (ignore?
@@ -330,11 +339,6 @@ Here's
        (eql node-type :lazy-transpose)))
     (T nil)))
 
-(declaim (ftype (function (boolean waffetensor waffetensor waffetensor) mgl-mat:mat)
-		pow-tensor
-		compare-tensor
-		sum-tensor))
-
 
 (define-waffe-kernel kernel-log (x) (x1)
   :jit log
@@ -378,65 +382,49 @@ Here's
   :mat-mat ((.tanh! (get-out-buffer x :copy t))))
 
 
+(define-onearg-fn apply-asin asin)
+(define-onearg-fn apply-acos acos)
+(define-onearg-fn apply-atan atan)
+
 (define-waffe-kernel kernel-asin (x) (x1)
   :ignore-optimize t
   :jit asin
-  :mat-mat ((with-facet (r ((get-out-buffer x :copy t) 'backing-array))
-	      (declare (type (simple-array single-float) r))
-	      (loop for i fixnum upfrom 0 below (!size x)
-		    do (setf (aref r i) (asin (aref r i))))
-	      r)))
+  :mat-mat ((apply-asin (get-out-buffer x :copy t))))
 
 (define-waffe-kernel kernel-acos (x) (x1)
   :ignore-optimize t
   :jit acos
-  :mat-mat ((with-facet (r ((get-out-buffer x :copy t) 'backing-array))
-	      (declare (type (simple-array single-float) r))
-	      (loop for i fixnum upfrom 0 below (!size x)
-		    do (setf (aref r i) (acos (aref r i))))
-	      r)))
+  :mat-mat ((apply-acos (get-out-buffer x :copy t))))
 
 (define-waffe-kernel kernel-atan (x) (x1)
   :ignore-optimize t
   :jit atan
-  :mat-mat ((with-facet (r ((get-out-buffer x :copy t) 'backing-array))
-	      (declare (type (simple-array single-float) r))
-	      (loop for i fixnum upfrom 0 below (!size x)
-		    do (setf (aref r i) (atan (aref r i))))
-	      r)))
+  :mat-mat ((apply-atan (get-out-buffer x :copy t))))
+
+(define-onearg-fn apply-asinh asinh)
+(define-onearg-fn apply-acosh acosh)
+(define-onearg-fn apply-atanh atanh)
 
 (define-waffe-kernel kernel-asinh (x) (x1)
   :ignore-optimize t
   :jit asinh
-  :mat-mat ((with-facet (r ((get-out-buffer x :copy t) 'backing-array))
-	      (declare (type (simple-array single-float) r))
-	      (loop for i fixnum upfrom 0 below (!size x)
-		    do (setf (aref r i) (asinh (aref r i))))
-	      r)))
+  :mat-mat ((apply-asinh (get-out-buffer x :copy t))))
 
 (define-waffe-kernel kernel-acosh (x) (x1)
   :ignore-optimize t
   :jit acosh
-  :mat-mat ((with-facet (r ((get-out-buffer x :copy t) 'backing-array))
-	      (declare (type (simple-array single-float) r))
-	      (loop for i fixnum upfrom 0 below (!size x)
-		    do (setf (aref r i) (acosh (aref r i))))
-	      r)))
+  :mat-mat ((apply-acosh (get-out-buffer x :copy t))))
 
 (define-waffe-kernel kernel-atanh (x) (x1)
   :ignore-optimize t
   :jit atanh
-  :mat-mat ((with-facet (r ((get-out-buffer x :copy t) 'backing-array))
-	      (declare (type (simple-array single-float) r))
-	      (loop for i fixnum upfrom 0 below (!size x)
-		    do (setf (aref r i) (atanh (aref r i))))
-	      r)))
+  :mat-mat ((apply-atanh (get-out-buffer x :copy t))))
 
 (defun compare-tensor (enable-optim out x y)
-  (declare (optimize (speed 3) (safety 1))
+  (declare (optimize (speed 3) (safety 0))
 	   (type boolean enable-optim)
            (type waffetensor out x y))
-					; Todo do lazy
+  
   (let ((o (decide-out-buffer out x enable-optim t)))
     (mgl-mat:.<! (value y) o)))
 
@@ -524,36 +512,24 @@ Here's
      (n fixnum)
      (p single-float))
   (loop for mi fixnum upfrom start-mask below (the fixnum (+ start-mask n))
-	do (cond ((< (aref mask mi) p)
+	do (locally (declare (optimize (safety 1)))
+	       (cond ((< (aref mask mi) p)
 		  (setf (aref mask mi) 0.0))
 		 (t
-		  (setf (aref mask mi) 1.0)))))
+		  (setf (aref mask mi) 1.0))))))
 
-					; having not cuda gpus, i can't test this code lol T_T
-					;(define-cuda-kernel (bernoulli-cuda)
-					;    (void ((mask :mat :io) (x :mat :io) (n int) (p float)))
-					;  (let ((i (+ (* block-dim-mask block-idx-mask) thread-idx-mask)))
-					;    (when (< i n)
-					;      (if (< (aref x i) p)
-					;	  (set (aref x i) 0.0)
-					;          (set (aref x i) 1.0)))))
-
-(defun bernoulli-tensor (enable-optimize out return-tensor rate)
+(define-with-typevar bernoulli-tensor u (enable-optimize out return-tensor rate)
   (declare (type boolean enable-optimize)
 	   (type waffetensor return-tensor rate))
   (let ((o (decide-out-buffer out return-tensor enable-optimize nil)))
     (mgl-mat:uniform-random! o)
-    (if (use-cuda-p (data return-tensor))
-	(progn
-	  (error "having not gpus, i've not tested cl-waffe.backends.mgl:bernoulli-tensor yet in cuda.")
-					;(bernoulli-cuda o (mat-size o) (data rate)
-					;		:grid-dim (list (ceiling (mat-size o) 256) 1 1)
-					;		:block-dim (list 256 1 1))
-	  )
-	(bernoulli-lisp o (mat-displacement o) (mat-size o) (data rate)))))
+    (bernoulli-lisp
+     o
+     (mat-displacement o)
+     (mat-size o)
+     (coerce (data rate) (quote u)))))
 
 
-					;optimize is failed.
 (define-lisp-kernel (embedding-forward-lisp)
     ((out :mat :output)
      (x :mat :input)
