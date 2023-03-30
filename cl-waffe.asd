@@ -99,6 +99,7 @@
 					 (:file "deriv")
 					 (:file "node-extension")
 					 (:file "copy")
+					 (:file "dtype")
 					 (:file "caches")
 					 (:file "nodes")
 					 (:file "jit")
