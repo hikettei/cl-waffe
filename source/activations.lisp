@@ -59,7 +59,7 @@ Output: Tensor"
   (call (TanhTensor) (assure-tensor x)))
 
 ; Optimizing won't go well
-(defun !gelu (x &key (approximate t))
+(define-with-typevar !gelu u (x &key (approximate t))
   "Applying gelu to x, returning a new sysconst.
 
 Paper: https://arxiv.org/abs/1606.08415.
@@ -89,24 +89,24 @@ Not implemented (TODO)
 	       (!mul (!div x 2)
 		     (!filter x
 			      #'(lambda (el)
-				  (declare (type single-float el))
+				  (declare (type u el))
 				  (multiple-value-bind (n)
 				      ; failed to optimize
 				      (floor
-				       (the single-float
-					    (* (sqrt (the (single-float 0e0)
+				       (the u
+					    (* (sqrt (the (u 0e0)
 							  (/ 2.0
-							     (the single-float pi-single-float))))
+							     (the u pi-single-float))))
 					       (+ el
 						  (* 0.044715
 						     (expt el 3))))))
-				    (the single-float (+ 1.0 (tanh n)))))))
+				    (the u (+ 1.0 (tanh n)))))))
 	       (error "no implemented yet"))))
     (!mul x s)))
 
 
 
-(defun !leakey-relu (x &optional (alpha 0.01))
+(define-with-typevar !leakey-relu u (x &optional (alpha 0.01))
   "Applying Leakey-relu to x, returning a new sysconst.
 
 Leakey-ReLU is defined as out = {alpha (x < 0), x (x >= 0)}
@@ -125,9 +125,9 @@ Example:
         (0.775... 1.258... ~ 0.016... 0.240...)) :mgl t :shape (10 10))
 @end[lang=lisp](code)"
   (declare (optimize (speed 3))
-	   (type single-float alpha))
+	   (type u alpha))
   (!mul x (!filter x #'(lambda (x)
-			 (declare (type single-float x))
+			 (declare (type u x))
 			 (if (>= x 0)
 			     1.0
 			     (* alpha x))))))
@@ -167,7 +167,7 @@ Note that beta must begin given as a waffetensor.
 ;                 ...
 ;        (0.531... 0.980... ~ -0.27... 0.134...)) :mgl t :shape (10 10))
 @end[lang=lisp](code)"
-  (!div x (!add 1 (!exp (!mul (!mul -1 beta) x)))))
+  (!div x (!add 1.0 (!exp (!mul (!mul -1.0 beta) x)))))
 
 (defun !mish () "Todo")
 

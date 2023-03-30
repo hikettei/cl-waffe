@@ -32,15 +32,46 @@
 			      (symbol-name type-var))
 		       dtype
 		       code))
+		  (single-float (coerce code dtype))
+		  (double-float (coerce code dtype))
 		  (T
 		   code)))
 	    body))
 
+(defun define-lisp-code-with (args
+			      fname-with-prefix
+			      dtype
+			      body
+			      declarations
+			      type-specifier)
+  `(defun ,fname-with-prefix (,@args)
+     (locally
+       ,@(unless (eql dtype 'double-float)
+	(replace-lisp-code-with-dtype
+	 declarations
+	 type-specifier
+	 dtype))
+	
+     ,@(replace-lisp-code-with-dtype
+	body
+	type-specifier
+	dtype))))
 
-(defun keyword-parser (keywords)
-  (let ((mode nil))
-    
-    ))
+(defun get-params (list)
+  (reverse
+   (delete-duplicates
+    (flatten
+     (loop for i fixnum upfrom 0 below (length list)
+	   collect (let ((sym (nth i list)))
+		     (typecase sym
+		       (symbol
+			(if (find sym `(&optional &rest &key &aux))
+			    nil
+			    sym))
+		       (list
+			(if (= (length sym) 2)
+			    (car sym)
+			    (get-params sym))))))))))
 
 (defmacro define-with-typevar
     (function-name
@@ -51,29 +82,40 @@
 		   'list
 		   #'(lambda (p)
 		       (symb function-name p))
-		   *dtype-prefixes*)))
+		   *dtype-prefixes*))
+          (params (get-params args)))
   
   (multiple-value-bind (body declarations doc) (alexandria:parse-body `,body
 								      :documentation t)
-    (labels ((define-lisp-code-with (fname-with-prefix dtype)
-	       `(,fname-with-prefix ()
-				    ,@(replace-lisp-code-with-dtype
-				      `(,@declarations ,@body)
-				       type-specifier
-				       dtype))))
-      `(progn
-	 (defun ,function-name (,@args)
-	   ,doc
-	   (labels (,@(loop for i fixnum upfrom 0 below (length fnames)
-			    collect (define-lisp-code-with
-					(nth i fnames)
-					(nth i *dtype-cl-names*))))
-	     (case mgl-mat:*DEFAULT-MAT-CTYPE*
-	       (:half
-		(error "No implementation"))
-	       (:float
-		(,(car fnames)))
-	       (:double
-		(,(second fnames)))
-	       (T
-		(error "No dtype")))))))))
+    `(progn
+       ,@(loop for i fixnum upfrom 0 below (length fnames)
+	       collect (define-lisp-code-with
+			   params
+			   (nth i fnames)
+			 (nth i *dtype-cl-names*)
+			 body
+			 declarations
+			 type-specifier))
+       (defun ,function-name (,@args)
+	 ,doc
+	 (case mgl-mat:*DEFAULT-MAT-CTYPE*
+	   (:half
+	    (error "No implementation"))
+	   (:float
+	    (,(car fnames) ,@params))
+	   (:double
+	    (,(second fnames) ,@params))
+	   (T
+	    (error "No dtype")))))))
+
+(print (macroexpand
+	`(define-with-typevar xxx u (a &key (x 1))
+	   "aa"
+	   (declare (optimize (speed 3))
+		    (type u a))
+	   (print a))))
+#|
+(define-with-typevar xxx u (a)
+  "aa"
+	   (declare (type u a))
+  (print a))|#

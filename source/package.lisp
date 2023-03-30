@@ -11,6 +11,8 @@
   (:export #:*single-value*)
   (:export #:*lparallel-kernel*
 	   #:set-lparallel-kernel)
+  (:export #:with-dtype
+	   #:define-with-typevar)
   (:export #:waffetensor
 	   #:tensor
 	   #:const
