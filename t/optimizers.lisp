@@ -47,12 +47,12 @@ Using dummy data, i will get assure activation and optimizers are working well.
 
 (defun test-for (trainer &optional (niter 3))
   (let ((losses nil))
-    (print (slot-value trainer 'cl-waffe::optimizer))
+    ;(print (slot-value trainer 'cl-waffe::optimizer))
     ; iterate for epoch
     (dotimes (epoch niter)
       (!reset-batch train)
       (!reset-batch label)
-      (format t "~%Training ~a th epoch at ~a~%" epoch trainer)
+      ;(format t "~%Training ~a th epoch at ~a~%" epoch trainer)
 
       ; iterate for batch. todo -> !Loop-for-batch macro
       (loop for index fixnum upfrom 0 below (!shape train 0) by 100
@@ -73,6 +73,9 @@ Using dummy data, i will get assure activation and optimizers are working well.
 (define-test-trainer Trainer7 cl-waffe.optimizers:Adam 1e-3 #'!leakey-relu)
 (define-test-trainer Trainer8 cl-waffe.optimizers:Adam 1e-4 #'!gelu)
 (define-test-trainer Trainer9 cl-waffe.optimizers:Adam 1e-3 #'!swish)
+
+(test printing-optimizer-test
+      (is (print (slot-value (Trainer9) 'cl-waffe::optimizer))))
 
 (with-dtype :float
   (test test-training-in-float

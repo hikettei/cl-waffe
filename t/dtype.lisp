@@ -70,12 +70,16 @@
     (!argmin target-tensor)
 
     (!abs target-tensor)
-    (!sqrt target-tensor)
-    
-    
-    
-    
-    ))
+    (!sqrt target-tensor)))
+
+(test operation-in-float
+      (is (all-the-operations)))
+
+(defun test-in-double ()
+  (with-dtype :double
+    (all-the-operations)))
+
+(test operation-in-float
+      (is (test-in-double)))
 
 
-(all-the-operations)
