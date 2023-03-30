@@ -36,6 +36,12 @@
 		   code)))
 	    body))
 
+
+(defun keyword-parser (keywords)
+  (let ((mode nil))
+    
+    ))
+
 (defmacro define-with-typevar
     (function-name
      type-specifier
@@ -46,26 +52,28 @@
 		   #'(lambda (p)
 		       (symb function-name p))
 		   *dtype-prefixes*)))
-  (labels ((define-lisp-code-with (fname-with-prefix dtype)
-	     `(defun ,fname-with-prefix (,@args)
-		,@(replace-lisp-code-with-dtype
-		   body
-		   type-specifier
-		   dtype))))
-    `(progn
-       ,@(loop for i fixnum upfrom 0 below (length fnames)
-	       collect (define-lisp-code-with
-			   (nth i fnames)
-			   (nth i *dtype-cl-names*)))
-       (defun ,function-name (,@args)
-	 (declare (optimize (speed 3) (safety 0))
-		  (inline ,@fnames))
-	 (case mgl-mat:*DEFAULT-MAT-CTYPE*
-	   (:half
-	    (error "No implementation"))
-	   (:float
-	    (,(car fnames) ,@args))
-	   (:double
-	    (,(second fnames) ,@args))
-	   (T
-	    (error "No dtype")))))))
+  
+  (multiple-value-bind (body declarations doc) (alexandria:parse-body `,body
+								      :documentation t)
+    (labels ((define-lisp-code-with (fname-with-prefix dtype)
+	       `(,fname-with-prefix ()
+				    ,@(replace-lisp-code-with-dtype
+				      `(,@declarations ,@body)
+				       type-specifier
+				       dtype))))
+      `(progn
+	 (defun ,function-name (,@args)
+	   ,doc
+	   (labels (,@(loop for i fixnum upfrom 0 below (length fnames)
+			    collect (define-lisp-code-with
+					(nth i fnames)
+					(nth i *dtype-cl-names*))))
+	     (case mgl-mat:*DEFAULT-MAT-CTYPE*
+	       (:half
+		(error "No implementation"))
+	       (:float
+		(,(car fnames)))
+	       (:double
+		(,(second fnames)))
+	       (T
+		(error "No dtype")))))))))
