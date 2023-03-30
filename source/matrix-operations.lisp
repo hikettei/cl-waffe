@@ -159,7 +159,7 @@ The Batch Filtered Matrix-Matrix product is returned.
 
 
 
-(defun !argmaxmin (tensor max-or-min &key (dim nil) (use-value? nil))
+(define-with-typevar !argmaxmin u (tensor max-or-min &key (dim nil) (use-value? nil))
   "Todo: For GPU"
   (declare (optimize (speed 3))
 	   (type waffetensor tensor))
@@ -199,6 +199,7 @@ The Batch Filtered Matrix-Matrix product is returned.
 						      result-dim1
 						      result-dim))
 				     (result-dim1 (or result-dim1 `(t))))
+				(declare (type (or null u) m-val m-pos))
 				(with-facet (arr
 					     ((data (apply
 						     #'!faref
@@ -206,7 +207,7 @@ The Batch Filtered Matrix-Matrix product is returned.
 						     result-dim1))
 					      'backing-array
 					      :direction :input))
-				  (declare (type (simple-array single-float) arr))
+				  (declare (type (simple-array u) arr))
 				  (loop for m fixnum upfrom 0 below iter-num
 					do (case max-or-min
 					     (:max

@@ -336,14 +336,17 @@ yi = log(e xi)
   (call (ATanhTensor) (assure-tensor x)))
 
 
+(define-with-typevar apply-abs u (x)
+  (!where #'(lambda (x)
+	      (declare (type u x))
+	      (> x 0.0))
+	  x 1.0 -1.0))	       
+			       
 (defnode AbsTensor ()
   :optimize t
   :parameters ((mask nil))
   :forward ((x)
-	    (let ((mask (!where #'(lambda (x)
-				    (declare (type single-float x))
-				    (> x 0.0))
-				x 1.0 -1.0)))
+	    (let ((mask (apply-abs x)))
 	      (save-for-backward mask x)
 	      (!mul x mask)))
   :backward ((dy)

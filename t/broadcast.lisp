@@ -187,4 +187,3 @@
 
       (is (broadcast-test (!randn `(10 1 10 1)) (!randn `(1 10 1 10))))
       (is (broadcast-test (!randn `(1 10 1 10)) (!randn `(10 1 10 1)))))
-

@@ -522,21 +522,8 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
   (if (waffetensor-is-ancestor-param (nth-var tensor n))
       (backward1 (nth-var tensor n))))
 
-(declaim (ftype (function (waffetensor) null) backward1))
-(defun backward1 (tensor)
-  "
-backward1 does following in order to optimize:
-
-I'm sorry for writing in Japanese...
-
-1. Nodes like... (Any Node -> !aref) is registered to *lazy-backwards*.
-  Step1. backward1を呼び出して, !arefより上の階層の計算ノードの微分を終わらせる
-  Step2. backward関数内で, *lazy-backwards* にある計算ノードがあったら、それをbackward1で!arefが出現するノードまでか末端まで計算.
-
-  Step3. Step2で*lazy-backwards*がNILになるまで繰り返す。
-
-2. *single-value*がtの場合、計算ノードが分岐しないから(Tracingで解決しようと必死だったやつ) 破壊的に計算してOK
-"
+(declaim (ftype (function (waffetensor) (values null &optional)) backward1))
+(define-with-typevar backward1 u (tensor)
   (declare (optimize (speed 3) (safety 0))
 	   (type waffetensor tensor))
   
@@ -643,8 +630,8 @@ I'm sorry for writing in Japanese...
 				(waffetensor-grad-tmp tensor)))
 			(waffetensor-grad tensor))
 		 (setf (waffetensor-grad tensor)
-		       (+ (the single-float (waffetensor-grad tensor))
-			  (the single-float
+		       (+ (the u (waffetensor-grad tensor))
+			  (the u
 			       (value (grad-tmp-value
 				 (waffetensor-grad-tmp tensor))))))))))))
   nil)
@@ -1024,7 +1011,7 @@ Example:
 @end[lang=lisp](code)"
   `(const (data ,tensor)))
 
-(defun !where (condition tensor then else)
+(define-with-typevar !where u (condition tensor then else)
   "Return a tensor of elements selected from either x or y, depending on condition.
 
 @cl:param(condition) is given as a lambda expression, which called with an value of (aref tensor index).
@@ -1056,10 +1043,6 @@ Return: A tensor of shape that equal to the condition.
 ;        (0.0... 0.962... ~ 0.0... 0.215...)) :mgl t :shape (10 10))
 @end[lang=lisp](code)
 @end(section)"
-  (declare (optimize (speed 3))
-	   (type function condition)
-	   (type waffetensor tensor)
-	   (type single-float then else))
   (value tensor)	      
   (let ((result (!zeros (!shape tensor))))
     (with-facets ((result-array ((data result)
@@ -1070,7 +1053,7 @@ Return: A tensor of shape that equal to the condition.
 				 'backing-array
 				 :direction
 				 :input)))
-      (declare (type (simple-array single-float) result-array tensor-array))
+      (declare (type (simple-array u) result-array tensor-array))
       (loop for i fixnum upfrom 0 below (!size tensor)
 	    do (setf (aref result-array i)
 		     (if (funcall condition (aref tensor-array i))
@@ -1079,7 +1062,8 @@ Return: A tensor of shape that equal to the condition.
     result))
 
 (defun !index () "Todo")
-(defun !filter (tensor lambda)
+
+(define-with-typevar !filter u (tensor lambda)
   "Applying every tensor's element @cl:param(lambda), it returns an tensor which comprised of the @cl:param(lambda)'s returned values.
 
 @begin(deflist)
@@ -1109,7 +1093,7 @@ Return: A tensor of shape that equal to the condition.
 				 'backing-array
 				 :direction
 				 :input)))
-      (declare (type (simple-array single-float) result-array tensor-array))
+      (declare (type (simple-array u) result-array tensor-array))
       (loop for i fixnum upfrom 0 below (!size tensor)
 	    do (setf (aref result-array i)
 		     (funcall lambda (aref tensor-array i))))

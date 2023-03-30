@@ -23,18 +23,21 @@
 2. broadcasting-apply-mgl
 3. broadcasting-apply-facet"
   (declare (optimize (speed 3) (safety 0)))
-
   (if (use-cuda-p (data x))
       (broadcasting-apply-mgl function x y)
       (let ((last-dims-x (apply #'* (last (!shape x) 2)))
 	    (last-dims-y (apply #'* (last (!shape y) 2))))
 	(declare (type fixnum last-dims-x last-dims-y))
-	(if (>= (the fixnum (+ last-dims-x last-dims-y))
-		(the fixnum *use-blas-min-size*))
-	    (if cl-waffe:*lparallel-kernel*
-		(%broadcasting-single-float-cpu function x y)
-		(broadcasting-apply-mgl function x y))
-	    (broadcasting-apply-facet function x y)))))
+	(dtypecase
+	 (:double
+	  (broadcasting-apply-mgl function x y))
+	 (:float
+	  (if (>= (the fixnum (+ last-dims-x last-dims-y))
+		  (the fixnum *use-blas-min-size*))
+	      (if cl-waffe:*lparallel-kernel*
+		  (%broadcasting-single-float-cpu function x y)
+		  (broadcasting-apply-mgl function x y))
+	      (broadcasting-apply-facet function x y)))))))
 
 (declaim (ftype (function (single-float single-float symbol) single-float) applying))
 (defun applying (a b function)

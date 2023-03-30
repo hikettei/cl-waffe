@@ -20,10 +20,6 @@
 	       #:bordeaux-threads)
   :in-order-to ((test-op (test-op cl-waffe-test)))
   :components ((:file "cl-cram")
-	       (:module "cl-termgraph"
-		:components ((:file "package")
-			     (:file "cl-termgraph")
-			     (:file "figure")))
 	       (:module "backends/cpu"
 		:depends-on ("package"
 			     "backends/mgl-mat")
@@ -41,10 +37,10 @@
 			     (:file "kernel")))
 	       (:file "package")
 	       (:file "utils")
+	       (:file "dtype" :depends-on ("utils"))
 	       (:file "conditions")
 	       (:file "model" :depends-on ("tensor"))
-	       (:file "dtype")
-	       (:file "tensor")
+	       (:file "tensor" :depends-on ("dtype"))
 	       (:file "thread")
 	       (:file "distributions/random")
 	       (:file "distributions/distribution")
@@ -103,6 +99,7 @@
 					 (:file "deriv")
 					 (:file "node-extension")
 					 (:file "copy")
+					 (:file "dtype")
 					 (:file "caches")
 					 (:file "nodes")
 					 (:file "jit")
