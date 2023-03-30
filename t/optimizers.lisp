@@ -74,14 +74,28 @@ Using dummy data, i will get assure activation and optimizers are working well.
 (define-test-trainer Trainer8 cl-waffe.optimizers:Adam 1e-4 #'!gelu)
 (define-test-trainer Trainer9 cl-waffe.optimizers:Adam 1e-3 #'!swish)
 
-(test test-training
-      (is (test-for (Trainer0)))
-      (is (test-for (Trainer1)))
-      (is (test-for (Trainer2)))
-      (is (test-for (Trainer3)))
-      (is (test-for (Trainer4)))
-      (is (test-for (Trainer5)))
-      (is (test-for (Trainer6)))
-      (is (test-for (Trainer7)))
-      (is (test-for (Trainer8)))
-      (is (test-for (Trainer9))))
+(with-dtype :float
+  (test test-training-in-float
+	(is (test-for (Trainer0)))
+	(is (test-for (Trainer1)))
+	(is (test-for (Trainer2)))
+	(is (test-for (Trainer3)))
+	(is (test-for (Trainer4)))
+	(is (test-for (Trainer5)))
+	(is (test-for (Trainer6)))
+	(is (test-for (Trainer7)))
+	(is (test-for (Trainer8)))
+	(is (test-for (Trainer9)))))
+
+(with-dtype :double
+  (test test-training-in-double
+	(is (test-for (Trainer0)))
+	(is (test-for (Trainer1)))
+	(is (test-for (Trainer2)))
+	(is (test-for (Trainer3)))
+	(is (test-for (Trainer4)))
+	(is (test-for (Trainer5)))
+	(is (test-for (Trainer6)))
+	(is (test-for (Trainer7)))
+	(is (test-for (Trainer8)))
+	(is (test-for (Trainer9)))))

@@ -23,7 +23,6 @@
 2. broadcasting-apply-mgl
 3. broadcasting-apply-facet"
   (declare (optimize (speed 3) (safety 0)))
-
   (if (use-cuda-p (data x))
       (broadcasting-apply-mgl function x y)
       (let ((last-dims-x (apply #'* (last (!shape x) 2)))

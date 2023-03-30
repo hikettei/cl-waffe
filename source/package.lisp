@@ -12,6 +12,7 @@
   (:export #:*lparallel-kernel*
 	   #:set-lparallel-kernel)
   (:export #:with-dtype
+	   #:dtypecase
 	   #:define-with-typevar)
   (:export #:waffetensor
 	   #:tensor
