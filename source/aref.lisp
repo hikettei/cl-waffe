@@ -4,13 +4,13 @@
 (deftype array-index-type ()
     `(integer 0 4611686018427387903))
 
-(defnode ArefTensor (shape)
+(defnode ArefTensor (shape) ; skip me.
   :optimize t
   :parameters ((shape shape)
 	       (base-shape T))
   :forward ((x) (setf (self base-shape) (!shape x))
 		(apply #'!faref x (self shape))) ;thread-node??
-    :backward ((dy)
+  :backward ((dy)
 	     (let ((dy-n (!zeros (self base-shape))))
 	       (setf (!areflist dy-n (self shape)) dy)
 	       (list dy-n))))

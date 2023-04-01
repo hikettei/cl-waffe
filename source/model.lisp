@@ -17,11 +17,6 @@ Utils for defnode/defmodel/defoptimizer
 (defparameter *initial-form-backward*
   `((error "backward is nil")))
 
-(defparameter *call-forward-features* (make-hash-table)
-  "An hash-table which records all forward nodes")
-(defparameter *call-backward-features* (make-hash-table)
-  "An hash-table which records all backward nodes")
-
 (defun register-features (features-table
 			 node-name
 			 fname
@@ -130,7 +125,7 @@ Output: An last value of layers."
 			 (setq ,input (call (self ,(car layer)) ,@(cdr layer)))))
 	      layers)
      ,input))
-
+#|
 (declaim (ftype (function (t &rest waffetensor) (or null list waffetensor)) call))
 (defun call (model &rest args)
   "Calls the forward steps which defined in: defnode, defmodel, defoptimizer.
@@ -202,7 +197,8 @@ Output: Waffetensor of list which comprised of waffetensor."
 	    ;(t
 	     ;(error "cl-waffe.defnode: Nodes must return a single tensor or list which consisted of waffetensor otherwise cl-waffe can't build up computation nodes..."))
 	    )))
-    result))
+result))
+|#
 
 (defun call-inlined-forward (model &rest inputs)
   (redefine-call-inline-forward)
@@ -286,11 +282,12 @@ Output: Waffetensor of list which comprised of waffetensor."
 					     'inputs)))
 			 (T
 			  (if *inlined-forward-retry-p*
-			      (error "no such node") ; todo more conditions
+			      (error "No such node ~a" model) ; todo more conditions
 			      (let ((*inlined-forward-retry-p* t))
 				(locally (declare (notinline call-inlined-forward))
 				  (redefine-call-inline-forward)
 				  (apply #'call-inlined-forward model inputs)))))))))
+       (print (macroexpand (output-function)))
        (eval (output-function)))))
 
 (defun model-inlineable-p (model)
@@ -301,10 +298,10 @@ Output: Waffetensor of list which comprised of waffetensor."
 	  (gethash name *call-forward-features*)))))
 
 
-(defmacro call1 (model
-		 &rest inputs
-		 &aux
-		   (features (model-inlineable-p model)))
+(defmacro call (model
+		&rest inputs
+		&aux
+		  (features (model-inlineable-p model)))
   #|
   If model is determined at compile-time. (e.g.: (call (ScalarAdd) (const 1.0) (const 1.0))), they inlined.
   |#

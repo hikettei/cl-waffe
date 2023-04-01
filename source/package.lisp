@@ -3,7 +3,7 @@
 
 (defpackage cl-waffe
   (:documentation "An package for defining node, initializing and computing with tensor, and backprops.")
-  (:use :cl :mgl-mat :alexandria :inlined-generic-function)
+  (:use :cl :mgl-mat :alexandria)
   (:export #:*verbose*
 	   #:with-verbose)
   (:export #:with-jit
@@ -215,6 +215,11 @@
 	   #:with-usage))
 
 (in-package :cl-waffe)
+
+(defconstant *call-forward-features* (common-lisp:make-hash-table)
+  "An hash-table which records all forward nodes")
+(defconstant *call-backward-features* (common-lisp:make-hash-table)
+  "An hash-table which records all backward nodes")
 
 (defparameter *cl-waffe-object-types* `(:model
 					:node

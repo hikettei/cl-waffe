@@ -83,8 +83,8 @@
 		   #'(lambda (p)
 		       (symb function-name p))
 		   *dtype-prefixes*))
-          (params (get-params args)))
-  
+       (params (get-params args)))
+  "Todo: Document"
   (multiple-value-bind (body declarations doc) (alexandria:parse-body `,body
 								      :documentation t)
     `(progn
@@ -109,5 +109,7 @@
 	    (error "No dtype")))))))
 
 (defmacro dtypecase (&rest cases)
+  "TODO: DOCUMENT"
   `(case mgl-mat:*DEFAULT-MAT-CTYPE*
      ,@cases))
+

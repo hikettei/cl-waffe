@@ -101,6 +101,26 @@ And utils for broadcasting etc...
 	      do (incf r (aref arr i)))))
     (sysconst r)))
 
+(defnode ScalarAdd ()
+  :forward-declaim (declaim (ftype (function (ScalarAdd waffetensor waffetensor) waffetensor) :forward))
+  :forward ((x y)
+	    (let ((x (data x))
+		  (y (data y)))
+	      (declare (type single-float x y))
+	      (const (+ x y))))
+  :backward ((dy) (list dy dy)))
+
+(defnode ScalarSub ()
+  ;:disassemble-forward t
+  :forward-declaim (declaim (ftype (function (ScalarSub waffetensor waffetensor) waffetensor) :forward))
+  :forward ((x y)
+	    (let ((x (data x))
+		  (y (data y))) ; todo: define with typevar
+	      (declare (type single-float x y))
+	      (const (- x y))))
+  :backward ((dy) (list dy dy)))
+
+
 (defnode AddTensor (&optional (output nil) (overwrite nil))
   :optimize t
   :parameters ((output output) (overwrite overwrite))

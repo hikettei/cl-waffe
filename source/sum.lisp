@@ -11,7 +11,6 @@
 	     (list (!div (!repeats dy (self axis) (self repeats))
 			 (self repeats)))))
 
-
 (defnode MeanTensor (axis)
   :optimize t
   :parameters ((axis axis) (repeats T))

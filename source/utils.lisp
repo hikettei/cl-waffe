@@ -185,3 +185,4 @@ Todo:Write Docs"
 (defun symb (&rest args)
   "interns the mkstr output/returns as symbol"
   (values (intern (apply #'mkstr args))))
+

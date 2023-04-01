@@ -8,14 +8,6 @@ The template of writing conditions:
 
 |#
 
-(define-condition Backend-Doesnt-Exists (simple-error)
-  ((kernel-name :initarg :kernel)
-   (node-name :initarg :node))
-  (:report (lambda (c s)
-	     (format s "[cl-waffe] Backend-Doesnt-Exists: The specified backend :~a doesn't have implementation for ~a."
-		     (slot-value c 'kernel-name)
-		     (slot-value c 'node-name)))))
-
 (define-condition invaild-slot-name-waffe-object (simple-error)
   ((slot-name :initarg :name)
    (object-type :initarg :object-type))
@@ -28,6 +20,11 @@ The template of writing conditions:
   (error (make-condition 'invaild-slot-name-waffe-object
 			 :name name
 			 :object-type model-type)))
+
+#|
+Shaping-Error
+-> Aref-Shaping-Error
+|#
 
 (define-condition shaping-error (simple-error)
   ((excepted-shape :initarg :excepted)
@@ -57,3 +54,17 @@ The template of writing conditions:
   `(error (make-condition 'aref-shaping-error
 			  :content (format nil ,content ,@args))))
   
+
+#|
+Node-Error
+-> ForwardNotNotFound
+-> Backend-Not-Found
+|#
+
+(define-condition Backend-Doesnt-Exists (simple-error)
+  ((kernel-name :initarg :kernel)
+   (node-name :initarg :node))
+  (:report (lambda (c s)
+	     (format s "[cl-waffe] Backend-Doesnt-Exists: The specified backend :~a doesn't have implementation for ~a."
+		     (slot-value c 'kernel-name)
+		     (slot-value c 'node-name)))))
