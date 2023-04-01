@@ -8,8 +8,18 @@ Utils for defnode/defmodel/defoptimizer
 (defparameter *in-node-method* nil)
 (defparameter *model-arg-max-displaying-size* 20 "")
 
+(defparameter *call-forward-features* (make-hash-table)
+  "An hash-table which records all forward nodes")
+(defparameter *call-backward-features* (make-hash-table)
+  "An hash-table which records all backward nodes")
+
+(defparameter *node-function-prefix* (gensym "gen-by-waffe"))
+
 (defparameter *restart-non-exist-backend* t
   "When t, in the case when the specified backend doesn't exist, cl-waffe calls a standard implementation backend")
+
+(defmacro redefine-calln ())
+
 
 (define-method-combination backend-dispatcher ()
   ((mgl-node-method  (backend-dispatcher . *))
@@ -386,6 +396,7 @@ Example:
 (defmacro define-node-method (fname
 			      name
 			      args
+			      declaim-forms
 			      body
 			      hide-from-tree
 			      optimize
@@ -400,7 +411,6 @@ Example:
   "The macro for defining node method. (:forward :backward in defmodel, defnode, defoptimizers)
   Also, the code for managing caches."
   (declare (ignore hide-from-tree object-type))
-  ; Note: is-node's meaning is on the around way.
   (let ((f-ident   (gensym (symbol-name name)))
 	(self-heap (gensym (symbol-name name)))
 	(vars (map 'list #'(lambda (x)
@@ -447,7 +457,8 @@ Example:
 				       (not
 					(waffetensor-path-through-node? ,value))
 				       t)
-			       ; save-for-backward is ignored when 1. in with-no-grad macro. 2. Nodes connected like (Node) -> (Node) ; (in nodes, :forward :backward doesn't create grads.)
+
+					; save-for-backward is ignored when 1. in with-no-grad macro. 2. Nodes connected like (Node) -> (Node) ; (in nodes, :forward :backward doesn't create grads.)
 
 			       (when (member t (list ,@',vars)
 					     :test
@@ -527,12 +538,13 @@ Example:
 			  (inline ,f-ident))
 		 (apply #',f-ident self node-inputs)))))))
 
-(defmacro defmodel (name args
-			 &key
-			   (parameters nil)
-			   forward
-			   (optimize nil)
-			   (document "An model, defined by cl-waffe"))
+(defmacro defmodel (name
+		    args
+		    &key
+		      (parameters nil)
+		      forward
+		      (optimize nil)
+		      (document "An model, defined by cl-waffe"))
   "This macro defines a cl-waffe model as @cl:param(name).
 
 At the same time, a constructor @cl:param(name) is defined and you can initialize your model like:
@@ -649,17 +661,155 @@ Example:
 	 (:external-node ,backend))
      nil))
 
+(defun generate-function-name (function-type
+			       structure-name
+			       backend-type)
+  "(generate-function-name :forward 'areftensor :mgl)
+   ;=> |gen-by-waffe4682call-AREFTENSOR-FORWARD-MGL|"
+  (declare (type keyword function-type backend-type)
+	   (type symbol structure-name))
+  (assert (find function-type `(:forward :backward))
+	  nil
+	  "in cl-waffe's internal, Assertion Failed with function-type = [:forward :backward]")
+  (intern
+   (concatenate 'string
+		(symbol-name *node-function-prefix*)
+		"call-"
+		(symbol-name structure-name)
+		"-"
+		(symbol-name function-type)
+		"-"
+		(symbol-name backend-type))
+   'cl-waffe))
+
+(defun replace-declaim-forms-with-fname (forward-or-backward
+					 function-name
+					 forms)
+  (map-tree
+   #'(lambda (code)
+       (typecase code
+	 (keyword
+	  (if (eql code forward-or-backward)
+	      function-name
+	      code))
+	 (T
+	  code)))
+   forms))
+
+(defmacro with-object-macrolet-forms (self-heap (&rest vars) &body body)
+  "vars - the list of symbols"
+  `(macrolet ((self (name)
+		`(slot-value ,',self-heap ',name))
+	      (model () `,',self-heap)
+	      (save-for-backward (name value)
+		`(let ((thread-info (waffetensor-thread-data ,value))
+		       (smaller-value (detach ,value)))
+		   (unless *no-grad* ; is no-grad disabled?
+		     (when (if *in-node-method*
+			       (not
+				(waffetensor-path-through-node? ,value))
+			       t)
+		       (when (member t (list ,@',vars)
+				     :test
+				     #'(lambda (x y)
+					 (eql x (waffetensor-is-ancestor-param y))))
+			 (cond
+			   ((and (typep (data ,value) 'mat)
+				 (not (null thread-info)))
+				    (cl-waffe.caches:with-cache
+					(tmp
+					 smaller-value
+					 :place
+					 (cl-waffe.backends.mgl:create-thread-idx thread-info)
+					 :copy t)
+				      (setf (self ,name) (const tmp))))
+			   (T ;(!allow-destruct smaller-value)
+			    (setf (self ,name) smaller-value)))))))))
+     ,@body))
+
+(defmacro with-define-function-in-defmacro-way
+    ()
+  )
+
+(defmacro with-define-function-in-defnode-way
+    (vars
+     body
+     &aux
+       (state (gensym "STATE")))
+  `(let ((,state (enable-node-tensor ,@vars)))
+     (declare (type list ,state))
+     (with-node-method-mode
+       (let ((result
+	       (multiple-value-bind (result) (progn ,@body)
+		 result))
+	     (result-next-state
+	       (find t ,state)))
+	 (uncheck-node-tensor ,state ,@vars)
+	 (typecase result
+	   (list
+	    (map
+	     'list
+	     #'(lambda (x)
+		 (setf
+		  (waffetensor-path-through-node? x)
+		  result-next-state)
+		 x)
+	     result))
+	   (T
+	    (setf
+	     (waffetensor-path-through-node? result)
+	     result-next-state)
+	    result))))))
+
+(defmacro define-node-function (forward-or-backward
+				structure-name
+				declaim-forms
+				args
+				body
+				object-type ; :node :model etc
+				backend-type)
+  "forward-or-backward :forward or :backward
+   Strucutre name defined by defobject (e.g.: areftensor)"
+  (let ((function-name (generate-function-name
+			forward-or-backward
+			structure-name
+			backend-type))
+	(self (gensym "self"))
+	(args-symbols (get-params args)))
+    (case forward-or-backward
+      (:forward
+       ; register
+       )
+      (:backward
+       ; register
+       )
+      (T
+       (error "")))
+    
+    `(progn
+       ,(replace-declaim-forms-with-fname
+	 forward-or-backward
+	 function-name
+	 declaim-forms)
+       (defun ,function-name (,self ,@args)
+	 (with-object-macrolet-forms ,self (,@args-symbols)
+	   ,(if (find object-type `(:node :optimizer))
+		`(with-define-function-in-defnode-way ,args-symbols
+		   ,@body)))))))
+
 (defmacro defobject (name
 		     args
 		     &key
-		      parameters
-		      forward
-		      backward
-		      hide-from-tree
-		      optimize
-		      (regard-as-node nil)
-		      (document "An object, defined by cl-waffe")
-		      (object-type :object))
+		       parameters
+		       forward-declaim
+		       forward
+		       backward-declaim
+		       backward
+		       hide-from-tree
+		       optimize
+		       (regard-as-node nil)
+		       (document "An object, defined by cl-waffe")
+		       (object-type :object))
   "Defining cl-waffe's object
 When hide-from-tree is t, autograds are ignored.
 When regard-as-node is nil, the forward and backward is defined as the node.
@@ -701,27 +851,28 @@ the object-type indicates the type of document format."
 	     (backward ,(if backward t nil) :type boolean)
 	     (parameters ',(map 'list (lambda (x) (assure-args (car x))) parameters))
 	     ,@(map 'list (lambda (x) `(,(assure-args (car x)) ,(second x) ,@(cddr x))) parameters))
-	 (define-node-method
-	     call-forward
-	     ,name
-	     ,(car forward)
-	     ,(cdr forward)
-	     ,hide-from-tree
-	     ,optimize
-	     ,object-type
-	     :mgl
-	     ,(not regard-as-node))
-	 (define-node-method
-	     call-backward
-	     ,name
-	     ,(car backward)
-	     ,(cdr backward)
-	     ,hide-from-tree
-	     ,optimize
-	     ,object-type
-	     :mgl
-	     ,(not regard-as-node))
-	 nil))))
+	   
+	   (define-node-method
+	       call-forward
+	       ,name
+	       ,(car forward)
+	       ,(cdr forward)
+	       ,hide-from-tree
+	       ,optimize
+	       ,object-type
+	       :mgl
+	       ,(not regard-as-node))
+	   (define-node-method
+	       call-backward
+	       ,name
+	       ,(car backward)
+	       ,(cdr backward)
+	       ,hide-from-tree
+	       ,optimize
+	       ,object-type
+	       :mgl
+	       ,(not regard-as-node))
+	   nil))))
 
 (defun render-simple-model-structure (stream model) ; Todo: More Details
   (case (slot-value model 'cl-waffe::object-type)
