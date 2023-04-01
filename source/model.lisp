@@ -22,8 +22,6 @@ Utils for defnode/defmodel/defoptimizer
 (defparameter *call-backward-features* (make-hash-table)
   "An hash-table which records all backward nodes")
 
-(defpackage :cl-waffe.tmp.call-states-storeroom)
-
 (defun register-features (features-table
 			 node-name
 			 fname
@@ -209,22 +207,49 @@ Output: Waffetensor of list which comprised of waffetensor."
 (defun update-computation-node ()
   )
 
+(defun model-inlineable-p (model)
+  (and (typep model 'list)
+       (let ((name (car model)))
+	 (and
+	  (not (eql name 'model-list))
+	  (gethash name *call-forward-features*)))))
+
 ;mlistはパスすればおk。callを再起する必要なし
 ;call modelは呼ばれるたびに、modelが同じStructureを受け取る必要がある
 ;+inline
 (defmacro call1 (model
 		 &rest inputs
+		 ;&environment env
 		 &aux
-		   (call-ident (gentemp "CallID" :cl-waffe.tmp.call-states-storeroom))
-		   (model-type (gentemp "MTYPE"  :cl-waffe.tmp.call-states-storeroom)))
-  "Warning: Model must be static"
-  ; call-ident = fixnum
+		   (model-type (type-of model))
+		   (call-ident (gensym "CALL"))
+		   (features (model-inlineable-p model)))
+  #|
+    If model is determined at compile-time. (e.g.: (call (ScalarAdd) (const 1.0) (const 1.0))), they inlined.
+  |#
+  (declare (optimize (speed 3)))
+  (if features
+      #|When there's a defined node|#
+      (let ((backends)
+	    (fnames))
+	(maphash #'(lambda (backend-type function-symbol)
+		     (push backend-type backends)
+		     (push function-symbol fnames))
+		 features)
+	(if (= (the fixnum (length (the list backends))) 1)
+	    `(locally
+		 (declare (optimize (speed 3) (safety 1))
+			  (inline ,(car fnames)))
+	       (,(car fnames) ,model ,@inputs))
+	    nil))
+      (print :A)))
+		 
 
-  `(progn ; eval-when
-     (defparameter ,call-ident nil)
-     (print ',call-ident)))
+(defun tmp-inf (model-name)
+  (gethash (type-of model-name) *call-forward-features*))
 
 (defnode ScalarAdd ()
+  :forward-declaim (declaim (ftype (function (ScalarAdd waffetensor waffetensor) waffetensor) :forward))
   :forward ((x y)
 	    (let ((x (data x))
 		  (y (data y)))
@@ -232,10 +257,33 @@ Output: Waffetensor of list which comprised of waffetensor."
 	      (const (+ x y))))
   :backward ((dy) (list dy dy)))
 
+(defnode ScalarSub ()
+  :forward-declaim (declaim (ftype (function (ScalarSub waffetensor waffetensor) waffetensor) :forward))
+  :forward ((x y)
+	    (let ((x (data x))
+		  (y (data y)))
+	      (declare (type single-float x y))
+	      (const (- x y))))
+  :backward ((dy) (list dy dy)))
+
+(define-node-extension cl-waffe::ScalarAdd
+  :backend :numcl
+  :forward ((x y) x)
+  :backward ((dy) (list dy dy)))
+
 (defun bench1 (&aux (node (ScalarAdd)))
-	    (declare (optimize (speed 3) (safety 0)) (inline |call-addtensor-forward-mgl|))
-	    (time (dotimes (i 10000)
-		    (|call-scalaradd-forward-mgl| node (const 1.0) (const 1.0)))))
+  (declare (optimize (speed 3) (safety 0))
+	   (inline |call-scalaradd-forward-mgl|))
+  (time (dotimes (i 10000)
+	  (|call-scalaradd-forward-mgl| node (const 1.0) (const 1.0)))))
+
+
+(defun bench2 (&aux (node (ScalarAdd)))
+  (declare (optimize (speed 3) (safety 0)))
+  (with-no-grad
+  (time (dotimes (i 10000)
+	  (call node (const 1.0) (const 1.0))))))
+
 
 
 (defmacro with-model-list (&rest models)
@@ -673,8 +721,10 @@ When backward, @b(Automatic differentiation applies).
 				 &key
 				   optimize
 				   backend
+				   (disassemble-forward nil)
 				   forward-declaim
 				   forward
+				   (disassemble-backward nil)
 				   backward-declaim
 				   backward)
   "Adds a new backend to the defined node.
@@ -710,6 +760,10 @@ Example:
 @end[lang=lisp](code)
 "
   `(progn
+     (assert (not (equal (symbol-name ',name)
+			 "MODEL-LIST"))
+	     nil
+	     "define-node-extension is failed because cl-waffe::model-list is attempted to overwrite. This node is prohibited to extend")
      (define-node-function
 	 :forward
        ,name
@@ -718,7 +772,8 @@ Example:
        ,(or (cdr forward)
 	    *initial-form-forward*)
        :node
-       ,backend)
+       ,backend
+       :disassemble-me ,disassemble-forward)
 
      (define-node-function
 	 :backward
@@ -728,7 +783,8 @@ Example:
        ,(or (cdr backward)
 	    *initial-form-backward*)
        :node
-       ,backend)
+       ,backend
+       :disassemble-me ,disassemble-backward)
      
      (define-node-method
 	 call-forward
