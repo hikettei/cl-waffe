@@ -204,8 +204,54 @@ Output: Waffetensor of list which comprised of waffetensor."
 	    )))
     result))
 
-(defun update-computation-node ()
-  )
+(defun call-inlined-forward (model &rest inputs)
+  (declare (ignore model inputs))
+  (error "not compiled yet"))
+
+(defun build-backend-case (features
+			   model
+			   inputs
+			   &aux (keys (hash-table-keys features)))
+  (declare (type hash-table features))
+  (print keys)
+  ; quite model and each inputs
+  (if (= (length keys) 1)
+      (progn
+	`(apply
+	  #',(gethash (car keys) features)
+	  ,model
+	  ,inputs))
+      (progn
+
+	)))
+
+(defmacro redefine-call-inlined-forward (&aux (tmp (gensym)))
+  (let ((keys (hash-table-keys *call-forward-features*))
+	(functions))
+    (format t "Inlining call-forward...")
+    (mapc
+     #'(lambda (key)
+	 (maphash #'(lambda (backend-name function-name)
+		      (declare (ignore backend-name))
+		      (push function-name functions))
+		  (gethash key *call-forward-features*)))
+     keys)
+    
+     ; note: fcase, automatically call this when defnode is called.
+    `(progn
+       (defun ,tmp (model &rest inputs)
+	 (declare (optimize (speed 3))
+		  (inline ,@functions))
+	 (typecase model
+	   ,@(loop for i fixnum upfrom 0 below (length keys)
+		   collect `(,(nth i keys)
+			     ,(build-backend-case
+			       (gethash (nth i keys) *call-forward-features*)
+			       'model
+			       'inputs)))))
+       (setf (symbol-function 'cl-waffe::call-inlined-forward)
+	     (symbol-function ',tmp))
+       t)))
 
 (defun model-inlineable-p (model)
   (and (typep model 'list)
@@ -214,15 +260,13 @@ Output: Waffetensor of list which comprised of waffetensor."
 	  (not (eql name 'model-list))
 	  (gethash name *call-forward-features*)))))
 
+
 ;mlistはパスすればおk。callを再起する必要なし
 ;call modelは呼ばれるたびに、modelが同じStructureを受け取る必要がある
 					;+inline
 (defmacro call1 (model
 		 &rest inputs
-					;&environment env
 		 &aux
-		   (model-type (type-of model))
-		   (call-ident (gensym "CALL"))
 		   (features (model-inlineable-p model)))
   #|
   If model is determined at compile-time. (e.g.: (call (ScalarAdd) (const 1.0) (const 1.0))), they inlined.
@@ -265,10 +309,26 @@ Output: Waffetensor of list which comprised of waffetensor."
 				      :node ,model))
 			    (restart-with-mgl-kernel ()
 			      (,defaultfunc ,model ,@inputs))))))))))
-      (print :A)))
+      (progn
+	; model-listはインライン化できない
+	; when model-list
+	; when not determined.
+	
+	`(let* ((model ,model)
+		(model-type (type-of model))
+		(inputs (list ,@inputs)))
+	   (declare (type list table-keys))
+	   (if (typep model 'model-list)
+	       (progn
+		 (setq model (nth (data (car inputs))
+				  (model-list-mlist model)))
+		 (setq inputs (cdr inputs))
+		 (assert (not (typep model 'model-list))
+			 nil
+			 "cl-waffe.call: Assertion failed because model-list can't posses model-list as a element.")))
+	   
 
-(defun tmp-inf (model-name)
-  (gethash (type-of model-name) *call-forward-features*))
+	   nil))))
 
 (defnode ScalarAdd ()
   :forward-declaim (declaim (ftype (function (ScalarAdd waffetensor waffetensor) waffetensor) :forward))
