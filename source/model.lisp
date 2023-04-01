@@ -224,6 +224,20 @@ Output: Waffetensor of list which comprised of waffetensor."
      (defparameter ,call-ident nil)
      (print ',call-ident)))
 
+(defnode ScalarAdd ()
+  :forward ((x y)
+	    (let ((x (data x))
+		  (y (data y)))
+	      (declare (type single-float x y))
+	      (const (+ x y))))
+  :backward ((dy) (list dy dy)))
+
+(defun bench1 (&aux (node (ScalarAdd)))
+	    (declare (optimize (speed 3) (safety 0)) (inline |call-addtensor-forward-mgl|))
+	    (time (dotimes (i 10000)
+		    (|call-scalaradd-forward-mgl| node (const 1.0) (const 1.0)))))
+
+
 (defmacro with-model-list (&rest models)
   "Applying model-list.
 
