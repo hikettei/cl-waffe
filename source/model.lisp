@@ -208,6 +208,11 @@ Output: Waffetensor of list which comprised of waffetensor."
   (redefine-call-inlined-forward)
   (apply #'call-inlined-forward model inputs))
 
+(defun call-inlined-forward-initial-state (model &rest inputs)
+  (redefine-call-inlined-forward)
+  (apply #'call-inlined-forward model inputs))
+
+
 (defun build-backend-case (features
 			   model
 			   inputs
@@ -247,11 +252,18 @@ Output: Waffetensor of list which comprised of waffetensor."
 		      (restart-with-mgl-kernel ()
 			(apply #',defaultfunc ,model ,inputs))))))))))
 
+(defparameter *inlined-forward-retry-p* nil)
+
+(defun redefine-caller ()
+  (redefine-call-inlined-forward))
+
 (defmacro redefine-call-inlined-forward (&aux (tmp (gensym)))
   (let ((keys (hash-table-keys *call-forward-features*))
 	(functions))
     #|Todo: Add Event to avoid consume a lot of time to compile.|#
-    (format t "Inlining call-forward...")
+
+    (format t "Inlining call-forward... Total Size: ~a" (length keys))
+
     (mapc
      #'(lambda (key)
 	 (maphash #'(lambda (backend-name function-name)
@@ -271,7 +283,17 @@ Output: Waffetensor of list which comprised of waffetensor."
 			     ,(build-backend-case
 			       (gethash (nth i keys) *call-forward-features*)
 			       'model
-			       'inputs)))))
+			       'inputs)))
+	   (T
+	    (print *inlined-forward-retry-p*)
+	    (if *inlined-forward-retry-p*
+		(error "no such node")
+		(let ((*inlined-forward-retry-p* t))
+		  (setf (symbol-function 'cl-waffe::call-inlined-forward)
+			(symbol-function 'cl-waffe::call-inlined-forward-initial-state))
+		  (locally
+		      (declare (notinline call-inlined-forward))
+		    (apply #'call-inlined-forward model inputs)))))))
        (setf (symbol-function 'cl-waffe::call-inlined-forward)
 	     (symbol-function ',tmp))
        t)))
@@ -334,9 +356,7 @@ Output: Waffetensor of list which comprised of waffetensor."
 			      (,defaultfunc ,model ,@inputs))))))))))
       (progn
 	`(let* ((model ,model)
-		(model-type (type-of model))
 		(inputs (list ,@inputs)))
-	   (declare (type list table-keys))
 	   (if (typep model 'model-list)
 	       (progn
 		 (setq model (nth (data (car inputs))
@@ -346,9 +366,24 @@ Output: Waffetensor of list which comprised of waffetensor."
 			 nil
 			 "cl-waffe.call: Assertion failed because model-list can't posses model-list as a element.")))
 	   (locally (declare (optimize (speed 3))
-			     (inline call-inlined-forward))
+			     #+sbcl(sb-ext:maybe-inline call-inlined-forward)
+			     #-sbcl(inline call-inlined-forward)
+			     )
 	     (call-inlined-forward ,model ,@inputs))))))
 
+#|
+(defnode ScalarSub ()
+  :forward-declaim (declaim (ftype (function (ScalarSub waffetensor waffetensor) waffetensor) :forward))
+  :forward ((x y)
+	    (let ((x (data x))
+		  (y (data y)))
+	      (declare (type single-float x y))
+	      (const (- x y))))
+  :backward ((dy) (list dy dy)))
+
+|#
+
+#|
 (defnode ScalarAdd ()
   :forward-declaim (declaim (ftype (function (ScalarAdd waffetensor waffetensor) waffetensor) :forward))
   :forward ((x y)
@@ -384,7 +419,7 @@ Output: Waffetensor of list which comprised of waffetensor."
   (with-no-grad
   (time (dotimes (i 10000)
 	  (call node (const 1.0) (const 1.0))))))
-
+|#
 
 
 (defmacro with-model-list (&rest models)
@@ -1121,7 +1156,7 @@ Example:
 	 (register-backward-features structure-name
 				     function-name
 				     backend-type))
-	(T (error "")))
+	(T (error "internal error")))
       `(progn
 	 (declaim (inline ,function-name))
 	 ,(replace-declaim-forms-with-fname
