@@ -205,15 +205,14 @@ Output: Waffetensor of list which comprised of waffetensor."
     result))
 
 (defun call-inlined-forward (model &rest inputs)
-  (declare (ignore model inputs))
-  (error "not compiled yet"))
+  (redefine-call-inlined-forward)
+  (apply #'call-inlined-forward model inputs))
 
 (defun build-backend-case (features
 			   model
 			   inputs
 			   &aux (keys (hash-table-keys features)))
   (declare (type hash-table features))
-  (print keys)
   ; quite model and each inputs
   (if (= (length keys) 1)
       (progn
@@ -222,12 +221,36 @@ Output: Waffetensor of list which comprised of waffetensor."
 	  ,model
 	  ,inputs))
       (progn
-
-	)))
+	`(case *default-backend*
+	   ,@(loop for i fixnum upfrom 0 repeat (length keys)
+		   collect `(,(nth i keys)
+			     (apply
+			      #',(gethash (nth i keys) features)
+			      ,model
+			      ,inputs)))
+	   (T
+	    ,(let ((default (car (last keys)))
+		   (defaultfunc (gethash (car (last keys)) features)))
+	       (assert (eql default :mgl)
+		       nil
+		       "cl-waffe:call Assertion Failed with default-backend != :mgl. Load cl-waffe's defnode first, and then load extensions.")
+	       (if *restart-non-exist-backend*
+		   `(apply
+		     #',defaultfunc
+		     ,model
+		     ,inputs)
+		   `(restart-case
+			(error (make-condition
+				'Backend-Doesnt-Exists
+				:kernel *default-backend*
+				:node ,model))
+		      (restart-with-mgl-kernel ()
+			(apply #',defaultfunc ,model ,inputs))))))))))
 
 (defmacro redefine-call-inlined-forward (&aux (tmp (gensym)))
   (let ((keys (hash-table-keys *call-forward-features*))
 	(functions))
+    #|Todo: Add Event to avoid consume a lot of time to compile.|#
     (format t "Inlining call-forward...")
     (mapc
      #'(lambda (key)
@@ -310,10 +333,6 @@ Output: Waffetensor of list which comprised of waffetensor."
 			    (restart-with-mgl-kernel ()
 			      (,defaultfunc ,model ,@inputs))))))))))
       (progn
-	; model-listはインライン化できない
-	; when model-list
-	; when not determined.
-	
 	`(let* ((model ,model)
 		(model-type (type-of model))
 		(inputs (list ,@inputs)))
@@ -326,9 +345,9 @@ Output: Waffetensor of list which comprised of waffetensor."
 		 (assert (not (typep model 'model-list))
 			 nil
 			 "cl-waffe.call: Assertion failed because model-list can't posses model-list as a element.")))
-	   
-
-	   nil))))
+	   (locally (declare (optimize (speed 3))
+			     (inline call-inlined-forward))
+	     (call-inlined-forward ,model ,@inputs))))))
 
 (defnode ScalarAdd ()
   :forward-declaim (declaim (ftype (function (ScalarAdd waffetensor waffetensor) waffetensor) :forward))
