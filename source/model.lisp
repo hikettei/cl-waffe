@@ -205,7 +205,7 @@ Output: Waffetensor of list which comprised of waffetensor."
     result))
 
 (defun call-inlined-forward (model &rest inputs)
-  (redefine-call-inlined-forward)
+  (redefine-call-inline-forward)
   (apply #'call-inlined-forward model inputs))
 
 (defun build-backend-case (features
@@ -286,7 +286,7 @@ Output: Waffetensor of list which comprised of waffetensor."
 					     'inputs)))
 			 (T
 			  (if *inlined-forward-retry-p*
-			      (error "no such node")
+			      (error "no such node") ; todo more conditions
 			      (let ((*inlined-forward-retry-p* t))
 				(locally (declare (notinline call-inlined-forward))
 				  (redefine-call-inline-forward)
@@ -301,9 +301,6 @@ Output: Waffetensor of list which comprised of waffetensor."
 	  (gethash name *call-forward-features*)))))
 
 
-;mlistはパスすればおk。callを再起する必要なし
-;call modelは呼ばれるたびに、modelが同じStructureを受け取る必要がある
-					;+inline
 (defmacro call1 (model
 		 &rest inputs
 		 &aux
@@ -365,57 +362,6 @@ Output: Waffetensor of list which comprised of waffetensor."
 			     #-sbcl(inline call-inlined-forward)
 			     )
 	     (call-inlined-forward ,model ,@inputs))))))
-
-#|
-(defnode ScalarSub ()
-  :forward-declaim (declaim (ftype (function (ScalarSub waffetensor waffetensor) waffetensor) :forward))
-  :forward ((x y)
-	    (let ((x (data x))
-		  (y (data y)))
-	      (declare (type single-float x y))
-	      (const (- x y))))
-  :backward ((dy) (list dy dy)))
-
-|#
-
-#|
-(defnode ScalarAdd ()
-  :forward-declaim (declaim (ftype (function (ScalarAdd waffetensor waffetensor) waffetensor) :forward))
-  :forward ((x y)
-	    (let ((x (data x))
-		  (y (data y)))
-	      (declare (type single-float x y))
-	      (const (+ x y))))
-  :backward ((dy) (list dy dy)))
-
-(defnode ScalarSub ()
-  :forward-declaim (declaim (ftype (function (ScalarSub waffetensor waffetensor) waffetensor) :forward))
-  :forward ((x y)
-	    (let ((x (data x))
-		  (y (data y)))
-	      (declare (type single-float x y))
-	      (const (- x y))))
-  :backward ((dy) (list dy dy)))
-
-(define-node-extension cl-waffe::ScalarAdd
-  :backend :numcl
-  :forward ((x y) x)
-  :backward ((dy) (list dy dy)))
-
-(defun bench1 (&aux (node (ScalarAdd)))
-  (declare (optimize (speed 3) (safety 0))
-	   (inline |call-scalaradd-forward-mgl|))
-  (time (dotimes (i 10000)
-	  (|call-scalaradd-forward-mgl| node (const 1.0) (const 1.0)))))
-
-
-(defun bench2 (&aux (node (ScalarAdd)))
-  (declare (optimize (speed 3) (safety 0)))
-  (with-no-grad
-  (time (dotimes (i 10000)
-	  (call node (const 1.0) (const 1.0))))))
-|#
-
 
 (defmacro with-model-list (&rest models)
   "Applying model-list.
