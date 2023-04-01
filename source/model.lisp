@@ -13,8 +13,6 @@ Utils for defnode/defmodel/defoptimizer
 (defparameter *call-backward-features* (make-hash-table)
   "An hash-table which records all backward nodes")
 
-(defparameter *node-function-prefix* (gensym "gen-by-waffe"))
-
 (defparameter *restart-non-exist-backend* t
   "When t, in the case when the specified backend doesn't exist, cl-waffe calls a standard implementation backend")
 
@@ -700,7 +698,6 @@ Example:
 	  "in cl-waffe's internal, Assertion Failed with function-type = [:forward :backward]")
   (intern
    (concatenate 'string
-		(symbol-name *node-function-prefix*)
 		"call-"
 		(symbol-name structure-name)
 		"-"
@@ -832,7 +829,9 @@ Example:
 				args
 				body
 				object-type ; :node :model etc
-				backend-type)
+				backend-type
+				&key
+				  (disassemble-me nil))
   "forward-or-backward :forward or :backward
    Strucutre name defined by defobject (e.g.: areftensor)"
   (let ((function-name (generate-function-name
@@ -860,14 +859,14 @@ Example:
 	 (defun ,function-name (,self ,@args)
 	   ,docs
 	   ,@declarations
-	   (progn
-	     ;(declare (type ,structure-name ,self))
-	     (with-object-macrolet-forms ',self ,args-symbols
-	       ,(if (find object-type `(:node :optimizer))
-		    `(with-define-function-in-defnode-way ,args-symbols
-		       ,@body)
-		    `(with-define-function-in-defmodel-way ,args-symbols
-		       ,@body)))))))))
+	   (with-object-macrolet-forms ',self ,args-symbols
+	     ,(if (find object-type `(:node :optimizer))
+		  `(with-define-function-in-defnode-way ,args-symbols
+		     ,@body)
+		  `(with-define-function-in-defmodel-way ,args-symbols
+		     ,@body))))
+	 (if ,disassemble-me
+	     (disassemble #',function-name))))))
 
 (defmacro defobject (name
 		     args
