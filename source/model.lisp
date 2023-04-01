@@ -227,9 +227,11 @@ The model defined by model-list can be used like:
 	  (butlast parameters)))))
 
 (defmacro defoptimizer (name
-			args
+			initializer-arguments
 			&key
 			  parameters
+			  (disassemble-update nil)
+			  update-declaim
 			  update
 			  optimize
 			  (document "An optimizer, defined by cl-waffe."))
@@ -277,26 +279,28 @@ Example:
 @end[lang=lisp](code)
 "
 
-  `(defobject ,name ,args
-    :parameters ,parameters
-    :optimize ,optimize
-    :forward ,update
-    ;zero-grad
-    :backward ((model) (dolist (p (find-variables model)) ; Todo Rewrite.
-			 (setf (waffetensor-state p) nil)
-			 (setf (waffetensor-backward p) nil)
-			 (setf (waffetensor-variables p) nil)
-			 (if (waffetensor-grad p) ; only params have grad
-			     (setf (waffetensor-grad p) `(nil nil)))
-			 (setf (waffetensor-grad-tmp p) (make-grad-tmp)))
-	       nil)
-    :hide-from-tree nil
-    :document ,document
-    :regard-as-node t
-    :object-type :optimizer))
+  `(defobject ,name ,initializer-arguments
+     :parameters ,parameters
+     :optimize ,optimize
+     :disassemble-forward ,disassemble-update
+     :forward-declaim ,update-declaim
+     :forward ,update
+					;zero-grad
+     :backward ((model) (dolist (p (find-variables model)) ; Todo Rewrite.
+			  (setf (waffetensor-state p) nil)
+			  (setf (waffetensor-backward p) nil)
+			  (setf (waffetensor-variables p) nil)
+			  (if (waffetensor-grad p) ; only params have grad
+			      (setf (waffetensor-grad p) `(nil nil)))
+			  (setf (waffetensor-grad-tmp p) (make-grad-tmp)))
+		nil)
+     :hide-from-tree nil
+     :document ,document
+     :regard-as-node t
+     :object-type :optimizer))
 
 (defmacro defnode (name
-		   args
+		   initializer-arguments
 		   &key
 		     parameters
 		     (disassemble-forward nil)
@@ -348,7 +352,7 @@ Example:
   (if (null backward)
       (warn "The backward slot of ~a is undefined, which returns nil without cl-waffe being noticed." (symbol-name name)))
   
-  `(defobject ,name ,args
+  `(defobject ,name ,initializer-arguments
      :parameters ,parameters
      
      :disassemble-forward ,disassemble-forward
@@ -363,6 +367,7 @@ Example:
      :optimize ,optimize
      :regard-as-node ,regard-as-node
      :document ,document
+     
      :object-type :node))
 
 (defun decide-thread-idx (&rest args)
@@ -553,9 +558,11 @@ Example:
 		 (apply #',f-ident self node-inputs)))))))
 
 (defmacro defmodel (name
-		    args
+		    initializer-arguments
 		    &key
 		      (parameters nil)
+		      (disassemble-forward nil)
+		      forward-declaim
 		      forward
 		      (optimize nil)
 		      (document "An model, defined by cl-waffe"))
@@ -605,8 +612,10 @@ When backward, @b(Automatic differentiation applies).
 
 @end(deflist)
 "
-  `(defobject ,name ,args
+  `(defobject ,name ,initializer-arguments
      :parameters ,parameters
+     :disassemble-forward ,disassemble-forward
+     :forward-declaim ,forward-declaim
      :forward ,forward
      :optimize ,optimize
      :object-type :model
