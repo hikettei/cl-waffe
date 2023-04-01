@@ -287,7 +287,7 @@ result))
 				(locally (declare (notinline call-inlined-forward))
 				  (redefine-call-inline-forward)
 				  (apply #'call-inlined-forward model inputs)))))))))
-       (print (macroexpand (output-function)))
+       ;(print (macroexpand (output-function)))
        (eval (output-function)))))
 
 (defun model-inlineable-p (model)
@@ -884,6 +884,7 @@ Example:
 	 (:external-node ,backend))
      nil))
 
+
 (defun generate-function-name (function-type
 			       structure-name
 			       backend-type)
@@ -1087,10 +1088,12 @@ Example:
 	(alexandria:parse-body body :documentation t)
       (case forward-or-backward
 	(:forward
+	 (print :forward)
 	 (register-forward-features structure-name
 				    function-name
 				    backend-type))
 	(:backward
+	 (print :backward)
 	 (register-backward-features structure-name
 				     function-name
 				     backend-type))
