@@ -831,7 +831,7 @@ Example:
 				object-type ; :node :model etc
 				backend-type
 				&key
-				  (disassemble-me nil))
+				  (disassemble-me t))
   "forward-or-backward :forward or :backward
    Strucutre name defined by defobject (e.g.: areftensor)"
   (let ((function-name (generate-function-name
@@ -839,6 +839,8 @@ Example:
 			structure-name
 			backend-type))
 	(self (gensym "self"))
+	(tmp-fname (if disassemble-me
+		       (gensym "nodedebug")))
 	(args-symbols (reverse (get-params args))))
     (multiple-value-bind (body declarations docs)
 	(alexandria:parse-body body :documentation t)
@@ -856,6 +858,17 @@ Example:
 	   forward-or-backward
 	   function-name
 	   declaim-forms)
+	 ,(if disassemble-me
+	      (replace-declaim-forms-with-fname
+	       forward-or-backward
+	       tmp-fname
+	       declaim-forms))
+	 ,(if disassemble-me
+	      `(defun ,tmp-fname (,self ,@args)
+		 ,docs
+		 ,@declarations
+		 (with-object-macrolet-forms ',self ,args-symbols
+		   ,@body)))
 	 (defun ,function-name (,self ,@args)
 	   ,docs
 	   ,@declarations
@@ -866,7 +879,7 @@ Example:
 		  `(with-define-function-in-defmodel-way ,args-symbols
 		     ,@body))))
 	 (if ,disassemble-me
-	     (disassemble #',function-name))))))
+	     (disassemble #',tmp-fname))))))
 
 (defmacro defobject (name
 		     args
