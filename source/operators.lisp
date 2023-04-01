@@ -196,7 +196,7 @@ And utils for broadcasting etc...
        (let* ((,tensor (if *no-grad* ,place ,node-object)))
 	 ,@body))))
 
-(defope !add (AddTensor) node (x y)
+(defun !add (x y)
     "Adds x and y.
 
 In the case when x or y is not a tensor, automatically creates a new tensor.
@@ -236,10 +236,11 @@ It supports:
 
 @end[lang=lisp](code)
 @end(section)"
+  (declare (optimize (speed 3)))
   (let ((x (assure-tensor x))
 	(y (assure-tensor y)))
     (if (same-shape-p x y)
-	(call node x y)
+	(call (AddTensor) x y)
 	(multiple-value-bind (x y) (straighten-up x y)
 	  (call (BroadCastingAddTensor) x y)))))
 
