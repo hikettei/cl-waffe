@@ -943,7 +943,8 @@ Example:
 	 (T result)))))
 
 (defmacro with-define-function-in-defnode-way
-    (vars
+    (object-type
+     vars
      &body
        body
      &aux
@@ -955,22 +956,60 @@ Example:
 	       (multiple-value-bind (result) (progn ,@body)
 		 result))
 	     (result-next-state
-	       (find t ,state)))
+	       (find t ,state))
+	     (is-ancestor-param
+	       ,(if (eql object-type :node)
+		    `(unless *no-grad*
+		       (member-if #'waffetensor-is-ancestor-param (list ,@vars)))
+		    nil)))
+	 ,(unless (eql object-type :node)
+	    `(declare (ignore is-ancestor-param)))
 	 (uncheck-node-tensor ,state ,@vars)
 	 (typecase result
 	   (list
-	    (map
-	     'list
-	     #'(lambda (x)
-		 (setf
-		  (waffetensor-path-through-node? x)
-		  result-next-state)
-		 x)
-	     result))
+	    ,(if (eql object-type :node)
+		 `(map
+		   'list
+		   #'(lambda (x)
+		       (setf (waffetensor-path-through-node? x)
+			     result-next-state)
+		       (unless *no-grad*
+			 (progn
+			   (setf (waffetensor-backward x) t)
+			   (setf (waffetensor-state x) (model))
+			   (setf (waffetensor-variables x) (list ,@vars))
+			   (setf (waffetensor-is-ancestor-param x)
+				 is-ancestor-param)))
+		       x)
+		   result)
+		 `(map
+		  'list
+		  #'(lambda (x)
+		      (setf
+		       (waffetensor-path-through-node? x)
+		       result-next-state)
+		      x)
+		  result)))
 	   (T
-	    (setf
-	     (waffetensor-path-through-node? result)
-	     result-next-state)
+	    ,(if (eql object-type :node)
+		 `(unless *no-grad*
+		    (progn
+		      (setf
+		       (waffetensor-path-through-node? result)
+		       result-next-state)
+		      (setf (waffetensor-backward result) t)
+		      (setf (waffetensor-state result) (model))
+		      (setf (waffetensor-variables result) (list ,@vars))
+		      (setf (waffetensor-is-ancestor-param result)
+			    is-ancestor-param)
+		      result)
+		    (progn
+		      (setf
+		       (waffetensor-path-through-node? result)
+		       result-next-state)))
+		 `(setf
+		   (waffetensor-path-through-node? result)
+		   result-next-state))
 	    result))))))
 
 (defmacro define-node-function (forward-or-backward
@@ -1026,7 +1065,7 @@ Example:
 	   ,@declarations
 	   (with-object-macrolet-forms ',self ,args-symbols
 	     ,(if (find object-type `(:node :optimizer))
-		  `(with-define-function-in-defnode-way ,args-symbols
+		  `(with-define-function-in-defnode-way ,object-type ,args-symbols
 		     ,@body)
 		  `(with-define-function-in-defmodel-way ,args-symbols
 		     ,@body))))
