@@ -208,11 +208,6 @@ Output: Waffetensor of list which comprised of waffetensor."
   (redefine-call-inlined-forward)
   (apply #'call-inlined-forward model inputs))
 
-(defun call-inlined-forward-initial-state (model &rest inputs)
-  (redefine-call-inlined-forward)
-  (apply #'call-inlined-forward model inputs))
-
-
 (defun build-backend-case (features
 			   model
 			   inputs
@@ -254,12 +249,16 @@ Output: Waffetensor of list which comprised of waffetensor."
 
 (defparameter *inlined-forward-retry-p* nil)
 
-(defun redefine-caller ()
-  (redefine-call-inlined-forward))
 
-(defmacro redefine-call-inlined-forward (&aux (tmp (gensym)))
+(defun redefine-call-inline-forward ()
+  (let ((new-definition (generate-call-inline-forward)))
+    (setf (symbol-function 'cl-waffe::call-inlined-forward)
+	  new-definition)))
+
+(defun generate-call-inline-forward ()
   (let ((keys (hash-table-keys *call-forward-features*))
 	(functions))
+     
     #|Todo: Add Event to avoid consume a lot of time to compile.|#
 
     (format t "Inlining call-forward... Total Size: ~a" (length keys))
@@ -272,31 +271,27 @@ Output: Waffetensor of list which comprised of waffetensor."
 		  (gethash key *call-forward-features*)))
      keys)
     
-     ; note: fcase, automatically call this when defnode is called.
-    `(progn
-       (defun ,tmp (model &rest inputs)
-	 (declare (optimize (speed 3))
-		  (inline ,@functions))
-	 (typecase model
-	   ,@(loop for i fixnum upfrom 0 below (length keys)
-		   collect `(,(nth i keys)
-			     ,(build-backend-case
-			       (gethash (nth i keys) *call-forward-features*)
-			       'model
-			       'inputs)))
-	   (T
-	    (print *inlined-forward-retry-p*)
-	    (if *inlined-forward-retry-p*
-		(error "no such node")
-		(let ((*inlined-forward-retry-p* t))
-		  (setf (symbol-function 'cl-waffe::call-inlined-forward)
-			(symbol-function 'cl-waffe::call-inlined-forward-initial-state))
-		  (locally
-		      (declare (notinline call-inlined-forward))
-		    (apply #'call-inlined-forward model inputs)))))))
-       (setf (symbol-function 'cl-waffe::call-inlined-forward)
-	     (symbol-function ',tmp))
-       t)))
+     (macrolet ((output-function ()
+		  ``#'(lambda (model &rest inputs)
+		       (declare (optimize (speed 3))
+				(inline ,@functions))
+		       (typecase model
+			 ,@(loop for i fixnum upfrom 0 below (length keys)
+				 collect `(,(nth i keys)
+					   ,(build-backend-case
+					     (gethash
+					      (nth i keys)
+					      *call-forward-features*)
+					     'model
+					     'inputs)))
+			 (T
+			  (if *inlined-forward-retry-p*
+			      (error "no such node")
+			      (let ((*inlined-forward-retry-p* t))
+				(locally (declare (notinline call-inlined-forward))
+				  (redefine-call-inline-forward)
+				  (apply #'call-inlined-forward model inputs)))))))))
+       (eval (output-function)))))
 
 (defun model-inlineable-p (model)
   (and (typep model 'list)
