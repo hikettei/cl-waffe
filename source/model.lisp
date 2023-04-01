@@ -8,15 +8,8 @@ Utils for defnode/defmodel/defoptimizer
 (defparameter *in-node-method* nil)
 (defparameter *model-arg-max-displaying-size* 20 "")
 
-(defparameter *call-forward-features* (make-hash-table)
-  "An hash-table which records all forward nodes")
-(defparameter *call-backward-features* (make-hash-table)
-  "An hash-table which records all backward nodes")
-
 (defparameter *restart-non-exist-backend* t
   "When t, in the case when the specified backend doesn't exist, cl-waffe calls a standard implementation backend")
-
-(defmacro redefine-calln ())
 
 (defparameter *initial-form-forward*
   `((error "forward is nil")))
@@ -24,6 +17,30 @@ Utils for defnode/defmodel/defoptimizer
 (defparameter *initial-form-backward*
   `((error "backward is nil")))
 
+(defparameter *call-forward-features* (make-hash-table)
+  "An hash-table which records all forward nodes")
+(defparameter *call-backward-features* (make-hash-table)
+  "An hash-table which records all backward nodes")
+
+(defpackage :cl-waffe.tmp.call-states-storeroom)
+
+(defun register-features (features-table
+			 node-name
+			 fname
+			 backend-name)
+  (declare (optimize (speed 3))
+	   (type hash-table features-table))
+  (let ((features (or (gethash node-name features-table)
+		      (make-hash-table))))
+    (setf (gethash backend-name features) fname)
+    (setf (gethash node-name features-table) features)
+    nil))
+
+(defun register-forward-features (node-name fname backend-name)
+  (register-features *call-forward-features* node-name fname backend-name))
+
+(defun register-backward-features (node-name fname backend-name)
+  (register-features *call-backward-features* node-name fname backend-name))
 
 (define-method-combination backend-dispatcher ()
   ((mgl-node-method  (backend-dispatcher . *))
@@ -116,7 +133,6 @@ Output: An last value of layers."
 	      layers)
      ,input))
 
-(declaim (inline call))
 (declaim (ftype (function (t &rest waffetensor) (or null list waffetensor)) call))
 (defun call (model &rest args)
   "Calls the forward steps which defined in: defnode, defmodel, defoptimizer.
@@ -189,6 +205,24 @@ Output: Waffetensor of list which comprised of waffetensor."
 	     ;(error "cl-waffe.defnode: Nodes must return a single tensor or list which consisted of waffetensor otherwise cl-waffe can't build up computation nodes..."))
 	    )))
     result))
+
+(defun update-computation-node ()
+  )
+
+;mlistはパスすればおk。callを再起する必要なし
+;call modelは呼ばれるたびに、modelが同じStructureを受け取る必要がある
+;+inline
+(defmacro call1 (model
+		 &rest inputs
+		 &aux
+		   (call-ident (gentemp "CallID" :cl-waffe.tmp.call-states-storeroom))
+		   (model-type (gentemp "MTYPE"  :cl-waffe.tmp.call-states-storeroom)))
+  "Warning: Model must be static"
+  ; call-ident = fixnum
+
+  `(progn ; eval-when
+     (defparameter ,call-ident nil)
+     (print ',call-ident)))
 
 (defmacro with-model-list (&rest models)
   "Applying model-list.
@@ -709,21 +743,24 @@ Example:
 (defun generate-function-name (function-type
 			       structure-name
 			       backend-type)
+					; todo: export it for debugging.
   "(generate-function-name :forward 'areftensor :mgl)
    ;=> |gen-by-waffe4682call-AREFTENSOR-FORWARD-MGL|"
-  (declare (type keyword function-type backend-type)
+  (declare (optimize (speed 3))
+           (type keyword function-type backend-type)
 	   (type symbol structure-name))
   (assert (find function-type `(:forward :backward))
 	  nil
 	  "in cl-waffe's internal, Assertion Failed with function-type = [:forward :backward]")
   (intern
-   (concatenate 'string
-		"call-"
-		(symbol-name structure-name)
-		"-"
-		(symbol-name function-type)
-		"-"
-		(symbol-name backend-type))))
+   (string-downcase
+    (concatenate 'string
+		 "CALL-"
+		 (symbol-name structure-name)
+		 "-"
+		 (symbol-name function-type)
+		 "-"
+		 (symbol-name backend-type)))))
 
 (defun replace-declaim-forms-with-fname (forward-or-backward
 					 function-name
@@ -770,6 +807,7 @@ Example:
 			    (setf (self ,name) smaller-value)))))))))
      (progn
        (model)
+       nil
        ,@body)))
 
 (defmacro with-define-function-in-defmodel-way
@@ -866,14 +904,16 @@ Example:
 	(alexandria:parse-body body :documentation t)
       (case forward-or-backward
 	(:forward
-					; register
-	 )
+	 (register-forward-features structure-name
+				    function-name
+				    backend-type))
 	(:backward
-					; register
-	 )
-	(T
-	 (error "")))
+	 (register-backward-features structure-name
+				     function-name
+				     backend-type))
+	(T (error "")))
       `(progn
+	 (declaim (inline ,function-name))
 	 ,(replace-declaim-forms-with-fname
 	   forward-or-backward
 	   function-name
@@ -885,8 +925,8 @@ Example:
 	       declaim-forms))
 	 ,(if disassemble-me
 	      `(defun ,tmp-fname (,self ,@args)
-		 ,docs
 		 ,@declarations
+		 ,docs
 		 (with-object-macrolet-forms ',self ,args-symbols
 		   ,@body)))
 	 (defun ,function-name (,self ,@args)
@@ -950,7 +990,10 @@ the object-type indicates the type of document format."
 		       (:print-function (lambda (m stream k)
 					  (declare (ignore k))
 					  (render-simple-model-structure stream m)))
-		       (:constructor ,name (,@args &aux (model-ident (gensym "W")) ,@(map 'list (lambda (x) `(,(car x) ,(second x))) parameters))))
+		       (:constructor
+			   ,name
+			   (,@args &aux (model-ident (gensym "W"))
+				     ,@(map 'list (lambda (x) `(,(car x) ,(second x))) parameters))))
 	     ,doc-output
 	     (model-ident ,(gensym "W") :type symbol)
 	     (hide-from-tree ,hide-from-tree :type boolean)
