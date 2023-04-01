@@ -20,6 +20,12 @@ Utils for defnode/defmodel/defoptimizer
 
 (defmacro redefine-calln ())
 
+(defparameter *initial-form-forward*
+  `((error "forward is nil")))
+
+(defparameter *initial-form-backward*
+  `((error "backward is nil")))
+
 
 (define-method-combination backend-dispatcher ()
   ((mgl-node-method  (backend-dispatcher . *))
@@ -396,7 +402,6 @@ Example:
 (defmacro define-node-method (fname
 			      name
 			      args
-			      declaim-forms
 			      body
 			      hide-from-tree
 			      optimize
@@ -602,7 +607,9 @@ When backward, @b(Automatic differentiation applies).
 				 &key
 				   optimize
 				   backend
+				   forward-declaim
 				   forward
+				   backward-declaim
 				   backward)
   "Adds a new backend to the defined node.
 
@@ -637,6 +644,26 @@ Example:
 @end[lang=lisp](code)
 "
   `(progn
+     (define-node-function
+	 :forward
+       ,name
+       ,forward-declaim
+       ,(car forward)
+       ,(or (cdr forward)
+	    *initial-form-forward*)
+       :node
+       ,backend)
+
+     (define-node-function
+	 :backward
+       ,name
+       ,backward-declaim
+       ,(car backward)
+       ,(or (cdr backward)
+	    *initial-form-backward*)
+       :node
+       ,backend)
+     
      (define-node-method
 	 call-forward
 	 ,name
@@ -679,8 +706,7 @@ Example:
 		"-"
 		(symbol-name function-type)
 		"-"
-		(symbol-name backend-type))
-   'cl-waffe))
+		(symbol-name backend-type))))
 
 (defun replace-declaim-forms-with-fname (forward-or-backward
 					 function-name
@@ -696,11 +722,11 @@ Example:
 	  code)))
    forms))
 
-(defmacro with-object-macrolet-forms (self-heap (&rest vars) &body body)
+(defmacro with-object-macrolet-forms (self-heap vars &body body)
   "vars - the list of symbols"
   `(macrolet ((self (name)
-		`(slot-value ,',self-heap ',name))
-	      (model () `,',self-heap)
+		`(slot-value ,,self-heap ',name))
+	      (model () ,self-heap)
 	      (save-for-backward (name value)
 		`(let ((thread-info (waffetensor-thread-data ,value))
 		       (smaller-value (detach ,value)))
@@ -725,12 +751,14 @@ Example:
 				      (setf (self ,name) (const tmp))))
 			   (T ;(!allow-destruct smaller-value)
 			    (setf (self ,name) smaller-value)))))))))
-     ,@body))
+     (progn
+       (model)
+       ,@body)))
 
 (defmacro with-define-function-in-defmodel-way
-    (model-ident
-     vars
-     &body body
+    (vars
+     &body
+       body
      &aux
        (thread (gensym "thread"))
        (is-top (gensym "is-top")))
@@ -747,7 +775,7 @@ Example:
 			      (waffenodethread-belong-to
 			       (waffetensor-thread-data k))
 			      nil))
-			(self ',model-ident))))
+			(self model-ident))))
 	  (,is-top (= (waffenodethread-thread-idx ,thread) 0)))
      (set-thread-data ,thread ,@vars)
      (let ((result (multiple-value-bind (result) (progn ,@body) ; FIXME: (values x y) is not available in defmodel
@@ -769,7 +797,8 @@ Example:
 
 (defmacro with-define-function-in-defnode-way
     (vars
-     body
+     &body
+       body
      &aux
        (state (gensym "STATE")))
   `(let ((,state (enable-node-tensor ,@vars)))
@@ -830,13 +859,15 @@ Example:
 	   declaim-forms)
 	 (defun ,function-name (,self ,@args)
 	   ,docs
-	   ,declarations
-	   (with-object-macrolet-forms ,self (,@args-symbols)
-	     ,(if (find object-type `(:node :optimizer))
-		  `(with-define-function-in-defnode-way ,args-symbols
-		     ,@body)
-		  `(with-define-function-in-defmodel-way ,self ,args-symbols
-		     ,@body))))))))
+	   ,@declarations
+	   (progn
+	     ;(declare (type ,structure-name ,self))
+	     (with-object-macrolet-forms ',self ,args-symbols
+	       ,(if (find object-type `(:node :optimizer))
+		    `(with-define-function-in-defnode-way ,args-symbols
+		       ,@body)
+		    `(with-define-function-in-defmodel-way ,args-symbols
+		       ,@body)))))))))
 
 (defmacro defobject (name
 		     args
@@ -892,6 +923,26 @@ the object-type indicates the type of document format."
 	     (backward ,(if backward t nil) :type boolean)
 	     (parameters ',(map 'list (lambda (x) (assure-args (car x))) parameters))
 	     ,@(map 'list (lambda (x) `(,(assure-args (car x)) ,(second x) ,@(cddr x))) parameters))
+
+	   (define-node-function
+	       :forward
+	     ,name
+	     ,forward-declaim
+	     ,(car forward)
+	     ,(or (cdr forward)
+		  *initial-form-forward*)
+	     ,object-type
+	     :mgl)
+
+	   (define-node-function
+	       :backward
+	     ,name
+	     ,backward-declaim
+	     ,(car backward)
+	     ,(or (cdr backward)
+		  *initial-form-backward*)
+	     ,object-type
+	     :mgl)
 	   
 	   (define-node-method
 	       call-forward
