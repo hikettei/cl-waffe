@@ -727,9 +727,45 @@ Example:
 			    (setf (self ,name) smaller-value)))))))))
      ,@body))
 
-(defmacro with-define-function-in-defmacro-way
-    ()
-  )
+(defmacro with-define-function-in-defmodel-way
+    (model-ident
+     vars
+     &body body
+     &aux
+       (thread (gensym "thread"))
+       (is-top (gensym "is-top")))
+  `(let* ((,thread (thread
+		    (decide-thread-idx ,@vars)
+		    (or (let ((k (find t (list ,@vars)
+				       :test #'(lambda (x y)
+						 (declare (ignore x))
+						 (waffetensor-thread-data y)))))
+			  (if (and
+			       k
+			       (waffenodethread-belong-to
+				(waffetensor-thread-data k)))
+			      (waffenodethread-belong-to
+			       (waffetensor-thread-data k))
+			      nil))
+			(self ',model-ident))))
+	  (,is-top (= (waffenodethread-thread-idx ,thread) 0)))
+     (set-thread-data ,thread ,@vars)
+     (let ((result (multiple-value-bind (result) (progn ,@body) ; FIXME: (values x y) is not available in defmodel
+		     result)))
+       (typecase result
+	 (list (prog1
+		   result
+		 (free-caches ,thread)
+		 (when ,is-top
+		   (set-thread-data nil ,@vars))))
+	 (waffetensor
+	  (prog1
+	      (progn
+		result)
+	    (free-caches ,thread)
+	    (when ,is-top
+	      (set-thread-data nil ,@vars))))
+	 (T result)))))
 
 (defmacro with-define-function-in-defnode-way
     (vars
@@ -775,27 +811,32 @@ Example:
 			structure-name
 			backend-type))
 	(self (gensym "self"))
-	(args-symbols (get-params args)))
-    (case forward-or-backward
-      (:forward
-       ; register
-       )
-      (:backward
-       ; register
-       )
-      (T
-       (error "")))
-    
-    `(progn
-       ,(replace-declaim-forms-with-fname
-	 forward-or-backward
-	 function-name
-	 declaim-forms)
-       (defun ,function-name (,self ,@args)
-	 (with-object-macrolet-forms ,self (,@args-symbols)
-	   ,(if (find object-type `(:node :optimizer))
-		`(with-define-function-in-defnode-way ,args-symbols
-		   ,@body)))))))
+	(args-symbols (reverse (get-params args))))
+    (multiple-value-bind (body declarations docs)
+	(alexandria:parse-body body :documentation t)
+      (case forward-or-backward
+	(:forward
+					; register
+	 )
+	(:backward
+					; register
+	 )
+	(T
+	 (error "")))
+      `(progn
+	 ,(replace-declaim-forms-with-fname
+	   forward-or-backward
+	   function-name
+	   declaim-forms)
+	 (defun ,function-name (,self ,@args)
+	   ,docs
+	   ,declarations
+	   (with-object-macrolet-forms ,self (,@args-symbols)
+	     ,(if (find object-type `(:node :optimizer))
+		  `(with-define-function-in-defnode-way ,args-symbols
+		     ,@body)
+		  `(with-define-function-in-defmodel-way ,self ,args-symbols
+		     ,@body))))))))
 
 (defmacro defobject (name
 		     args
