@@ -25,11 +25,7 @@
 	       (:file "utils")
 	       (:file "dtype")
 	       (:file "conditions")
-	       (:file "model")
 	       (:file "tensor")
-	       (:module "backends/cpu"
-		:components ((:file "package")
-			     (:file "kernel")))
 	       (:module "backends/mgl-mat"
 		:components ((:file "cache")
 			     (:file "package")
@@ -39,6 +35,10 @@
 			     (:file "utils")
 			     (:file "optimizers")			     
 			     (:file "kernel")))
+	       (:module "backends/cpu"
+		:components ((:file "package")
+			     (:file "kernel")))
+	       (:file "model")
 	       (:file "thread")
 	       (:file "distributions/random")
 	       (:file "distributions/distribution")
@@ -46,7 +46,6 @@
 	       (:file "distributions/gamma")
 	       (:file "distributions/chisquare")
                (:file "kernel")
-	       (:file "trainer")
 	       (:file "functions")
 	       (:file "aref")
 	       (:file "activations")
@@ -64,6 +63,7 @@
 		:components ((:file "package")
 			     (:file "optimizers")
 			     (:file "optimizer")))
+	       (:file "trainer")
 	       (:module "nn"
 		:depends-on ("model")
 		:components ((:file "package")
