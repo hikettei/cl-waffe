@@ -216,16 +216,16 @@ Output: Waffetensor of list which comprised of waffetensor."
 
 ;mlistはパスすればおk。callを再起する必要なし
 ;call modelは呼ばれるたびに、modelが同じStructureを受け取る必要がある
-;+inline
+					;+inline
 (defmacro call1 (model
 		 &rest inputs
-		 ;&environment env
+					;&environment env
 		 &aux
 		   (model-type (type-of model))
 		   (call-ident (gensym "CALL"))
 		   (features (model-inlineable-p model)))
   #|
-    If model is determined at compile-time. (e.g.: (call (ScalarAdd) (const 1.0) (const 1.0))), they inlined.
+  If model is determined at compile-time. (e.g.: (call (ScalarAdd) (const 1.0) (const 1.0))), they inlined.
   |#
   (declare (optimize (speed 3)))
   (if features
@@ -241,9 +241,31 @@ Output: Waffetensor of list which comprised of waffetensor."
 		 (declare (optimize (speed 3) (safety 1))
 			  (inline ,(car fnames)))
 	       (,(car fnames) ,model ,@inputs))
-	    nil))
+	    `(locally
+		 (declare (optimize (speed 3) (safety 1))
+			  (inline ,@fnames))
+	       (case *default-backend*
+		 ,@(loop for i fixnum upfrom 0 repeat (length backends)
+			 collect `(,(nth i backends)
+				   (,(nth i fnames) ,model ,@inputs)))
+		 (T
+		  ,(let ((default (car (last backends)))
+			 (defaultfunc (car (last fnames))))
+		     (assert (eql default :mgl)
+			     nil
+			     "cl-waffe:call Assertion Failed with default-backend != :mgl. Load cl-waffe's defnode first, and then load extensions.")
+		     (if *restart-non-exist-backend*
+			 `(,defaultfunc
+			   ,model
+			   ,@inputs)
+			 `(restart-case
+			      (error (make-condition
+				      'Backend-Doesnt-Exists
+				      :kernel *default-backend*
+				      :node ,model))
+			    (restart-with-mgl-kernel ()
+			      (,defaultfunc ,model ,@inputs))))))))))
       (print :A)))
-		 
 
 (defun tmp-inf (model-name)
   (gethash (type-of model-name) *call-forward-features*))
