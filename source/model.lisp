@@ -299,9 +299,13 @@ Example:
 		   args
 		   &key
 		     parameters
+		     (disassemble-forward nil)
+		     forward-declaim
 		     forward
+		     (disassemble-backward nil)
+		     backward-declaim
 		     backward
-		     optimize
+		     (optimize nil)
 		     (regard-as-node t)
 		     (document "An node, defined by cl-waffe."))
   "Defining computation nodes.
@@ -346,8 +350,15 @@ Example:
   
   `(defobject ,name ,args
      :parameters ,parameters
+     
+     :disassemble-forward ,disassemble-forward
+     :forward-declaim ,forward-declaim
      :forward ,forward
+     
+     :disassemble-backward ,disassemble-backward
+     :backward-declaim ,backward-declaim
      :backward ,backward
+     
      :hide-from-tree T
      :optimize ,optimize
      :regard-as-node ,regard-as-node
@@ -878,15 +889,18 @@ Example:
 		     ,@body)
 		  `(with-define-function-in-defmodel-way ,args-symbols
 		     ,@body))))
-	 (if ,disassemble-me
-	     (disassemble #',tmp-fname))))))
+	 ,(if disassemble-me
+	      `(disassemble #',tmp-fname))
+	 nil))))
 
 (defmacro defobject (name
 		     args
 		     &key
 		       parameters
+		       disassemble-forward
 		       forward-declaim
 		       forward
+		       disassemble-backward
 		       backward-declaim
 		       backward
 		       hide-from-tree
@@ -898,6 +912,7 @@ Example:
 When hide-from-tree is t, autograds are ignored.
 When regard-as-node is nil, the forward and backward is defined as the node.
 the object-type indicates the type of document format."
+  (declare (type boolean disassemble-forward disassemble-backward))
   (labels ((assure-args (x)
 	     (declare (type symbol x))
 	     (if (or (equal (symbol-name x) "FORWARD")
@@ -944,7 +959,8 @@ the object-type indicates the type of document format."
 	     ,(or (cdr forward)
 		  *initial-form-forward*)
 	     ,object-type
-	     :mgl)
+	     :mgl
+	     :disassemble-me ,disassemble-forward)
 
 	   (define-node-function
 	       :backward
@@ -954,7 +970,8 @@ the object-type indicates the type of document format."
 	     ,(or (cdr backward)
 		  *initial-form-backward*)
 	     ,object-type
-	     :mgl)
+	     :mgl
+	     :disassemble-me ,disassemble-backward)
 	   
 	   (define-node-method
 	       call-forward
