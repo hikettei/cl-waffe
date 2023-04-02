@@ -4,7 +4,7 @@
 (defparameter *overview* "")
 
 (with-page *overview* "Overview"
-  (with-section "About cl-waffe"
+  (with-section "About This Project"
     (image "https://github.com/hikettei/cl-waffe/blob/main/docs/cl-waffe-logo.png?raw=true")
     (image "https://github.com/hikettei/cl-waffe/actions/workflows/ci.yml/badge.svg")
     (insert "This documentation provides an overview of the development and usage of cl-waffe, based on Common Lisp and mgl-mat.")
@@ -26,7 +26,10 @@
     (url "https://github.com/hikettei/cl-waffe/benchmark/Result.md" "Benchmarks"))
 
   (with-section "Sections"
-    (insert "The list of sections"))
+    (insert "The list of sections")
+    (with-deflist
+      (def "Tutorials")
+      (term "a")))
 
   (with-section "LLA Backend"
     (insert "cl-waffe's matrix operations are performed via mgl-mat, and mgl-mat uses LLA. Accordingly, cl-waffe's performance hinges on mgl-mat and LLA's performance.")
@@ -44,7 +47,7 @@
     (insert "For Example, Roswell and SLIME respectively.")
     (with-shell-code
       "$ ros config set dynamic-space-size 4gb")
-    (with-shell-code
+    (with-lisp-code
       "(setq slime-lisp-implementations '((\"sbcl\" (\"sbcl\" \"--dynamic-space-size\" \"4096\"))))")
     (insert "should work. However, Improving memory usage is one of my concerns.")))
-  
+

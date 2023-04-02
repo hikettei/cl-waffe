@@ -6,7 +6,7 @@
    For example: Automatically generates example.
 |#
 (defpackage :cl-waffe.documents
-  (:use :cl :cl-waffe)
+  (:use :cl :cl-waffe :cl-ppcre)
   (:export #:generate))
 
 

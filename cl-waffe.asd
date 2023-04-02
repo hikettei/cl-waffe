@@ -139,7 +139,7 @@
   :version nil
   :author "hikettei"
   :licence "MIT"
-  :depends-on (:cl-waffe)
+  :depends-on (:cl-waffe :cl-ppcre)
   :components ((:module "docs"
 		:components ((:file "package")
 			     (:file "document")
