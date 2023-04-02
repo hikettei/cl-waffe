@@ -25,6 +25,14 @@
     (url "https://github.com/hikettei/cl-waffe/tree/main/tutorials/jp" "Tutorial Notebooks (Written in Japanese)")
     (url "https://github.com/hikettei/cl-waffe/benchmark/Result.md" "Benchmarks"))
 
+  (with-section "Workloads"
+    (with-enum
+      (item "Full Optimization")
+      (item "save models with npz")
+      (item "🎉 release cl-waffe v0.1")
+      (item "more standard impls")
+      ))
+  
   (with-section "Sections"
     (insert "The list of sections")
     (with-deflist
