@@ -24,7 +24,7 @@
 	       (:file "utils")
 	       (:file "dtype")
 	       (:file "conditions")
-	       (:file "tensor")
+	       ;(:file "tensor")
 	       (:module "backends/mgl-mat"
 		:components ((:file "cache")
 			     (:file "package")
@@ -38,6 +38,7 @@
 		:components ((:file "package")
 			     (:file "kernel")))
 	       (:file "model")
+	       (:file "tensor")
 	       (:file "thread")
 	       (:file "distributions/random")
 	       (:file "distributions/distribution")
