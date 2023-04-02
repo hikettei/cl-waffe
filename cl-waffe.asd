@@ -143,4 +143,5 @@
   :components ((:module "docs"
 		:components ((:file "package")
 			     (:file "document")
-			     (:file "overview")))))
+			     (:file "overview")
+			     (:file "tutorials")))))
