@@ -73,7 +73,7 @@
 	   #:call-and-dispatch-kernel
 	   #:with-optimized-operation)
 
-  (:export ; macros in waffe-object
+  (:export ; macros (binded by defobject) in waffe-object
            #:model
 	   #:self
 	   #:save-for-backward

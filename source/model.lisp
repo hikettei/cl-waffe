@@ -273,7 +273,6 @@ Output: An last value of layers."
 	  (not (eql name 'model-list))
 	  (gethash name *call-forward-features*)))))
 
-
 (defmacro call (model
 		&rest inputs
 		&aux
