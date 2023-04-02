@@ -63,7 +63,15 @@
 		    `(format ,',output-to "~%@begin[lang=lisp](code)~%~a~%@end[lang=lisp](code)" ,content))
 		  (with-shell-code (content)
 		    `(format ,',output-to "~%@begin[lang=shell](code)~%~a~%@end[lang=shell](code)" ,content))
-
+		  (with-eval (code)
+		    )
+		  (with-evals (&rest codes)
+		    `(progn
+		       (dolist (code ',codes)
+			 (format ,',output-to "~%Input:~%")
+			 (format ,',output-to "~%@begin[lang=lisp](code)~%~a~%@end[lang=lisp](code)~%" code)
+			 (format ,',output-to "~%Output:~%")
+			 (format ,',output-to "~%@begin[lang=lisp](code)~%~a~%@end[lang=lisp](code)~%" (eval (read-from-string code))))))
 		  )
 	 ,@body))
      (format ,output-to "~%@end(section)")))

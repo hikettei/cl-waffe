@@ -8,7 +8,10 @@
     (insert "Most deep learning frameworks, represented by PyTorch's Tensor and Chainer's Variables, has their own data structures to store matrices. In cl-waffe, @b(WaffeTensor) is available and defined by Common Lisp's @b(defstruct).")
 
     (with-section "What can WaffeTensor do?"
-      (insert "")
+      (insert "A")
+      (with-evals
+	"(setq x (!randn `(3 3)))"
+	"(data x)")
       )
     
     (with-section "Parameter and Const"
