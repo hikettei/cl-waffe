@@ -338,7 +338,7 @@ Output: An last value of layers."
 				model
 				&aux
 				  (node-type (type-of model)))
-  (declare (optimize (speed 3))) ; safety 0
+  (declare (optimize (speed 3) (safety 0)))
   (let ((result (case forward-or-backward
 		  (:forward
 		   (gethash node-type *call-forward-features*))
@@ -349,17 +349,18 @@ Output: An last value of layers."
     (unless result
       (error "no such node ~a" model)); conditions
 
-    (the function
-	 (or (gethash *default-backend* result)
-	     (if *restart-non-exist-backend*
-		 (gethash :mgl result)
-		 (restart-case
-		     (error (make-condition
-			     'Backend-Doesnt-Exists
-			     :kernel *default-backend*
-			     :node model))
-		   (restart-with-mgl-kernel ()
-		     (gethash :mgl result))))))))
+    (symbol-function
+     (the symbol
+	  (or (gethash *default-backend* result)
+	      (if *restart-non-exist-backend*
+		  (gethash :mgl result)
+		  (restart-case
+		      (error (make-condition
+			      'Backend-Doesnt-Exists
+			      :kernel *default-backend*
+			      :node model))
+		    (restart-with-mgl-kernel ()
+		      (gethash :mgl result)))))))))
 
 (defmacro get-forward-caller (model)
   "Todo: Docstring"
