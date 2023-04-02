@@ -701,6 +701,9 @@ Example:
        :node
        ,backend
        :disassemble-me ,disassemble-backward)
+
+     (redefine-call-inline-forward)
+     (redefine-call-inline-backward)
      nil))
 
 
