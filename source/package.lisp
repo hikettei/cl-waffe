@@ -10,6 +10,7 @@
 	   #:with-jit-debug)
   (:export #:*single-value*)
   (:export #:*lparallel-kernel*
+	   #:*ignore-inlining-info*
 	   #:set-lparallel-kernel)
   (:export #:with-dtype
 	   #:dtypecase

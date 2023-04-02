@@ -17,6 +17,9 @@ Utils for defnode/defmodel/defoptimizer
 (defparameter *initial-form-backward*
   `((unimplemented-error "The :backward is undefined")))
 
+(defparameter *ignore-inlining-info* nil
+  "When t, cl-waffe fail to print indications on inlining.")
+
 (defun register-features (features-table
 			 node-name
 			 fname
@@ -194,7 +197,8 @@ Output: An last value of layers."
      
     #|Todo: Add Event to avoid consume a lot of time to compile.|#
 
-    (format t "Inlining call-forward... Total Size: ~a" (length keys))
+    (unless *ignore-inlining-info*
+      (format t "~%[INFO] Inlining call-forward... Total Features: ~a~%To disable this, set cl-waffe:*ignore-inlining-info* t~%" (length keys)))
 
     (mapc
      #'(lambda (key)
@@ -233,7 +237,8 @@ Output: An last value of layers."
   (let ((keys (hash-table-keys *call-backward-features*))
 	(functions))
 
-    (format t "Inlining call-backward... Total Size: ~a" (length keys))
+    (unless *ignore-inlining-info*
+      (format t "~%[INFO] Inlining call-backward... Total Features: ~a~%To disable this, set cl-waffe:*ignore-inlining-info* t~%" (length keys)))
 
     (mapc
      #'(lambda (key)
