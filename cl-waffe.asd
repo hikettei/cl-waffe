@@ -133,3 +133,14 @@
 			     (:file "output")
 			     (:file "benchmark")
 			     (:file "benchmark1")))))
+
+
+(asdf:defsystem :cl-waffe/documents
+  :version nil
+  :author "hikettei"
+  :licence "MIT"
+  :depends-on (:cl-waffe)
+  :components ((:module "docs"
+		:components ((:file "package")
+			     (:file "document")
+			     (:file "overview")))))
