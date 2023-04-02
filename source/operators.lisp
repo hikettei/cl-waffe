@@ -101,6 +101,7 @@ And utils for broadcasting etc...
 	      do (incf r (aref arr i)))))
     (sysconst r)))
 
+; they're currently not used: ScalarAdd/ScalarSub.
 (defnode ScalarAdd ()
   :forward-declaim (declaim (ftype (function (ScalarAdd waffetensor waffetensor) waffetensor) :forward))
   :forward ((x y)
@@ -244,7 +245,7 @@ It supports:
 	(multiple-value-bind (x y) (straighten-up x y)
 	  (call (BroadCastingAddTensor) x y)))))
 
-(defope !sub (SubTensor) node (x y)
+(defun !sub (x y)
     "Subtract x by y.
 
 In the case when x or y is not a tensor, automatically creates a new tensor.
@@ -283,14 +284,15 @@ It supports:
 @end[lang=lisp](code)
 @end(section)
 "
+  (declare (optimize (speed 3)))
   (let ((x (assure-tensor x))
 	(y (assure-tensor y)))
     (if (same-shape-p x y)
-	(call node x y)
+	(call (SubTensor) x y)
 	(multiple-value-bind (x y) (straighten-up x y)
 	  (call (BroadCastingSubTensor) x y)))))
 
-(defope !mul (MulTensor) node (x y)
+(defun !mul (x y)
     "Multiply x and y with element-wise.
 
 In the case when x or y is not a tensor, automatically creates a new tensor.
@@ -329,18 +331,19 @@ It supports:
 @end[lang=lisp](code)
 @end(section)
 "
+  (declare (optimize (speed 3)))
   (let ((x (assure-tensor x))
 	(y (assure-tensor y)))
     (if (same-shape-p x y)
-	(call node x y)
+	(call (MulTensor) x y)
 	(multiple-value-bind (x y) (straighten-up x y)
 	  (call (BroadCastingMulTensor) x y)))))
 
-(defope !div-old (DivTensor) node (x y)
+(defun !div-old (x y)
     "1/x"
 					; (unless (= x 1) (error "!div-old: x must be 1"))
 					; x must be 1, cl-waffe.backends.mgl:div has some problems?...
-  (call node (assure-tensor x) (assure-tensor y)))
+  (call (DivTensor) (assure-tensor x) (assure-tensor y)))
 
 					; its much faster
 (defun !div (x y)
