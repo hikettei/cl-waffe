@@ -55,7 +55,7 @@
 				(!transpose (self xi)))
 			    dy))))
 
-(defope !matmul (MatmulTensor) node (x y)
+(defun !matmul (x y)
     "Multiplying matrices @cl:param(x) and @cl:param(y).
 
 !matmul has many behaviours depends on the dimensionality of the tensors as follows:
@@ -151,11 +151,12 @@ The Batch Filtered Matrix-Matrix product is returned.
 @def(Otherwise)
 @term(Currently not implemented. In the near future for more will be added.)
 @end(deflist)"
+  (declare (optimize (speed 3)))
   (cond
     ((and (= (the fixnum (!dims x)) 1)
 	  (= (the fixnum (!dims y)) 1))
      (!dot x y))
-    (T (call node (assure-tensor x) (assure-tensor y)))))
+    (T (call (MatmulTensor) (assure-tensor x) (assure-tensor y)))))
 
 
 
