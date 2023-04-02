@@ -38,39 +38,6 @@ Utils for defnode/defmodel/defoptimizer
 (defun register-backward-features (node-name fname backend-name)
   (register-features *call-backward-features* node-name fname backend-name))
 
-(define-method-combination backend-dispatcher ()
-  ((mgl-node-method  (backend-dispatcher . *))
-   (external-methods (:external-node . *)))
-  (:arguments node)
-  (let ((extensions-call-form (mapcar
-			       #'(lambda (method)
-				   `(the (or function null)
-					 (call-method ,method)))
-			       external-methods)))
-    `(or ,@extensions-call-form
-	 ,(cond
-	    ((null external-methods)
-	     `(the function (call-method ,(first mgl-node-method))))
-	    ((eql *default-backend* :mgl)
-	     `(call-method ,(first mgl-node-method)))
-	    (T
-	     `(if (or
-		   *restart-non-exist-backend*
-		   (eql *default-backend* :mgl))
-		  (call-method ,(first mgl-node-method))
-		  (restart-case
-		      (error (make-condition
-			      'Backend-Doesnt-Exists
-			      :kernel *default-backend*
-			      :node ,node))
-		    (restart-with-mgl-kernel ()
-		      (call-method ,(first mgl-node-method)))))))
-	 (progn
-	   (error "cl-waffe: restarting was failed. ~a" ,node)))))
-
-(defgeneric call-forward  (self) (:method-combination backend-dispatcher))
-(defgeneric call-backward (self) (:method-combination backend-dispatcher))
-
 (defmacro with-no-grad (&body body)
   "This macro is used in order to implict that codes below is ignored:
 save-for-backward, creating new node object, using backward and processes for it.
@@ -137,6 +104,10 @@ Output: An last value of layers."
 (defun call-inlined-backward (model &rest inputs)
   (redefine-call-inline-backward)
   (apply #'call-inlined-backward model inputs))
+
+(defmacro call-backward (model &rest inputs)
+  "Todo: Docs"
+  `(call-inlined-backward ,model ,@inputs))
 
 (defun build-backend-case (features
 			   model
@@ -598,150 +569,6 @@ Example:
        args first-states)
   nil)
 
-(defmacro define-node-method (fname
-			      name
-			      args
-			      body
-			      hide-from-tree
-			      optimize
-			      object-type
-			      required-backend-symbol
-			      &optional
-				(is-node nil)
-				(backend-name (list 'backend-dispatcher))
-			      &aux (thread (gensym))
-				   (is-top (gensym))
-				   (state  (gensym)))
-  "The macro for defining node method. (:forward :backward in defmodel, defnode, defoptimizers)
-  Also, the code for managing caches."
-  (declare (ignore hide-from-tree object-type))
-  (let ((f-ident   (gensym (symbol-name name)))
-	(self-heap (gensym (symbol-name name)))
-	(vars (map 'list #'(lambda (x)
-			     (typecase x
-			       (list (car x))
-			       (T x)))
-		   (remove-if #'(lambda (x) (find x `(&optional &key &aux &rest)))
-			      args))))
-    `(progn
-       #|(declaim (ftype
-		 (function
-		  (,name
-		   ,@(map 'list (lambda (x)
-				  (cond
-				    ((find x `(&optional &key &aux &rest))
-				     x)
-				    (T `waffetensor)))
-			  `,args))
-		  (or null list waffetensor))
-		 ,f-ident))|#
-	 (defun ,f-ident (,self-heap ,@args)
-	   ,(if optimize
-		`(declare (optimize (speed 3) (space 0) (safety 1))
-			  (type ,name ,self-heap))
-		`(declare (type ,name ,self-heap))) ; This is needed to inline call-forwrd/backward.
-;	   ,(if hide-from-tree `(declare (type waffetensor ,@vars)) nil)
-	   ; Utils that can be used in :forward and :backward
-
-	   ; Optimizer is required to use model in arguments
-	   ;(when (not (eql ,object-type :optimizer))
-	   ;    ,@(map 'list #'(lambda (variable)
-		;		`(setq ,variable (typecase ,variable
-		;				   (waffetensor ,variable)
-		;				   (T (const ,variable)))))
-		 ;     `,vars))
-	   
-	   (macrolet ((self (name) `(slot-value ,',self-heap ',name))
-		      (model () `,',self-heap)
-		      (save-for-backward (name value)
-			`(let ((thread-info (waffetensor-thread-data ,value))
-			       (smaller-value (detach ,value)))
-			   (unless *no-grad* ; is no-grad disabled?
-			     (when (if *in-node-method*
-				       (not
-					(waffetensor-path-through-node? ,value))
-				       t)
-
-					; save-for-backward is ignored when 1. in with-no-grad macro. 2. Nodes connected like (Node) -> (Node) ; (in nodes, :forward :backward doesn't create grads.)
-
-			       (when (member t (list ,@',vars)
-					     :test
-					     #'(lambda (x y)
-						 (eql x (waffetensor-is-ancestor-param y))))
-				 (cond
-				   ((and (typep (data ,value) 'mat)
-					 (not (null thread-info)))
-				    (cl-waffe.caches:with-cache
-					(tmp
-					 smaller-value
-					 :place
-					 (cl-waffe.backends.mgl:create-thread-idx thread-info)
-					 :copy t)
-				      (setf (self ,name) (const tmp))))
-				   (T ;(!allow-destruct smaller-value)
-				      (setf (self ,name) smaller-value)))))))))
-	     (self hide-from-tree) ; avoid unused argument (model itself)
-	     ,(if is-node
-		  ; when method is for models.
-		  ; WaffeNodeThread is created when called with model.
-		  `(let* ((,thread (thread ; initialize thread-data with searching the toplevel ident of models.
-				    (decide-thread-idx ,@vars)
-				    (or (let ((k (find t (list ,@vars) :test #'(lambda (x y)
-									   (declare (ignore x))
-									   (waffetensor-thread-data y)))))
-					  (if (and
-					       k
-					       (waffenodethread-belong-to (waffetensor-thread-data k)))
-					      (waffenodethread-belong-to (waffetensor-thread-data k))
-					      nil))
-					(self model-ident))))
-			  (,is-top (= (waffenodethread-thread-idx ,thread) 0)))
-		     (set-thread-data ,thread ,@vars)
-		     (let ((result (progn ,@body)))
-		       ; no matter what returns model/node, cl-waffe won't error.
-		       ;(declare (type waffetensor &optional result))
-		       (typecase result
-			 (list (prog1
-				   result
-				 (free-caches ,thread)
-				 (when ,is-top
-				   (set-thread-data nil ,@vars))))
-			 (waffetensor
-			  (prog1
-			      (progn
-				result)
-			    (free-caches ,thread)
-			    (when ,is-top
-			      (set-thread-data nil ,@vars))))
-			 (T result))))
-		  ; when method is for nodes/optimizers
-		  `(let ((,state (enable-node-tensor ,@vars)))
-		     (declare (type list ,state))
-		     (with-node-method-mode
-		       (let ((result (progn ,@body))
-			     (result-next-state (find t ,state)))
-			 (uncheck-node-tensor ,state ,@vars)
-			 (typecase result
-			   (list
-			    (map 'list #'(lambda (x)
-					   (setf (waffetensor-path-through-node? x) result-next-state)
-					   x)
-				 result))
-			   (T
-			    (setf (waffetensor-path-through-node? result) result-next-state)
-			    result))))))))
-	 ; ,@backend-name -> backend-dispatcher / :external-node :numcl ...
-	 (defmethod ,fname ,@backend-name ((self ,name))
-	   (declare (optimize (speed 3) (safety 0))
-		    (type ,name self))
-	   (when (or
-		  (eql :mgl ,required-backend-symbol)
-		  (eql *default-backend* ,required-backend-symbol))
-	     #'(lambda (&rest node-inputs)
-		 (declare (optimize (speed 3) (safety 0))
-			  (inline ,f-ident))
-		 (apply #',f-ident self node-inputs)))))))
-
 (defmacro defmodel (name
 		    initializer-arguments
 		    &key
@@ -874,29 +701,6 @@ Example:
        :node
        ,backend
        :disassemble-me ,disassemble-backward)
-     
-     (define-node-method
-	 call-forward
-	 ,name
-	 ,(car forward)
-	 ,(cdr forward)
-	 nil
-	 ,optimize
-	 :node
-	 ,backend
-	 nil
-	 (:external-node ,backend))
-     (define-node-method
-	 call-backward
-	 ,name
-	 ,(car backward)
-	 ,(cdr backward)
-	 nil
-	 ,optimize
-	 :node
-	 ,backend
-	 nil
-	 (:external-node ,backend))
      nil))
 
 
@@ -1248,28 +1052,7 @@ the object-type indicates the type of document format."
 		  *initial-form-backward*)
 	     ,object-type
 	     :mgl
-	     :disassemble-me ,disassemble-backward)
-	   
-	   (define-node-method
-	       call-forward
-	       ,name
-	       ,(car forward)
-	       ,(cdr forward)
-	       ,hide-from-tree
-	       ,optimize
-	       ,object-type
-	       :mgl
-	       ,(not regard-as-node))
-	   (define-node-method
-	       call-backward
-	       ,name
-	       ,(car backward)
-	       ,(cdr backward)
-	       ,hide-from-tree
-	       ,optimize
-	       ,object-type
-	       :mgl
-	       ,(not regard-as-node))
+	     :disassemble-me ,disassemble-backward)	   
 	   nil))))
 
 (defun render-simple-model-structure (stream model) ; Todo: More Details

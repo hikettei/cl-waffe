@@ -108,6 +108,7 @@
   (:export 
 	   #:parameter
 	   #:call
+	   #:call-backward
 	   #:backward)
 
   (:export

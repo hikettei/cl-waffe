@@ -597,9 +597,8 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
 	    nil)
 	   ; Otherwise, simply explore deeper nodes if there's param.
 	   (T 
-	    (let ((grads (funcall
-			  (the function
-			       (call-backward (waffetensor-state tensor)))
+	    (let ((grads (call-backward
+			  (waffetensor-state tensor)
 			  grad-before)))
 	      (declare (type list grads)) ; Todo: Print Error
 	      (unless (= (length (waffetensor-variables tensor))

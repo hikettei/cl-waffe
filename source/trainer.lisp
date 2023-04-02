@@ -28,7 +28,7 @@ and train/valid function.
 						 (call (self optimizer) ,@args1))))
 		      (zero-grad ()
 			`(unless *no-grad*
-			   (funcall (call-backward (self optimizer)) (self model)))))
+			   (call-backward (self optimizer) (self model)))))
 	     ,@body))
 	 (defmethod ,fname ((self ,name))
 	   (lambda (&rest node-inputs) (apply #',f-ident self node-inputs))))))
