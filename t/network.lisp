@@ -113,9 +113,6 @@
 		      cl-waffe::!softmax
 		      cl-waffe::!faref
 		      cl-waffe::!write-faref
-		      cl-waffe::call
-		      cl-waffe::call-forward
-		      cl-waffe::call-backward
 		      cl-waffe.backends.mgl::adam-update
 		      svmformat:parse-file)
     (time (backward (!sum (car out))))
