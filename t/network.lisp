@@ -115,7 +115,8 @@
 		      cl-waffe::!write-faref
 		      cl-waffe.backends.mgl::adam-update
 		      svmformat:parse-file)
-    (time (backward (!sum (car out))))
+    (with-verbose
+      (time (backward (!sum (car out)))))
     (sb-profile:report)
     t
     ))
