@@ -22,4 +22,8 @@
 
   (with-section "Writing Node Extensions"
     (insert "")
+    )
+
+  (with-section "MNIST Example"
+
     ))
