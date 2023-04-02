@@ -604,7 +604,7 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
 	      (declare (type list grads)) ; Todo: Print Error
 	      (unless (= (length (waffetensor-variables tensor))
 			 (length grads))
-		(backward-error "backward error: The number of arguments :forward has doesnt correspond with of :backward returned in list."))
+		(backward-error "Backward Error: The number of arguments :forward has doesnt correspond with of :backward returned in list.~%Node: ~a~%Forward:~a~%:Backward:~a~%" (waffetensor-state tensor) (waffetensor-variables tensor) grads))
 
 	      (dotimes (n (length grads))
 		(unless (eql (data (nth n grads)) nil) ; when nil, ignored.

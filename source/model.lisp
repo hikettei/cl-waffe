@@ -1067,6 +1067,7 @@ Example:
 			 (progn
 			   (setf (waffetensor-backward x) t)
 			   (setf (waffetensor-state x) (model))
+			   ; Note: variables are recorded in flat list.
 			   (setf (waffetensor-variables x) (list ,@vars))
 			   (setf (waffetensor-is-ancestor-param x)
 				 is-ancestor-param)))
