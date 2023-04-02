@@ -23,7 +23,7 @@
 (defparameter rnn1 (RNN 10 25 :num-layers 1))
 (defparameter rnn2 (RNN 10 25 :num-layers 3))
 
-(defparameter words (call embedding (parameter (!ones `(10 10)))))
+(defparameter words (!randn `(10 10 10)))
 
 (defparameter model-list (model-list (list (linearlayer 10 1)
 					   (linearlayer 10 1))))
