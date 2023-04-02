@@ -25,7 +25,7 @@ and train/valid function.
 		      (model () `(self model))
 		      (update (&rest args1) `(unless *no-grad*
 				               (with-no-grad
-						 (funcall (call-forward (self optimizer)) ,@args1))))
+						 (call (self optimizer) ,@args1))))
 		      (zero-grad ()
 			`(unless *no-grad*
 			   (funcall (call-backward (self optimizer)) (self model)))))
