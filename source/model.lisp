@@ -1086,20 +1086,20 @@ Example:
 	(args-symbols (reverse (get-params args))))
     (multiple-value-bind (body declarations docs)
 	(alexandria:parse-body body :documentation t)
-      (eval-when (:compile-toplevel
-		  :load-toplevel
-		  :execute)
-	(case forward-or-backward
-	  (:forward
-	   (register-forward-features structure-name
-				      function-name
-				      backend-type))
-	  (:backward
-	   (register-backward-features structure-name
-				       function-name
-				       backend-type))
-	  (T (error "internal error"))))
       `(progn
+	 (eval-when (:compile-toplevel
+		     :load-toplevel
+		     :execute)
+	(case ,forward-or-backward
+	  (:forward
+	   (register-forward-features ',structure-name
+				      ',function-name
+				      ,backend-type))
+	  (:backward
+	   (register-backward-features ',structure-name
+				       ',function-name
+				       ,backend-type))
+	  (T (error "internal error"))))
 	 (declaim (inline ,function-name))
 	 ,(replace-declaim-forms-with-fname
 	   forward-or-backward
