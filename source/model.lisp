@@ -125,84 +125,15 @@ Output: An last value of layers."
 			 (setq ,input (call (self ,(car layer)) ,@(cdr layer)))))
 	      layers)
      ,input))
-#|
-(declaim (ftype (function (t &rest waffetensor) (or null list waffetensor)) call))
-(defun call (model &rest args)
-  "Calls the forward steps which defined in: defnode, defmodel, defoptimizer.
 
-All forward steps must be called through this function, otherwise the returned tensor doesn't have: computation nodes, thread-datum which supports performance.
-
-Building computation nodes is ignored when *no-grad* is t.
-
-@begin(deflist)
-@term(model)
-@def(Your initialized model/node/optimizer objects)
-@term(args)
-@def(Arguments :forward needs)
-@end(deflist)
-
-Example:
-@begin[lang=lisp](code)
-(defnode Add nil
-  :optimize t
-  :parameters nil
-  :forward  ((x y)
-	     (sysconst (+ (data x) (data y))))
-  :backward ((dy) (list dy dy)))
-
-(call (Add) (const 1.0) (const 1.0))
-;=>Const(2.0)
-
-@end[lang=lisp](code)
-
-Output: Waffetensor of list which comprised of waffetensor."
-  (declare (optimize (speed 3) (safety 0))
-	   (notinline call))
-  ; calculating op(x,y) -> result(x, y), state
-
-  (when (model-list-p model)
-    (return-from call
-      (apply
-       #'call
-       (nth (the fixnum (data (car args)))
-	    (model-list-mlist model))
-       (cdr args))))
-  
-  (let* ((result (apply (the function (call-forward model)) args)))
-    (declare (type (or null waffetensor list) result))
-
-    (unless *no-grad*
-      (if (slot-value model 'hide-from-tree) ;is model defined by defmodel?
-	  (typecase result
-	    (waffetensor
-	     (setf (waffetensor-backward result) t)
-	     (setf (waffetensor-state result) model)
-	     (setf (waffetensor-variables result) args)
-	     (setf (waffetensor-is-ancestor-param result)
-		   (if (member-if #'waffetensor-is-ancestor-param args)
-		       t
-		       nil)))
-	    (list
-	     (mapc
-	      #'(lambda (r)
-		  (declare (type waffetensor r))
-		  (setf (waffetensor-backward r) t)
-		  (setf (waffetensor-state r) model)
-		  (setf (waffetensor-variables r) args)
-		  (setf (waffetensor-is-ancestor-param r)
-		   (if (member-if #'waffetensor-is-ancestor-param args)
-		       t
-		       nil)))
-	      result))
-	    ;(t
-	     ;(error "cl-waffe.defnode: Nodes must return a single tensor or list which consisted of waffetensor otherwise cl-waffe can't build up computation nodes..."))
-	    )))
-result))
-|#
 
 (defun call-inlined-forward (model &rest inputs)
   (redefine-call-inline-forward)
   (apply #'call-inlined-forward model inputs))
+
+(defun call-inlined-backward (model &rest inputs)
+  (redefine-call-inline-backward)
+  (apply #'call-inlined-backward model inputs))
 
 (defun build-backend-case (features
 			   model
@@ -245,11 +176,17 @@ result))
 
 (defparameter *inlined-forward-retry-p* nil)
 
-
 (defun redefine-call-inline-forward ()
   (let ((new-definition (generate-call-inline-forward)))
     (setf (symbol-function 'cl-waffe::call-inlined-forward)
-	  new-definition)))
+	  new-definition)
+    t))
+
+(defun redefine-call-inline-backward ()
+  (let ((new-definition (generate-call-inline-backward)))
+    (setf (symbol-function 'cl-waffe::call-inlined-backward)
+	  new-definition)
+    t))
 
 (defun generate-call-inline-forward ()
   (let ((keys (hash-table-keys *call-forward-features*))
@@ -290,6 +227,45 @@ result))
        ;(print (macroexpand (output-function)))
        (eval (output-function)))))
 
+(defparameter *inlined-backward-retry-p* nil)
+
+(defun generate-call-inline-backward ()
+  (let ((keys (hash-table-keys *call-backward-features*))
+	(functions))
+
+    (format t "Inlining call-backward... Total Size: ~a" (length keys))
+
+    (mapc
+     #'(lambda (key)
+	 (maphash #'(lambda (backend-name function-name)
+		      (declare (ignore backend-name))
+		      (push function-name functions))
+		  (gethash key *call-backward-features*)))
+     keys)
+    
+     (macrolet ((output-function ()
+		  ``#'(lambda (model &rest inputs)
+		       (declare (optimize (speed 3))
+				(inline ,@functions))
+		       (typecase model
+			 ,@(loop for i fixnum upfrom 0 below (length keys)
+				 collect `(,(nth i keys)
+					   ,(build-backend-case
+					     (gethash
+					      (nth i keys)
+					      *call-backward-features*)
+					     'model
+					     'inputs)))
+			 (T
+			  (if *inlined-backward-retry-p*
+			      (error "No such node ~a" model) ; todo more conditions
+			      (let ((*inlined-backward-retry-p* t))
+				(locally (declare (notinline call-inlined-backward))
+				  (redefine-call-inline-backward)
+				  (apply #'call-inlined-backward model inputs)))))))))
+       ;(print (macroexpand (output-function)))
+       (eval (output-function)))))
+
 (defun model-inlineable-p (model)
   (and (typep model 'list)
        (let ((name (car model)))
@@ -302,9 +278,7 @@ result))
 		&rest inputs
 		&aux
 		  (features (model-inlineable-p model)))
-  #|
-  If model is determined at compile-time. (e.g.: (call (ScalarAdd) (const 1.0) (const 1.0))), they inlined.
-  |#
+  "todo: docs"
   (declare (optimize (speed 3)))
   (if features
       #|When there's a defined node|#
@@ -1090,16 +1064,16 @@ Example:
 	 (eval-when (:compile-toplevel
 		     :load-toplevel
 		     :execute)
-	(case ,forward-or-backward
-	  (:forward
-	   (register-forward-features ',structure-name
-				      ',function-name
-				      ,backend-type))
-	  (:backward
-	   (register-backward-features ',structure-name
-				       ',function-name
-				       ,backend-type))
-	  (T (error "internal error"))))
+	   (case ,forward-or-backward
+	     (:forward
+	      (register-forward-features ',structure-name
+					 ',function-name
+					 ,backend-type))
+	     (:backward
+	      (register-backward-features ',structure-name
+					  ',function-name
+					  ,backend-type))
+	     (T (error "internal error"))))
 	 (declaim (inline ,function-name))
 	 ,(replace-declaim-forms-with-fname
 	   forward-or-backward
