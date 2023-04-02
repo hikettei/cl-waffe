@@ -113,7 +113,7 @@ Todo: currently, it returns error.
 	      :step-args "index &rest args")
   :parameters ((mlist model-list))
   :forward ((index &rest args)
-	    (error "model-list couldn't pass call correctly")))
+	    (error "Model-List should be accessed via call/mth, but couldn't pass correctly.")))
 
 (defun mlist (&rest models)
   "define mlist"

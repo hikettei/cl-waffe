@@ -126,7 +126,9 @@
 @end(section)"
   (declare (optimize (speed 3))
 	   (type fixnum axis))
-  (apply #'call (ConcatenateTensorNode axis) tensors))
+  (let* ((node (ConcatenateTensorNode axis))
+	 (caller (get-forward-caller node)))
+    (apply caller node tensors)))
 
 (defun !stack (axis &rest tensors)
   "Stacks the given @cl:param(tensors) in the specified @cl:param(axis).
@@ -166,7 +168,10 @@ Note: Currently, when unsqueezing given tensors, !stack creates copies every tim
 			  (!disallow-destruct tensor)
 			  (!unsqueeze tensor axis))
 		      tensors)))
-    (apply #'call (ConcatenateTensorNode axis) tensors)))
+
+    (let* ((node (ConcatenateTensorNode axis))
+	   (caller (get-forward-caller node)))
+      (apply caller node tensors))))
 
 (defun !split (tensor split-size &key (axis 0))
   "Splits the tensor into chunks in the specified @cl:param(axis). Each chunk is a copy of original tensor.

@@ -30,17 +30,17 @@ Using dummy data, i will get assure activation and optimizers are working well.
 
 (defmacro define-test-trainer (name optim lr activation)
   `(progn
-   (deftrainer ,name nil
-     :model (MLP ,activation)
-     :optimizer ,optim
-     :optimizer-args (:lr ,lr)
-     :step-model ((x y)
-		  (zero-grad)
-		  (let ((out (cl-waffe.nn:softmax-cross-entropy (call (model) x) y)))
-		    (backward out)
-		    (update)
-		    out))
-     :predict ((x) (call (model) x)))
+     (deftrainer ,name nil
+       :model (MLP ,activation)
+       :optimizer ,optim
+       :optimizer-args (:lr ,lr)
+       :step-model ((x y)
+		    (zero-grad)
+		    (let ((out (cl-waffe.nn:softmax-cross-entropy (call (model) x) y)))
+		      (backward out)
+		      (update)
+		      out))
+       :predict ((x) (call (model) x)))
 
    (defmethod print-object ((model ,name) stream)
      (format stream "[Trainer: ~a]" ',name))))
@@ -102,3 +102,4 @@ Using dummy data, i will get assure activation and optimizers are working well.
 	(is (test-for (Trainer7)))
 	(is (test-for (Trainer8)))
 	(is (test-for (Trainer9)))))
+

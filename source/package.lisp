@@ -3,13 +3,14 @@
 
 (defpackage cl-waffe
   (:documentation "An package for defining node, initializing and computing with tensor, and backprops.")
-  (:use :cl :mgl-mat :alexandria :inlined-generic-function)
+  (:use :cl :mgl-mat :alexandria)
   (:export #:*verbose*
 	   #:with-verbose)
   (:export #:with-jit
 	   #:with-jit-debug)
   (:export #:*single-value*)
   (:export #:*lparallel-kernel*
+	   #:*ignore-inlining-info*
 	   #:set-lparallel-kernel)
   (:export #:with-dtype
 	   #:dtypecase
@@ -24,6 +25,15 @@
 	   #:backward)
   (:export #:with-backend
 	   #:define-node-extension)
+  (:export ; conditions
+   #:invaild-slot-name-waffe-object
+   #:shaping-error
+   #:aref-shaping-error
+   #:node-error
+   #:Backend-Doesnt-Exists
+   #:backward-error
+   #:unimplemented-error
+   #:nosuchnode-error)
   (:export 
 	   ; An parameters for displaying tensor.
 	   #:*print-char-max-len*
@@ -73,7 +83,7 @@
 	   #:call-and-dispatch-kernel
 	   #:with-optimized-operation)
 
-  (:export ; macros in waffe-object
+  (:export ; macros (binded by defobject) in waffe-object
            #:model
 	   #:self
 	   #:save-for-backward
@@ -87,6 +97,10 @@
 	   #:with-model-list)
 
   (:export
+          #:get-forward-caller
+          #:get-backward-caller)
+
+  (:export
 	   #:train
 	   #:get-dataset
 	   #:get-dataset-length)
@@ -94,6 +108,7 @@
   (:export 
 	   #:parameter
 	   #:call
+	   #:call-backward
 	   #:backward)
 
   (:export
@@ -215,6 +230,11 @@
 	   #:with-usage))
 
 (in-package :cl-waffe)
+
+(defvar *call-forward-features* (common-lisp:make-hash-table)
+  "An hash-table which records all forward nodes")
+(defvar *call-backward-features* (common-lisp:make-hash-table)
+  "An hash-table which records all backward nodes")
 
 (defparameter *cl-waffe-object-types* `(:model
 					:node

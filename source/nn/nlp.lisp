@@ -49,6 +49,9 @@
 			 (:relu (!relu h1)))))
 	      h1)))
 
+#|
+FIXME: This implementation IS SO SLOW AND STUPID ;/ (using !aref). And There must be more clever one.
+|#
 (defmodel RNN (input-size
 	       hidden-size
 	       &key

@@ -24,10 +24,11 @@ and train/valid function.
 	   (macrolet ((self (name) `(slot-value ,',self-heap ',name))
 		      (model () `(self model))
 		      (update (&rest args1) `(unless *no-grad*
-				                 (with-no-grad (funcall (call-forward (self optimizer)) ,@args1))))
+				               (with-no-grad
+						 (call (self optimizer) ,@args1))))
 		      (zero-grad ()
 			`(unless *no-grad*
-			   (funcall (call-backward (self optimizer)) (self model)))))
+			   (call-backward (self optimizer) (self model)))))
 	     ,@body))
 	 (defmethod ,fname ((self ,name))
 	   (lambda (&rest node-inputs) (apply #',f-ident self node-inputs))))))

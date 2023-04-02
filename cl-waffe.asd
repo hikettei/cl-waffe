@@ -15,18 +15,16 @@
 	       #:cl-cuda
 	       #:cl-libsvm-format
 	       #:lparallel
-	       #:inlined-generic-function
 	       #:trivial-garbage
 	       #:bordeaux-threads)
+  :serial t
   :in-order-to ((test-op (test-op cl-waffe-test)))
   :components ((:file "cl-cram")
-	       (:module "backends/cpu"
-		:depends-on ("package"
-			     "backends/mgl-mat")
-		:components ((:file "package")
-			     (:file "kernel")))
+	       (:file "package")
+	       (:file "utils")
+	       (:file "dtype")
+	       (:file "conditions")
 	       (:module "backends/mgl-mat"
-		:depends-on ("package" "tensor")
 		:components ((:file "cache")
 			     (:file "package")
 			     (:file "matmul")
@@ -35,37 +33,36 @@
 			     (:file "utils")
 			     (:file "optimizers")			     
 			     (:file "kernel")))
-	       (:file "package")
-	       (:file "utils")
-	       (:file "dtype" :depends-on ("utils"))
-	       (:file "conditions")
-	       (:file "model" :depends-on ("tensor"))
-	       (:file "tensor" :depends-on ("dtype"))
+	       (:module "backends/cpu"
+		:components ((:file "package")
+			     (:file "kernel")))
+	       (:file "model")
+	       (:file "tensor")
 	       (:file "thread")
 	       (:file "distributions/random")
 	       (:file "distributions/distribution")
 	       (:file "distributions/beta")
 	       (:file "distributions/gamma")
 	       (:file "distributions/chisquare")
-               (:file "kernel" :depends-on ("tensor"))
-	       (:file "trainer" :depends-on ("optimizers"))
-	       (:file "functions" :depends-on ("model"))
-	       (:file "aref" :depends-on ("model"))
-	       (:file "activations" :depends-on ("model"))
-	       (:file "transpose" :depends-on ("model"))
-	       (:file "operators" :depends-on ("tensor"))
-	       (:file "sum" :depends-on ("model"))
-	       (:file "conc" :depends-on ("model"))
-	       (:file "iter" :depends-on ("model"))
-	       (:file "shaping" :depends-on ("model"))
-	       (:file "mathematicals" :depends-on ("model"))
-	       (:file "einsum" :depends-on ("model"))
-	       (:file "matrix-operations" :depends-on ("model"))
+               (:file "kernel")
+	       (:file "functions")
+	       (:file "aref")
+	       (:file "activations")
+	       (:file "transpose")
+	       (:file "operators")
+	       (:file "sum")
+	       (:file "conc")
+	       (:file "iter")
+	       (:file "shaping")
+	       (:file "mathematicals")
+	       (:file "einsum")
+	       (:file "matrix-operations")
 	       (:module "optimizers"
 		:depends-on ("model")
 		:components ((:file "package")
 			     (:file "optimizers")
 			     (:file "optimizer")))
+	       (:file "trainer")
 	       (:module "nn"
 		:depends-on ("model")
 		:components ((:file "package")
@@ -94,6 +91,7 @@
   :author "hikettei"
   :licence "MIT"
   :depends-on (:cl-waffe :fiveam :cl-libsvm-format)
+  :serial t
   :components ((:module "t" :components ((:file "package")
 					 (:file "utils")
 					 (:file "deriv")

@@ -101,7 +101,7 @@ Not implemented (TODO)
 						  (* 0.044715
 						     (expt el 3))))))
 				    (the u (+ 1.0 (tanh n)))))))
-	       (error "no implemented yet"))))
+	       (error "I'm sorry but its not implemented yet..."))))
     (!mul x s)))
 
 

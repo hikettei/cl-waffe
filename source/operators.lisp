@@ -101,6 +101,27 @@ And utils for broadcasting etc...
 	      do (incf r (aref arr i)))))
     (sysconst r)))
 
+; they're currently not used: ScalarAdd/ScalarSub.
+(defnode ScalarAdd ()
+  :forward-declaim (declaim (ftype (function (ScalarAdd waffetensor waffetensor) waffetensor) :forward))
+  :forward ((x y)
+	    (let ((x (data x))
+		  (y (data y)))
+	      (declare (type single-float x y))
+	      (const (+ x y))))
+  :backward ((dy) (list dy dy)))
+
+(defnode ScalarSub ()
+  ;:disassemble-forward t
+  :forward-declaim (declaim (ftype (function (ScalarSub waffetensor waffetensor) waffetensor) :forward))
+  :forward ((x y)
+	    (let ((x (data x))
+		  (y (data y))) ; todo: define with typevar
+	      (declare (type single-float x y))
+	      (const (- x y))))
+  :backward ((dy) (list dy dy)))
+
+
 (defnode AddTensor (&optional (output nil) (overwrite nil))
   :optimize t
   :parameters ((output output) (overwrite overwrite))
@@ -160,7 +181,7 @@ And utils for broadcasting etc...
   :optimize t
   :parameters ((xi T) (yi T))
   :forward ((x y)
-	    (unless (= (the fixnum (data x)) 1) (error "!div-old: x must be 1"))
+	    (unless (= (the fixnum (data x)) 1) (error "internal error: !div-old: x must be 1"))
             (save-for-backward xi x)
 	    (save-for-backward yi y)
 	    (with-searching-calc-node :div x y))
@@ -176,7 +197,7 @@ And utils for broadcasting etc...
        (let* ((,tensor (if *no-grad* ,place ,node-object)))
 	 ,@body))))
 
-(defope !add (AddTensor) node (x y)
+(defun !add (x y)
     "Adds x and y.
 
 In the case when x or y is not a tensor, automatically creates a new tensor.
@@ -216,14 +237,15 @@ It supports:
 
 @end[lang=lisp](code)
 @end(section)"
+  (declare (optimize (speed 3)))
   (let ((x (assure-tensor x))
 	(y (assure-tensor y)))
     (if (same-shape-p x y)
-	(call node x y)
+	(call (AddTensor) x y)
 	(multiple-value-bind (x y) (straighten-up x y)
 	  (call (BroadCastingAddTensor) x y)))))
 
-(defope !sub (SubTensor) node (x y)
+(defun !sub (x y)
     "Subtract x by y.
 
 In the case when x or y is not a tensor, automatically creates a new tensor.
@@ -262,14 +284,15 @@ It supports:
 @end[lang=lisp](code)
 @end(section)
 "
+  (declare (optimize (speed 3)))
   (let ((x (assure-tensor x))
 	(y (assure-tensor y)))
     (if (same-shape-p x y)
-	(call node x y)
+	(call (SubTensor) x y)
 	(multiple-value-bind (x y) (straighten-up x y)
 	  (call (BroadCastingSubTensor) x y)))))
 
-(defope !mul (MulTensor) node (x y)
+(defun !mul (x y)
     "Multiply x and y with element-wise.
 
 In the case when x or y is not a tensor, automatically creates a new tensor.
@@ -308,18 +331,19 @@ It supports:
 @end[lang=lisp](code)
 @end(section)
 "
+  (declare (optimize (speed 3)))
   (let ((x (assure-tensor x))
 	(y (assure-tensor y)))
     (if (same-shape-p x y)
-	(call node x y)
+	(call (MulTensor) x y)
 	(multiple-value-bind (x y) (straighten-up x y)
 	  (call (BroadCastingMulTensor) x y)))))
 
-(defope !div-old (DivTensor) node (x y)
+(defun !div-old (x y)
     "1/x"
 					; (unless (= x 1) (error "!div-old: x must be 1"))
 					; x must be 1, cl-waffe.backends.mgl:div has some problems?...
-  (call node (assure-tensor x) (assure-tensor y)))
+  (call (DivTensor) (assure-tensor x) (assure-tensor y)))
 
 					; its much faster
 (defun !div (x y)

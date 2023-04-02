@@ -286,7 +286,7 @@ When the argument that you want to insert is a tensor, this function automatical
   
   (when (eql content t)
     (reset-config)
-    (error "An tensor is initialized with ~a, which means your node/model's parameter weren't updated. This is due to you're training with *no-grad*=t or cl-waffe::*in-node-method*=t. Try this after calling (cl-waffe:reset-config). (This is occurs when an error occurs during training models.)" content))
+    (backward-error "An tensor is initialized with ~a, which means your node/model's parameter weren't updated. This is due to you're training with *no-grad*=t or cl-waffe::*in-node-method*=t. Try this after calling (cl-waffe:reset-config). (This is occurs when an error occurs during training models.)" content))
   
   (typecase content
     (ratio
@@ -416,13 +416,13 @@ When tensor's grad is nil, an error occurs
 Note: grad is @b(not) setfable"
   `(progn
      (unless (typep ,tensor 'WaffeTensor)
-       (error "The tensor is not a waffetensor."))
+       (backward-error "Grads are only created for waffetensor. But got ~a" ,tensor))
      
      (unless (waffetensor-grad ,tensor)
-       (error "The tensor is not a parameter. Constants doesn't have a grad. If you need grad, please define it with (parameter (const XXX)). When using ~a~%" ,tensor))
+       (backward-error "The tensor is not a parameter. Constants doesn't have a grad. If you need grad, please define it with (parameter (const XXX)). When using ~a~%" ,tensor))
 
      (if (typep (waffetensor-grad ,tensor) 'cons)
-	 (error "Refering the tensor's grad, cl-waffe got nil.~%This is because (backward out) weren't called after using (zero-grad), otherwise the computation nodes aren't continuous. ~%See also: Documentation of defnode/defmodel. ~%When using ~%~a~%" ,tensor))
+	 (backward-error "Refering the tensor's grad, cl-waffe got nil.~%This is because (backward out) weren't called after using (zero-grad), otherwise the computation nodes aren't continuous. ~%See also: Documentation of defnode/defmodel. ~%When using ~%~a~%" ,tensor))
 	 
      (waffetensor-grad ,tensor)))
 
@@ -482,7 +482,7 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
 	   (type waffetensor tensor))
   (if (typep (data tensor) 'mgl-mat:mat)
       (unless (eq (!shape tensor) `(1))
-	(error "grad can be implicitly created only for scalar outputs")))
+	(backward-error "grad can be implicitly created only for scalar outputs")))
   (let ((*no-grad* t))
     (let ((*lazy-backwards* (make-hash-table)))
       (labels ((backward-by-id (id lazy-tensors)
@@ -571,7 +571,7 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
 		   (called-from-state (waffetensor-state (car variables)))
 		   (higher-node-id (slot-value called-from-state 'model-ident)))
 	      (unless (= 1 (length variables))
-		(error "cl-waffe's internal error: the size of !aref's retent should be 1 but got: ~a" variables))
+		(backward-error "cl-waffe's internal error: the size of !aref's retent should be 1 but got: ~a" variables))
 
 	      ; Pseudo, moves down one node.
 	      (setf (waffetensor-backward grad-before)
@@ -597,14 +597,13 @@ In the process calculating backward, new backwards won't be created. (*no-grad* 
 	    nil)
 	   ; Otherwise, simply explore deeper nodes if there's param.
 	   (T 
-	    (let ((grads (funcall
-			  (the function
-			       (call-backward (waffetensor-state tensor)))
+	    (let ((grads (call-backward
+			  (waffetensor-state tensor)
 			  grad-before)))
 	      (declare (type list grads)) ; Todo: Print Error
 	      (unless (= (length (waffetensor-variables tensor))
 			 (length grads))
-		(error "backward error: The number of :forward args doesnt correspond with of :backward"))
+		(backward-error "Backward Error: The number of arguments :forward has doesnt correspond with of :backward returned in list.~%Node: ~a~%Forward:~a~%:Backward:~a~%" (waffetensor-state tensor) (waffetensor-variables tensor) grads))
 
 	      (dotimes (n (length grads))
 		(unless (eql (data (nth n grads)) nil) ; when nil, ignored.
@@ -1124,7 +1123,7 @@ Return: A tensor of shape that equal to the condition.
 
 (defun pprint-1d-vector (stream data)
   (if (> (length (array-dimensions data)) 1)
-      (error ""))
+      (error "internal bug"))
   (if (>= (apply #'* (array-dimensions data)) *print-arr-max-size*)
       (write-string (format nil "(~A ~A ~2~ ~A ~A)" ; todo: i wanna display last 3 digits.
 			    (reduce-str (aref data 0))
