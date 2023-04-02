@@ -24,7 +24,6 @@
 	       (:file "utils")
 	       (:file "dtype")
 	       (:file "conditions")
-	       ;(:file "tensor")
 	       (:module "backends/mgl-mat"
 		:components ((:file "cache")
 			     (:file "package")

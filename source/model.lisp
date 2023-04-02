@@ -987,7 +987,9 @@ Example:
 	     (is-ancestor-param
 	       ,(if (eql object-type :node)
 		    `(unless *no-grad*
-		       (member-if #'waffetensor-is-ancestor-param (list ,@vars)))
+		       (if (member-if #'waffetensor-is-ancestor-param (list ,@vars))
+			   t
+			   nil))
 		    nil)))
 	 ,(unless (eql object-type :node)
 	    `(declare (ignore is-ancestor-param)))
