@@ -15,7 +15,6 @@
 	       #:cl-cuda
 	       #:cl-libsvm-format
 	       #:lparallel
-	       #:inlined-generic-function
 	       #:trivial-garbage
 	       #:bordeaux-threads)
   :serial t
@@ -92,6 +91,7 @@
   :author "hikettei"
   :licence "MIT"
   :depends-on (:cl-waffe :fiveam :cl-libsvm-format)
+  :serial t
   :components ((:module "t" :components ((:file "package")
 					 (:file "utils")
 					 (:file "deriv")
