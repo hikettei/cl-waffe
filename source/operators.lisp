@@ -180,7 +180,7 @@ And utils for broadcasting etc...
   :optimize t
   :parameters ((xi T) (yi T))
   :forward ((x y)
-	    (unless (= (the fixnum (data x)) 1) (error "!div-old: x must be 1"))
+	    (unless (= (the fixnum (data x)) 1) (error "internal error: !div-old: x must be 1"))
             (save-for-backward xi x)
 	    (save-for-backward yi y)
 	    (with-searching-calc-node :div x y))

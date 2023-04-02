@@ -403,7 +403,7 @@ The model defined by model-list can be used like:
 		  (push m parameters)))))
       (search-param model)
       (if (= (length parameters) 1)
-	  (error "Could not find any parameter")
+	  (optimizer-error "The optimizer couldn't find any parameters to optimize in the model.")
 	  (butlast parameters)))))
 
 (defmacro defoptimizer (name

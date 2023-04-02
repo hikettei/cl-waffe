@@ -127,3 +127,15 @@ Node-Error
 (defmacro nosuchnode-error (content &rest args)
   `(error (make-condition 'nosuchnode-error
 			  :content (format nil ,content ,@args))))
+
+(define-condition optimizer-error (simple-error)
+  ((content :initarg :content))
+  (:documentation
+   "Errors related to optimizers")
+  (:report
+   (lambda (c s)
+     (format s "[cl-waffe.optimizers] ~a" (slot-value c 'content)))))
+
+(defmacro optimizer-error (content &rest args)
+  `(error (make-condition 'optimizer-error
+			  :content (format nil ,content ,@args))))
