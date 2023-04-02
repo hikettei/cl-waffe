@@ -216,9 +216,9 @@
 
 (in-package :cl-waffe)
 
-(defconstant *call-forward-features* (common-lisp:make-hash-table)
+(defvar *call-forward-features* (common-lisp:make-hash-table)
   "An hash-table which records all forward nodes")
-(defconstant *call-backward-features* (common-lisp:make-hash-table)
+(defvar *call-backward-features* (common-lisp:make-hash-table)
   "An hash-table which records all backward nodes")
 
 (defparameter *cl-waffe-object-types* `(:model
