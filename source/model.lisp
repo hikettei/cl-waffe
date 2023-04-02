@@ -332,7 +332,7 @@ Output: An last value of layers."
 			     #+sbcl(sb-ext:maybe-inline call-inlined-forward)
 			     #-sbcl(inline call-inlined-forward)
 			     )
-	     (call-inlined-forward ,model ,@inputs))))))
+	     (apply #'call-inlined-forward model inputs))))))
 
 (defmacro with-model-list (&rest models)
   "Applying model-list.
