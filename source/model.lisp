@@ -871,8 +871,9 @@ Example:
 			 (progn
 			   (setf (waffetensor-backward x) t)
 			   (setf (waffetensor-state x) (model))
-			   ; Note: variables are recorded in flat list.
-			   (setf (waffetensor-variables x) (list ,@vars))
+			   ; Note: variables are flat lists.
+			   ; I hate this overehead of flatten...
+			   (setf (waffetensor-variables x) (flatten (list ,@vars)))
 			   (setf (waffetensor-is-ancestor-param x)
 				 is-ancestor-param)))
 		       x)
@@ -894,7 +895,9 @@ Example:
 		       result-next-state)
 		      (setf (waffetensor-backward result) t)
 		      (setf (waffetensor-state result) (model))
-		      (setf (waffetensor-variables result) (list ,@vars))
+		      ; Note: variables are flat lists.
+		      ; I hate this overehead of flatten...
+		      (setf (waffetensor-variables result) (flatten (list ,@vars)))
 		      (setf (waffetensor-is-ancestor-param result)
 			    is-ancestor-param)
 		      result)
