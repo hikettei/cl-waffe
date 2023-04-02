@@ -333,6 +333,42 @@ Output: An last value of layers."
 			     )
 	     (apply #'call-inlined-forward model inputs))))))
 
+(declaim (ftype (function (keyword t) function) get-nodefunction-caller))
+(defun get-nodefunction-caller (forward-or-backward
+				model
+				&aux
+				  (node-type (type-of model)))
+  (declare (optimize (speed 3)))
+  (let ((result (case forward-or-backward
+		  (:forward
+		   (gethash node-type *call-forward-features*))
+		  (:backward
+		   (gethash node-type *call-backward-features*))
+		  (T
+		   (error "cl-waffe's internal error. Features are only available when :forward and :backward")))))
+    (unless result
+      (error "no such node ~a" model)); conditions
+
+    (the function
+	 (or (gethash *default-backend* result)
+	     (if *restart-non-exist-backend*
+		 (gethash :mgl result)
+		 (restart-case
+		     (error (make-condition
+			     'Backend-Doesnt-Exists
+			     :kernel *default-backend*
+			     :node model))
+		   (restart-with-mgl-kernel ()
+		     (gethash :mgl result))))))))
+
+(defmacro get-forward-caller (model)
+  "Todo: Docstring"
+  `(get-nodefunction-caller :forward ,model))
+
+(defmacro get-backward-caller (model)
+  "Todo: Docstring"
+  `(get-nodefunction-caller :backward ,model))
+
 (defmacro with-model-list (&rest models)
   "Applying model-list.
 

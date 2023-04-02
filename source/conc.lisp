@@ -126,7 +126,9 @@
 @end(section)"
   (declare (optimize (speed 3))
 	   (type fixnum axis))
-  (call (ConcatenateTensorNode axis) tensors))
+  (let* ((node (ConcatenateTensorNode axis))
+	 (caller (get-forward-caller node)))
+  (apply caller node tensors)))
 
 (defun !stack (axis &rest tensors)
   "Stacks the given @cl:param(tensors) in the specified @cl:param(axis).

@@ -87,6 +87,10 @@
 	   #:with-model-list)
 
   (:export
+          #:get-forward-caller
+          #:get-backward-caller)
+
+  (:export
 	   #:train
 	   #:get-dataset
 	   #:get-dataset-length)
