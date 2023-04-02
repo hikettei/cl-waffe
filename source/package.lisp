@@ -24,6 +24,15 @@
 	   #:backward)
   (:export #:with-backend
 	   #:define-node-extension)
+  (:export ; conditions
+   #:invaild-slot-name-waffe-object
+   #:shaping-error
+   #:aref-shaping-error
+   #:node-error
+   #:Backend-Doesnt-Exists
+   #:backward-error
+   #:unimplemented-error
+   #:nosuchnode-error)
   (:export 
 	   ; An parameters for displaying tensor.
 	   #:*print-char-max-len*
