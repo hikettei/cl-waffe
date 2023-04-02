@@ -100,13 +100,13 @@
 	 ,doc
 	 (case mgl-mat:*DEFAULT-MAT-CTYPE*
 	   (:half
-	    (error "No implementation"))
+	    (error "define-with-typevar: half is no implementation"))
 	   (:float
 	    (,(car fnames) ,@params))
 	   (:double
 	    (,(second fnames) ,@params))
 	   (T
-	    (error "No dtype")))))))
+	    (error "no such dtype.")))))))
 
 (defmacro dtypecase (&rest cases)
   "TODO: DOCUMENT"

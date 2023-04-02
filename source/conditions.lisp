@@ -101,3 +101,29 @@ Node-Error
 (defmacro backward-error (content &rest args)
   `(error (make-condition 'backward-error
 			  :content (format nil ,content ,@args))))
+
+
+(define-condition unimplemented-error (node-error)
+  ((content :initarg :content))
+  (:documentation
+   "Occurs when unimplemented :forward/:backward is called..")
+  (:report
+   (lambda (c s)
+     (format s "[cl-waffe] ~a" (slot-value c 'content)))))
+
+(defmacro unimplemented-error (content &rest args)
+  `(error (make-condition 'unimplemented-error
+			  :content (format nil ,content ,@args))))
+
+
+(define-condition nosuchnode-error (node-error)
+  ((content :initarg :content))
+  (:documentation
+   "Occurs when call happened to undefined node.")
+  (:report
+   (lambda (c s)
+     (format s "[cl-waffe] ~a" (slot-value c 'content)))))
+
+(defmacro nosuchnode-error (content &rest args)
+  `(error (make-condition 'nosuchnode-error
+			  :content (format nil ,content ,@args))))

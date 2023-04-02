@@ -12,10 +12,10 @@ Utils for defnode/defmodel/defoptimizer
   "When t, in the case when the specified backend doesn't exist, cl-waffe calls a standard implementation backend")
 
 (defparameter *initial-form-forward*
-  `((error "forward is nil")))
+  `((unimplemented-error "The :forward is undefined.")))
 
 (defparameter *initial-form-backward*
-  `((error "backward is nil")))
+  `((unimplemented-error "The :backward is undefined")))
 
 (defun register-features (features-table
 			 node-name
@@ -219,7 +219,7 @@ Output: An last value of layers."
 					     'inputs)))
 			 (T
 			  (if *inlined-forward-retry-p*
-			      (error "No such node ~a" model) ; todo more conditions
+			      (nosuchnode-error "cl-waffe attempted to call forward of ~a but couldn't find such a node. ~%Please check:~%Is the node really defined? or the dependencies are loaded correctly?" model)
 			      (let ((*inlined-forward-retry-p* t))
 				(locally (declare (notinline call-inlined-forward))
 				  (redefine-call-inline-forward)
@@ -258,7 +258,7 @@ Output: An last value of layers."
 					     'inputs)))
 			 (T
 			  (if *inlined-backward-retry-p*
-			      (error "No such node ~a" model) ; todo more conditions
+			      (nosuchnode-error "cl-waffe attempted to call backward of ~a but couldn't find such a node. ~%Please check:~%Is the node really defined? or the dependencies are loaded correctly?" model) ; todo more conditions
 			      (let ((*inlined-backward-retry-p* t))
 				(locally (declare (notinline call-inlined-backward))
 				  (redefine-call-inline-backward)
@@ -347,7 +347,7 @@ Output: An last value of layers."
 		  (T
 		   (error "cl-waffe's internal error. Features are only available when :forward and :backward")))))
     (unless result
-      (error "no such node ~a" model)); conditions
+      (nosuchnode-error "cl-waffe attempted to call ~a of ~a but couldn't find such a node. ~%Please check:~%Is the node really defined? or the dependencies are loaded correctly?" forward-or-backward model))
 
     (symbol-function
      (the symbol
