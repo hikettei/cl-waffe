@@ -338,7 +338,7 @@ Output: An last value of layers."
 				model
 				&aux
 				  (node-type (type-of model)))
-  (declare (optimize (speed 3)))
+  (declare (optimize (speed 3))) ; safety 0
   (let ((result (case forward-or-backward
 		  (:forward
 		   (gethash node-type *call-forward-features*))
@@ -930,6 +930,31 @@ Example:
 	  code)))
    forms))
 
+
+(declaim (ftype (function (t) boolean) ancestor-param-p))
+(defun ancestor-param-p (vars)
+  ; Fixme: There must be more faster solution.
+  (declare (optimize (speed 3)))
+  (if (or (typecase vars
+	    (list
+	     (member-if #'(lambda (x)
+			    (typecase x
+			      (waffetensor
+			       (waffetensor-is-ancestor-param x))
+			      (list
+			       (ancestor-param-p x))
+			      (T ; defnode's argument must be consisted of waffetensor, or list consisted of waffetensor.
+			       ;(error "~a" x)
+			       )))
+			vars))
+	    (waffetensor
+	     (waffetensor-is-ancestor-param vars))
+	    (T
+	     ;(error "~a" vars)
+	     )))
+      t
+      nil))
+
 (defmacro with-object-macrolet-forms (self-heap vars &body body)
   "vars - the list of symbols"
   `(macrolet ((self (name)
@@ -943,10 +968,7 @@ Example:
 			       (not
 				(waffetensor-path-through-node? ,value))
 			       t)
-		       (when (member t (list ,@',vars)
-				     :test
-				     #'(lambda (x y)
-					 (eql x (waffetensor-is-ancestor-param y))))
+		       (when (ancestor-param-p (list ,@,vars))
 			 (cond
 			   ((and (typep (data ,value) 'mat)
 				 (not (null thread-info)))
@@ -1022,9 +1044,7 @@ Example:
 	     (is-ancestor-param
 	       ,(if (eql object-type :node)
 		    `(unless *no-grad*
-		       (if (member-if #'waffetensor-is-ancestor-param (list ,@vars))
-			   t
-			   nil))
+		       (ancestor-param-p (list ,@vars)))
 		    nil)))
 	 ,(unless (eql object-type :node)
 	    `(declare (ignore is-ancestor-param)))
@@ -1130,7 +1150,7 @@ Example:
 	 (defun ,function-name (,self ,@args)
 	   ,docs
 	   ,@declarations
-	   (with-object-macrolet-forms ',self ,args-symbols
+	   (with-object-macrolet-forms ',self ',args-symbols
 	     ,(if (find object-type `(:node :optimizer))
 		  `(with-define-function-in-defnode-way ,object-type ,args-symbols
 		     ,@body)
