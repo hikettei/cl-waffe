@@ -8,25 +8,44 @@
     (with-section "What can WaffeTensor do?"
       (insert "Internally, All matrices created by cl-waffe is a type of mgl-mat, being accessed by the accessor (data tensor).")
       (with-evals
-	"(setq x (!randn `(3 3)))"
-	"(data x)")
+	"(setq x (!randn `(3 3))) ; WaffeTensor"
+	"(data x) ;mgl-mat:mat")
 
       (insert "In the same way, WaffeTensor can restore scalar object.")
       
       (with-evals
-	"(setq x (const 1.0))"
-	"(data x)")
+	"(setq x (const 1.0)) : WaffeTensor"
+	"(data x) ; single-float")
 
       (insert "That is, one of the main roles of WaffeTensor is to be @b(a wrapper for multiple data structures.)")
 
       (insert "Moreover, WaffeTensor also has these roles:")
+
+      (with-section "To Restore Computation Nodes"
+	(insert "Operations performed via cl-waffe, creates a @b(comutation nodes). This can all be extended by the defnode and call macros described the defnode and call section.")
+	(with-eval
+	  "
+(let ((a (const 1.0))
+      (b (const 1.0)))
+  (!add a b))")
+	(insert "When gradient is not required (e.g.: predict), the macro (with-no-grad) would be useful.")
+	(with-eval
+	  "
+(with-no-grad
+    (let ((a (const 1.0))
+	  (b (const 1.0)))
+      (!add a b)))")
+	)
       
       (with-enum
 	(item "To restore Computation Nodes")
 	(item "To restore Gradients")
 	(item "To distinguish What Tensor Requires Grads")
 	(item "To store Lazy-Evaluated Function."))
-      (insert "This is why the definition of WaffeTensor has a large number of slots."))
+      (insert "This is why the definition of WaffeTensor has a large number of slots.")
+
+      ; I guess more practical examples are needed.
+      )
 
     (with-section "Parameter and Const"
       (insert "There are two types of WaffeTensor, parameter and constant. The parameter creates gradient when (backward out) is called, on the other hand, the constant doesn't.")
