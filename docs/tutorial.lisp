@@ -2,7 +2,7 @@
 (in-package :cl-waffe.documents)
 
 (with-page *tutorials* "Tutorials"
-  (with-section "Tensor"
+  (with-section "Introducing WaffeTensor"
     (insert "Most deep learning frameworks, represented by PyTorch's Tensor and Chainer's Variables, has their own data structures to store matrices. In cl-waffe, @b(WaffeTensor) is available and defined by Common Lisp's @b(defstruct).")
 
     (with-section "What can WaffeTensor do?"
@@ -19,7 +19,7 @@
 
       (insert "That is, one of the main roles of WaffeTensor is to be @b(a wrapper for multiple data structures.)")
 
-      (insert "Moreover, WaffeTensor also has these roles:")
+      (insert "~%~%You may well feel it is just rebundant for waffetensor to be only a wrapper. Of course, WaffeTensor has also these roles:")
 
       (with-section "To Restore Computation Nodes"
 	(insert "Operations performed via cl-waffe, creates a @b(comutation nodes). This can all be extended by the defnode and call macros described the defnode and call section.")
@@ -28,24 +28,45 @@
 (let ((a (const 1.0))
       (b (const 1.0)))
   (!add a b))")
-	(insert "When gradient is not required (e.g.: predict), the macro (with-no-grad) would be useful.")
+	(insert "When gradient is not required (e.g.: predict), the macro @c((with-no-grad)) would be useful.")
 	(with-eval
 	  "
 (with-no-grad
     (let ((a (const 1.0))
 	  (b (const 1.0)))
-      (!add a b)))")
-	)
-      
-      (with-enum
-	(item "To restore Computation Nodes")
-	(item "To restore Gradients")
-	(item "To distinguish What Tensor Requires Grads")
-	(item "To store Lazy-Evaluated Function."))
-      (insert "This is why the definition of WaffeTensor has a large number of slots.")
+      (!add a b)))"))
 
-      ; I guess more practical examples are needed.
-      )
+      (with-section "To Restore Gradients"
+	(insert "WaffeTensors which created by @c((parameter tensor)) macro, posses the gradients, where you can get via `(backward out)`")
+
+	(with-evals
+	  "(setq a (parameter (!randn `(3 3))))"
+	  "(setq b (parameter (!randn `(3 3))))"
+	  "(setq c (parameter (!randn `(3 3))))"
+	  "(setq z (!sum (!add (!mul a b) c))) ; computes z=a*b + c, and summarize it."
+	  "(backward z)"
+	  "(grad a)"
+	  "(grad b)"
+	  "(grad c)")
+
+	(insert "(backward out) called inside of (with-verbose &body body) macro, will display how the computation nodes are traced. It would be helpful for debugging."))
+
+      (with-section "To distinguish What Tensor Requires Gradients"
+	(insert "WaffeTensor that requires gradients, are represented by @c((parameter tensor)), on the other hand, don't requires one are @c((const)). Then, Computational nodes that have no parameters at the destination of back propagation do not need to keep a copy for gradient creation during forward propagation or to perform back propagation in the first place. WaffeTensor determines this dynamically during forward propagation."))
+
+      (with-section "To Store Lazy-Evaluated Object"
+	(insert "You may notice that: some operators, like !transpose, creates lazy-evaluated tensor when get started with cl-waffe.")
+	(with-evals
+	  "(!transpose (!randn `(3 1)))")
+
+	(insert "They behaves as if they're normal tensor (In fact, !shape !dims etc... works as usual), but aren't evaluated until (value tensor) is called.")
+
+	(with-evals
+	  "(setq transpose (!transpose (!randn `(3 1))))"
+	  "(value transpose)"
+	  "transpose")
+
+	(insert "This property helps to reduce the cost of !transpose before !matmul")))
 
     (with-section "Parameter and Const"
       (insert "There are two types of WaffeTensor, parameter and constant. The parameter creates gradient when (backward out) is called, on the other hand, the constant doesn't.")

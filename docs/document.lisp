@@ -70,8 +70,8 @@
 		  (with-evals (&rest codes)
 		    `(progn
 		       (format ,',output-to "~%~%~%")
+		       (format ,',output-to "@b(REPL:)")
 		       (dolist (code ',codes)
-			 (format ,',output-to "@b(Examples:)")
 			 (format ,',output-to "~%@begin[lang=lisp](code)~%CL-WAFFE> ~a~%@end[lang=lisp](code)~%" code)
 			 ;(format ,',output-to "~%@b(Output)~%")
 			 (format ,',output-to "~%@begin[lang=lisp](code)~%~a~%@end[lang=lisp](code)~%" (eval (read-from-string code))))))
