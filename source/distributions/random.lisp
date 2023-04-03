@@ -21,44 +21,7 @@
 
 ; Todo: Optimize
 (defun !random (dims limit)
-  "Initialize an tensor of dims (cons)
-
-!random can be called with a varying number of type of arguments:
-
-@begin(section)
-@title(When limit=fixnum)
-init within the range of @c(0<=x<limit)
-
-@begin[lang=lisp](code)
-;#Const(((1.0 2.0 ~ 2.0 1.0)        
-;                 ...
-;        (2.0 2.0 ~ 2.0 2.0)) :mgl t :shape (10 10))
-@end[lang=lisp](code)
-@end(section)
-
-@begin(section)
-@title(When limit=single-float)
-init within the range of @c(0<=x<limit)
-@begin[lang=lisp](code)
-(!random '(10 10) 3.0)
-;#Const(((0.152... 2.203... ~ 2.360... 2.216...)        
-;                 ...
-;        (1.003... 2.257... ~ 2.305... 2.025...)) :mgl t :shape (10 10))
-@end[lang=lisp](code)
-@end(section)
-
-@begin(section)
-@title(When limit=(cons single-float1 single-float2))
-init with single-float1<=x<single-float2, where each element is single-float.
-@begin[lang=lisp](code)
-(!random '(10 10) '(1.0 3.0))
-;#Const(((1.982... 1.526... ~ 1.388... 1.312...)        
-;                 ...
-;        (1.829... 2.676... ~ 1.226... 2.980...)) :mgl t :shape (10 10))
-@end[lang=lisp](code)
-@end(section)
-
-Return: WaffeTensor
+  "Initializes the new tensor of dims. Each element is consisted of a uniform-random within limit. limit must be following: fixnum, single-float, cons. and depending on this !random has a multiple behaviours.
 "
   (let* ((res (!zeros dims))
          (upper-limit (if (listp limit) (second limit) limit))
@@ -72,17 +35,7 @@ Return: WaffeTensor
 
 (declaim (ftype (function ((or cons fixnum) function) waffetensor) !random-with))
 (defun !random-with (dims f)
-  "Initializes the tensor of dims. Each element is initialized with @cl:param(f) where f is a lambda exp and called with index.
-
-Warning: Using mref and slow algorithm, @b(it is so slow).
-
-Example:
-@begin[lang=lisp](code)
-(!random-with '(10 10) #'(lambda (n) n))
-;#Const(((0.0 1.0 ~ 8.0 9.0)        
-;                 ...
-;        (90.0 91.0 ~ 98.0 99.0)) :mgl t :shape (10 10))
-@end[lang=lisp](code)
+  "Initializes the tensor of dims. Each element is initialized with @cl:param(f), f is a funcallable function. and called with the index of the tensor.
 
 See also: !init-with which is alias for !random-with.
 "
@@ -102,23 +55,14 @@ See also: !init-with which is alias for !random-with.
 
 
 (defun !normal (dims &optional (mean 2.0) (stddev 1.0))
-  "Initializes tensor with sample of standard distribution."
+  "Initializes the new tensor with sampling the standard distribution."
   (declare (type cons dims))
   (let* ((res (!zeros dims)))
     (gaussian-random! (data res) :mean mean :stddev stddev)
     res))
 
 (defun !randn (dims)
-  "Initializes tensor with normal distribution in a faster way where mean=0.0, var=1.0.
-
-Example:
-
-@begin[lang=lisp](code)
-(!randn `(10 10))
-;#Const(((0.677... 0.054... ~ 0.257... 0.261...)        
-;                 ...
-;        (0.063... 0.607... ~ 0.460... 0.730...)) :mgl t :shape (10 10))
-@end[lang=lisp](code)"
+  "Initializes the new tensor of dims with sampling normal distribution where mean=0.0, stddev=1.0"
   (!normal dims 0.0 1.0))
 
 (defun !uniform-random (dims &key (limit 1))

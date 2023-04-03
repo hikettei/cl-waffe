@@ -1,4 +1,4 @@
 
 @begin(section)
-@title(NN)
+@title(Package :cl-waffe.nn)
 @end(section)

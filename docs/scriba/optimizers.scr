@@ -1,4 +1,4 @@
 
 @begin(section)
-@title(optims)
+@title(Package :cl-waffe.optimizers)
 @end(section)

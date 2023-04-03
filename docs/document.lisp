@@ -63,6 +63,13 @@
 		    `(format ,',output-to "~%@begin[lang=lisp](code)~%~a~%@end[lang=lisp](code)" ,content))
 		  (with-shell-code (content)
 		    `(format ,',output-to "~%@begin[lang=shell](code)~%~a~%@end[lang=shell](code)" ,content))
+		  (with-api (type function-name &body body)
+		    `(progn
+		       (format ,',output-to "~%@begin(section)~%@title(~a)~%" ,function-name)
+		       (placedoc "cl-waffe" ,type ,function-name)
+		       ,@body
+		       (format ,',output-to "~%@end(section)")
+		       ))
 		  (with-eval (code)
 		    `(progn ; `(progn (read-from-string ~))
 		       (format ,',output-to "~%~%~%@b(Input)")

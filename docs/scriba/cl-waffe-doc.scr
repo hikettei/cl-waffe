@@ -1,4 +1,4 @@
 
 @begin(section)
-@title(cl-waffe APIs)
+@title(Package :cl-waffe)
 @end(section)

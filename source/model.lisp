@@ -249,7 +249,7 @@ Output: An last value of layers."
 		&rest inputs
 		&aux
 		  (features (model-inlineable-p model)))
-  "todo: docs"
+  "calls the given model's forward slot with inputs."
   (declare (optimize (speed 3)))
   (if features
       #|When there's a defined node|#

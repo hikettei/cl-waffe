@@ -12,6 +12,7 @@
 
 			"scriba/cl-waffe-doc.scr"
 			"scriba/nn-doc.scr"
+			"scriba/optimizers.scr"
 			"scriba/conditions.scr"
 
 			"scriba/APIs_cl-waffe.scr"
