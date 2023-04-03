@@ -2,19 +2,7 @@
 (in-package :cl-waffe)
 
 (defun !bernoulli (dims rate)
-  "Init a tensor of dims with bernoulli
-
-rate is single-float, and [0 1]
-
-See also: @cl:param(!binomial), alias for it.
-
-Example:
-@begin[lang=lisp](code)
-(!binomial '(10 10) 0.5)
-;#Const(((1.0 0.0 ~ 1.0 1.0)        
-;                 ...
-;        (0.0 1.0 ~ 1.0 0.0)) :mgl t :shape (10 10))
-@end[lang=lisp](code)"
+  "Initializes the tensor of dims with sampling bernoulli distribution, where p=rate. p=[0, 1]"
   (declare (optimize (speed 3))
 	   (type cons dims)
 	   (type (single-float 0e0) rate))

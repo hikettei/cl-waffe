@@ -5,7 +5,6 @@
 (defparameter pi-single-float (the single-float (coerce pi 'single-float)))
 
 (defnode ReLUTensor nil
-  :optimize t
   :parameters ((path-through nil) (zero-buff nil))
   :forward ((x) ; Todo rewrite more faster way.
 		(unless (self zero-buff)
@@ -27,7 +26,6 @@ Output: Tensor"
   (call (ReLUTensor) (assure-tensor x)))
 
 (defnode SigmoidTensor nil
-  :optimize t
   :parameters ((xi T))
   :forward ((x)
 	    (let ((result (!!div 1 (!!add (!!exp (!mul -1 x)) 1))))
@@ -46,7 +44,6 @@ Output: Tensor"
   (call (SigmoidTensor) (assure-tensor x)))
 
 (defnode TanhTensor nil
-  :optimize t
   :parameters ((xi T))
   :forward ((x)
 	    (save-for-backward xi x)

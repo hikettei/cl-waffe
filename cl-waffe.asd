@@ -133,3 +133,22 @@
 			     (:file "output")
 			     (:file "benchmark")
 			     (:file "benchmark1")))))
+
+
+(asdf:defsystem :cl-waffe/documents
+  :version nil
+  :author "hikettei"
+  :licence "MIT"
+  :depends-on (:cl-waffe :cl-ppcre)
+  :components ((:module "docs"
+		:components ((:file "package")
+			     (:file "document")
+			     (:file "overview")
+			     (:file "tutorial")
+			     (:file "tips")
+			     (:file "features")
+			     (:file "cl-waffe-docs")
+			     (:file "cl-waffe-nn-docs")
+			     (:file "cl-waffe-optimizers-doc")
+			     (:file "conditions")
+			     ))))

@@ -5,7 +5,6 @@
 (defmodel BatchNorm2d (in-features &key (affine t) (epsilon 1e-7))
   :document (with-usage "BatchNorm2d"
 	      :note "todo: docs")
-  :optimize t
   :parameters ((affine (if affine
 			   (linearlayer in-features in-features T)
 			   T))

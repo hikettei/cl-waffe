@@ -2,31 +2,9 @@
 (in-package :cl-waffe)
 
 (define-with-typevar !beta u (dims alpha beta)
-  "Initializes tensor with samples of beta distribution in a faster way.
+  "Initializes the new tensor of dims with sampling beta distribution.
 
-Algorithm: https://dl.acm.org/doi/pdf/10.1145/359460.359482
-
-x=[0,1]
-
-a = min(alpha, beta)
-
-b = max(alpha, beta)
-
-PDF: fX(x)=x^a−1*(1−x)*b−1/B(a,b)
-
-where B(a,b)=∫1,0{x^a−1(1−x)^b−1}dx
-
-@begin[lang=lisp](code)
-(time (!beta '(200) 5.0 1.0))
-;Evaluation took:
-;  0.000 seconds of real time
-;  0.000063 seconds of total run time (0.000063 user, 0.000000 system)
-;  100.00% CPU
-;  143,846 processor cycles
-;  0 bytes consed
-  
-;#Const((0.813... 0.832... ~ 0.865... 0.787...) :mgl t :shape (200))
-@end[lang=lisp](code)"
+Algorithm: https://dl.acm.org/doi/pdf/10.1145/359460.359482"
 
   (declare (optimize (speed 3))
 	   (type cons dims)

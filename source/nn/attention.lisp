@@ -2,7 +2,6 @@
 (in-package :cl-waffe.nn)
 
 (defmodel ScaleDotProductAttention (n-dim)
-  :optimize t
   :parameters ((n-dim n-dim :type fixnum))
   :forward ((q k v &optional (mask (const NIL)))
 	    (let* ((scalar (sqrt (self n-dim)))

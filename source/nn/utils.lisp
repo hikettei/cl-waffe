@@ -5,7 +5,6 @@
 (defnode Dropout (&optional (dropout-rate 0.5))
   :document (with-usage "Dropout"
 	      :note "Todo: docstring")
-  :optimize t
   :parameters ((dropout-rate
 		(if (and (> dropout-rate 0.0)
 			 (< dropout-rate 1.0))

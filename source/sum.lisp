@@ -2,7 +2,6 @@
 (in-package :cl-waffe)
 
 (defnode SumTensor (axis)
-  :optimize t
   :parameters ((axis axis) (repeats T))
   :forward ((x)
 	    (setf (self repeats) (assure-tensor (!shape x (self axis))))
@@ -12,7 +11,6 @@
 			 (self repeats)))))
 
 (defnode MeanTensor (axis)
-  :optimize t
   :parameters ((axis axis) (repeats T))
   :forward ((x)
 	    (setf (self repeats) (assure-tensor (!shape x (self axis))))

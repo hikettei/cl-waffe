@@ -4,6 +4,7 @@
 (defpackage cl-waffe
   (:documentation "An package for defining node, initializing and computing with tensor, and backprops.")
   (:use :cl :mgl-mat :alexandria)
+
   (:export #:*verbose*
 	   #:with-verbose)
   (:export #:with-jit
@@ -41,13 +42,12 @@
 	   #:*print-mat-max-size*)
 
   (:export
+           #:WITH-SEARCHING-CALC-NODE
 	   #:!allow-destruct
 	   #:!disallow-destruct)
 
-  (:export
-	   ; Accessors
-           #:warranty
-           #:waffe-tensor-p	   
+  (:export #:warranty
+	   ; Accessors	   
 	   #:data
 	   #:value
 	   #:grad)
@@ -62,9 +62,7 @@
 	   #:with-no-grad
 	   #:*no-grad*
 	   #:*restart-non-exist-backend*)
-  (:export
-	   #:with-searching-calc-node
-	   #:defmodel
+  (:export #:defmodel
 	   #:defnode
 	   #:defoptimizer
 	   #:deftrainer
@@ -80,8 +78,7 @@
 	   #:get-dataset
 	   #:get-dataset-length
 
-	   #:call-and-dispatch-kernel
-	   #:with-optimized-operation)
+	   #:call-and-dispatch-kernel)
 
   (:export ; macros (binded by defobject) in waffe-object
            #:model
@@ -93,8 +90,7 @@
   (:export
            #:mlist
 	   #:mth
-	   #:model-list
-	   #:with-model-list)
+	   #:model-list)
 
   (:export
           #:get-forward-caller
@@ -134,9 +130,6 @@
 	   #:!fill
 	   #:!arange
 	   #:!aref
-	   #:!row-major-aref
-	   #:!with-mgl-operation
-	   #:!copy
 	   #:!index
 	   #:!where
 	   #:!random
@@ -244,6 +237,7 @@
   "An identifiers of cl-waffe's objects.")
 
 (defmacro save-for-backward (slot tensor)
+  "TODO :DOCSTRING"
   (error "Welcome to cl-waffe.
 Attempting your tensor ~a to a slot ~a, but save-for-backward wasn't called in:
 1. defmodel's forward or backward.
@@ -261,6 +255,7 @@ For example:
 	 tensor))
 
 (defmacro self (name)
+  "Todo: Docstring"
   (error "Welcome to cl-waffe.
 Attempting to access ~a but couldn't.
 This is because self wasn't called in:
@@ -279,12 +274,14 @@ For example:
             (+ (self A) x)))" name))
 
 (defmacro model ()
+  "Todo: Docstring"
   (error "Welcome to cl-waffe.
 Attempting to access the currently model but (model) wasn't called in:
 1. defmodel/defnode's forward or backward
 2. defoptimizer's slots"))
 
 (defmacro update (&rest args)
+  "Todo: Docstring"
   (declare (ignore args))
   (error "Welcome to cl-waffe.
 The macro (update) can only be called in deftrainer's slots.
@@ -293,6 +290,7 @@ For details, documentations are available.
 https://hikettei.github.io/cl-waffe-docs/docs/cl-waffe.html#3-deftrainer"))
 
 (defmacro zero-grad ()
+  "Todo docstring"
   (error "Welcome to cl-waffe.
 The macro (zero-grad) can only be called in deftrainer's slots.
 For details, documentations are available.

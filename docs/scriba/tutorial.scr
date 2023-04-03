@@ -1,0 +1,843 @@
+
+@begin(section)
+@title(Tutorials)
+@begin(section)
+@title(Introducing WaffeTensor)
+
+Most deep learning frameworks, represented by PyTorch's Tensor and Chainer's Variables, has their own data structures to store matrices. In cl-waffe, @b(WaffeTensor) is available and defined by Common Lisp's @b(defstruct).
+
+
+⚠️ There is no guarantee that this design is technically mature.
+@begin(section)
+@title(What can WaffeTensor do?)
+
+Internally, All matrices created by cl-waffe is a type of mgl-mat, being accessed by the accessor (data tensor).
+
+
+@b(REPL:)
+@begin[lang=lisp](code)
+CL-WAFFE> (setq x (!randn `(3 3))) ; WaffeTensor
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+#Const(((0.388... -1.56... 0.298...)        
+                 ...
+        (0.241... 1.498... -1.07...)) :dtype :float :shape (3 3) :backward NIL)
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+CL-WAFFE> (data x) ;mgl-mat:mat
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+#<MAT 3x3 AB #2A((0.38843256 -1.5604061 0.29888523)
+                 (0.7765525 -0.46924242 0.74521625)
+                 (0.24136996 1.4987508 -1.0782416))>
+@end[lang=lisp](code)
+
+In the same way, WaffeTensor can restore scalar object.
+
+
+@b(REPL:)
+@begin[lang=lisp](code)
+CL-WAFFE> (setq x (const 1.0)) : WaffeTensor
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+#Const(1.0 :dtype SINGLE-FLOAT :backward NIL)
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+CL-WAFFE> (data x) ; single-float
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+1.0
+@end[lang=lisp](code)
+
+That is, one of the main roles of WaffeTensor is to be @b(a wrapper for multiple data structures.)
+
+
+You may well feel it is just rebundant for waffetensor to be only a wrapper. Of course, WaffeTensor has also these roles:
+@begin(section)
+@title(To Restore Computation Nodes)
+
+Operations performed via cl-waffe, creates a @b(comutation nodes). This can all be extended by the defnode and call macros described the defnode and call section.
+
+
+@b(Input)
+@begin[lang=lisp](code)
+CL-WAFFE>
+(let ((a (const 1.0))
+      (b (const 1.0)))
+  (!add a b))
+@end[lang=lisp](code)
+
+@b(Output)
+
+@begin[lang=lisp](code)
+#Const(2.0 :dtype SINGLE-FLOAT :backward <Node: ADDTENSOR{W836}>)
+@end[lang=lisp](code)
+
+When gradient is not required (e.g.: predict), the macro @c((with-no-grad)) would be useful.
+@cl:with-package[name="cl-waffe"](
+@cl:doc(macro with-no-grad)
+)
+
+
+
+@b(Input)
+@begin[lang=lisp](code)
+CL-WAFFE>
+(with-no-grad
+    (let ((a (const 1.0))
+	  (b (const 1.0)))
+      (!add a b)))
+@end[lang=lisp](code)
+
+@b(Output)
+
+@begin[lang=lisp](code)
+#Const(2.0 :dtype SINGLE-FLOAT :backward NIL)
+@end[lang=lisp](code)
+
+@end(section)
+@begin(section)
+@title(To Restore Gradients)
+
+WaffeTensors which created by @c((parameter tensor)) macro, posses the gradients, where you can get via `(backward out)`
+@cl:with-package[name="cl-waffe"](
+@cl:doc(macro parameter)
+)
+
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function backward)
+)
+
+
+
+@b(REPL:)
+@begin[lang=lisp](code)
+CL-WAFFE> (setq a (parameter (!randn `(3 3))))
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+#Parameter{((-0.66... -0.87... 0.539...)            
+                         ...
+            (0.176... -0.32... 0.308...)) :dtype :float :shape (3 3) :backward NIL}
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+CL-WAFFE> (setq b (parameter (!randn `(3 3))))
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+#Parameter{((-2.05... -1.10... 0.237...)            
+                         ...
+            (-0.26... 0.141... 0.094...)) :dtype :float :shape (3 3) :backward NIL}
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+CL-WAFFE> (setq c (parameter (!randn `(3 3))))
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+#Parameter{((-0.23... 0.432... 0.050...)            
+                         ...
+            (-0.53... 0.092... -0.39...)) :dtype :float :shape (3 3) :backward NIL}
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+CL-WAFFE> (setq z (!sum (!add (!mul a b) c))) ; computes z=a*b + c, and summarize it.
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+#Const(5.6745043 :dtype SINGLE-FLOAT :backward <Node: SUMUPTENSOR{W846}>)
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+CL-WAFFE> (backward z)
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+NIL
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+CL-WAFFE> (grad a)
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+#<MAT 3x3 B #2A((-0.22871757 -0.12243843 0.026442857)
+                (-0.02219441 0.42385927 -0.0024049429)
+                (-0.029781269 0.015730541 0.010543759))>
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+CL-WAFFE> (grad b)
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+#<MAT 3x3 B #2A((-0.074292995 -0.09741843 0.059954096)
+                (0.17647834 0.03662637 0.27036503)
+                (0.019568805 -0.036299534 0.034257263))>
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+CL-WAFFE> (grad c)
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+#<MAT 3x3 BF #2A((0.11111111 0.11111111 0.11111111)
+                 (0.11111111 0.11111111 0.11111111)
+                 (0.11111111 0.11111111 0.11111111))>
+@end[lang=lisp](code)
+
+@cl:with-package[name="cl-waffe"](
+@cl:doc(macro with-verbose)
+)
+
+(backward out) called inside of (with-verbose &body body) macro, will display how the computation nodes are traced. It would be helpful for debugging.
+@end(section)
+@begin(section)
+@title(To distinguish What Tensor Requires Gradients)
+
+WaffeTensor that requires gradients, are represented by @c((parameter tensor)), on the other hand, don't requires one are @c((const)). Then, Computational nodes that have no parameters at the destination of back propagation do not need to keep a copy for gradient creation during forward propagation or to perform back propagation in the first place. WaffeTensor determines this dynamically during forward propagation.
+@end(section)
+@begin(section)
+@title(To Store Lazy-Evaluated Object)
+
+You may notice that: some operators, like !transpose, creates lazy-evaluated tensor when get started with cl-waffe.
+
+
+@b(REPL:)
+@begin[lang=lisp](code)
+CL-WAFFE> (!transpose (!randn `(3 1)))
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+#Const(<Transposed Tensor> :shape (1 3) :backward <Node: TRANSPOSETENSOR{W849}>)
+@end[lang=lisp](code)
+
+They behaves as if they're normal tensor (In fact, !shape !dims etc... works as usual), but aren't evaluated until (value tensor) is called.
+
+
+@b(REPL:)
+@begin[lang=lisp](code)
+CL-WAFFE> (setq transpose (!transpose (!randn `(3 1))))
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+#Const(<Transposed Tensor> :shape (1 3) :backward <Node: TRANSPOSETENSOR{W850}>)
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+CL-WAFFE> (value transpose)
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+#<MAT 1x3 B #2A((-1.9306349 -0.07226962 1.2816001))>
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+CL-WAFFE> transpose
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+#Const(((-1.93... -0.07... 1.281...)) :dtype :float :shape (1 3) :backward <Node: TRANSPOSETENSOR{W850}>)
+@end[lang=lisp](code)
+
+This property helps to reduce the cost of !transpose before !matmul
+@end(section)
+@end(section)
+@begin(section)
+@title(Parameter and Const)
+
+There are two types of WaffeTensor, parameter and constant. The parameter creates gradient when (backward out) is called, on the other hand, the constant doesn't.
+@begin(section)
+@title(Initialize Constants)
+
+cl-waffe provides various ways to initialize constants. For example, `!randn` initializes the new tensor of the given dims with sampling the standard distribution, where var=0.0, stdev=1.0. !beta samples the beta distribution with the given alpha and beta.
+
+
+@b(REPL:)
+@begin[lang=lisp](code)
+CL-WAFFE> (!randn `(10 10))
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+#Const(((1.029... 0.023... ~ -0.70... -0.29...)        
+                 ...
+        (-0.57... -1.64... ~ -0.19... -0.60...)) :dtype :float :shape (10 10) :backward NIL)
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+CL-WAFFE> (!beta `(10 10) 2.0 1.0)
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+#Const(((0.663... 0.590... ~ 0.315... 0.387...)        
+                 ...
+        (0.152... 0.806... ~ 0.872... 0.957...)) :dtype :float :shape (10 10) :backward NIL)
+@end[lang=lisp](code)
+
+WaffeTensors we obtain from standard initializing methods are Constant. In general, cl-waffe provides the constructor (const value). The given value is coerced to properly types. In this example, we obtain mgl-mat from simple-array.
+
+
+@b(REPL:)
+@begin[lang=lisp](code)
+CL-WAFFE> (const (make-array `(3 3)))
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+#Const(((0.0 0.0 0.0)        
+                 ...
+        (0.0 0.0 0.0)) :dtype :float :shape (3 3) :backward NIL)
+@end[lang=lisp](code)
+
+@end(section)
+@begin(section)
+@title(Initialize Parameter)
+
+Parameters are initialized via the macro (parameter tensor), which makes the given tensor parameter.
+
+
+@b(REPL:)
+@begin[lang=lisp](code)
+CL-WAFFE> (parameter (!randn `(10 10)))
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+#Parameter{((0.208... -1.28... ~ 0.296... -1.47...)            
+                         ...
+            (-0.98... -0.46... ~ 0.633... 0.862...)) :dtype :float :shape (10 10) :backward NIL}
+@end[lang=lisp](code)
+
+@end(section)
+@begin(section)
+@title(Parameter vs Constant)
+
+Excepted Usage of them is:
+@begin(deflist)
+@begin(def)
+Constant
+@end(def)
+@begin(term)
+Datasets, the temporary result of calculations, Parameter which is not necessary to be optimized.
+@end(term)
+@begin(def)
+Parameter
+@end(def)
+@begin(term)
+Trainable Variables, to be optimized by @b(optimizers) defined by defoptimizer.
+@end(term)
+@end(deflist)
+@end(section)
+@end(section)
+@end(section)
+@begin(section)
+@title(defnode and call)
+
+@cl:with-package[name="cl-waffe"](
+@cl:doc(macro defnode)
+)
+
+The macros @b(defnode) and @b(call) serve as a key component of cl-waffe, since @b(defnode) enables users to define forward and backward propagation in a simple notations and optimize them. If needed, they're inlined via @b(call) macro. Let's get started with this example. it defines a computation node that finds the sum of two single-float values.
+
+
+@b(Input)
+@begin[lang=lisp](code)
+CL-WAFFE>
+(defnode ScalarAdd ()
+  :disassemble-forward t
+  :forward-declaim (declaim (ftype (function (ScalarAdd waffetensor waffetensor) waffetensor) :forward))
+  :forward ((x y)
+	    (let ((x (data x))
+		  (y (data y)))
+	      (declare (type single-float x y))
+	      (const (+ x y))))
+  :disassemble-backward t
+  :backward-declaim (declaim (type (function (ScalarAdd waffetensor) list) :backward))
+  :backward ((dy) (list dy dy)))
+@end[lang=lisp](code)
+
+@b(Output)
+
+@begin[lang=lisp](code)
+NIL
+@end[lang=lisp](code)
+
+Through this macro, these structures and functions are defined:
+@begin(enum)
+@item(The structure, ScalarAdd)
+@item(The constructor function, (ScalarAdd))
+@item(The function, (call-scalaradd-forward-mgl self x y) where self is a strucure ScalarAdd)
+@item(The function, (call-scalaradd-backward-mgl self dy) where self is a structure ScalarAdd.)
+@end(enum)
+Setting :disassemble-forward or :disassemble-backward t, prints the disassemble of :forward/:backward (only essential parts) respectively. From the result below, it seems to be optimized enough...
+@begin[lang=lisp](code)
+; disassembly for #:|nodedebug9718|
+; Size: 148 bytes. Origin: #x540A110F                         ; #:|nodedebug9718|
+; 0F:       498B4510         MOV RAX, [R13+16]                ; thread.binding-stack-pointer
+; 13:       488945F8         MOV [RBP-8], RAX
+; 17:       4883EC10         SUB RSP, 16
+; 1B:       488B55F0         MOV RDX, [RBP-16]
+; 1F:       B902000000       MOV ECX, 2
+; 24:       48892C24         MOV [RSP], RBP
+; 28:       488BEC           MOV RBP, RSP
+; 2B:       B802AC3650       MOV EAX, #x5036AC02              ; #<FDEFN DATA>
+; 30:       FFD0             CALL RAX
+; 32:       480F42E3         CMOVB RSP, RBX
+; 36:       4C8BC2           MOV R8, RDX
+; 39:       4C8945E0         MOV [RBP-32], R8
+; 3D:       4883EC10         SUB RSP, 16
+; 41:       488B55E8         MOV RDX, [RBP-24]
+; 45:       B902000000       MOV ECX, 2
+; 4A:       48892C24         MOV [RSP], RBP
+; 4E:       488BEC           MOV RBP, RSP
+; 51:       B802AC3650       MOV EAX, #x5036AC02              ; #<FDEFN DATA>
+; 56:       FFD0             CALL RAX
+; 58:       480F42E3         CMOVB RSP, RBX
+; 5C:       4C8B45E0         MOV R8, [RBP-32]
+; 60:       4180F819         CMP R8B, 25
+; 64:       7538             JNE L1
+; 66:       66490F6ED0       MOVQ XMM2, R8
+; 6B:       0FC6D2FD         SHUFPS XMM2, XMM2, #4r3331
+; 6F:       80FA19           CMP DL, 25
+; 72:       7403             JEQ L0
+; 74:       CC51             INT3 81                          ; OBJECT-NOT-SINGLE-FLOAT-ERROR
+; 76:       08               BYTE #X08                        ; RDX(d)
+; 77: L0:   66480F6ECA       MOVQ XMM1, RDX
+; 7C:       0FC6C9FD         SHUFPS XMM1, XMM1, #4r3331
+; 80:       F30F58CA         ADDSS XMM1, XMM2
+; 84:       660F7ECA         MOVD EDX, XMM1
+; 88:       48C1E220         SHL RDX, 32
+; 8C:       80CA19           OR DL, 25
+; 8F:       B902000000       MOV ECX, 2
+; 94:       FF7508           PUSH QWORD PTR [RBP+8]
+; 97:       B802DD3650       MOV EAX, #x5036DD02              ; #<FDEFN CONST>
+; 9C:       FFE0             JMP RAX
+; 9E: L1:   CC51             INT3 81                          ; OBJECT-NOT-SINGLE-FLOAT-ERROR
+; A0:       20               BYTE #X20                        ; R8(d)
+; A1:       CC10             INT3 16                          ; Invalid argument count trap
+@end[lang=lisp](code)
+@begin[lang=lisp](code)
+; disassembly for #:|nodedebug9739|
+; Size: 84 bytes. Origin: #x541BA04C                          ; #:|nodedebug9739|
+; 4C:       498B4510         MOV RAX, [R13+16]                ; thread.binding-stack-pointer
+; 50:       488945F8         MOV [RBP-8], RAX
+; 54:       4D896D28         MOV [R13+40], R13                ; thread.pseudo-atomic-bits
+; 58:       498B5558         MOV RDX, [R13+88]                ; thread.cons-tlab
+; 5C:       488D4220         LEA RAX, [RDX+32]
+; 60:       493B4560         CMP RAX, [R13+96]
+; 64:       772E             JNBE L2
+; 66:       49894558         MOV [R13+88], RAX                ; thread.cons-tlab
+; 6A: L0:   48893A           MOV [RDX], RDI
+; 6D:       48897A10         MOV [RDX+16], RDI
+; 71:       48C7421817010050 MOV QWORD PTR [RDX+24], #x50000117  ; NIL
+; 79:       488D4217         LEA RAX, [RDX+23]
+; 7D:       48894208         MOV [RDX+8], RAX
+; 81:       80CA07           OR DL, 7
+; 84:       4D316D28         XOR [R13+40], R13                ; thread.pseudo-atomic-bits
+; 88:       7402             JEQ L1
+; 8A:       CC09             INT3 9                           ; pending interrupt trap
+; 8C: L1:   488BE5           MOV RSP, RBP
+; 8F:       F8               CLC
+; 90:       5D               POP RBP
+; 91:       C3               RET
+; 92:       CC10             INT3 16                          ; Invalid argument count trap
+; 94: L2:   6A20             PUSH 32
+; 96:       FF142528050050   CALL [#x50000528]                ; #x52A005B0: LIST-ALLOC-TRAMP
+; 9D:       5A               POP RDX
+; 9E:       EBCA             JMP L0
+@end[lang=lisp](code)
+@cl:with-package[name="cl-waffe"](
+@cl:doc(macro call)
+)
+
+Nodes defined this macro, works as if CLOS class, and they can have :parameters. However, what makes defnode distinct from them is that:
+
+
+@b(REPL:)
+@begin[lang=lisp](code)
+CL-WAFFE> (time (call (ScalarAdd) (const 1.0) (const 1.0)))
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+#Const(2.0 :dtype SINGLE-FLOAT :backward <Node: SCALARADD{W867}>)
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+CL-WAFFE> (time (+ 1.0 1.0))
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+2.0
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+Evaluation took:
+  0.000 seconds of real time
+  0.000005 seconds of total run time (0.000005 user, 0.000000 system)
+  100.00% CPU
+  11,084 processor cycles
+  0 bytes consed
+@end[lang=lisp](code)
+@begin[lang=lisp](code)
+Evaluation took:
+  0.000 seconds of real time
+  0.000001 seconds of total run time (0.000000 user, 0.000001 system)
+  100.00% CPU
+  422 processor cycles
+  0 bytes consed
+@end[lang=lisp](code)
+Nodes called by the macro @c((call)) are fully inlined, (like CL's inline-generic-function, static-dispatch). Considering ScalarAdd builds computation node in addition to summing up the arguments, these overheads are enough small. Here's how I achieve this behaviour:
+
+
+@b(REPL:)
+@begin[lang=lisp](code)
+CL-WAFFE> (macroexpand `(call (ScalarAdd) (const 1.0) (const 1.0)))
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+(LOCALLY
+ (DECLARE (OPTIMIZE (SPEED 3) (SAFETY 1))
+          (INLINE call-scalaradd-forward-mgl))
+ (call-scalaradd-forward-mgl (SCALARADD) (CONST 1.0) (CONST 1.0)))
+@end[lang=lisp](code)
+
+The function call-forward-scalaradd-mgl seems to be inlined. This is because @c((call)) can detect the type of node in the compile time. This leads one of the key propeties, @b(easy to optimise). The functions via defnode and call are optimized like:
+
+
+@b(Input)
+@begin[lang=lisp](code)
+CL-WAFFE>
+(defun sadd (x y)
+    (declare (optimize (speed 3) (safety 0))
+             (type single-float x y))
+        (call (ScalarAdd) (const x) (const y)))
+@end[lang=lisp](code)
+
+@b(Output)
+
+@begin[lang=lisp](code)
+SADD
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+(disassemble #'sadd)
+
+; disassembly for SADD
+; Size: 943 bytes. Origin: #x541AFCAE                         ; SADD
+; AFCAE:       488975F0         MOV [RBP-16], RSI
+; AFCB2:       4883EC10         SUB RSP, 16
+.
+.
+(Omitted)
+@end[lang=lisp](code)
+We got a large disassembled codes which means: all processes including building computation nodes parts, are correctly inlined. Anyway, the optimization of sadd function is properly working!. Note that the case when the type of given nodes aren't determined in compile time, call behaviours the different from this.
+
+
+@b(Input)
+@begin[lang=lisp](code)
+CL-WAFFE>
+(let ((node (ScalarAdd)))
+    (macroexpand `(call node (const 1.0) (const 1.0))))
+@end[lang=lisp](code)
+
+@b(Output)
+
+@begin[lang=lisp](code)
+(LET* ((MODEL NODE) (INPUTS (LIST (CONST 1.0) (CONST 1.0))))
+  (IF (TYPEP MODEL 'MODEL-LIST)
+      (PROGN
+       (SETQ MODEL (NTH (DATA (CAR INPUTS)) (MODEL-LIST-MLIST MODEL)))
+       (SETQ INPUTS (CDR INPUTS))
+       (ASSERT (NOT (TYPEP MODEL 'MODEL-LIST)) NIL
+               cl-waffe.call: Assertion failed because model-list can't posses model-list as a element.)))
+  (LOCALLY
+   (DECLARE (OPTIMIZE (SPEED 3))
+            (MAYBE-INLINE CALL-INLINED-FORWARD))
+   (APPLY #'CALL-INLINED-FORWARD MODEL INPUTS)))
+@end[lang=lisp](code)
+
+The expanded equation was slightly more complicated. Anyway, the most important part is @c((APPLY #'CALL-INLINED-FORWARD MODEL INPUTS)). In short, call-inlined-forward is like:
+@begin[lang=lisp](code)
+(defun call-inlined-forwrd (model &rest inputs)
+    (typecase model
+        (addtensor (call-addtensor-forward-mgl ...))
+        (scalaradd (call-scalaradd-forward-mgl ...))
+        (T ; ... If this is first trying, Redefine call-inline-forward and try again
+        )))
+@end[lang=lisp](code)
+It may be misleading but simultaneously the most simple example. Of course they're inlined. And call-inlined-forward are automatically redefined when:
+@begin(enum)
+@item(The new backend is defined.)
+@item(The node you specified doesn't match any nodes.)
+@end(enum)
+That is, No need to pay attention to when they are inlined.
+
+
+@b(Input)
+@begin[lang=lisp](code)
+CL-WAFFE>(let ((node (ScalarAdd)))
+    (time (call node (const 1.0) (const 1.0))))
+@end[lang=lisp](code)
+
+@b(Output)
+
+@begin[lang=lisp](code)
+#Const(2.0 :dtype SINGLE-FLOAT :backward <Node: SCALARADD{W869}>)
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+Evaluation took:
+  0.000 seconds of real time
+  0.000005 seconds of total run time (0.000005 user, 0.000000 system)
+  100.00% CPU
+  10,502 processor cycles
+  0 bytes consed
+@end[lang=lisp](code)
+It works the same as the first example, the overhead is enough small.
+(P.S.: I was told that it is impossible for SBCL to optimize a CASE of several thousand lines. The assumption is that the more nodes defined in cl-waffe, the less performance we got. In my own benchmarks, I felt it was doing well enough on the second call, but if it is slow, I know how to make it faster.)
+
+
+By the way, defnode's forward slot can require &rest arguments. However, @c((call)) is a macro, so that we can't use apply. Is there no way to call it with &rest arguments? No, @c(get-forward-caller) and @c(get-backward-caller) is available to get the function object itself. In cl-waffe's implementation, !concatenate requires an &rest arguments.
+@cl:with-package[name="cl-waffe"](
+@cl:doc(macro get-forward-caller)
+)
+
+@cl:with-package[name="cl-waffe"](
+@cl:doc(macro get-backward-caller)
+)
+
+@begin[lang=lisp](code)
+
+(defun !concatenate (axis &rest tensors)
+  (declare (optimize (speed 3))
+	   (type fixnum axis))
+  (let* ((node (ConcatenateTensorNode axis))
+	 (caller (get-forward-caller node)))
+    (apply caller node tensors)))
+@end[lang=lisp](code)
+@end(section)
+@begin(section)
+@title(Writing Node Extensions)
+
+You may notice that the functions generated by defnode has the suffix, mgl. This indicates the backend cl-waffe uses. (mgl = mgl-mat).
+
+
+If the existing implementation of nodes aren't suitable for your usage, replace them. and cl-waffe provides the ecosystem to manage these additional implementation, I call it backend. For example, you can replace my broadcasting implementation with another fast implementation method. Let's create a double-float version of AddScalar.
+
+
+@b(Input)
+@begin[lang=lisp](code)
+CL-WAFFE>
+(define-node-extension ScalarAdd
+	     :backend :double-float
+	     :forward-declaim (declaim (ftype (function (ScalarAdd waffetensor waffetensor) waffetensor) :forward))
+	     :forward ((x y)
+	    (let ((x (data x))
+		  (y (data y)))
+	      (declare (type double-float x y))
+	      (const (+ x y))))
+	     :backward-declaim (declaim (type (function (ScalarAdd waffetensor) list) :backward))
+	     :backward ((dy) (list dy dy)))
+@end[lang=lisp](code)
+
+@b(Output)
+
+@begin[lang=lisp](code)
+NIL
+@end[lang=lisp](code)
+
+And receive this:
+@begin[lang=lisp](code)
+[INFO] Inlining call-forward... Total Features: 64
+To disable this, set cl-waffe:*ignore-inlining-info* t
+
+[INFO] Inlining call-backward... Total Features: 64
+To disable this, set cl-waffe:*ignore-inlining-info* t
+@end[lang=lisp](code)
+It's all done. The backends you defined can be switched via (with-backend backend-name &body body) macro. Let's check how call expands it.
+@cl:with-package[name="cl-waffe"](
+@cl:doc(macro with-backend)
+)
+
+
+
+@b(REPL:)
+@begin[lang=lisp](code)
+CL-WAFFE> 
+(with-backend :double-float
+    (macroexpand `(call (ScalarAdd) (const 1.0d0) (const 1.0d0))))
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+(LOCALLY
+ (DECLARE (OPTIMIZE (SPEED 3) (SAFETY 1))
+          (INLINE call-scalaradd-forward-double-float
+           call-scalaradd-forward-mgl))
+ (CASE *DEFAULT-BACKEND*
+   (DOUBLE-FLOAT
+    (call-scalaradd-forward-double-float (SCALARADD) (CONST 1.0d0)
+                                         (CONST 1.0d0)))
+   (MGL (call-scalaradd-forward-mgl (SCALARADD) (CONST 1.0d0) (CONST 1.0d0)))
+   (T (call-scalaradd-forward-mgl (SCALARADD) (CONST 1.0d0) (CONST 1.0d0)))))
+@end[lang=lisp](code)
+
+There's an additional case generated, depending on *default-backend*.
+
+
+@b(REPL:)
+@begin[lang=lisp](code)
+CL-WAFFE> 
+(with-backend :double-float
+    (time (call (scalarAdd) (const 1.0d0) (const 1.0d0))))
+
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+#Const(2.0d0 :dtype DOUBLE-FLOAT :backward <Node: SCALARADD{W874}>)
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+Evaluation took:
+  0.000 seconds of real time
+  0.000005 seconds of total run time (0.000005 user, 0.000000 system)
+  100.00% CPU
+  9,814 processor cycles
+  0 bytes consed
+@end[lang=lisp](code)
+Adding new backends is no pain for cl-waffe!
+@end(section)
+@begin(section)
+@title(MNIST Example)
+
+Using features that I introduced, we can training MNIST. In practice, we need more features to implement it bluntly: defmodel. (気が向いたらちゃんと書く)
+@begin(section)
+@title(Defines your model)
+
+
+
+@b(REPL:)
+@begin[lang=lisp](code)
+CL-WAFFE> 
+(defmodel MLP (activation)
+  :parameters ((layer1   (cl-waffe.nn:denselayer (* 28 28) 512 T activation))
+	       (layer2   (cl-waffe.nn:denselayer 512 256 T activation))
+	       (layer3   (cl-waffe.nn:linearlayer 256 10 T)))
+  :forward ((x)
+	    (with-calling-layers x
+	      (layer1 x)
+ 	      (layer2 x)
+	      (layer3 x))))
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+NIL
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+CL-WAFFE> (MLP :relu)
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+<Model: MLP{W880}(
+    <Model: LAYER1 -> DENSELAYER{W881} ...>
+    <Model: LAYER2 -> DENSELAYER{W884} ...>
+    <Model: LAYER3 -> LINEARLAYER{W887} ...>
+)>
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+CL-WAFFE> (with-output-to-string (out)
+    (print-model (MLP :relu) out))
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+
+––– <Model MLP{W888}>
+––––––– <MLP's LAYER1 = DENSELAYER{W889}>
+        |-ACTIVATION-|
+        |___RELU_____|
+––––––––––– <DENSELAYER's LAYER = LINEARLAYER{W890}>
+            |––slot––|–––shape–––|–trainable–|
+             WEIGHT -> (784 512)       O
+              BIAS  ->  (1 512)        O
+––––––– <MLP's LAYER2 = DENSELAYER{W892}>
+        |-ACTIVATION-|
+        |___RELU_____|
+––––––––––– <DENSELAYER's LAYER = LINEARLAYER{W893}>
+            |––slot––|–––shape–––|–trainable–|
+             WEIGHT -> (512 256)       O
+              BIAS  ->  (1 256)        O
+––––––– <MLP's LAYER3 = LINEARLAYER{W895}>
+        |––slot––|––shape–––|–trainable–|
+         WEIGHT -> (256 10)       O
+          BIAS  ->  (1 10)        O
+
+ -(+) Total Param: 535818
+@end[lang=lisp](code)
+
+@end(section)
+@begin(section)
+@title(define your trainer)
+
+
+
+@b(REPL:)
+@begin[lang=lisp](code)
+CL-WAFFE> 
+(deftrainer MLPTrainer (activation lr)
+  :model          (MLP activation)
+  :optimizer      cl-waffe.optimizers:Adam
+  :optimizer-args (:lr lr)
+  :step-model ((x y)
+	       (zero-grad)
+	       (let ((out (cl-waffe.nn:softmax-cross-entropy (call (model) x) y)))
+		 (backward out)
+		 (update)
+		 out))
+ :predict ((x)(call (model) x)))
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+NIL
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+CL-WAFFE> (setq trainer (MLPTrainer :relu 1e-3))
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+<Trainer: MLPTRAINER()>
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+CL-WAFFE> (slot-value trainer 'cl-waffe::optimizer)
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+<Optimizer: ADAM{W908}
+    Param: #<GENERAL-HASH-TABLE :TEST EQL :COUNT 6 :WEAKNESS :VALUE {100AEB1053}>
+    LR : 0.001
+    Param: #<HASH-TABLE :TEST EQL :COUNT 0 {100AEB1143}>
+    Param: #<HASH-TABLE :TEST EQL :COUNT 0 {100AEB11E3}>
+    N : 0
+    EPSILON : 1.0e-7
+    BETA1 : 0.9
+    BETA2 : 0.999
+    [Total Param]: 535818
+>
+@end[lang=lisp](code)
+
+@end(section)
+All the code including loading the data is at here.
+lake is available.
+@begin[lang=shell](code)
+$ lake example:install
+$ lake example:mnist
+@end[lang=shell](code)
+@end(section)
+@end(section)

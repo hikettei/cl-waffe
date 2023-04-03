@@ -123,21 +123,18 @@ And utils for broadcasting etc...
 
 
 (defnode AddTensor (&optional (output nil) (overwrite nil))
-  :optimize t
   :parameters ((output output) (overwrite overwrite))
   :forward  ((x y)
 	     (k-> :add (self output) (self overwrite) x y))
   :backward ((dy) (list dy dy)))
 
 (defnode SubTensor (&optional (output nil) (overwrite nil))
-  :optimize t
   :parameters ((output output) (overwrite overwrite))
   :forward ((x y)
 	    (k-> :sub (self output) (self overwrite) x y))
   :backward ((dy) (list dy (!mul dy (const -1)))))
 
 (defnode MulTensor (&optional (output nil) (overwrite nil))
-  :optimize t
   :parameters ((xi T) (yi T) (output output) (overwrite overwrite))
   :forward ((x y)
 	    (save-for-backward xi x)
@@ -147,7 +144,6 @@ And utils for broadcasting etc...
 			(!mul (self xi) dy))))
 
 (defnode BroadCastingAddTensor (&optional (output nil) (overwrite nil))
-  :optimize t
   :parameters ((dims-to-sum nil) (output output) (overwrite overwrite))
   :forward  ((x y)
 	     (let ((dims-to-sum (broadcasting x y)))
@@ -156,7 +152,6 @@ And utils for broadcasting etc...
   :backward ((dy) (sumup-broadcasted (self dims-to-sum) dy dy)))
 
 (defnode BroadCastingSubTensor (&optional (output nil) (overwrite nil))
-  :optimize t
   :parameters ((dims-to-sum nil) (output output) (overwrite overwrite))
   :forward ((x y)
 	    (let ((dims-to-sum (broadcasting x y)))
@@ -165,7 +160,6 @@ And utils for broadcasting etc...
   :backward ((dy) (sumup-broadcasted (self dims-to-sum) dy (!mul dy (const -1)))))
 
 (defnode BroadCastingMulTensor (&optional (output nil) (overwrite nil))
-  :optimize t
   :parameters ((xi T) (yi T) (dims-to-sum nil) (output output) (overwrite overwrite))
   :forward ((x y)
 	    (let ((dims-to-sum (broadcasting x y)))
@@ -178,7 +172,6 @@ And utils for broadcasting etc...
 				     (!mul (self xi) dy))))
 
 (defnode DivTensor nil
-  :optimize t
   :parameters ((xi T) (yi T))
   :forward ((x y)
 	    (unless (= (the fixnum (data x)) 1) (error "internal error: !div-old: x must be 1"))

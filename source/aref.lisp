@@ -4,8 +4,7 @@
 (deftype array-index-type ()
     `(integer 0 4611686018427387903))
 
-(defnode ArefTensor (shape) ; skip me.
-  :optimize t
+(defnode ArefTensor (shape) 
   :parameters ((shape shape)
 	       (base-shape T))
   :forward ((x) (setf (self base-shape) (!shape x))
@@ -16,7 +15,6 @@
 	       (list dy-n))))
 
 (defnode SetfArefTensor (shape)
-  :optimize t
   :parameters ((shape shape))
   :forward ((x y)
 	    ; Note: defnode must produce new sysconst otherwise stackoverflow...
