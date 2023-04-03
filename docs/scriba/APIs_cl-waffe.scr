@@ -16,9 +16,9 @@ CL-WAFFE> (!normal `(10 10)) :mean 2.0 :stddev 1.0
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(((-0.36... 1.886... ~ 0.970... 2.055...)        
+#Const(((0.560... 1.909... ~ 3.131... 1.479...)        
                  ...
-        (1.482... 2.409... ~ 2.534... 0.845...)) :dtype :float :shape (10 10) :backward NIL)
+        (3.386... 4.760... ~ -0.39... 1.177...)) :dtype :float :shape (10 10) :backward NIL)
 @end[lang=lisp](code)
 
 @end(section)
@@ -37,9 +37,9 @@ CL-WAFFE> (!randn `(10 10))
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(((0.118... -0.65... ~ 1.463... -1.40...)        
+#Const(((-0.34... 0.973... ~ 1.512... 2.565...)        
                  ...
-        (-0.75... 2.192... ~ 0.478... -0.50...)) :dtype :float :shape (10 10) :backward NIL)
+        (-1.73... -0.50... ~ -0.79... -0.83...)) :dtype :float :shape (10 10) :backward NIL)
 @end[lang=lisp](code)
 
 @end(section)
@@ -58,9 +58,9 @@ CL-WAFFE> (!uniform-random `(10 10) :limit 2.0)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(((0.675... 1.157... ~ 1.571... 0.525...)        
+#Const(((0.588... 1.448... ~ 0.027... 1.316...)        
                  ...
-        (1.814... 0.777... ~ 0.685... 0.633...)) :dtype :float :shape (10 10) :backward NIL)
+        (0.903... 1.833... ~ 0.058... 1.664...)) :dtype :float :shape (10 10) :backward NIL)
 @end[lang=lisp](code)
 
 @end(section)
@@ -79,9 +79,9 @@ CL-WAFFE> (!beta `(10 10) 5.0 1.0)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(((0.939... 0.958... ~ 0.542... 0.947...)        
+#Const(((0.862... 0.955... ~ 0.816... 0.525...)        
                  ...
-        (0.916... 0.811... ~ 0.786... 0.925...)) :dtype :float :shape (10 10) :backward NIL)
+        (0.890... 0.882... ~ 0.686... 0.921...)) :dtype :float :shape (10 10) :backward NIL)
 @end[lang=lisp](code)
 
 @end(section)
@@ -100,9 +100,9 @@ CL-WAFFE> (!gamma `(10 10) 1.0)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(((0.546... 0.147... ~ 0.817... 0.433...)        
+#Const(((0.803... 1.242... ~ 0.223... 0.120...)        
                  ...
-        (1.097... 0.071... ~ 0.271... 0.302...)) :dtype :float :shape (10 10) :backward NIL)
+        (1.111... 0.167... ~ 0.174... 0.119...)) :dtype :float :shape (10 10) :backward NIL)
 @end[lang=lisp](code)
 
 @end(section)
@@ -121,9 +121,9 @@ CL-WAFFE> (!chisquare `(10 10) 2.0)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(((0.637... 1.857... ~ 2.000... 1.425...)        
+#Const(((3.442... 2.194... ~ 1.352... 0.542...)        
                  ...
-        (1.466... 1.237... ~ 0.564... 2.355...)) :dtype :float :shape (10 10) :backward NIL)
+        (2.189... 0.451... ~ 1.958... 5.944...)) :dtype :float :shape (10 10) :backward NIL)
 @end[lang=lisp](code)
 
 @end(section)
@@ -142,9 +142,9 @@ CL-WAFFE> (!bernoulli `(10 10) 0.5)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(((0.0 1.0 ~ 1.0 1.0)        
+#Const(((0.0 0.0 ~ 1.0 1.0)        
                  ...
-        (0.0 0.0 ~ 0.0 0.0)) :dtype :float :shape (10 10) :backward NIL)
+        (1.0 1.0 ~ 1.0 1.0)) :dtype :float :shape (10 10) :backward NIL)
 @end[lang=lisp](code)
 
 @end(section)
@@ -163,9 +163,9 @@ CL-WAFFE> (!binomial `(10 10) 0.5)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(((1.0 0.0 ~ 0.0 1.0)        
+#Const(((1.0 0.0 ~ 1.0 1.0)        
                  ...
-        (1.0 1.0 ~ 0.0 1.0)) :dtype :float :shape (10 10) :backward NIL)
+        (0.0 0.0 ~ 1.0 1.0)) :dtype :float :shape (10 10) :backward NIL)
 @end[lang=lisp](code)
 
 @end(section)
@@ -205,9 +205,9 @@ CL-WAFFE> (!random `(10 10) 1.0)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(((0.645... 0.839... ~ 0.738... 0.055...)        
+#Const(((0.294... 0.931... ~ 0.164... 0.118...)        
                  ...
-        (0.484... 0.617... ~ 0.232... 0.914...)) :dtype :float :shape (10 10) :backward NIL)
+        (0.596... 0.563... ~ 0.919... 0.379...)) :dtype :float :shape (10 10) :backward NIL)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
@@ -215,9 +215,9 @@ CL-WAFFE> (!random `(10 10) 3)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(((2.0 1.0 ~ 1.0 1.0)        
+#Const(((0.0 2.0 ~ 2.0 0.0)        
                  ...
-        (0.0 1.0 ~ 0.0 0.0)) :dtype :float :shape (10 10) :backward NIL)
+        (2.0 2.0 ~ 2.0 1.0)) :dtype :float :shape (10 10) :backward NIL)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
@@ -225,9 +225,9 @@ CL-WAFFE> (!random `(10 10) `(1.0 2.0))
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(((1.860... 1.476... ~ 1.187... 1.918...)        
+#Const(((1.212... 1.374... ~ 1.474... 1.948...)        
                  ...
-        (1.760... 1.185... ~ 1.780... 1.764...)) :dtype :float :shape (10 10) :backward NIL)
+        (1.538... 1.126... ~ 1.581... 1.101...)) :dtype :float :shape (10 10) :backward NIL)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
@@ -235,34 +235,10 @@ CL-WAFFE> (!random `(10 10) `(1 5))
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(((4.0 3.0 ~ 4.0 2.0)        
+#Const(((2.0 2.0 ~ 3.0 1.0)        
                  ...
-        (3.0 3.0 ~ 3.0 4.0)) :dtype :float :shape (10 10) :backward NIL)
+        (4.0 4.0 ~ 1.0 1.0)) :dtype :float :shape (10 10) :backward NIL)
 @end[lang=lisp](code)
-
-@end(section)
-@begin(section)
-@title(!shape)
-
-@cl:with-package[name="cl-waffe"](
-@cl:doc(function !shape)
-)
-
-@end(section)
-@begin(section)
-@title(!dims)
-
-@cl:with-package[name="cl-waffe"](
-@cl:doc(function !dims)
-)
-
-@end(section)
-@begin(section)
-@title(!size)
-
-@cl:with-package[name="cl-waffe"](
-@cl:doc(function !size)
-)
 
 @end(section)
 @begin(section)
@@ -286,6 +262,54 @@ CL-WAFFE> (!random `(10 10) `(1 5))
 
 @cl:with-package[name="cl-waffe"](
 @cl:doc(function !full-like)
+)
+
+@end(section)
+@begin(section)
+@title(!zeros)
+
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !zeros)
+)
+
+@end(section)
+@begin(section)
+@title(!ones)
+
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !ones)
+)
+
+@end(section)
+@begin(section)
+@title(!fill)
+
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !fill)
+)
+
+@end(section)
+@begin(section)
+@title(!shape)
+
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !shape)
+)
+
+@end(section)
+@begin(section)
+@title(!dims)
+
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !dims)
+)
+
+@end(section)
+@begin(section)
+@title(!size)
+
+@cl:with-package[name="cl-waffe"](
+@cl:doc(function !size)
 )
 
 @end(section)
