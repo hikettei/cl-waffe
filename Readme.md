@@ -84,7 +84,7 @@ There are still **very few standard implementations of NNs(As of this writing, o
 
 # News
 
-- (2023/4/4) The [documentations](https://hikettei.github.io/cl-waffe-docs/docs/overview.html) are begin rewritten. 
+- (2023/4/4) The [documentations](https://hikettei.github.io/cl-waffe-docs/docs/overview.html) are being rewritten. (but only half finished. ><)
 - (2023/4/2) The entire cl-waffe code, (especially, `call` and `call-backward`), has been optimised. https://github.com/hikettei/cl-waffe/pull/120 . Accordingly, the API has changed significantly. (e.g.: the function `call` is now a macro.) However, **The Document isn't up-to-date**.
 
 - (2023/03/26) I published the benchmark compared to Numpy/PyTorch. Available at [Here](https://github.com/hikettei/cl-waffe/blob/main/benchmark/Result.md). (Not quite up to my goal.) cl-waffe should peform better... however I guess there's a room to optimize in the cl-waffe's codes...
