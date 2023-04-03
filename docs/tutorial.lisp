@@ -34,6 +34,7 @@
       (b (const 1.0)))
   (!add a b))")
 	(insert "When gradient is not required (e.g.: predict), the macro @c((with-no-grad)) would be useful.")
+	(placedoc "cl-waffe" "macro" "with-no-grad")
 	(with-eval
 	  "
 (with-no-grad
@@ -43,7 +44,9 @@
 
       (with-section "To Restore Gradients"
 	(insert "WaffeTensors which created by @c((parameter tensor)) macro, posses the gradients, where you can get via `(backward out)`")
-
+	(placedoc "cl-waffe" "macro" "parameter")
+	(placedoc "cl-waffe" "function" "backward")
+	
 	(with-evals
 	  "(setq a (parameter (!randn `(3 3))))"
 	  "(setq b (parameter (!randn `(3 3))))"
@@ -53,6 +56,8 @@
 	  "(grad a)"
 	  "(grad b)"
 	  "(grad c)")
+
+	(placedoc "cl-waffe" "macro" "with-verbose")
 
 	(insert "(backward out) called inside of (with-verbose &body body) macro, will display how the computation nodes are traced. It would be helpful for debugging."))
 
@@ -99,6 +104,8 @@
 	  (term "Trainable Variables, to be optimized by @b(optimizers) defined by defoptimizer.")))))
   
   (with-section "defnode and call"
+    (placedoc "cl-waffe" "macro" "defnode")
+    
     (insert "The macros @b(defnode) and @b(call) serve as a key component of cl-waffe, since @b(defnode) enables users to define forward and backward propagation in a simple notations and optimize them. If needed, they're inlined via @b(call) macro. Let's get started with this example. it defines a computation node that finds the sum of two single-float values.")
     (with-eval
       "
@@ -200,11 +207,13 @@
 ; 9D:       5A               POP RDX
 ; 9E:       EBCA             JMP L0")
 
+    (placedoc "cl-waffe" "macro" "call")
+
     (insert "Nodes defined this macro, works as if CLOS class, and they can have :parameters. However, what makes defnode distinct from them is that:")
     (with-evals
       "(time (call (ScalarAdd) (const 1.0) (const 1.0)))"
       "(time (+ 1.0 1.0))")
-
+    
     (with-lisp-code
       "Evaluation took:
   0.000 seconds of real time
@@ -284,11 +293,13 @@
   0 bytes consed")
 
     (insert "It works the same as the first example, the overhead is enough small.")
+    
     (insert "(P.S.: I was told that it is impossible for SBCL to optimize a CASE of several thousand lines. The assumption is that the more nodes defined in cl-waffe, the less performance we got. In my own benchmarks, I felt it was doing well enough on the second call, but if it is slow, I know how to make it faster.)")
     
     (insert "~%~%By the way, defnode's forward slot can require &rest arguments. However, @c((call)) is a macro, so that we can't use apply. Is there no way to call it with &rest arguments? No, @c(get-forward-caller) and @c(get-backward-caller) is available to get the function object itself. In cl-waffe's implementation, !concatenate requires an &rest arguments.")
 
-    (insert "TO ADD: The link to get-forward-caller...")
+    (placedoc "cl-waffe" "macro" "get-forward-caller")
+    (placedoc "cl-waffe" "macro" "get-backward-caller")
 
     (with-lisp-code "
 (defun !concatenate (axis &rest tensors)
@@ -326,6 +337,8 @@ To disable this, set cl-waffe:*ignore-inlining-info* t")
 
     (insert "It's all done. The backends you defined can be switched via (with-backend backend-name &body body) macro. Let's check how call expands it.")
 
+    (placedoc "cl-waffe" "macro" "with-backend")
+    
     (with-evals
       "
 (with-backend :double-float

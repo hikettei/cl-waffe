@@ -45,7 +45,6 @@ and train/valid function.
 
 ; This model used for just only making thread.
 (defmodel TrainerInputLayer (caller)
-  :optimize t
   :parameters ((caller caller :type function))
   :forward (()
 	    (funcall (self caller))))

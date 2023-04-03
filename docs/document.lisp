@@ -30,6 +30,8 @@
 		  `(format ,',output-to "~%@begin(def)~%~a~%@end(def)" ,content))
 		(term (content)
 		  `(format ,',output-to "~%@begin(term)~%~a~%@end(term)" ,content))
+		(placedoc (package type name)
+		  `(format ,',output-to "~%@cl:with-package[name=\"~a\"](~%@cl:doc(~a ~a)~%)~%" ,package ,type ,name))
 		(item (content)
 		  `(format ,',output-to "~%@item(~a)" ,content)))
        (macrolet ((with-section (title-name &body body)

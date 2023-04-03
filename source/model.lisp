@@ -373,15 +373,12 @@ Output: An last value of layers."
 			  (disassemble-update nil)
 			  update-declaim
 			  update
-			  optimize
 			  (document "An optimizer, defined by cl-waffe."))
-  "Defining optimizers. Internally, This is paraphase of defmodel, which slot names are just different.
-
-Note: by calling :backward slot, optimizers work as (zero-grad).
+  "Defines optimizer in the format that cl-waffe can handle.
 
 @begin(deflist)
 @term(Name)
-@def(The optimizer's structure and constructor will be defined based on name)
+@def(The optimizer's structure and constructor will be defined after name)
 
 @term(Args)
 @def(Initializer of the optimizer. The first value of initializer is the hash-table that collected model's parameter where the key is fixnum from 0 to n. You have to store it.)
@@ -416,16 +413,18 @@ Example:
          (!modify (gethash i (self params))) :+=
                (!mul (self lr) (grad (gethash i (self params)))))))
 
+;(call (SGD (find-variables model))) will works as update.
+;(call-backward (SGD)) will works as zero-grads.
+
 @end[lang=lisp](code)
 "
 
   `(defobject ,name ,initializer-arguments
      :parameters ,parameters
-     :optimize ,optimize
      :disassemble-forward ,disassemble-update
      :forward-declaim ,update-declaim
      :forward ,update
-					;zero-grad
+     ;zero-grad
      :backward ((model) (dolist (p (find-variables model)) ; Todo Rewrite.
 			  (setf (waffetensor-state p) nil)
 			  (setf (waffetensor-backward p) nil)
@@ -436,7 +435,6 @@ Example:
 		nil)
      :hide-from-tree nil
      :document ,document
-     :regard-as-node t
      :object-type :optimizer))
 
 (defmacro defnode (name
@@ -450,9 +448,46 @@ Example:
 		     backward-declaim
 		     backward
 		     (document "An node, defined by cl-waffe."))
-  "Define computation nodes in a format that cl-waffe can handle.
+  "Defines computation nodes in a format that cl-waffe can handle.
 
-Todo: args"
+Note: the data structures that can be used in arguments, and returned values, must be following:
+
+@begin(enum)
+@item(WaffeTensor)
+@item(1D list which each element is WaffeTensor)
+@end(enum)
+
+Be aware that you can't use (values x y ...).
+
+@begin(deflist)
+@def(name)
+@term(The node's name. constructor and structure are being defined named after this argument.)
+
+@def(initializer-argument)
+@term(arguments the constructor have.)
+
+@def(parameter)
+@term(The parameters this node has being initializer with initializer-argument.)
+
+@def(disassemble-forward)
+@term(when t, when this node is compiled, display the disassemble of forward slot.)
+
+@def(forward-declaim)
+@term(Describe the declaim for the forward function. Note that the first argument is a structure. and :forward keyword in this declaim will be replaced by the forward function's name.)
+
+@def(forward)
+@term(the definition of forward)
+
+@def(disassemble-backward)
+@term(when t, when this node is compiled, display the disassemble of backward slot.)
+
+@def(backward-declaim)
+@term(Describe the declaim for the backward function. Note that the first argument is a structure. and :backward keyword in this declaim will be replaced by the backward function's name.)
+
+@def(backward)
+@term(the definition of backward)
+
+@end(deflist)"
 
   (if (null backward)
       (warn "The backward slot of ~a is undefined, which returns nil without cl-waffe being noticed." (symbol-name name)))
@@ -523,7 +558,6 @@ Todo: args"
 		      (disassemble-forward nil)
 		      forward-declaim
 		      forward
-		      (optimize nil)
 		      (document "An model, defined by cl-waffe"))
   "This macro defines a cl-waffe model as @cl:param(name).
 
@@ -557,9 +591,6 @@ Format Example: ((param-name param-initial-value &key (type your-type)))
 
 @end(def)
 
-@term(optimize)
-@def(when t, your forward slot is defined with (declare (optimize (speed 3) (space 0) (debug 0))). It helps faster training after you ensured debugged.)
-
 @term(forward)
 @begin(def)
 
@@ -576,7 +607,6 @@ When backward, @b(Automatic differentiation applies).
      :disassemble-forward ,disassemble-forward
      :forward-declaim ,forward-declaim
      :forward ,forward
-     :optimize ,optimize
      :object-type :model
      :document ,document))
 
@@ -1071,6 +1101,7 @@ the object-type indicates the type of document format."
 	     (slot-value model 'cl-waffe::model-ident)))))
 
 (defun print-model (model &optional (stream t))
+  "displays the given model and its parameters."
   (format stream "~%")
   (let ((*total-param-size* 0))
     (render-model-structure stream model)
