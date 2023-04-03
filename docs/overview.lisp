@@ -15,9 +15,9 @@
       (item "Make APIs Extensible as possible, enabling users not to depend the standard implementations.")
       (item "Eazy to optimize with Inlined Function."))
 
-    (insert "This framework is designed to be user-friendly first, enabling both begginers and experts in the field of AI to take advantage of capabilities of powerful programming language, Common Lisp.")
+    (insert "This framework is designed to be user-friendly first, enabling both beginners and experts in the field of AI to take advantage of capabilities of powerful programming language, Common Lisp.")
 
-    (b "This framework is still under development and experimental. If you are thinking og using it in your products, It would be wiser to use other libraries. True, the author of cl-waffe is not a expert of AI."))
+    (b "This framework is still under development and experimental. If you are thinking on using it in your products, It would be wiser to use other libraries. True, the author of cl-waffe is not a expert of AI."))
 
   (with-section "Links"
     (url "https://github.com/hikettei/cl-waffe" "Official Github Repository")

@@ -165,7 +165,7 @@
     (with-evals
       "(macroexpand `(call (ScalarAdd) (const 1.0) (const 1.0)))")
 
-    (insert "where |call-scalaradd-forward-mgl| is automatically generated function by defnode. For example: If you define the function sadd which calls ScalarAdd Node. You can do:")
+    (insert "where call-scalaradd-forward-mgl is automatically generated function by defnode. For example: If you define the function sadd which calls ScalarAdd Node. You can do:")
 
     (with-eval
       "(defun sadd (x y)
@@ -183,16 +183,34 @@
 .
 .
 (Omitted)")
-    (insert "We got a large disassembled codes which means: all processes including building computation nodes parts, are correctly inlined. Anyway, the optimization of sadd function is properly working!")
+    (insert "We got a large disassembled codes which means: all processes including building computation nodes parts, are correctly inlined. Anyway, the optimization of sadd function is properly working!. Speaking of the case when the type of given nodes aren't determined in compile time, call behaviours the different from this.")
 
-    ; todo: the case when (call node x y)
-    ; todo: get-forward-caller get-backward-caller
+    (with-eval
+      "(let ((node (ScalarAdd)))
+    (macroexpand `(call node (const 1.0) (const 1.0))))")
+
+    (insert "and (madakaku)")
+
+    (with-eval
+      "(let ((node (ScalarAdd)))
+    (time (call node (const 1.0) (const 1.0))))")
+
+    (with-lisp-code
+      "Evaluation took:
+  0.000 seconds of real time
+  0.000005 seconds of total run time (0.000005 user, 0.000000 system)
+  100.00% CPU
+  10,502 processor cycles
+  0 bytes consed")
+
+    (insert "The overhead is small too. ( madakaku )")
+    (insert "When you need (apply): get-forward-caller get-backward-caller")
     )
   
   (with-section "Writing Node Extensions"
-    (insert "")
+    (insert "with-backend")
     )
 
   (with-section "MNIST Example"
-
+    (insert "Using features that I introduced, we can training MNIST. In practive, we need more features to implement it more simply: defmacro")
     ))
