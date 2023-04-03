@@ -5,8 +5,7 @@
               :authors ("Hikettei")
               :output-format (:type :multi-html
                               :template :gamma)
-              :sources ("manual.scr"
-			"overview.scr"
+              :sources ("overview.scr"
 			"tutorial.scr"
 			"tips.scr"
 			"section1.scr"
