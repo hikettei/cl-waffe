@@ -16,9 +16,9 @@ CL-WAFFE> (!normal `(10 10)) :mean 2.0 :stddev 1.0
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(((0.560... 1.909... ~ 3.131... 1.479...)        
+#Const(((2.316... 2.291... ~ 2.546... 2.100...)        
                  ...
-        (3.386... 4.760... ~ -0.39... 1.177...)) :dtype :float :shape (10 10) :backward NIL)
+        (1.770... 2.073... ~ 0.576... 2.802...)) :dtype :float :shape (10 10) :backward NIL)
 @end[lang=lisp](code)
 
 @end(section)
@@ -37,9 +37,9 @@ CL-WAFFE> (!randn `(10 10))
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(((-0.34... 0.973... ~ 1.512... 2.565...)        
+#Const(((1.261... 0.132... ~ -0.58... -1.51...)        
                  ...
-        (-1.73... -0.50... ~ -0.79... -0.83...)) :dtype :float :shape (10 10) :backward NIL)
+        (0.051... 0.146... ~ -0.18... 0.826...)) :dtype :float :shape (10 10) :backward NIL)
 @end[lang=lisp](code)
 
 @end(section)
@@ -58,9 +58,9 @@ CL-WAFFE> (!uniform-random `(10 10) :limit 2.0)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(((0.588... 1.448... ~ 0.027... 1.316...)        
+#Const(((1.129... 0.174... ~ 1.464... 0.346...)        
                  ...
-        (0.903... 1.833... ~ 0.058... 1.664...)) :dtype :float :shape (10 10) :backward NIL)
+        (1.624... 0.280... ~ 1.320... 1.854...)) :dtype :float :shape (10 10) :backward NIL)
 @end[lang=lisp](code)
 
 @end(section)
@@ -79,9 +79,9 @@ CL-WAFFE> (!beta `(10 10) 5.0 1.0)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(((0.862... 0.955... ~ 0.816... 0.525...)        
+#Const(((0.893... 0.911... ~ 0.907... 0.970...)        
                  ...
-        (0.890... 0.882... ~ 0.686... 0.921...)) :dtype :float :shape (10 10) :backward NIL)
+        (0.924... 0.742... ~ 0.796... 0.842...)) :dtype :float :shape (10 10) :backward NIL)
 @end[lang=lisp](code)
 
 @end(section)
@@ -100,9 +100,9 @@ CL-WAFFE> (!gamma `(10 10) 1.0)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(((0.803... 1.242... ~ 0.223... 0.120...)        
+#Const(((1.268... 0.336... ~ 0.213... 0.314...)        
                  ...
-        (1.111... 0.167... ~ 0.174... 0.119...)) :dtype :float :shape (10 10) :backward NIL)
+        (3.451... 0.395... ~ 0.609... 1.684...)) :dtype :float :shape (10 10) :backward NIL)
 @end[lang=lisp](code)
 
 @end(section)
@@ -121,9 +121,9 @@ CL-WAFFE> (!chisquare `(10 10) 2.0)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(((3.442... 2.194... ~ 1.352... 0.542...)        
+#Const(((1.851... 1.337... ~ 1.114... 0.433...)        
                  ...
-        (2.189... 0.451... ~ 1.958... 5.944...)) :dtype :float :shape (10 10) :backward NIL)
+        (3.706... 0.204... ~ 4.597... 0.306...)) :dtype :float :shape (10 10) :backward NIL)
 @end[lang=lisp](code)
 
 @end(section)
@@ -142,9 +142,9 @@ CL-WAFFE> (!bernoulli `(10 10) 0.5)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(((0.0 0.0 ~ 1.0 1.0)        
+#Const(((0.0 0.0 ~ 0.0 1.0)        
                  ...
-        (1.0 1.0 ~ 1.0 1.0)) :dtype :float :shape (10 10) :backward NIL)
+        (1.0 1.0 ~ 0.0 0.0)) :dtype :float :shape (10 10) :backward NIL)
 @end[lang=lisp](code)
 
 @end(section)
@@ -163,9 +163,9 @@ CL-WAFFE> (!binomial `(10 10) 0.5)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(((1.0 0.0 ~ 1.0 1.0)        
+#Const(((1.0 0.0 ~ 1.0 0.0)        
                  ...
-        (0.0 0.0 ~ 1.0 1.0)) :dtype :float :shape (10 10) :backward NIL)
+        (1.0 0.0 ~ 0.0 0.0)) :dtype :float :shape (10 10) :backward NIL)
 @end[lang=lisp](code)
 
 @end(section)
@@ -205,9 +205,9 @@ CL-WAFFE> (!random `(10 10) 1.0)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(((0.294... 0.931... ~ 0.164... 0.118...)        
+#Const(((0.277... 0.274... ~ 0.255... 0.439...)        
                  ...
-        (0.596... 0.563... ~ 0.919... 0.379...)) :dtype :float :shape (10 10) :backward NIL)
+        (0.340... 0.597... ~ 0.337... 0.218...)) :dtype :float :shape (10 10) :backward NIL)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
@@ -215,9 +215,9 @@ CL-WAFFE> (!random `(10 10) 3)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(((0.0 2.0 ~ 2.0 0.0)        
+#Const(((2.0 1.0 ~ 2.0 0.0)        
                  ...
-        (2.0 2.0 ~ 2.0 1.0)) :dtype :float :shape (10 10) :backward NIL)
+        (1.0 0.0 ~ 2.0 0.0)) :dtype :float :shape (10 10) :backward NIL)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
@@ -225,9 +225,9 @@ CL-WAFFE> (!random `(10 10) `(1.0 2.0))
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(((1.212... 1.374... ~ 1.474... 1.948...)        
+#Const(((1.652... 1.951... ~ 1.284... 1.769...)        
                  ...
-        (1.538... 1.126... ~ 1.581... 1.101...)) :dtype :float :shape (10 10) :backward NIL)
+        (1.231... 1.168... ~ 1.668... 1.646...)) :dtype :float :shape (10 10) :backward NIL)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
@@ -235,9 +235,9 @@ CL-WAFFE> (!random `(10 10) `(1 5))
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(((2.0 2.0 ~ 3.0 1.0)        
+#Const(((1.0 2.0 ~ 1.0 3.0)        
                  ...
-        (4.0 4.0 ~ 1.0 1.0)) :dtype :float :shape (10 10) :backward NIL)
+        (4.0 2.0 ~ 1.0 3.0)) :dtype :float :shape (10 10) :backward NIL)
 @end[lang=lisp](code)
 
 @end(section)

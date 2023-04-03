@@ -4,6 +4,7 @@
 (defpackage cl-waffe
   (:documentation "An package for defining node, initializing and computing with tensor, and backprops.")
   (:use :cl :mgl-mat :alexandria)
+
   (:export #:*verbose*
 	   #:with-verbose)
   (:export #:with-jit
@@ -45,9 +46,7 @@
 	   #:!disallow-destruct)
 
   (:export
-	   ; Accessors
-           #:warranty
-           #:waffe-tensor-p	   
+	   ; Accessors	   
 	   #:data
 	   #:value
 	   #:grad)
@@ -62,9 +61,7 @@
 	   #:with-no-grad
 	   #:*no-grad*
 	   #:*restart-non-exist-backend*)
-  (:export
-	   #:with-searching-calc-node
-	   #:defmodel
+  (:export #:defmodel
 	   #:defnode
 	   #:defoptimizer
 	   #:deftrainer
@@ -80,8 +77,7 @@
 	   #:get-dataset
 	   #:get-dataset-length
 
-	   #:call-and-dispatch-kernel
-	   #:with-optimized-operation)
+	   #:call-and-dispatch-kernel)
 
   (:export ; macros (binded by defobject) in waffe-object
            #:model
@@ -133,9 +129,6 @@
 	   #:!fill
 	   #:!arange
 	   #:!aref
-	   #:!row-major-aref
-	   #:!with-mgl-operation
-	   #:!copy
 	   #:!index
 	   #:!where
 	   #:!random
