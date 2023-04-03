@@ -13,6 +13,7 @@
 	     *dtypes*)))
 
 (defmacro with-dtype (dtype &body body)
+  "Switches the dtype. dtype = (:float :double). In default, :float."
   `(let ((mgl-mat:*DEFAULT-MAT-CTYPE* ,(dtype-p dtype)))
      ,@body))
 
@@ -109,7 +110,7 @@
 	    (error "no such dtype.")))))))
 
 (defmacro dtypecase (&rest cases)
-  "TODO: DOCUMENT"
+  "todo :docstring"
   `(case mgl-mat:*DEFAULT-MAT-CTYPE*
      ,@cases))
 

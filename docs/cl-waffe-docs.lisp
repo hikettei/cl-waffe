@@ -228,8 +228,130 @@
   (with-api "function" "!shape")
   (with-api "function" "!dims")
   (with-api "function" "!size")
-  
 
+  (with-api "struct" "WaffeTensor")
+  (with-api "macro" "parameter")
+  (with-api "function" "data")
+  (with-api "function" "value")
+  (with-api "function" "backward")
+
+  (with-api "macro" "with-no-grad")
+  (with-api "variable" "*no-grad*")
+
+  (with-api "function" "!add")
+  (with-api "function" "!!add")
+  (with-api "function" "!sub")
+  (with-api "function" "!!sub")
+  (with-api "function" "!mul")
+  (with-api "function" "!!mul")
+  (with-api "function" "!div")
+
+  (with-api "function" "!sum")
+  (with-api "function" "!mean")
+
+  (with-api "function" "!dot")
+  (with-api "function" "!matmul")
+
+  (with-api "function" "!sin")
+  (with-api "function" "!cos")
+  (with-api "function" "!tan")
+
+  (with-api "function" "!asin")
+  (with-api "function" "!acos")
+  (with-api "function" "!atan")
+
+  (with-api "function" "!sinh")
+  (with-api "function" "!cosh")
+  (with-api "function" "!tanh")
+
+  (with-api "function" "!asinh")
+  (with-api "function" "!acosh")
+  (with-api "function" "!atanh")
 
   
+  (with-api "function" "!abs")
+  (with-api "function" "!log")
+  (with-api "function" "!exp")
+
+  (with-api "function" "!pow")
+  (with-api "function" "!sqrt")
+
+  (with-api "function" "!argmax")
+  (with-api "function" "!argmin")
+
+  (with-api "function" "!squeeze")
+  (with-api "function" "!unsqueeze")
+
+  (with-api "function" "!reshape")
+  (with-api "function" "!repeats")
+  (with-api "function" "!flatten")
+  (with-api "function" "!transpose")
+  (with-api "function" "!transpose1")
+
+  (with-api "function" "!concatenate")
+  (with-api "function" "!stack")
+
+  (with-api "function" "!split")
+
+  (with-api "macro" "!hstack")
+  (with-api "macro" "!vstack")
+
+  (with-api "function" "!aref")
+  ;(with-api "function" "!displace")
+  (with-api "function" "!where")
+  (with-api "function" "!index")
+  (with-api "function" "!filter")
+  
+  (with-api "macro" "!arange")
+
+  (with-api "function" "!relu")
+  (with-api "function" "!sigmoid")
+  (with-api "function" "!gelu")
+  (with-api "function" "!leakey-relu")
+  (with-api "function" "!swish")
+  (with-api "function" "!softmax")
+
+  (with-api "macro" "with-verbose")
+  (with-api "macro" "with-dtype")
+  (with-api "macro" "dtypecase")
+  (with-api "macro" "define-with-typevar")
+
+  (with-api "macro" "with-backend")
+  (with-api "macro" "define-node-extension")
+  (with-api "variable" "*restart-non-exist-backend*")
+
+  (with-api "macro" "!allow-destruct")
+  (with-api "macro" "!disallow-destruct")
+
+  (with-api "macro" "defnode")
+  (with-api "macro" "defmodel")
+  (with-api "macro" "defoptimizer")
+
+  (with-api "macro" "call")
+  (with-api "macro" "call-backward")
+
+  (with-api "macro" "self")
+  (with-api "macro" "save-for-backward")
+  (with-api "macro" "get-forward-caller")
+  (with-api "macro" "get-backward-caller")
+  (with-api "macro" "with-calling-layers")
+
+  (with-api "macro" "deftrainer")
+  (with-api "function" "step-model")
+  (with-api "function" "predict")
+
+  (with-api "macro" "model")
+  (with-api "macro" "update")
+  (with-api "macro" "zero-grad")
+
+  (with-api "macro" "defdataset")
+
+  (with-api "function" "get-dataset")
+  (with-api "function" "get-dataset-length")
+
+  (with-api "function" "model-list")
+  (with-api "function" "mlist")
+  (with-api "function" "mth")
+
+  (with-api "macro" "grad")
   )

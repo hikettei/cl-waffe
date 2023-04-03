@@ -14,38 +14,37 @@ The primary goal of this project is:
 @item(Eazy to optimize with Inlined Function.)
 @end(enum)
 This framework is designed to be user-friendly first, enabling both beginners and experts in the field of AI to take advantage of capabilities of powerful programming language, Common Lisp.
+
+
+⚠️ @b(The documentation is being rewritten and is currently only half complete.)
 @b(This framework is still under development and experimental. If you are thinking on using it in your products, It would be wiser to use other libraries. True, the author of cl-waffe is not a expert of AI.)
 @end(section)
 @begin(section)
 @title(Links)
 
 @link[uri="https://github.com/hikettei/cl-waffe"](Official Github Repository)
+
+
+
 @link[uri="https://hikettei.github.io/cl-waffe-docs/docs/overview.html"](The Documentation)
+
+
+
 @link[uri="https://github.com/hikettei/cl-waffe/tree/main/tutorials/jp"](Tutorial Notebooks (Written in Japanese))
-@link[uri="https://github.com/hikettei/cl-waffe/benchmark/Result.md"](Benchmarks)
+
+
+
+@link[uri="https://github.com/hikettei/cl-waffe/blob/main/benchmark/Result.md"](Benchmarks)
 @end(section)
 @begin(section)
 @title(Workloads)
 
 @begin(enum)
 @item(Full Optimization)
-@item(save models with npz)
+@item(save models with npz format)
 @item(🎉 release cl-waffe v0.1)
-@item(more standard impls)
+@item(Add more standard implementations)
 @end(enum)
-@end(section)
-@begin(section)
-@title(Sections)
-
-The list of sections
-@begin(deflist)
-@begin(def)
-Tutorials
-@end(def)
-@begin(term)
-a
-@end(term)
-@end(deflist)
 @end(section)
 @begin(section)
 @title(LLA Backend)

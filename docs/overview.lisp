@@ -15,27 +15,26 @@
 
     (insert "This framework is designed to be user-friendly first, enabling both beginners and experts in the field of AI to take advantage of capabilities of powerful programming language, Common Lisp.")
 
-    (b "This framework is still under development and experimental. If you are thinking on using it in your products, It would be wiser to use other libraries. True, the author of cl-waffe is not a expert of AI."))
+    (insert "~%~%⚠️ @b(The documentation is being rewritten and is currently only half complete.)")
+
+    (b "~%~%This framework is still under development and experimental. If you are thinking on using it in your products, It would be wiser to use other libraries. True, the author of cl-waffe is not a expert of AI."))
 
   (with-section "Links"
     (url "https://github.com/hikettei/cl-waffe" "Official Github Repository")
+    (insert "~%~%")
     (url "https://hikettei.github.io/cl-waffe-docs/docs/overview.html" "The Documentation")
+    (insert "~%~%")
     (url "https://github.com/hikettei/cl-waffe/tree/main/tutorials/jp" "Tutorial Notebooks (Written in Japanese)")
-    (url "https://github.com/hikettei/cl-waffe/benchmark/Result.md" "Benchmarks"))
+    (insert "~%~%")
+    (url "https://github.com/hikettei/cl-waffe/blob/main/benchmark/Result.md" "Benchmarks"))
 
   (with-section "Workloads"
     (with-enum
       (item "Full Optimization")
-      (item "save models with npz")
+      (item "save models with npz format")
       (item "🎉 release cl-waffe v0.1")
-      (item "more standard impls")
+      (item "Add more standard implementations")
       ))
-  
-  (with-section "Sections"
-    (insert "The list of sections")
-    (with-deflist
-      (def "Tutorials")
-      (term "a")))
 
   (with-section "LLA Backend"
     (insert "cl-waffe's matrix operations are performed via mgl-mat, and mgl-mat uses LLA. Accordingly, cl-waffe's performance hinges on mgl-mat and LLA's performance.")

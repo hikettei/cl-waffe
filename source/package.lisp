@@ -237,6 +237,7 @@
   "An identifiers of cl-waffe's objects.")
 
 (defmacro save-for-backward (slot tensor)
+  "TODO :DOCSTRING"
   (error "Welcome to cl-waffe.
 Attempting your tensor ~a to a slot ~a, but save-for-backward wasn't called in:
 1. defmodel's forward or backward.
@@ -254,6 +255,7 @@ For example:
 	 tensor))
 
 (defmacro self (name)
+  "Todo: Docstring"
   (error "Welcome to cl-waffe.
 Attempting to access ~a but couldn't.
 This is because self wasn't called in:
@@ -272,12 +274,14 @@ For example:
             (+ (self A) x)))" name))
 
 (defmacro model ()
+  "Todo: Docstring"
   (error "Welcome to cl-waffe.
 Attempting to access the currently model but (model) wasn't called in:
 1. defmodel/defnode's forward or backward
 2. defoptimizer's slots"))
 
 (defmacro update (&rest args)
+  "Todo: Docstring"
   (declare (ignore args))
   (error "Welcome to cl-waffe.
 The macro (update) can only be called in deftrainer's slots.
@@ -286,6 +290,7 @@ For details, documentations are available.
 https://hikettei.github.io/cl-waffe-docs/docs/cl-waffe.html#3-deftrainer"))
 
 (defmacro zero-grad ()
+  "Todo docstring"
   (error "Welcome to cl-waffe.
 The macro (zero-grad) can only be called in deftrainer's slots.
 For details, documentations are available.
