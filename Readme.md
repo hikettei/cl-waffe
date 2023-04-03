@@ -110,7 +110,7 @@ As of this writing, available tutorials are written in Japanese and their writin
   - [Useful APIs like Numpy/PyTorch.](#useful-apis-like-numpypytorch)
   - [Automatic Differentiation](#automatic-differentiation)
   - [Useful Lazy-Evaluation System](#useful-lazy-evaluation-system)
-  - [Tracing JIT](#tracing-jit)
+  - [Eazy to optimize](#eazy-to-optimize)
   - [Extensible APIs](#extensible-apis)
   - [Switchable Backends](#switchable-backends)
 - [Install](#install)
