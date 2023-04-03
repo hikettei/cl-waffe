@@ -5,6 +5,8 @@
   (with-section "Introducing WaffeTensor"
     (insert "Most deep learning frameworks, represented by PyTorch's Tensor and Chainer's Variables, has their own data structures to store matrices. In cl-waffe, @b(WaffeTensor) is available and defined by Common Lisp's @b(defstruct).")
 
+    (insert "~%~%⚠️ There is no guarantee that this design is technically mature.")
+
     (with-section "What can WaffeTensor do?"
       (insert "Internally, All matrices created by cl-waffe is a type of mgl-mat, being accessed by the accessor (data tensor).")
       (with-evals
@@ -85,18 +87,19 @@
 	  "(parameter (!randn `(10 10)))"))
 
       (with-section "Parameter vs Constant"
-	(insert "I except they're used when...")
+	(insert "Excepted Usage of them is:")
 	(with-deflist
 	  (def "Constant")
-	  (term "Datasets, the temporary result of calculations, Parameter which is not necessary to be optimized")
+	  (term "Datasets, the temporary result of calculations, Parameter which is not necessary to be optimized.")
 
 	  (def "Parameter")
-	  (term "@b(Trainable Variable)")))))
+	  (term "Trainable Variables, to be optimized by @b(optimizers) defined by defoptimizer.")))))
   
   (with-section "defnode and call"
-    (insert "The macros @b(defnode) and @b(call) serve as a key component of cl-waffe, since @b(defnode) enables users to define forward and backward propagation in a simple notations and optimize them. If needed, they're inlined via @b(call) macro. Let's get started with this example:")
+    (insert "The macros @b(defnode) and @b(call) serve as a key component of cl-waffe, since @b(defnode) enables users to define forward and backward propagation in a simple notations and optimize them. If needed, they're inlined via @b(call) macro. Let's get started with this example. it defines a computation node that finds the sum of two single-float values.")
     (with-eval
-      "(defnode ScalarAdd ()
+      "
+(defnode ScalarAdd ()
   :disassemble-forward t
   :forward-declaim (declaim (ftype (function (ScalarAdd waffetensor waffetensor) waffetensor) :forward))
   :forward ((x y)
@@ -108,7 +111,15 @@
   :backward-declaim (declaim (type (function (ScalarAdd waffetensor) list) :backward))
   :backward ((dy) (list dy dy)))")
 
-    (insert "setting :disassemble-forward or :disassemble-backward t, prints the disassemble of :forward/:backward (only essential parts) respectively. It seems they're enough optimized.")
+    (insert "Through this macro, these structures and functions are defined:")
+
+    (with-enum
+      (item "The structure, ScalarAdd")
+      (item "The constructor function, (ScalarAdd)")
+      (item "The function, (call-scalaradd-forward-mgl self x y) where self is a strucure ScalarAdd")
+      (item "The function, (call-scalaradd-backward-mgl self dy) where self is a structure ScalarAdd."))
+
+    (insert "Setting :disassemble-forward or :disassemble-backward t, prints the disassemble of :forward/:backward (only essential parts) respectively. From the result below, it seems to be optimized enough...")
     
     (with-lisp-code
       "; disassembly for #:|nodedebug9718|
@@ -186,9 +197,10 @@
 ; 9D:       5A               POP RDX
 ; 9E:       EBCA             JMP L0")
 
-    (insert "The defined nodes works as if CLOS object, but it is eazy to inline them.")
+    (insert "Nodes defined this macro, works as if CLOS class, and they can have :parameters. However, what makes defnode distinct from them is that:")
     (with-evals
-      "(time (call (ScalarAdd) (const 1.0) (const 1.0)))")
+      "(time (call (ScalarAdd) (const 1.0) (const 1.0)))"
+      "(time (+ 1.0 1.0))")
 
     (with-lisp-code
       "Evaluation took:
@@ -198,15 +210,24 @@
   11,084 processor cycles
   0 bytes consed")
 
-    (insert "It seems enough inlined and the overhead is enough small considering `ScalarAdd` requires to create computation nodes. This is because call is expanded to:")
+    (with-lisp-code
+	"Evaluation took:
+  0.000 seconds of real time
+  0.000001 seconds of total run time (0.000000 user, 0.000001 system)
+  100.00% CPU
+  422 processor cycles
+  0 bytes consed")
 
+    (insert "Nodes called by the macro @c((call)) are fully inlined, (like CL's inline-generic-function, static-dispatch). Considering ScalarAdd builds computation node in addition to summing up the arguments, these overheads are enough small. Here's how I achieve this behaviour:")
+    
     (with-evals
       "(macroexpand `(call (ScalarAdd) (const 1.0) (const 1.0)))")
 
-    (insert "where call-scalaradd-forward-mgl is automatically generated function by defnode. For example: If you define the function sadd which calls ScalarAdd Node. You can do:")
+    (insert "The function call-forward-scalaradd-mgl seems to be inlined. This is because @c((call)) can detect the type of node in the compile time. This leads one of the key propeties, @b(easy to optimise). The functions via defnode and call are optimized like:")
 
     (with-eval
-      "(defun sadd (x y)
+      "
+(defun sadd (x y)
     (declare (optimize (speed 3) (safety 0))
              (type single-float x y))
         (call (ScalarAdd) (const x) (const y)))")
@@ -221,13 +242,31 @@
 .
 .
 (Omitted)")
-    (insert "We got a large disassembled codes which means: all processes including building computation nodes parts, are correctly inlined. Anyway, the optimization of sadd function is properly working!. Speaking of the case when the type of given nodes aren't determined in compile time, call behaviours the different from this.")
+    
+    (insert "We got a large disassembled codes which means: all processes including building computation nodes parts, are correctly inlined. Anyway, the optimization of sadd function is properly working!. Note that the case when the type of given nodes aren't determined in compile time, call behaviours the different from this.")
 
     (with-eval
-      "(let ((node (ScalarAdd)))
+      "
+(let ((node (ScalarAdd)))
     (macroexpand `(call node (const 1.0) (const 1.0))))")
 
-    (insert "and (madakaku)")
+    (insert "The expanded equation was slightly more complicated. Anyway, the most important part is @c((APPLY #'CALL-INLINED-FORWARD MODEL INPUTS)). In short, call-inlined-forward is like:")
+
+    (with-lisp-code
+      "(defun call-inlined-forwrd (model &rest inputs)
+    (typecase model
+        (addtensor (call-addtensor-forward-mgl ...))
+        (scalaradd (call-scalaradd-forward-mgl ...))
+        (T ; ... If this is first trying, Redefine call-inline-forward and try again
+        )))")
+
+    (insert "It may be misleading but simultaneously the most simple example. Of course they're inlined. And call-inlined-forward are automatically redefined when:")
+
+    (with-enum
+      (item "The new backend is defined.")
+      (item "The node you specified doesn't match any nodes."))
+
+    (insert "That is, No need to pay attention to when they are inlined.")
 
     (with-eval
       "(let ((node (ScalarAdd)))
@@ -241,12 +280,23 @@
   10,502 processor cycles
   0 bytes consed")
 
-    (insert "The overhead is small too. ( madakaku )")
-    (insert "When you need (apply): get-forward-caller get-backward-caller")
-    )
+    (insert "It works the same as the first example, the overhead is enough small.")
+    (insert "(P.S.: I was told that it is impossible for SBCL to optimize a CASE of several thousand lines. The assumption is that the more nodes defined in cl-waffe, the less performance we got. In my own benchmarks, I felt it was doing well enough on the second call, but if it is slow, I know how to make it faster.)")
+    
+    (insert "~%~%By the way, defnode's forward slot can require &rest arguments. However, @c((call)) is a macro, so that we can't use apply. Is there no way to call it with &rest arguments? No, @c(get-forward-caller) and @c(get-backward-caller) is available to get the function object itself. In cl-waffe's implementation, !concatenate requires an &rest arguments.")
+
+    (insert "TO ADD: The link to get-forward-caller...")
+
+    (with-lisp-code "
+(defun !concatenate (axis &rest tensors)
+  (declare (optimize (speed 3))
+	   (type fixnum axis))
+  (let* ((node (ConcatenateTensorNode axis))
+	 (caller (get-forward-caller node)))
+    (apply caller node tensors)))"))
   
   (with-section "Writing Node Extensions"
-    (insert "with-backend")
+    (insert "You may notice that the functions generated by defnode has the suffix, mgl. This indicates the backend cl-waffe uses.")
     )
 
   (with-section "MNIST Example"
