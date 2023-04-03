@@ -26,6 +26,8 @@
 
 (defun generate ()
   (write-scr "./docs/overview.scr" *overview*)
+  (write-scr "./docs/tutorial.scr" *tutorials*)
+  (write-scr "./docs/tips.scr" *tips*)
   
   )
 

@@ -6,6 +6,9 @@
               :output-format (:type :multi-html
                               :template :gamma)
               :sources ("manual.scr"
+			"overview.scr"
+			"tutorial.scr"
+			"tips.scr"
 			"section1.scr"
 			"section3.scr"
 			"section2.scr"

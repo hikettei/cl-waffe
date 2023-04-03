@@ -53,7 +53,7 @@
 	  (def "Parameter")
 	  (term "@b(Trainable Variable)")))))
   
-  (with-section "How does these macros work?, defnode and call."
+  (with-section "defnode and call"
     (insert "The macros @b(defnode) and @b(call) serve as a key component of cl-waffe, since @b(defnode) enables users to define forward and backward propagation in a simple notations and optimize them. If needed, they're inlined via @b(call) macro. Let's get started with this example:")
     (with-eval
       "(defnode ScalarAdd ()

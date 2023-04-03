@@ -10,11 +10,8 @@
 		     &body
 		       body)
   `(setq ,title-binding-symbol
-	 ;(regex-replace-all "\""
-			    (with-section ,title-name
-			      ,@body)
-	;		    "\"")
-	 ))
+	 (with-section ,title-name
+	   ,@body)))
 
 (defmacro with-section (title-name
 			&body body
@@ -66,12 +63,13 @@
 		    `(format ,',output-to "~%@begin[lang=shell](code)~%~a~%@end[lang=shell](code)" ,content))
 		  (with-eval (code)
 		    `(progn ; `(progn (read-from-string ~))
-		       (format ,',output-to "~%@b(Input)~%")
+		       (format ,',output-to "~%~%@b(Input)~%")
 		       (format ,',output-to "~%@begin[lang=lisp](code)~%~a~%@end[lang=lisp](code)~%" ,code)
 		       (format ,',output-to "~%@b(Output)~%")
 		       (format ,',output-to "~%@begin[lang=lisp](code)~%~a~%@end[lang=lisp](code)~%" (eval (read-from-string ,code)))))
 		  (with-evals (&rest codes)
 		    `(progn
+		       (format ,',output-to "~%")
 		       (dolist (code ',codes)
 			 (format ,',output-to "~%@b(Input)~%")
 			 (format ,',output-to "~%@begin[lang=lisp](code)~%~a~%@end[lang=lisp](code)~%" code)

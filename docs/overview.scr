@@ -1,3 +1,4 @@
+
 @begin(section)
 @title(Overview)
 @begin(section)
@@ -12,16 +13,26 @@ The primary goal of this project is:
 @item(Make APIs Extensible as possible, enabling users not to depend the standard implementations.)
 @item(Eazy to optimize with Inlined Function.)
 @end(enum)
-This framework is designed to be user-friendly first, enabling both begginers and experts in the field of AI to take advantage of capabilities of powerful programming language, Common Lisp.
-@b(This framework is still under development and experimental. If you are thinking og using it in your products, It would be wiser to use other libraries. True, the author of cl-waffe is not a expert of AI.)
+This framework is designed to be user-friendly first, enabling both beginners and experts in the field of AI to take advantage of capabilities of powerful programming language, Common Lisp.
+@b(This framework is still under development and experimental. If you are thinking on using it in your products, It would be wiser to use other libraries. True, the author of cl-waffe is not a expert of AI.)
 @end(section)
 @begin(section)
 @title(Links)
 
-@link[uri=\"https://github.com/hikettei/cl-waffe\"](Official Github Repository)
-@link[uri=\"https://hikettei.github.io/cl-waffe-docs/docs/overview.html\"](The Documentation)
-@link[uri=\"https://github.com/hikettei/cl-waffe/tree/main/tutorials/jp\"](Tutorial Notebooks (Written in Japanese))
-@link[uri=\"https://github.com/hikettei/cl-waffe/benchmark/Result.md\"](Benchmarks)
+@link[uri="https://github.com/hikettei/cl-waffe"](Official Github Repository)
+@link[uri="https://hikettei.github.io/cl-waffe-docs/docs/overview.html"](The Documentation)
+@link[uri="https://github.com/hikettei/cl-waffe/tree/main/tutorials/jp"](Tutorial Notebooks (Written in Japanese))
+@link[uri="https://github.com/hikettei/cl-waffe/benchmark/Result.md"](Benchmarks)
+@end(section)
+@begin(section)
+@title(Workloads)
+
+@begin(enum)
+@item(Full Optimization)
+@item(save models with npz)
+@item(🎉 release cl-waffe v0.1)
+@item(more standard impls)
+@end(enum)
 @end(section)
 @begin(section)
 @title(Sections)
@@ -41,10 +52,10 @@ a
 
 cl-waffe's matrix operations are performed via mgl-mat, and mgl-mat uses LLA. Accordingly, cl-waffe's performance hinges on mgl-mat and LLA's performance.
 The most recommended one is OpenBLAS. Append following in your setup files (e.g.: ~/.roswell/init.lisp, ~/.sbclrc). For more details, visit the official repositories.
-@link[uri=\"https://github.com/tpapp/lla\"](LLA)
-@link[uri=\"https://github.com/melisgl/mgl-mat\"](mgl-mat)
+@link[uri="https://github.com/tpapp/lla"](LLA)
+@link[uri="https://github.com/melisgl/mgl-mat"](mgl-mat)
 @begin[lang=lisp](code)
-(defvar *lla-configuration* '(:libraries (\"/usr/local/opt/openblas/lib/libblas.dylib\")))
+(defvar *lla-configuration* '(:libraries ("/usr/local/opt/openblas/lib/libblas.dylib")))
 @end[lang=lisp](code)
 @end(section)
 @begin(section)
@@ -56,7 +67,7 @@ For Example, Roswell and SLIME respectively.
 $ ros config set dynamic-space-size 4gb
 @end[lang=shell](code)
 @begin[lang=lisp](code)
-(setq slime-lisp-implementations '((\"sbcl\" (\"sbcl\" \"--dynamic-space-size\" \"4096\"))))
+(setq slime-lisp-implementations '(("sbcl" ("sbcl" "--dynamic-space-size" "4096"))))
 @end[lang=lisp](code)
 should work. However, Improving memory usage is one of my concerns.
 @end(section)
