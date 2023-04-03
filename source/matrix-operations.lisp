@@ -2,7 +2,6 @@
 (in-package :cl-waffe)
 
 (defnode DotProductTensor nil
-  :optimize t
   :parameters ((xi T) (yi T))
   :forward ((x1 x2) ; only supports 2d and 2d arrays
 		    (save-for-backward xi x1)
@@ -32,7 +31,6 @@
   (call node (assure-tensor x) (assure-tensor y)))
 
 (defnode MatMulTensor ()
-  :optimize t
   :parameters ((xi nil)
 	       (yi nil)
 	       (transpose-x? nil)

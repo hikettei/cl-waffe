@@ -6,7 +6,6 @@
 	      :overview "Simple SGD."
 	      :args "&key (lr 1e-3)"
 	      :update "Following defnition.")
-  :optimize t
   :parameters ((params params :type hash-table)
 	       (lr lr :type float))
   :update (()
@@ -88,7 +87,6 @@
 	      :overview "Simple Adam. It invokes kernel directly."
 	      :args "&key (lr 1e-3) (epsilon 1e-7) (beta1 0.9) (beta2 0.999)"
 	      :update "Following definition.")
-  :optimize t
   :parameters ((params params :type hash-table)
 	       (lr lr :type float)
 	       (m (make-hash-table) :type hash-table)

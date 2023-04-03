@@ -93,8 +93,7 @@
   (:export
            #:mlist
 	   #:mth
-	   #:model-list
-	   #:with-model-list)
+	   #:model-list)
 
   (:export
           #:get-forward-caller

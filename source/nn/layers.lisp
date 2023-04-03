@@ -13,7 +13,6 @@ Args:  in-features (fixnum)
 
 Input: x (Tensor) where the x is the shape of (batch-size in-features)
 Output: Applied tensor, where the tensor is the shape of (batch-size out-features)"
-  :optimize t
   :parameters ((weight
 		(init-activation-weights activation-name-for-selecting-initializer in-features out-features)
 		:type waffetensor)
@@ -35,7 +34,6 @@ Args:  in-features (fixnum)
 Input: x (Tensor) where the x is the shape of (batch-size in-features)
 Output: Applied tensor, where the tensor is the shape of (batch-size out-features)
 "
-  :optimize t
   :parameters ((layer (linearlayer in-features out-features bias activation)) (activation activation))
   :forward ((x)
 	    (case (cl-waffe:self activation)

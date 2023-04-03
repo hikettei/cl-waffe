@@ -2,7 +2,6 @@
 (in-package :cl-waffe)
 
 (defnode ConcatenateTensorNode (axis)
-  :optimize t
   :parameters ((axis axis :type fixnum)
 	       (shape t)
 	       (arg-size 0 :type fixnum))

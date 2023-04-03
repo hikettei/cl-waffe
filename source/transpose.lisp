@@ -3,7 +3,6 @@
 
 
 (defnode TransposeTensor (shape)
-  :optimize t
   :parameters ((prev-shape T) (shape shape))
   :forward ((x)
 	    (setf (self prev-shape) (assure-tensor (!shape x)))
@@ -12,7 +11,6 @@
 	     (list (!transpose d1))))
 
 (defnode TransposeOriginalTensor (shape)
-  :optimize t
   :parameters ((prev-shape nil) (shape shape))
   :forward ((x)
 	    (setf (self prev-shape) (!shape x))

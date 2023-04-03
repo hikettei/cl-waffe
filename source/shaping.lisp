@@ -2,7 +2,6 @@
 (in-package :cl-waffe)
 
 (defnode ReshapeTensor (shape)
-  :optimize t
   :parameters ((prev-shape T) (shape shape))
   :forward ((x) (setf (self prev-shape) (!shape x))
 		(with-searching-calc-node :reshape x (self shape)))
@@ -50,7 +49,6 @@ See also: nil
 
 
 (defnode RepeatTensor (axis repeats)
-  :optimize t
   :parameters ((axis axis) (repeats repeats))
   :forward ((x)
 	    (with-searching-calc-node :repeat x (self axis) (self repeats)))

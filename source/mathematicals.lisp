@@ -3,7 +3,6 @@
 
 
 (defnode PowTensor (n)
-  :optimize t
   :parameters ((xi T)
 	       (n (assure-tensor n)))
   :forward ((x1)
@@ -42,7 +41,6 @@ target-x is destructed."
 
 
 (defnode SqrtTensor nil
-  :optimize t
   :parameters ((xi T))
   :forward ((x1) (save-for-backward xi x1)
 		 (with-searching-calc-node :sqrt x1))
@@ -74,7 +72,6 @@ target-x is destructed."
 
 
 (defnode LogTensor nil
-  :optimize t
   :parameters ((x1 T))
   :forward ((x1) (save-for-backward x1 x1)
 		 (with-searching-calc-node :log x1))
@@ -105,7 +102,6 @@ yi = log(e xi)
 
 
 (defnode ExpTensor ()
-  :optimize t
   :parameters ((xi T))
   :forward ((x) (save-for-backward xi x)
 		(with-searching-calc-node :exp x))
@@ -141,7 +137,6 @@ yi = log(e xi)
 ; Trigonometric functions.
 
 (defnode SinTensor ()
-  :optimize t
   :parameters ((xi nil))
   :forward ((x)
 	    (save-for-backward xi x)
@@ -150,7 +145,6 @@ yi = log(e xi)
 	     (list (!mul dy (!cos (self xi))))))
 
 (defnode CosTensor ()
-  :optimize t
   :parameters ((xi nil))
   :forward ((x)
 	    (save-for-backward xi x)
@@ -159,7 +153,6 @@ yi = log(e xi)
 	     (list (!mul dy (!mul -1.0 (!sin (self xi)))))))
 
 (defnode TanTensor ()
-  :optimize t
   :parameters ((xi nil))
   :forward ((x)
 	    (save-for-backward xi x)
@@ -218,7 +211,6 @@ yi = log(e xi)
 	     (list (!mul dy (!div 1 (!pow (!acosh (self xi)) 2))))))
 
 (defnode HyperbolicSinTensor ()
-  :optimize t
   :parameters ((xi nil))
   :forward ((x)
 	    (save-for-backward xi x)
@@ -227,7 +219,6 @@ yi = log(e xi)
 	     (list (!mul dy (!cosh (self xi))))))
 
 (defnode HyperbolicCosTensor ()
-  :optimize t
   :parameters ((xi nil))
   :forward ((x)
 	    (save-for-backward xi x)
@@ -343,7 +334,6 @@ yi = log(e xi)
 	  x 1.0 -1.0))	       
 			       
 (defnode AbsTensor ()
-  :optimize t
   :parameters ((mask nil))
   :forward ((x)
 	    (let ((mask (apply-abs x)))

@@ -6,7 +6,7 @@ Here's
 Utils for defnode/defmodel/defoptimizer
 |#
 (defparameter *in-node-method* nil)
-(defparameter *model-arg-max-displaying-size* 20 "")
+(defparameter *model-arg-max-displaying-size* 20 "(print-model model) uses it. the argument content which longer than it, will be omitted.")
 
 (defparameter *restart-non-exist-backend* t
   "When t, in the case when the specified backend doesn't exist, cl-waffe calls a standard implementation backend")
@@ -39,11 +39,7 @@ Utils for defnode/defmodel/defoptimizer
   (register-features *call-backward-features* node-name fname backend-name))
 
 (defmacro with-no-grad (&body body)
-  "This macro is used in order to implict that codes below is ignored:
-save-for-backward, creating new node object, using backward and processes for it.
-
-For tasks in which grads are not required, using it helps better performance.
-
+  "Below this macro, the parameter *no-grad* become t, which means: some operations are forcibly ignored. (e.g.: save-for-backward, building computation nodes)
 @begin[lang=lisp](code)
 (with-no-grad
   (call (model) x))
@@ -106,7 +102,7 @@ Output: An last value of layers."
   (apply #'call-inlined-backward model inputs))
 
 (defmacro call-backward (model &rest inputs)
-  "Todo: Docs"
+  "calls the given model's backward, with inputs."
   `(call-inlined-backward ,model ,@inputs))
 
 (defun build-backend-case (features
@@ -339,24 +335,12 @@ Output: An last value of layers."
 		      (gethash :mgl result)))))))))
 
 (defmacro get-forward-caller (model)
-  "Todo: Docstring"
+  "Returns the given node (model/node/optimizer)'s forward slot, which is callable with funcall/apply."
   `(get-nodefunction-caller :forward ,model))
 
 (defmacro get-backward-caller (model)
-  "Todo: Docstring"
+  "Returns the given node (model/node/optimizer)'s backward slot, which is callable with funcall/apply."
   `(get-nodefunction-caller :backward ,model))
-
-(defmacro with-model-list (&rest models)
-  "Applying model-list.
-
-Input: models an list of models
-
-Output: [Model:Model-List]
-
-The model defined by model-list can be used like:
-
-@c((call (Model-List) i args...)) where i is the index for models"
-  `(model-list ,models))
 
 (defmacro is-waffe-model (model)
   `(and (slot-exists-p ,model 'parameters)
@@ -465,45 +449,10 @@ Example:
 		     (disassemble-backward nil)
 		     backward-declaim
 		     backward
-		     (optimize nil)
-		     (regard-as-node t)
 		     (document "An node, defined by cl-waffe."))
-  "Defining computation nodes.
+  "Define computation nodes in a format that cl-waffe can handle.
 
-defnode is useful when you want to define the derivative yourself.
-
-@b(Note that parameter tensors in :parameter won't updated by optimizers.)
-
-If you want to update params, define additional models.
-
-@begin(deflist)
-
-@term(regard-as-node)
-@begin(def)
-When the slot :regard-as-node is nil, an optimizer in cl-waffe.caches regards this as model (i.e. argument could be destructed.) Default is t.
-@end(def)
-@end(deflist)
-
-Note that:
-
-@begin(enum)
-@item(:backward must return list, where that length corresponds with the length of input's argument, otherwise an error occurs when backward.)
-
-@item(In forward and backward, computation node isn't needed to be continuous.However, the last values of :forward and :backward step, must posses :thread-data, which can be obtained by (waffetensor-thread-data tensor))
-@end(enum)
-
-Example:
-
-@begin[lang=lisp](code)
-(defnode AddTensor nil
-  :optimize t
-  :parameters nil
-  :forward  ((x y)
-	     (with-searching-calc-node :add x y))
-  :backward ((dy) (list dy dy)))
-
-(call (AddTensor) tensor1 tensor2)
-@end[lang=lisp](code)"
+Todo: args"
 
   (if (null backward)
       (warn "The backward slot of ~a is undefined, which returns nil without cl-waffe being noticed." (symbol-name name)))
@@ -520,8 +469,6 @@ Example:
      :backward ,backward
      
      :hide-from-tree T
-     :optimize ,optimize
-     :regard-as-node ,regard-as-node
      :document ,document
      
      :object-type :node))

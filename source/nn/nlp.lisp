@@ -8,7 +8,6 @@
 			  (bias nil)
 			  (dropout nil)
 			  (initializing-method :orthogonal))
-  :optimize t
   :parameters ((weight (init-weights
 			initializing-method
 			input-size
@@ -61,7 +60,6 @@ FIXME: This implementation IS SO SLOW AND STUPID ;/ (using !aref). And There mus
 	       (dropout nil)
 	       (bidirectional nil)
 	       (initializing-method :orthogonal))
-  :optimize t
   :parameters ((rnn-layers (model-list
 			    (loop for i upfrom 0 below num-layers
 				  collect (RNNHiddenLayer
