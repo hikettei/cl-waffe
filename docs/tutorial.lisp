@@ -349,9 +349,9 @@ To disable this, set cl-waffe:*ignore-inlining-info* t")
     (insert "Adding new backends is no pain for cl-waffe!"))
 
   (with-section "MNIST Example"
-    (insert "Using features that I introduced, we can training MNIST. In practive, we need more features to implement it more simply: defmacro")
+    (insert "Using features that I introduced, we can training MNIST. In practice, we need more features to implement it bluntly: defmodel. (気が向いたらちゃんと書く)")
 
-    (with-section "define your model"
+    (with-section "Defines your model"
       (with-evals "
 (defmodel MLP (activation)
   :parameters ((layer1   (cl-waffe.nn:denselayer (* 28 28) 512 T activation))
@@ -362,7 +362,9 @@ To disable this, set cl-waffe:*ignore-inlining-info* t")
 	      (layer1 x)
  	      (layer2 x)
 	      (layer3 x))))"
-      "(MLP :relu)"))
+	"(MLP :relu)"
+	"(with-output-to-string (out)
+    (print-model (MLP :relu) out))"))
 
     (with-section "define your trainer"
       (with-evals "
@@ -379,6 +381,13 @@ To disable this, set cl-waffe:*ignore-inlining-info* t")
  :predict ((x)(call (model) x)))"
 	"(setq trainer (MLPTrainer :relu 1e-3))"
 	"(slot-value trainer 'cl-waffe::optimizer)"))
+
+    (insert "All the code including loading the data is at here.")
+
+    (insert "lake is available.")
+    (with-shell-code
+      "$ lake example:install
+$ lake example:mnist")
 
     
     ))

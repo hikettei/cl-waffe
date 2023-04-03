@@ -679,9 +679,9 @@ Adding new backends is no pain for cl-waffe!
 @begin(section)
 @title(MNIST Example)
 
-Using features that I introduced, we can training MNIST. In practive, we need more features to implement it more simply: defmacro
+Using features that I introduced, we can training MNIST. In practice, we need more features to implement it more simply: defmodel
 @begin(section)
-@title(define your model)
+@title(Defines your model)
 
 
 
@@ -713,6 +713,36 @@ CL-WAFFE> (MLP :relu)
     <Model: LAYER2 -> DENSELAYER{W905} ...>
     <Model: LAYER3 -> LINEARLAYER{W908} ...>
 )>
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+CL-WAFFE> (with-output-to-string (out)
+    (print-model (MLP :relu) out))
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+
+––– <Model MLP{W909}>
+––––––– <MLP's LAYER1 = DENSELAYER{W910}>
+        |-ACTIVATION-|
+        |___RELU_____|
+––––––––––– <DENSELAYER's LAYER = LINEARLAYER{W911}>
+            |––slot––|–––shape–––|–trainable–|
+             WEIGHT -> (784 512)       O
+              BIAS  ->  (1 512)        O
+––––––– <MLP's LAYER2 = DENSELAYER{W913}>
+        |-ACTIVATION-|
+        |___RELU_____|
+––––––––––– <DENSELAYER's LAYER = LINEARLAYER{W914}>
+            |––slot––|–––shape–––|–trainable–|
+             WEIGHT -> (512 256)       O
+              BIAS  ->  (1 256)        O
+––––––– <MLP's LAYER3 = LINEARLAYER{W916}>
+        |––slot––|––shape–––|–trainable–|
+         WEIGHT -> (256 10)       O
+          BIAS  ->  (1 10)        O
+
+ -(+) Total Param: 535818
 @end[lang=lisp](code)
 
 @end(section)
@@ -754,11 +784,11 @@ CL-WAFFE> (slot-value trainer 'cl-waffe::optimizer)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-<Optimizer: ADAM{W921}
-    Param: #<GENERAL-HASH-TABLE :TEST EQL :COUNT 6 :WEAKNESS :VALUE {1007CB4F63}>
+<Optimizer: ADAM{W929}
+    Param: #<GENERAL-HASH-TABLE :TEST EQL :COUNT 6 :WEAKNESS :VALUE {1009136233}>
     LR : 0.001
-    Param: #<HASH-TABLE :TEST EQL :COUNT 0 {1007CB5053}>
-    Param: #<HASH-TABLE :TEST EQL :COUNT 0 {1007CB50F3}>
+    Param: #<HASH-TABLE :TEST EQL :COUNT 0 {1009136323}>
+    Param: #<HASH-TABLE :TEST EQL :COUNT 0 {10091363C3}>
     N : 0
     EPSILON : 1.0e-7
     BETA1 : 0.9
@@ -768,5 +798,11 @@ CL-WAFFE> (slot-value trainer 'cl-waffe::optimizer)
 @end[lang=lisp](code)
 
 @end(section)
+All the code including loading the data is at here.
+lake is available.
+@begin[lang=shell](code)
+$ lake example:install
+$ lake example:mnist
+@end[lang=shell](code)
 @end(section)
 @end(section)
