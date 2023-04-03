@@ -42,10 +42,11 @@
 	   #:*print-mat-max-size*)
 
   (:export
+           #:WITH-SEARCHING-CALC-NODE
 	   #:!allow-destruct
 	   #:!disallow-destruct)
 
-  (:export
+  (:export #:warranty
 	   ; Accessors	   
 	   #:data
 	   #:value
