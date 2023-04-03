@@ -84,6 +84,7 @@ There are still **very few standard implementations of NNs(As of this writing, o
 
 # News
 
+- (2023/4/4) The [documentations](https://hikettei.github.io/cl-waffe-docs/docs/overview.html) are begin rewritten. 
 - (2023/4/2) The entire cl-waffe code, (especially, `call` and `call-backward`), has been optimised. https://github.com/hikettei/cl-waffe/pull/120 . Accordingly, the API has changed significantly. (e.g.: the function `call` is now a macro.) However, **The Document isn't up-to-date**.
 
 - (2023/03/26) I published the benchmark compared to Numpy/PyTorch. Available at [Here](https://github.com/hikettei/cl-waffe/blob/main/benchmark/Result.md). (Not quite up to my goal.) cl-waffe should peform better... however I guess there's a room to optimize in the cl-waffe's codes...
@@ -174,7 +175,7 @@ As of this writing:
 - Useful APIs like Numpy/PyTorch
 - Automatic Differentiation
 - Useful Lazy-Evaluation System
-- Tracing JIT
+- Eazy to optimize.
 - Extensible APIs
 - Switchable Backends
 
@@ -449,61 +450,38 @@ The lazy-evaluated tensors are evaluated via function `(value tensor)`. Once thi
 ;        (0.862... -0.82... ~ 1.360... -0.91...)) :mgl t :shape (10 10))
 ```
 
-## Tracing JIT
+## Eazy to optimize
 
-This is still experimental...
+For more detail: [defnode and call](https://hikettei.github.io/cl-waffe-docs/docs/tutorials.html#defnode-and-call)
 
-In the `(with-jit)` macro, cl-waffe dynamically defines the kernel functions with a lazy-evaluation system. (currently, it is only when blas).
+Nodes are described in a clear and highly functional notation:
 
 ```lisp
-
-; In default...
-
-(time (!log (!exp a)))
-;Evaluation took:
-;  0.000 seconds of real time
-;  0.000171 seconds of total run time (0.000130 user, 0.000041 system)
-;  100.00% CPU
-;  248,100 processor cycles
-;  3,232 bytes consed
-  
-;#Const(((0.570... -0.13... ~ 0.217... 0.862...)        
-;                 ...
-;        (-0.12... 0.384... ~ -0.25... -0.91...)) :mgl t :shape (10 10))
-
-(defun trace-operate ()
-  (with-jit
-     (time (const (value (!log (!exp a)))))))
-
-; The first call of trace-operate, it seems slower because cl-waffe traces and compiles code.
-(trace-operate)
-;Evaluation took:
-;  0.000 seconds of real time
-;  0.000183 seconds of total run time (0.000122 user, 0.000061 system)
-;  100.00% CPU
-;  240,442 processor cycles
-;  32,512 bytes consed
-  
-;#Const(((0.570... -0.13... ~ 0.217... 0.862...)        
-;                 ...
-;        (-0.12... 0.384... ~ -0.25... -0.91...)) :mgl t :shape (10 10))
-
-; However, after the second one, it will be faster.
-(trace-operate)
-;Evaluation took:
-;  0.000 seconds of real time
-;  0.000096 seconds of total run time (0.000087 user, 0.000009 system)
-;  100.00% CPU
-;  187,848 processor cycles
-;  0 bytes consed
-  
-;#Const(((0.570... -0.13... ~ 0.217... 0.862...)        
-;                 ...
-;        (-0.12... 0.384... ~ -0.25... -0.91...)) :mgl t :shape (10 10))
-
-; P.S.: Back propagation is available even when with-jit is enabled
+(defnode ScalarAdd ()
+  :disassemble-forward t
+  :forward-declaim (declaim (ftype (function (ScalarAdd waffetensor waffetensor) waffetensor) :forward))
+  :forward ((x y)
+	    (let ((x (data x))
+		  (y (data y)))
+	      (declare (type single-float x y))
+	      (const (+ x y))))
+  :disassemble-backward t
+  :backward-declaim (declaim (type (function (ScalarAdd waffetensor) list) :backward))
+  :backward ((dy) (list dy dy)))
 ```
 
+It can be easily inlined via the macro `call`.
+
+```lisp
+(macroexpand `(call (ScalarAdd) (const 1.0) (const 1.0)))
+```
+
+```lisp
+(LOCALLY
+ (DECLARE (OPTIMIZE (SPEED 3) (SAFETY 1))
+          (INLINE call-scalaradd-forward-mgl))
+ (call-scalaradd-forward-mgl (SCALARADD) (CONST 1.0) (CONST 1.0)))
+```
 
 ## Extensible APIs
 
