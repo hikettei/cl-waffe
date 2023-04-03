@@ -20,9 +20,9 @@ CL-WAFFE> (setq x (!randn `(3 3))) ; WaffeTensor
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(((0.388... -1.56... 0.298...)        
+#Const(((0.113... -0.99... 0.546...)        
                  ...
-        (0.241... 1.498... -1.07...)) :dtype :float :shape (3 3) :backward NIL)
+        (-1.19... 1.772... -0.16...)) :dtype :float :shape (3 3) :backward NIL)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
@@ -30,9 +30,9 @@ CL-WAFFE> (data x) ;mgl-mat:mat
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#<MAT 3x3 AB #2A((0.38843256 -1.5604061 0.29888523)
-                 (0.7765525 -0.46924242 0.74521625)
-                 (0.24136996 1.4987508 -1.0782416))>
+#<MAT 3x3 AB #2A((0.11365369 -0.9985097 0.54621303)
+                 (1.6119125 1.0711697 -0.6234866)
+                 (-1.190943 1.7725886 -0.16458914))>
 @end[lang=lisp](code)
 
 In the same way, WaffeTensor can restore scalar object.
@@ -76,7 +76,7 @@ CL-WAFFE>
 @b(Output)
 
 @begin[lang=lisp](code)
-#Const(2.0 :dtype SINGLE-FLOAT :backward <Node: ADDTENSOR{W857}>)
+#Const(2.0 :dtype SINGLE-FLOAT :backward <Node: ADDTENSOR{W914}>)
 @end[lang=lisp](code)
 
 When gradient is not required (e.g.: predict), the macro @c((with-no-grad)) would be useful.
@@ -110,9 +110,9 @@ CL-WAFFE> (setq a (parameter (!randn `(3 3))))
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Parameter{((-0.66... -0.87... 0.539...)            
+#Parameter{((0.125... -0.95... 0.938...)            
                          ...
-            (0.176... -0.32... 0.308...)) :dtype :float :shape (3 3) :backward NIL}
+            (-0.23... 2.095... -0.73...)) :dtype :float :shape (3 3) :backward NIL}
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
@@ -120,9 +120,9 @@ CL-WAFFE> (setq b (parameter (!randn `(3 3))))
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Parameter{((-2.05... -1.10... 0.237...)            
+#Parameter{((0.093... 1.027... -0.46...)            
                          ...
-            (-0.26... 0.141... 0.094...)) :dtype :float :shape (3 3) :backward NIL}
+            (0.810... -0.06... -0.69...)) :dtype :float :shape (3 3) :backward NIL}
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
@@ -130,9 +130,9 @@ CL-WAFFE> (setq c (parameter (!randn `(3 3))))
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Parameter{((-0.23... 0.432... 0.050...)            
+#Parameter{((1.262... 0.641... 0.320...)            
                          ...
-            (-0.53... 0.092... -0.39...)) :dtype :float :shape (3 3) :backward NIL}
+            (-0.08... 0.943... -1.26...)) :dtype :float :shape (3 3) :backward NIL}
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
@@ -140,7 +140,7 @@ CL-WAFFE> (setq z (!sum (!add (!mul a b) c))) ; computes z=a*b + c, and summariz
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(5.6745043 :dtype SINGLE-FLOAT :backward <Node: SUMUPTENSOR{W867}>)
+#Const(-0.3184932 :dtype SINGLE-FLOAT :backward <Node: SUMUPTENSOR{W924}>)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
@@ -156,9 +156,9 @@ CL-WAFFE> (grad a)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#<MAT 3x3 B #2A((-0.22871757 -0.12243843 0.026442857)
-                (-0.02219441 0.42385927 -0.0024049429)
-                (-0.029781269 0.015730541 0.010543759))>
+#<MAT 3x3 B #2A((0.010436081 0.11415275 -0.052036814)
+                (-0.20477839 0.10362298 0.11329234)
+                (0.09003866 -0.0077186567 -0.07688061))>
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
@@ -166,9 +166,9 @@ CL-WAFFE> (grad b)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#<MAT 3x3 B #2A((-0.074292995 -0.09741843 0.059954096)
-                (0.17647834 0.03662637 0.27036503)
-                (0.019568805 -0.036299534 0.034257263))>
+#<MAT 3x3 B #2A((0.013993139 -0.10566751 0.10432069)
+                (-0.017649844 -0.05955922 -0.06815399)
+                (-0.02659057 0.23282263 -0.081720024))>
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
@@ -200,7 +200,7 @@ CL-WAFFE> (!transpose (!randn `(3 1)))
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(<Transposed Tensor> :shape (1 3) :backward <Node: TRANSPOSETENSOR{W870}>)
+#Const(<Transposed Tensor> :shape (1 3) :backward <Node: TRANSPOSETENSOR{W927}>)
 @end[lang=lisp](code)
 
 They behaves as if they're normal tensor (In fact, !shape !dims etc... works as usual), but aren't evaluated until (value tensor) is called.
@@ -212,7 +212,7 @@ CL-WAFFE> (setq transpose (!transpose (!randn `(3 1))))
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(<Transposed Tensor> :shape (1 3) :backward <Node: TRANSPOSETENSOR{W871}>)
+#Const(<Transposed Tensor> :shape (1 3) :backward <Node: TRANSPOSETENSOR{W928}>)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
@@ -220,7 +220,7 @@ CL-WAFFE> (value transpose)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#<MAT 1x3 B #2A((-1.9306349 -0.07226962 1.2816001))>
+#<MAT 1x3 B #2A((1.3619953 0.38642612 0.1761382))>
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
@@ -228,7 +228,7 @@ CL-WAFFE> transpose
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(((-1.93... -0.07... 1.281...)) :dtype :float :shape (1 3) :backward <Node: TRANSPOSETENSOR{W871}>)
+#Const(((1.361... 0.386... 0.176...)) :dtype :float :shape (1 3) :backward <Node: TRANSPOSETENSOR{W928}>)
 @end[lang=lisp](code)
 
 This property helps to reduce the cost of !transpose before !matmul
@@ -250,9 +250,9 @@ CL-WAFFE> (!randn `(10 10))
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(((1.029... 0.023... ~ -0.70... -0.29...)        
+#Const(((0.437... -0.17... ~ -0.31... 0.608...)        
                  ...
-        (-0.57... -1.64... ~ -0.19... -0.60...)) :dtype :float :shape (10 10) :backward NIL)
+        (1.008... -0.33... ~ -1.96... 0.598...)) :dtype :float :shape (10 10) :backward NIL)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
@@ -260,9 +260,9 @@ CL-WAFFE> (!beta `(10 10) 2.0 1.0)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(((0.663... 0.590... ~ 0.315... 0.387...)        
+#Const(((0.998... 0.262... ~ 0.819... 0.482...)        
                  ...
-        (0.152... 0.806... ~ 0.872... 0.957...)) :dtype :float :shape (10 10) :backward NIL)
+        (0.754... 0.245... ~ 0.590... 0.184...)) :dtype :float :shape (10 10) :backward NIL)
 @end[lang=lisp](code)
 
 WaffeTensors we obtain from standard initializing methods are Constant. In general, cl-waffe provides the constructor (const value). The given value is coerced to properly types. In this example, we obtain mgl-mat from simple-array.
@@ -292,9 +292,9 @@ CL-WAFFE> (parameter (!randn `(10 10)))
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Parameter{((0.208... -1.28... ~ 0.296... -1.47...)            
+#Parameter{((-1.28... 0.354... ~ -0.63... -0.69...)            
                          ...
-            (-0.98... -0.46... ~ 0.633... 0.862...)) :dtype :float :shape (10 10) :backward NIL}
+            (-2.70... 0.699... ~ -0.30... -1.77...)) :dtype :float :shape (10 10) :backward NIL}
 @end[lang=lisp](code)
 
 @end(section)
@@ -440,7 +440,7 @@ CL-WAFFE> (time (call (ScalarAdd) (const 1.0) (const 1.0)))
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(2.0 :dtype SINGLE-FLOAT :backward <Node: SCALARADD{W888}>)
+#Const(2.0 :dtype SINGLE-FLOAT :backward <Node: SCALARADD{W945}>)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
@@ -563,7 +563,7 @@ CL-WAFFE>(let ((node (ScalarAdd)))
 @b(Output)
 
 @begin[lang=lisp](code)
-#Const(2.0 :dtype SINGLE-FLOAT :backward <Node: SCALARADD{W890}>)
+#Const(2.0 :dtype SINGLE-FLOAT :backward <Node: SCALARADD{W947}>)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
@@ -663,7 +663,7 @@ CL-WAFFE>
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-#Const(2.0d0 :dtype DOUBLE-FLOAT :backward <Node: SCALARADD{W895}>)
+#Const(2.0d0 :dtype DOUBLE-FLOAT :backward <Node: SCALARADD{W952}>)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
@@ -679,7 +679,7 @@ Adding new backends is no pain for cl-waffe!
 @begin(section)
 @title(MNIST Example)
 
-Using features that I introduced, we can training MNIST. In practice, we need more features to implement it more simply: defmodel
+Using features that I introduced, we can training MNIST. In practice, we need more features to implement it bluntly: defmodel. (気が向いたらちゃんと書く)
 @begin(section)
 @title(Defines your model)
 
@@ -708,10 +708,10 @@ CL-WAFFE> (MLP :relu)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-<Model: MLP{W901}(
-    <Model: LAYER1 -> DENSELAYER{W902} ...>
-    <Model: LAYER2 -> DENSELAYER{W905} ...>
-    <Model: LAYER3 -> LINEARLAYER{W908} ...>
+<Model: MLP{W958}(
+    <Model: LAYER1 -> DENSELAYER{W959} ...>
+    <Model: LAYER2 -> DENSELAYER{W962} ...>
+    <Model: LAYER3 -> LINEARLAYER{W965} ...>
 )>
 @end[lang=lisp](code)
 
@@ -722,27 +722,27 @@ CL-WAFFE> (with-output-to-string (out)
 
 @begin[lang=lisp](code)
 
-––– <Model MLP{W909}>
-––––––– <MLP's LAYER1 = DENSELAYER{W910}>
+––– <Model MLP{W966}>
+––––––– <MLP's LAYER1 = DENSELAYER{W967}>
         |-ACTIVATION-|
         |___RELU_____|
-––––––––––– <DENSELAYER's LAYER = LINEARLAYER{W911}>
+––––––––––– <DENSELAYER's LAYER = LINEARLAYER{W968}>
             |––slot––|–––shape–––|–trainable–|
              WEIGHT -> (784 512)       O
               BIAS  ->  (1 512)        O
-––––––– <MLP's LAYER2 = DENSELAYER{W913}>
+––––––– <MLP's LAYER2 = DENSELAYER{W970}>
         |-ACTIVATION-|
         |___RELU_____|
-––––––––––– <DENSELAYER's LAYER = LINEARLAYER{W914}>
+––––––––––– <DENSELAYER's LAYER = LINEARLAYER{W971}>
             |––slot––|–––shape–––|–trainable–|
              WEIGHT -> (512 256)       O
               BIAS  ->  (1 256)        O
-––––––– <MLP's LAYER3 = LINEARLAYER{W916}>
+––––––– <MLP's LAYER3 = LINEARLAYER{W973}>
         |––slot––|––shape–––|–trainable–|
          WEIGHT -> (256 10)       O
           BIAS  ->  (1 10)        O
 
- -(+) Total Param: 535818
+ -(+) Total Param: 0
 @end[lang=lisp](code)
 
 @end(section)
@@ -784,11 +784,11 @@ CL-WAFFE> (slot-value trainer 'cl-waffe::optimizer)
 @end[lang=lisp](code)
 
 @begin[lang=lisp](code)
-<Optimizer: ADAM{W929}
-    Param: #<GENERAL-HASH-TABLE :TEST EQL :COUNT 6 :WEAKNESS :VALUE {1009136233}>
+<Optimizer: ADAM{W986}
+    Param: #<GENERAL-HASH-TABLE :TEST EQL :COUNT 6 :WEAKNESS :VALUE {100F6DCD63}>
     LR : 0.001
-    Param: #<HASH-TABLE :TEST EQL :COUNT 0 {1009136323}>
-    Param: #<HASH-TABLE :TEST EQL :COUNT 0 {10091363C3}>
+    Param: #<HASH-TABLE :TEST EQL :COUNT 0 {100F6DCE53}>
+    Param: #<HASH-TABLE :TEST EQL :COUNT 0 {100F6DCEF3}>
     N : 0
     EPSILON : 1.0e-7
     BETA1 : 0.9

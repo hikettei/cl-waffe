@@ -8,9 +8,17 @@
               :sources ("overview.scr"
 			"tutorial.scr"
 			"tips.scr"
-			"section1.scr"
-			"section3.scr"
-			"section2.scr"
+			"features.scr"
+
+			"cl-waffe-doc.scr"
+			"nn-doc.scr"
+			"conditions.scr"
+
+			"APIs_cl-waffe.scr"
+			"APIs_cl-waffe-nn.scr"
+			"APIs_cl-waffe-optimizers.scr"
+
+			; To delete: below.
 			"references.scr"
 			"references-nn.scr"
 			"references-optimizers.scr"
