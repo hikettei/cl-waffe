@@ -346,8 +346,39 @@ To disable this, set cl-waffe:*ignore-inlining-info* t")
   9,814 processor cycles
   0 bytes consed")
 
-    (insert "Adding new backends is zero-cost for cl-waffe!"))
+    (insert "Adding new backends is no pain for cl-waffe!"))
 
   (with-section "MNIST Example"
     (insert "Using features that I introduced, we can training MNIST. In practive, we need more features to implement it more simply: defmacro")
+
+    (with-section "define your model"
+      (with-evals "
+(defmodel MLP (activation)
+  :parameters ((layer1   (cl-waffe.nn:denselayer (* 28 28) 512 T activation))
+	       (layer2   (cl-waffe.nn:denselayer 512 256 T activation))
+	       (layer3   (cl-waffe.nn:linearlayer 256 10 T)))
+  :forward ((x)
+	    (with-calling-layers x
+	      (layer1 x)
+ 	      (layer2 x)
+	      (layer3 x))))"
+      "(MLP :relu)"))
+
+    (with-section "define your trainer"
+      (with-evals "
+(deftrainer MLPTrainer (activation lr)
+  :model          (MLP activation)
+  :optimizer      cl-waffe.optimizers:Adam
+  :optimizer-args (:lr lr)
+  :step-model ((x y)
+	       (zero-grad)
+	       (let ((out (cl-waffe.nn:softmax-cross-entropy (call (model) x) y)))
+		 (backward out)
+		 (update)
+		 out))
+ :predict ((x)(call (model) x)))"
+	"(setq trainer (MLPTrainer :relu 1e-3))"
+	"(slot-value trainer 'cl-waffe::optimizer)"))
+
+    
     ))

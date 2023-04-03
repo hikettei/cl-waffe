@@ -674,11 +674,99 @@ Evaluation took:
   9,814 processor cycles
   0 bytes consed
 @end[lang=lisp](code)
-Adding new backends is zero-cost for cl-waffe!
+Adding new backends is no pain for cl-waffe!
 @end(section)
 @begin(section)
 @title(MNIST Example)
 
 Using features that I introduced, we can training MNIST. In practive, we need more features to implement it more simply: defmacro
+@begin(section)
+@title(define your model)
+
+
+
+@b(REPL:)
+@begin[lang=lisp](code)
+CL-WAFFE> 
+(defmodel MLP (activation)
+  :parameters ((layer1   (cl-waffe.nn:denselayer (* 28 28) 512 T activation))
+	       (layer2   (cl-waffe.nn:denselayer 512 256 T activation))
+	       (layer3   (cl-waffe.nn:linearlayer 256 10 T)))
+  :forward ((x)
+	    (with-calling-layers x
+	      (layer1 x)
+ 	      (layer2 x)
+	      (layer3 x))))
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+NIL
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+CL-WAFFE> (MLP :relu)
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+<Model: MLP{W901}(
+    <Model: LAYER1 -> DENSELAYER{W902} ...>
+    <Model: LAYER2 -> DENSELAYER{W905} ...>
+    <Model: LAYER3 -> LINEARLAYER{W908} ...>
+)>
+@end[lang=lisp](code)
+
+@end(section)
+@begin(section)
+@title(define your trainer)
+
+
+
+@b(REPL:)
+@begin[lang=lisp](code)
+CL-WAFFE> 
+(deftrainer MLPTrainer (activation lr)
+  :model          (MLP activation)
+  :optimizer      cl-waffe.optimizers:Adam
+  :optimizer-args (:lr lr)
+  :step-model ((x y)
+	       (zero-grad)
+	       (let ((out (cl-waffe.nn:softmax-cross-entropy (call (model) x) y)))
+		 (backward out)
+		 (update)
+		 out))
+ :predict ((x)(call (model) x)))
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+NIL
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+CL-WAFFE> (setq trainer (MLPTrainer :relu 1e-3))
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+<Trainer: MLPTRAINER()>
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+CL-WAFFE> (slot-value trainer 'cl-waffe::optimizer)
+@end[lang=lisp](code)
+
+@begin[lang=lisp](code)
+<Optimizer: ADAM{W921}
+    Param: #<GENERAL-HASH-TABLE :TEST EQL :COUNT 6 :WEAKNESS :VALUE {1007CB4F63}>
+    LR : 0.001
+    Param: #<HASH-TABLE :TEST EQL :COUNT 0 {1007CB5053}>
+    Param: #<HASH-TABLE :TEST EQL :COUNT 0 {1007CB50F3}>
+    N : 0
+    EPSILON : 1.0e-7
+    BETA1 : 0.9
+    BETA2 : 0.999
+    [Total Param]: 535818
+>
+@end[lang=lisp](code)
+
+@end(section)
 @end(section)
 @end(section)
