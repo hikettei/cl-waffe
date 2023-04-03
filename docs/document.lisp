@@ -10,10 +10,11 @@
 		     &body
 		       body)
   `(setq ,title-binding-symbol
-	 (regex-replace-all "\""
+	 ;(regex-replace-all "\""
 			    (with-section ,title-name
 			      ,@body)
-			    "")))
+	;		    "\"")
+	 ))
 
 (defmacro with-section (title-name
 			&body body
@@ -25,9 +26,9 @@
 		(b (content &rest args)
 		  `(format ,',output-to "~%@b(~a)" (format nil ,content ,@args)))
 		(image (url)
-		  `(format ,',output-to "~%@image[src='~a']()" ,url))
+		  `(princ (format nil "~%@image[src=\"~a\"]()" ,url) ,',output-to))
 		(url (url name)
-		  `(format ,',output-to "~%@link[uri='~a'](~a)" ,url ,name))
+		  `(princ (format nil "~%@link[uri=\"~a\"](~a)" ,url ,name) ,',output-to))
 		(def (content)
 		  `(format ,',output-to "~%@begin(def)~%~a~%@end(def)" ,content))
 		(term (content)

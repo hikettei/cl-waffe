@@ -1,8 +1,6 @@
 
 (in-package :cl-waffe.documents)
 
-(defparameter *tutorials* "")
-
 (with-page *tutorials* "Tutorials"
   (with-section "Tensor"
     (insert "Most deep learning frameworks, represented by PyTorch's Tensor and Chainer's Variables, has their own data structures to store matrices. In cl-waffe, @b(WaffeTensor) is available and defined by Common Lisp's @b(defstruct).")

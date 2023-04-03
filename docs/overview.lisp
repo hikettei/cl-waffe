@@ -1,8 +1,6 @@
 
 (in-package :cl-waffe.documents)
 
-(defparameter *overview* "")
-
 (with-page *overview* "Overview"
   (with-section "About This Project"
     (image "https://github.com/hikettei/cl-waffe/blob/main/docs/cl-waffe-logo.png?raw=true")

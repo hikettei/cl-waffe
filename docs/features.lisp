@@ -1,8 +1,6 @@
 
 (in-package :cl-waffe.documents)
 
-(defparameter *features-doc* "")
-
 (with-page *features-doc* "Features"
   (with-section "defmodel")
   (with-section "defnode")

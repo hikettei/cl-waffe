@@ -144,4 +144,4 @@
 		:components ((:file "package")
 			     (:file "document")
 			     (:file "overview")
-			     (:file "tutorials")))))
+			     (:file "tutorial")))))
