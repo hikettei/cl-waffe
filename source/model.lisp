@@ -1127,8 +1127,7 @@ the object-type indicates the type of document format."
   (format stream "~%")
   (let ((*total-param-size* 0))
     (render-model-structure stream model)
-    (format stream "~% -(+) Total Param: ~a" *total-param-size*)
-    nil))
+    (format stream "~% -(+) Total Param: ~a" *total-param-size*)))
 
 (defun trim-string (str max-length)
   (concatenate 'string
