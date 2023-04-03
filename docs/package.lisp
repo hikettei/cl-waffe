@@ -35,18 +35,18 @@
 
 
 (defun generate ()
-  (write-scr "./docs/overview.scr" *overview*)
-  (write-scr "./docs/tutorial.scr" *tutorials*)
-  (write-scr "./docs/tips.scr" *tips*)
-  (write-scr "./docs/features.scr" *features-doc*)
+  (write-scr "./docs/scriba/overview.scr" *overview*)
+  (write-scr "./docs/scriba/tutorial.scr" *tutorials*)
+  (write-scr "./docs/scriba/tips.scr" *tips*)
+  (write-scr "./docs/scriba/features.scr" *features-doc*)
 
-  (write-scr "./docs/cl-waffe-doc.scr" *cl-waffe-doc*)
-  (write-scr "./docs/nn-doc.scr" *nn-doc*)
-  (write-scr "./docs/optimizers.scr" *optimizers-doc*)
-  (write-scr "./docs/conditions.scr" *conditions-doc*)
+  (write-scr "./docs/scriba/cl-waffe-doc.scr" *cl-waffe-doc*)
+  (write-scr "./docs/scriba/nn-doc.scr" *nn-doc*)
+  (write-scr "./docs/scriba/optimizers.scr" *optimizers-doc*)
+  (write-scr "./docs/scriba/conditions.scr" *conditions-doc*)
 
-  (write-scr "./docs/APIs_cl-waffe.scr" *apis-cl-waffe*)
-  (write-scr "./docs/APIs_cl-waffe-nn.scr" *apis-cl-waffe-nn*)
-  (write-scr "./docs/APIs_cl-waffe-optimizers.scr" *apis-cl-waffe-optimizers*)
+  (write-scr "./docs/scriba/APIs_cl-waffe.scr" *apis-cl-waffe*)
+  (write-scr "./docs/scriba/APIs_cl-waffe-nn.scr" *apis-cl-waffe-nn*)
+  (write-scr "./docs/scriba/APIs_cl-waffe-optimizers.scr" *apis-cl-waffe-optimizers*)
   )
 
