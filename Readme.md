@@ -1,5 +1,5 @@
 <p>
-	<img alt="Logo" scr="./docs/cl-waffe-logo.png" width="50%">
+	<img alt="Logo" scr="https://hikettei.github.io/cl-waffe-docs/cl-waffe.png" width="50%">
 </p>
 
 [![CI](https://github.com/hikettei/cl-waffe/actions/workflows/ci.yml/badge.svg)](https://github.com/hikettei/cl-waffe/actions/workflows/ci.yml)
