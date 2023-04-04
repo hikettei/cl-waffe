@@ -1,7 +1,8 @@
+<p>
+	<img alt="Logo" scr="./docs/cl-waffe-logo.png" width="50%">
+</p>
 
-# cl-waffe
 [![CI](https://github.com/hikettei/cl-waffe/actions/workflows/ci.yml/badge.svg)](https://github.com/hikettei/cl-waffe/actions/workflows/ci.yml)
-![cl-waffe](https://hikettei.github.io/cl-waffe-docs/docs/cl-waffe-logo.png)
 
 **This package is still under development and experimental, so don't use this in your product.**
 
