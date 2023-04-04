@@ -1,3 +1,4 @@
+[![CI](https://github.com/hikettei/cl-waffe/actions/workflows/ci.yml/badge.svg)](https://github.com/hikettei/cl-waffe/actions/workflows/ci.yml)
 
 <p align="center">
     <a href="https://github.com/hikettei/cl-waffe">
@@ -17,15 +18,15 @@
   </p>
 </p>
 
-[![CI](https://github.com/hikettei/cl-waffe/actions/workflows/ci.yml/badge.svg)](https://github.com/hikettei/cl-waffe/actions/workflows/ci.yml)
 
-**This package is still under development and experimental, so don't use this in your product.**
+# About This Project
 
-cl-waffe is a deep learning framework with modern APIs for Common Lisp based on [mgl-mat](https://github.com/melisgl/mgl-mat). 
+cl-waffe is a deep learning framework with modern APIs for Common Lisp, based on [mgl-mat](https://github.com/melisgl/mgl-mat). 
 
-This is 100% written in Common Lisp (ignoring BLAS/CUBLAS parts). So it is super easy to extend kernel as you will. (In real, properly optimised and parallelised Common Lisp code is surprisingly fast, and not impossible to compete with C/C++.)
+This framework is 100% written in Common Lisp (ignored BLAS/CUBLAS parts). As a result, it is extremely easy to extend the features as needed. However, 
+The framework currently has a limited set of features, and I am working to expand its capabilities in future releases.
 
-Not having GPUs, I can't test my framework on cuda ><. CUDA support is a little further along. (Ignoring some operations like Embedding, most operations are performed via [mgl-mat](https://github.com/melisgl/mgl-mat), so it should work without any modifications.)
+**⚠️ This framework is still under development and experimental. If you are thinking on using it in your products, It would be wiser to use other libraries.** It should be noted that the author of cl-waffe is not an AI expert.  Also, not having GPUs, I can't test my framework on cuda ><. CUDA support is a little further along. (Ignoring some operations like Embedding, most operations are performed via [mgl-mat](https://github.com/melisgl/mgl-mat), so it should work without any modifications.)
 
 # What cl-waffe does?
 
