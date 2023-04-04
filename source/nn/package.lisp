@@ -12,14 +12,15 @@
    :init-weights
    :select-initializer
    :init-activation-weights)
+  
   (:export :linear
            :linearlayer
 	   :denselayer)
+  
   (:export :RNN
 	   :LSTM)
 
-  (:export
-           :dropout
+  (:export :dropout
            :batchnorm2d
            :embedding
 	   :mse

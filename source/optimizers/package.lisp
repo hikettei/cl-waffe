@@ -8,14 +8,11 @@
    :is-waffe-model
    :find-parameters
    :init-optimizer
-   
 
    :SGD
    :Momentum
    :AdaGrad
    :RMSProp
-   :Adam
-   :RAdam
-   :Amos))
+   :Adam))
 
 
