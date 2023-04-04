@@ -1,5 +1,20 @@
-<p>
-	<img alt="Logo" scr="https://hikettei.github.io/cl-waffe-docs/cl-waffe.png" width="50%">
+
+<p align="center">
+    <a href="https://github.com/hikettei/cl-waffe">
+        <img alt="Logo" src="https://hikettei.github.io/cl-waffe-docs/cl-waffe.png" width="45%">
+    </a>
+    <br>
+    <h3 align="center">Deep Learning Framework for Common Lisp</h3>
+    <p align="center">
+    <a href="https://hikettei.github.io/cl-waffe-docs/docs/overview.html"><strong>Documentations »</strong></a>
+    <br />
+    <br />
+    <a href="https://github.com/hikettei/cl-waffe/issues">Issues</a>
+    ·
+    <a href="https://github.com/hikettei/cl-waffe/blob/main/benchmark/Result.md">Benchmarks</a>
+    ·
+    <a href="https://github.com/hikettei/cl-waffe/tree/main/tutorials/jp">Tutorials(JP)</a>
+  </p>
 </p>
 
 [![CI](https://github.com/hikettei/cl-waffe/actions/workflows/ci.yml/badge.svg)](https://github.com/hikettei/cl-waffe/actions/workflows/ci.yml)
