@@ -17,7 +17,9 @@ This framework is designed to be user-friendly first, enabling both beginners an
 
 
 ⚠️ @b(The documentation is being rewritten and is currently only half complete.)
-@b(This framework is still under development and experimental. If you are thinking on using it in your products, It would be wiser to use other libraries. True, the author of cl-waffe is not a expert of AI.)
+@b(
+
+This framework is still under development and experimental. If you are thinking on using it in your products, It would be wiser to use other libraries. True, the author of cl-waffe is not a expert of AI.)
 @end(section)
 @begin(section)
 @title(Links)
