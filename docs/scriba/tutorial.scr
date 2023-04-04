@@ -820,10 +820,10 @@ CL-WAFFE> (slot-value trainer 'cl-waffe::optimizer)
 
 @begin[lang=lisp](code)
 <Optimizer: ADAM{W908}
-    Param: #<GENERAL-HASH-TABLE :TEST EQL :COUNT 6 :WEAKNESS :VALUE {1009079903}>
+    Param: #<GENERAL-HASH-TABLE :TEST EQL :COUNT 6 :WEAKNESS :VALUE {1008FDF603}>
     LR : 0.001
-    Param: #<HASH-TABLE :TEST EQL :COUNT 0 {10090799F3}>
-    Param: #<HASH-TABLE :TEST EQL :COUNT 0 {1009079A93}>
+    Param: #<HASH-TABLE :TEST EQL :COUNT 0 {1008FDF6F3}>
+    Param: #<HASH-TABLE :TEST EQL :COUNT 0 {1008FDF793}>
     N : 0
     EPSILON : 1.0e-7
     BETA1 : 0.9
@@ -835,7 +835,7 @@ CL-WAFFE> (slot-value trainer 'cl-waffe::optimizer)
 @end(section)
 (This section is still under progress. However, here's a MLP model which can achive 98% valid_accuracy.)
 @link[uri="https://github.com/hikettei/cl-waffe/blob/main/examples/fnn.lisp"](fnn.lisp)
-If you have clones cl-waffe's repository, here's lakefile.
+If you have cloned the cl-waffe's repository, Lakefile would be available:
 @begin[lang=shell](code)
 $ lake example:install # Install training dataset
 $ lake example:mnist # Start training. (batch-size=100)

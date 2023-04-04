@@ -19,7 +19,7 @@ This framework is designed to be user-friendly first, enabling both beginners an
 ⚠️ @b(The documentation is being rewritten and is currently only half complete.)
 @b(
 
-This framework is still under development and experimental. If you are thinking on using it in your products, It would be wiser to use other libraries. True, the author of cl-waffe is not a expert of AI.)
+This framework is still under development and experimental. If you are thinking on using it in your products, It would be wiser to use other libraries. True, the author of cl-waffe is not a expert of AI. (Also, not having cuda gpus, I can't test my framework on cuda.))
 @end(section)
 @begin(section)
 @title(Links)
@@ -42,10 +42,10 @@ This framework is still under development and experimental. If you are thinking 
 @title(Workloads)
 
 @begin(enum)
-@item(Full Optimization)
-@item(save models with npz format)
+@item(Make Full optimized implementation of the standard nodes.)
+@item(Save And Restore Models with keeping compatibility with npz.)
 @item(🎉 release cl-waffe v0.1)
-@item(Add more standard implementations)
+@item(Add more standard implementation of NNs, after the foundations are in place.)
 @end(enum)
 @end(section)
 @begin(section)
