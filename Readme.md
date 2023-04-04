@@ -28,6 +28,40 @@ The framework currently has a limited set of features, and I am working to expan
 
 **⚠️ This framework is still under development and experimental. If you are thinking on using it in your products, It would be wiser to use other libraries.** It should be noted that the author of cl-waffe is not an AI expert.  Also, not having GPUs, I can't test my framework on cuda ><. CUDA support is a little further along. (Ignoring some operations like Embedding, most operations are performed via [mgl-mat](https://github.com/melisgl/mgl-mat), so it should work without any modifications.)
 
+# TOC
+
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**
+
+- [MNIST Example](#mnist-example)
+- [Features](#features)
+  - [Broadcasting](#broadcasting)
+  - [Destructive APIs with a Simple Rule.](#destructive-apis-with-a-simple-rule)
+  - [Useful APIs like Numpy/PyTorch.](#useful-apis-like-numpypytorch)
+  - [Automatic Differentiation](#automatic-differentiation)
+  - [Useful Lazy-Evaluation System](#useful-lazy-evaluation-system)
+  - [Eazy to optimize](#eazy-to-optimize)
+  - [Extensible APIs](#extensible-apis)
+  - [Switchable Backends](#switchable-backends)
+- [Install](#install)
+    - [Install via Github](#install-via-github)
+    - [Install via Roswell](#install-via-roswell)
+    - [Install via Ultralisp](#install-via-ultralisp)
+- [Contributing](#contributing)
+    - [Prerequisites](#prerequisites)
+    - [Running the tests](#running-the-tests)
+  - [Lakefile](#lakefile)
+- [Run MNIST With Roswell](#run-mnist-with-roswell)
+- [Currently Problems/Todo](#currently-problemstodo)
+- [Goals](#goals)
+- [Acknowledgements](#acknowledgements)
+- [Author](#author)
+- [Environment](#environment)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
+
 # What cl-waffe does?
 
 cl-waffe is the two sides of the coin:
@@ -113,39 +147,6 @@ There are still **very few standard implementations of NNs(As of this writing, o
 Also, I started writing [Tutorials(Written in Japanese)](https://github.com/hikettei/cl-waffe/tree/main/tutorials/jp).
 
 As of this writing, available tutorials are written in Japanese and their writing continues, but eventually, I'm willing to complete and translate them into English. So don't worry if you don't speak Japanese.
-
-# TOC
-
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**
-
-- [MNIST Example](#mnist-example)
-- [Features](#features)
-  - [Broadcasting](#broadcasting)
-  - [Destructive APIs with a Simple Rule.](#destructive-apis-with-a-simple-rule)
-  - [Useful APIs like Numpy/PyTorch.](#useful-apis-like-numpypytorch)
-  - [Automatic Differentiation](#automatic-differentiation)
-  - [Useful Lazy-Evaluation System](#useful-lazy-evaluation-system)
-  - [Eazy to optimize](#eazy-to-optimize)
-  - [Extensible APIs](#extensible-apis)
-  - [Switchable Backends](#switchable-backends)
-- [Install](#install)
-    - [Install via Github](#install-via-github)
-    - [Install via Roswell](#install-via-roswell)
-    - [Install via Ultralisp](#install-via-ultralisp)
-- [Contributing](#contributing)
-    - [Prerequisites](#prerequisites)
-    - [Running the tests](#running-the-tests)
-  - [Lakefile](#lakefile)
-- [Run MNIST With Roswell](#run-mnist-with-roswell)
-- [Currently Problems/Todo](#currently-problemstodo)
-- [Goals](#goals)
-- [Acknowledgements](#acknowledgements)
-- [Author](#author)
-- [Environment](#environment)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 # MNIST Example
 
