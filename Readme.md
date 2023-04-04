@@ -38,7 +38,6 @@ The framework currently has a limited set of features, and I am working to expan
   - [cl-waffe as a matrix operation library](#cl-waffe-as-a-matrix-operation-library)
   - [cl-waffe as a deep learning framework](#cl-waffe-as-a-deep-learning-framework)
 - [News](#news)
-- [Documents](#documents)
 - [MNIST Example](#mnist-example)
 - [Features](#features)
   - [Broadcasting](#broadcasting)
