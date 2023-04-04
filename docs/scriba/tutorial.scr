@@ -342,7 +342,7 @@ Trainable Variables, to be optimized by @b(optimizers) defined by defoptimizer.
 @cl:doc(macro defnode)
 )
 
-The macros @b(defnode) and @b(call) serve as a key component of cl-waffe, since @b(defnode) enables users to define forward and backward propagation in a simple notations and optimize them. If needed, they're inlined via @b(call) macro. Let's get started with this example. it defines a computation node that finds the sum of two single-float values.
+The macros @b(defnode) and @b(call) server as a key component of cl-waffe. In designing deep learning models, incorporating object-oriented programming can lead to more consice descriptions. Although Common Lisp has a powerful framework: CLOS and Closer-MOP, but I think its computational speed strongly depends on what common lisp implementation to use. (e.g.: SBCL/Clozure CL...) Thus, by using only defstruct and defun for defining the computation nodes and wrapping them with macros, (defnode) and (call), I have reduced the overhead associated with the process. This example shows how to define ScalarAdd Node.
 
 
 @b(Input)
@@ -455,7 +455,7 @@ Setting :disassemble-forward or :disassemble-backward t, prints the disassemble 
 @cl:doc(macro call)
 )
 
-Nodes defined this macro, works as if CLOS class, and they can have :parameters. However, what makes defnode distinct from them is that:
+Nodes which defined by this macro, works as if CLOS class, and they can have :parameters. However, what makes defnode distinct from them is that:
 
 
 @b(REPL:)
@@ -714,7 +714,7 @@ Adding new backends is no pain for cl-waffe!
 @begin(section)
 @title(MNIST Example)
 
-Using features that I introduced, we can training MNIST. In practice, we need more features to implement it bluntly: defmodel. (気が向いたらちゃんと書く)
+Using features that I introduced, we can training MLP Model with MNIST Dataset. In practice, more additional features are needed to put it simply: defmodel and deftrainer.
 @begin(section)
 @title(Defines your model)
 
@@ -820,10 +820,10 @@ CL-WAFFE> (slot-value trainer 'cl-waffe::optimizer)
 
 @begin[lang=lisp](code)
 <Optimizer: ADAM{W908}
-    Param: #<GENERAL-HASH-TABLE :TEST EQL :COUNT 6 :WEAKNESS :VALUE {100AEB1053}>
+    Param: #<GENERAL-HASH-TABLE :TEST EQL :COUNT 6 :WEAKNESS :VALUE {1008FDF603}>
     LR : 0.001
-    Param: #<HASH-TABLE :TEST EQL :COUNT 0 {100AEB1143}>
-    Param: #<HASH-TABLE :TEST EQL :COUNT 0 {100AEB11E3}>
+    Param: #<HASH-TABLE :TEST EQL :COUNT 0 {1008FDF6F3}>
+    Param: #<HASH-TABLE :TEST EQL :COUNT 0 {1008FDF793}>
     N : 0
     EPSILON : 1.0e-7
     BETA1 : 0.9
@@ -833,11 +833,12 @@ CL-WAFFE> (slot-value trainer 'cl-waffe::optimizer)
 @end[lang=lisp](code)
 
 @end(section)
-All the code including loading the data is at here.
-lake is available.
+(This section is still under progress. However, here's a MLP model which can achive 98% valid_accuracy.)
+@link[uri="https://github.com/hikettei/cl-waffe/blob/main/examples/fnn.lisp"](fnn.lisp)
+If you have cloned the cl-waffe's repository, Lakefile would be available:
 @begin[lang=shell](code)
-$ lake example:install
-$ lake example:mnist
+$ lake example:install # Install training dataset
+$ lake example:mnist # Start training. (batch-size=100)
 @end[lang=shell](code)
 @end(section)
 @end(section)

@@ -105,8 +105,9 @@
   
   (with-section "defnode and call"
     (placedoc "cl-waffe" "macro" "defnode")
+
+    (insert "The macros @b(defnode) and @b(call) server as a key component of cl-waffe. In designing deep learning models, incorporating object-oriented programming can lead to more consice descriptions. Although Common Lisp has a powerful framework: CLOS and Closer-MOP, but I think its computational speed strongly depends on what common lisp implementation to use. (e.g.: SBCL/Clozure CL...) Thus, by using only defstruct and defun for defining the computation nodes and wrapping them with macros, (defnode) and (call), I have reduced the overhead associated with the process. This example shows how to define ScalarAdd Node.")
     
-    (insert "The macros @b(defnode) and @b(call) serve as a key component of cl-waffe, since @b(defnode) enables users to define forward and backward propagation in a simple notations and optimize them. If needed, they're inlined via @b(call) macro. Let's get started with this example. it defines a computation node that finds the sum of two single-float values.")
     (with-eval
       "
 (defnode ScalarAdd ()
@@ -209,7 +210,7 @@
 
     (placedoc "cl-waffe" "macro" "call")
 
-    (insert "Nodes defined this macro, works as if CLOS class, and they can have :parameters. However, what makes defnode distinct from them is that:")
+    (insert "Nodes which defined by this macro, works as if CLOS class, and they can have :parameters. However, what makes defnode distinct from them is that:")
     (with-evals
       "(time (call (ScalarAdd) (const 1.0) (const 1.0)))"
       "(time (+ 1.0 1.0))")
@@ -362,7 +363,7 @@ To disable this, set cl-waffe:*ignore-inlining-info* t")
     (insert "Adding new backends is no pain for cl-waffe!"))
 
   (with-section "MNIST Example"
-    (insert "Using features that I introduced, we can training MNIST. In practice, we need more features to implement it bluntly: defmodel. (気が向いたらちゃんと書く)")
+    (insert "Using features that I introduced, we can training MLP Model with MNIST Dataset. In practice, more additional features are needed to put it simply: defmodel and deftrainer.")
 
     (with-section "Defines your model"
       (with-evals "
@@ -395,12 +396,12 @@ To disable this, set cl-waffe:*ignore-inlining-info* t")
 	"(setq trainer (MLPTrainer :relu 1e-3))"
 	"(slot-value trainer 'cl-waffe::optimizer)"))
 
-    (insert "All the code including loading the data is at here.")
+    (insert "(This section is still under progress. However, here's a MLP model which can achive 98% valid_accuracy.)")
 
-    (insert "lake is available.")
-    (with-shell-code
-      "$ lake example:install
-$ lake example:mnist")
+    (url "https://github.com/hikettei/cl-waffe/blob/main/examples/fnn.lisp" "fnn.lisp")
 
+    (insert "If you have cloned the cl-waffe's repository, Lakefile would be available:")
     
-    ))
+    (with-shell-code
+      "$ lake example:install # Install training dataset
+$ lake example:mnist # Start training. (batch-size=100)")))

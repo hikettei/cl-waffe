@@ -17,7 +17,7 @@
 
     (insert "~%~%⚠️ @b(The documentation is being rewritten and is currently only half complete.)")
 
-    (b "~%~%This framework is still under development and experimental. If you are thinking on using it in your products, It would be wiser to use other libraries. True, the author of cl-waffe is not a expert of AI."))
+    (b "~%~%This framework is still under development and experimental. If you are thinking on using it in your products, It would be wiser to use other libraries. True, the author of cl-waffe is not a expert of AI. (Also, not having cuda gpus, I can't test my framework on cuda.)"))
 
   (with-section "Links"
     (url "https://github.com/hikettei/cl-waffe" "Official Github Repository")
@@ -30,11 +30,10 @@
 
   (with-section "Workloads"
     (with-enum
-      (item "Full Optimization")
-      (item "save models with npz format")
+      (item "Make Full optimized implementation of the standard nodes.")
+      (item "Save And Restore Models with keeping compatibility with npz.")
       (item "🎉 release cl-waffe v0.1")
-      (item "Add more standard implementations")
-      ))
+      (item "Add more standard implementation of NNs, after the foundations are in place.")))
 
   (with-section "LLA Backend"
     (insert "cl-waffe's matrix operations are performed via mgl-mat, and mgl-mat uses LLA. Accordingly, cl-waffe's performance hinges on mgl-mat and LLA's performance.")
