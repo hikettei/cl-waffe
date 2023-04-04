@@ -75,7 +75,7 @@ cl-waffe is the two sides of the coin:
 
 ## cl-waffe as a matrix operation library
 
-Speaking of the former, cl-waffe aimed to wrap the existing Common Lisp matrix operation libraries with Numpy/PyTorch like APIs. And reduce overheads between cl-waffe and these libraries.
+For the first purpose, cl-waffe aims to wrap existing Common Lisp matrix operation libraries with Numpy/PyTorch like APIs, reducing overheads between cl-waffe and these libraries.
 
 So, If you are considering contributing to cl-waffe in terms of boosting its performance, the first thing you should do is **to contribute libraries cl-waffe uses**, especially, [mgl-mat](https://github.com/melisgl/mgl-mat).
 
@@ -100,43 +100,45 @@ True, cl-waffe works like in the relationship shown in this flow.
 
 ## cl-waffe as a deep learning framework
 
-We wrap such existing libraries and define forward and backward propagation via the macro `defnode`, thus enabling automatic differentiation.
+For more details: [defnode and call](https://hikettei.github.io/cl-waffe-docs/docs/tutorials.html#defnode-and-call)
 
-I think this is not an ideal situation because `array-to-mat` and `numcl:transpose` is both creating copies, but this is simultaneously good example to show what I want to do:
+The macros **defnode** and **call** serves as a key component of cl-waffe. In designing deep learning models, incorporating object-oriented programming can lead to more consice descriptions. Although Common Lisp has a powerful framework: CLOS and Closer-MOP, but I think its computational speed strongly depends on what common lisp implementation to use. (e.g.: SBCL/Clozure CL...) Thus, by using only defstruct and defun for defining the computation nodes and wrapping them with macros, (defnode) and (call), I have reduced the overhead associated with the process. This example shows how to define ScalarAdd Node.
 
 ```lisp
-(defnode TransposeOriginalTensor (shape)
-  :parameters ((prev-shape nil)
-               (shape shape :type cons))
-  :forward ((x)
-	    (setf (self prev-shape) (!shape x))
-	    (with-facet (array ((value x) 'array :direction :input))
-	      ; In defnode, it is not always necessary to use the cl-waffe API.
-	      ; With regard to this example, it defines a transpose with numcl's API.
-	      (sysconst (array-to-mat (numcl:transpose array)))))
-  :backward ((dy)
-	     (list (!transpose1 dy (self prev-shape)))))
-
-(defun !transpose1 (tensor &rest dims)
-  ; defined nodes are called with call
-  (call (TransposeOriginalTensor dims) tensor))
-
-(!transpose (!randn `(10 3)))
-
-;#Const(((-0.21... -1.92... ~ 0.560... -0.90...)        
-;                 ...
-;        (0.580... 0.197... ~ -0.86... 0.765...)) :dtype :float :shape (3 10) :backward <Node: TRANSPOSEORIGINALTENSOR{W2995}>)
+(defnode ScalarAdd ()
+  :disassemble-forward t
+  :forward-declaim (declaim (ftype (function (ScalarAdd waffetensor waffetensor) waffetensor) :forward))
+  :forward ((x y)
+	    (let ((x (data x))
+		  (y (data y)))
+	      (declare (type single-float x y))
+	      (const (+ x y))))
+  :disassemble-backward t
+  :backward-declaim (declaim (type (function (ScalarAdd waffetensor) list) :backward))
+  :backward ((dy) (list dy dy)))
 ```
 
-This is the basic idea behind cl-waffe's automatic differentiation.
+```lisp
+(time (call (ScalarAdd) (const 1.0) (const 1.0))) ; via cl-waffe
+;#Const(2.0 :dtype SINGLE-FLOAT :backward <Node: SCALARADD{W924}>)
+;Evaluation took:
+;  0.000 seconds of real time
+;  0.000005 seconds of total run time (0.000005 user, 0.000000 system)
+;  100.00% CPU
+;  11,084 processor cycles
+;  0 bytes consed
+  
+(time (+ 1.0 1.0)) ; CL Native
+;2.0
+;Evaluation took:
+;  0.000 seconds of real time
+;  0.000001 seconds of total run time (0.000000 user, 0.000001 system)
+;  100.00% CPU
+;  422 processor cycles
+;  0 bytes consed
+```
 
-These nodes are combined to define a `model` (via defmodel macro). Also, the model has `trainable parameters` and they're optimized by optimizers, defined by `defoptimizer`.
-
-(P.S.: I know not everyone likes this Chainer-like system (define-by-run), so I'm thinking of providing Keras-like APIs.)
-
-Anyway, these features have been developed as **extensible APIs** and do not need to be known by everyone.
-
-There are still **very few standard implementations of NNs(As of this writing, only supports RNN/Linear and so on...)/**, as I think it is important to get the computational fundamentals in place before implementing various deep learning methods. (but contributions are welcome!)
+Nodes called by the macro `(call) `are fully inlined, (like CL's `inline-generic-function`, `static-dispatch`). Considering ScalarAdd builds computation node in addition to summing up the arguments, these overheads are enough small.
 
 # News
 
