@@ -147,14 +147,6 @@ Nodes called by the macro `(call) `are fully inlined, (like CL's `inline-generic
 
 - (2023/03/26) I published the benchmark compared to Numpy/PyTorch. Available at [Here](https://github.com/hikettei/cl-waffe/blob/main/benchmark/Result.md). (Not quite up to my goal.) cl-waffe should peform better... however I guess there's a room to optimize in the cl-waffe's codes...
 
-# Documents
-
-[Documentation](https://hikettei.github.io/cl-waffe-docs) is available.
-
-Also, I started writing [Tutorials(Written in Japanese)](https://github.com/hikettei/cl-waffe/tree/main/tutorials/jp).
-
-As of this writing, available tutorials are written in Japanese and their writing continues, but eventually, I'm willing to complete and translate them into English. So don't worry if you don't speak Japanese.
-
 # MNIST Example
 
 See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/mnist-tutorial.html)
