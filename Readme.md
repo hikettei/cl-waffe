@@ -5,7 +5,7 @@
         <img alt="Logo" src="https://hikettei.github.io/cl-waffe-docs/cl-waffe.png" width="45%">
     </a>
     <br>
-    <h3 align="center">Deep Learning Framework for Common Lisp</h3>
+    <h3 align="center">Deep Learning Framework for Common Lisp (Experimental) </h3>
     <p align="center">
     <a href="https://hikettei.github.io/cl-waffe-docs/docs/overview.html"><strong>Documentations »</strong></a>
     <br />
@@ -144,6 +144,8 @@ Nodes called by the macro `(call) `are fully inlined, (like CL's `inline-generic
 
 See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/mnist-tutorial.html)
 
+This example demonstrates a three-layer MLP implemented using cl-waffe.
+
 With the help of cl-waffe, you can define models consisely like this:
 
 ```lisp
@@ -172,72 +174,112 @@ With the help of cl-waffe, you can define models consisely like this:
  :predict ((x) (call (model) x)))
  
 (let ((model (MLPTrainer :relu 1e-3)))
-  (step-model model (!randn `(10 784))))
+  (step-model model (!randn `(10 784)) (!ones `(10 10))))
 ```
 
 # Features
 
 As of this writing:
 
-- Useful and high-level APIs
+- Useful and high-level API
 - Automatic Differentation
 - Eazy to optimize
 - Extensible APIs
 
-## Useful and high-level APIs
+## Useful and high-level API
 
+The standard cl-waffe API includes features like these, which are also supported by other Python libraries.
 
-See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#broadcasting)
-See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#compute-tensors-in-a-destructive-way)
+- Broadcasting
+- Highly functional Aref
+- Rich API
+
+### Broadcasting
+
+```lisp
+(setq a (!randn `(100 100 100)))
+(setq b (!randn `(100 1)))
+
+(time (!add a b))
+;Evaluation took:
+;  0.004 seconds of real time
+;  0.004748 seconds of total run time (0.003399 user, 0.001349 system)
+;  125.00% CPU
+;  11,061,940 processor cycles
+;  4,190,448 bytes consed
+  
+;#Const((((-1.25... -0.46... ~ 0.265... -0.37...)         
+;                   ...
+;         (0.675... -0.77... ~ -1.50... -1.22...))        
+;                 ...
+;        ((-0.72... -0.25... ~ 1.381... 0.727...)         
+;                   ...
+;         (0.198... 0.178... ~ -2.18... -1.40...))) :dtype :float :shape (100 100 100) :backward <Node: BROADCASTINGADDTENSOR{W90085}>)
+```
+
+### Highly functional Aref
+
+```lisp
+(setq a (!init-with `(1000 1000) #'(lambda (x) x)))
+;#Const(((0.0 1.0 ~ 998.0... 999.0...)        
+;                 ...
+;        (99900... 99900... ~ 99999... 99999...)) :dtype :float :shape (1000 1000) :backward NIL)
+
+(time (!aref a 0 t))
+;Evaluation took:
+;  0.000 seconds of real time
+;  0.000078 seconds of total run time (0.000078 user, 0.000000 system)
+;  100.00% CPU
+;  177,232 processor cycles
+;  0 bytes consed
+  
+;#Const(((0.0 1.0 ~ 998.0... 999.0...)) :dtype :float :shape (1 1000) :backward <Node: AREFTENSOR{W90108}>)
+
+(time (!aref a `(2 -1) t))
+;Evaluation took:
+;  0.007 seconds of real time
+;  0.007651 seconds of total run time (0.006475 user, 0.001176 system)
+;  114.29% CPU
+;  17,779,036 processor cycles
+;  4,909,136 bytes consed
+  
+;#Const(((2000.... 2001.... ~ 2998.... 2999....)        
+;                 ...
+;        (99800... 99800... ~ 99899... 99899...)) :dtype :float :shape (997 1000) :backward <Node: AREFTENSOR{W90109}>)
+
+(setf (!aref a '(0 10) t) (!ones `(10)))
+;#Const(((1.0 1.0 ~ 1.0 1.0)        
+;                 ...
+;        (99900... 99900... ~ 99999... 99999...)) :dtype :float :shape (1000 1000) :backward <Node: SETFAREFTENSOR{W90130}>)
+```
+
+### Rich APIs
+
 See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/cl-waffe.html)
-
-broadcasting/aref/destrucitve
-
-...
 
 ## Automatic Differentiation
 
-See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#basic-tensor-operations)
-
-Once forward is defined, backward is also automatically defined. This feature is indispensable for Deep Learning Framework. Of course it is available.
+define-by-run style:
 
 ```lisp
-(setq a (parameter (!randn `(10 10))))
-(setq b (parameter (!randn `(10 10))))
-(setq c (parameter (!randn `(10))))
-
+(setq a (parameter (!randn `(3 3))))
+(setq b (parameter (!randn `(3 3))))
+(setq c (parameter (!randn `(3 3))))
 
 (setq z (!sum (!add (!mul a b) c)))
 
-(time (backward z))
-;Evaluation took:
-;  0.001 seconds of real time
-;  0.001469 seconds of total run time (0.001344 user, 0.000125 system)
-;  100.00% CPU
-;  3,239,008 processor cycles
-;  130,048 bytes consed
-  
-;NIL
+(backward z)
 
-(print (const (grad a)))
-;#Const(((0.004... -0.00... ~ 0.004... 5.721...)
-;                 ...
-;        (0.001... 5.919... ~ 7.748... -0.00...)) :mgl t :shape (10 10))
-(print (const (grad b)))
-;#Const(((0.004... -0.00... ~ 0.004... 5.721...)
-;                 ...
-;        (0.001... 5.919... ~ 7.748... -0.00...)) :mgl t :shape (10 10))
-(print (const (grad c)))
-;#Const((0.01 0.01 ~ 0.01 0.01) :mgl t :shape (10))
+(grad a)
+(grad b)
+(grad c)
 ```
-
 
 ## Eazy to optimize.
 
-- lazy-eval
-- inline
 
-See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#lazy-evaluation)
+### Fully Inlined Nodes
+
 For more detail: [defnode and call](https://hikettei.github.io/cl-waffe-docs/docs/tutorials.html#defnode-and-call)
 
 Nodes are described in a clear and highly functional notation:
@@ -267,6 +309,30 @@ It can be easily inlined via the macro `call`.
  (DECLARE (OPTIMIZE (SPEED 3) (SAFETY 1))
           (INLINE call-scalaradd-forward-mgl))
  (call-scalaradd-forward-mgl (SCALARADD) (CONST 1.0) (CONST 1.0)))
+```
+
+### Lazy-Evaluation
+
+Zero-cost transpose
+
+```lisp
+(setq a (!randn `(100 20)))
+(setq b (!randn `(100 20)))
+
+(!transpose a)
+;#Const(<Transposed Tensor> :shape (20 100) :backward <Node: TRANSPOSETENSOR{W90135}>)
+
+(time (!matmul (!transpose a) b))
+;Evaluation took:
+;  0.001 seconds of real time
+;  0.000312 seconds of total run time (0.000085 user, 0.000227 system)
+;  0.00% CPU
+;  4,329,458 processor cycles
+;  0 bytes consed
+  
+;#Const(((5.946... -6.45... ~ -14.0... 10.40...)        
+;                 ...
+;        (8.740... 6.130... ~ -6.76... -3.12...)) :dtype :float :shape (20 20) :backward <Node: MATMULTENSOR{W90165}>)
 ```
 
 ## Extensible APIs
@@ -315,9 +381,7 @@ True, almost implementations are using it (See also: `./source/optimizers/optimi
 			  (data (gethash i (self params)))))))
 ```
 
-See also: [Documentation](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#backends)
-
-It is allowed to redefine the original node in cl-waffe. Such nodes are managed by using `backend`.
+Also, it is allowed to redefine the original node in cl-waffe. Such nodes are managed by using `backend`.
 
 `define-node-extension` is available to extend the existing nodes.
 
@@ -337,10 +401,6 @@ It is allowed to redefine the original node in cl-waffe. Such nodes are managed 
 (defun operate-in-extension ()
   (with-backend :my-extension
     (= (data (!add 1 1)) 200)))
-
-(defun operate-restart-test () ; if the operation doesn't exists...
-  (with-backend :does-not-exists
-    (= (data (!add 1 1)) 2)))
 ```
 
 # Install
@@ -409,21 +469,21 @@ Tasks:
 
 # Trying cl-waffe with Example Models
 
-(No Lake but Roswell Ver)
-```shell
-$ cd examples
-$ sh install.sh
-$ cd ..
-$ ./run-test-model.ros mnist
-```
-
-(Roswell and Lake ver)
 ```shell
 $ lake example:install
 $ lake example:fnn
 ```
 
-should work. `lake example:mnist` is also OK.
+If Lake isn't available in your environment, try this:
+
+```shell
+$ cd examples
+$ sh install.sh
+$ cd ..
+$ ./run-test-model.ros fnn
+```
+
+either of them should work. `lake example:mnist` is also OK.
 
 # Acknowledgements
 
@@ -438,7 +498,6 @@ hikettei
 - Discord: rulia🌙#5298
 
 # Environment
-
 
 - SBCL
 	- it is recommended to use SBCL, I've not tested on others
