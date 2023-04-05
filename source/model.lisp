@@ -937,19 +937,23 @@ Example:
 	       declaim-forms))
 	 ,(if disassemble-me
 	      `(defun ,tmp-fname (,self ,@args)
-		 ,@declarations
 		 ,docs
-		 (with-object-macrolet-forms ',self ,args-symbols
-		   ,@body)))
+		 (locally ,@declarations
+		   (with-object-macrolet-forms ',self ,args-symbols
+		     ,(if (find object-type `(:node :optimizer))
+			  `(with-define-function-in-defnode-way ,object-type ,args-symbols
+			     ,@body)
+			  `(with-define-function-in-defmodel-way ,args-symbols
+			     ,@body))))))
 	 (defun ,function-name (,self ,@args)
 	   ,docs
-	   ,@declarations
-	   (with-object-macrolet-forms ',self ',args-symbols
-	     ,(if (find object-type `(:node :optimizer))
-		  `(with-define-function-in-defnode-way ,object-type ,args-symbols
-		     ,@body)
-		  `(with-define-function-in-defmodel-way ,args-symbols
-		     ,@body))))
+	   (locally ,@declarations
+	     (with-object-macrolet-forms ',self ',args-symbols
+	       ,(if (find object-type `(:node :optimizer))
+		    `(with-define-function-in-defnode-way ,object-type ,args-symbols
+		       ,@body)
+		    `(with-define-function-in-defmodel-way ,args-symbols
+		       ,@body)))))
 	 ,(if disassemble-me
 	      `(disassemble #',tmp-fname))
 	 nil))))
