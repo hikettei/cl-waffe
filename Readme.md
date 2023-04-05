@@ -150,7 +150,7 @@ Nodes called by the macro `(call) `are fully inlined, (like CL's `inline-generic
 
 See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/mnist-tutorial.html)
 
-cl-waffe aimed to reduce the amount of total code written.
+With the help of cl-waffe, you can define models consisely like this:
 
 ```lisp
 ; Full Code is in ./examples/mnist.lisp
@@ -183,172 +183,23 @@ cl-waffe aimed to reduce the amount of total code written.
 
 # Features
 
-I've only just started developing it, so I'm trying out a lot of features by hand. (That is some features below may well work, some may not.)
-
 As of this writing:
-- Broadcasting
-- Destructive APIs with a Simple Rule.
-- Useful APIs like Numpy/PyTorch
-- Automatic Differentiation
-- Useful Lazy-Evaluation System
-- Eazy to optimize.
-- Extensible APIs
-- Switchable Backends
 
-## Broadcasting
+- Useful and high-level APIs
+- Automatic Differentation
+- Eazy to optimize
+- Extensible APIs
+
+## Useful and high-level APIs
+
 
 See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#broadcasting)
-
-cl-waffe has a broadcasting operations like other frameworks.
-
-```lisp
-(setq a (!randn `(1 100 200)))
-;#Const((((1.900... -0.70... ~ 0.609... 1.397...)         
-;                   ...
-;         (0.781... 1.735... ~ -1.01... 0.152...))) :mgl t :shape (1 100 200))
-(setq b (!randn `(100 100 200)))
-;#Const((((-1.21... 0.823... ~ 2.001... -0.21...)         
-;                   ...
-;         (-0.34... 0.441... ~ -0.07... -0.38...))        
-;                 ...
-;        ((1.627... 1.127... ~ 0.705... 0.798...)         
-;                   ...
-;         (0.070... 1.883... ~ 1.850... -0.47...))) :mgl t :shape (100 100 200))
-
-(time (!add a b))
-;Evaluation took:
-;  0.003 seconds of real time
-;  0.002999 seconds of total run time (0.002799 user, 0.000200 system)
-;  100.00% CPU
-;  6,903,748 processor cycles
-;  8,163,776 bytes consed
-  
-;#Const((((0.689... 0.115... ~ 2.611... 1.183...)         
-;                   ...
-;         (0.435... 2.177... ~ -1.08... -0.23...))        
-;                 ...
-;        ((3.528... 0.419... ~ 1.315... 2.195...)         
-;                   ...
-;         (0.851... 3.619... ~ 0.839... -0.32...))) :mgl t :shape (100 100 200))
-```
-
-## Destructive APIs with a Simple Rule.
-
 See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#compute-tensors-in-a-destructive-way)
+See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/cl-waffe.html)
 
-Internally, Just add to your code `(!allow-destruct tensor)`, cl-waffe regards the tensor as unnecessary and destruct it. This is how implemented destructive operations are.
+broadcasting/aref/destrucitve
 
-```lisp
-(setq a (!randn `(100 100 100)))
-(setq b (!randn `(100 100 100)))
-
-(time (!!add a b))
-;Evaluation took:
-;  0.000 seconds of real time
-;  0.000662 seconds of total run time (0.000605 user, 0.000057 system)
-;  100.00% CPU
-;  1,422,578 processor cycles
-;  0 bytes consed
-  
-;#Const((((-1.47... 1.016... ~ -1.29... -1.71...)         
-;                   ...
-;         (2.276... 0.878... ~ -1.35... 0.466...))        
-;                 ...
-;        ((1.712... 1.318... ~ 0.213... 1.262...)         
-;                   ...
-;         (1.084... -0.18... ~ -1.42... 0.552...))) :mgl t :shape (100 100 100))
-```
-
-## Useful APIs like Numpy/PyTorch.
-
-See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/cl-waffe.html), Here's the list of all APIs in cl-waffe.
-
-Here's API like `SliceTensor` in Numpy/PyTorch. Of course, they're differentiable.
-
-However, in practical, using offsets (in lisp, we call it displacement) will perform better. (e.g.: setting batch, applying word-by-word processing in RNN). so it is just extra.
-
-```lisp
-(setq a (!randn `(100 100 100)))
-;#Const((((-1.45... -0.70... ~ -0.87... -0.52...)         
-;                   ...
-;         (0.655... -1.47... ~ -2.10... -1.79...))        
-;                 ...
-;        ((-0.28... -1.75... ~ -1.28... 0.381...)         
-;                   ...
-;         (-0.55... -0.53... ~ 0.421... -0.13...))) :mgl t :shape (100 100 100))
-
-(time (!aref a 0 0 0))
-;Evaluation took:
-;  0.000 seconds of real time
-;  0.000163 seconds of total run time (0.000135 user, 0.000028 system)
-;  100.00% CPU
-;  235,060 processor cycles
-;  0 bytes consed
-  
-;#Const((((-1.45...))) :mgl t :shape (1 1 1))
-
-(time (!aref a t 0 0))
-;Evaluation took:
-;  0.000 seconds of real time
-;  0.000477 seconds of total run time (0.000455 user, 0.000022 system)
-;  100.00% CPU
-;  963,246 processor cycles
-;  98,256 bytes consed
-  
-;#Const((((-1.45...))        
-;                 ...
-;        ((-0.28...))) :mgl t :shape (100 1 1))
-
-(time (!aref a '(0 3) '(10 -1) t))
-
-;Evaluation took:
-;  0.001 seconds of real time
-;  0.001489 seconds of total run time (0.001445 user, 0.000044 system)
-;  100.00% CPU
-;  3,518,516 processor cycles
-;  322,144 bytes consed
-  
-;#Const((((-0.10... 0.226... ~ -1.68... 0.662...)         
-;                   ...
-;         (-0.14... 1.239... ~ -0.90... -0.60...))        
-;                 ...
-;        ((-0.97... 1.588... ~ 0.558... -1.79...)         
-;                   ...
-;         (-0.80... -1.50... ~ -1.11... -0.21...))) :mgl t :shape (3 89 100))
-
-(time (!aref a t t t))
-;Evaluation took:
-;  0.024 seconds of real time
-;  0.024426 seconds of total run time (0.024367 user, 0.000059 system)
-;  100.00% CPU
-;  56,193,050 processor cycles
-;  12,675,952 bytes consed
-  
-;#Const((((-1.45... -0.70... ~ -0.87... -0.52...)         
-;                   ...
-;         (0.655... -1.47... ~ -2.10... -1.79...))        
-;                 ...
-;        ((-0.28... -1.75... ~ -1.28... 0.381...)         
-;                   ...
-;         (-0.55... -0.53... ~ 0.421... -0.13...))) :mgl t :shape (100 100 100))
-
-(setq b (!ones `(100 3)))
-(time (setf (!aref a '(0 3)) b))
-;Evaluation took:
-;  0.001 seconds of real time
-;  0.001312 seconds of total run time (0.001274 user, 0.000038 system)
-;  100.00% CPU
-;  2,898,956 processor cycles
-;  262,048 bytes consed
-;#Const((((1.0 1.0 ~ -0.87... -0.52...)         
-;                   ...
-;         (1.0 1.0 ~ -2.10... -1.79...))        
-;                 ...
-;        ((-0.28... -1.75... ~ -1.28... 0.381...)         
-;                   ...
-;         (-0.55... -0.53... ~ 0.421... -0.13...))) :mgl t :shape (100 100 100))
-```
-
+...
 
 ## Automatic Differentiation
 
@@ -386,88 +237,13 @@ Once forward is defined, backward is also automatically defined. This feature is
 ;#Const((0.01 0.01 ~ 0.01 0.01) :mgl t :shape (10))
 ```
 
-## Useful Lazy-Evaluation System
+
+## Eazy to optimize.
+
+- lazy-eval
+- inline
 
 See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#lazy-evaluation)
-
-cl-waffe provides zero-cost transpose by using lazy-evaluation.
-
-Just use `!transpose` before `!matmul`, `!matmul` automatically recognises it and the retuend tensor is applied `transpose`.
-
-Here's `!transpose1` for the case when you just want a transposed tensor.
-
-The lazy-evaluated tensors are evaluated via function `(value tensor)`. Once this function called. the content of tensor is fulfilled with a new evaluated matrix. Don't worry, `(value tensor)` are scattered all over the place in cl-waffe's code, so no additional codes are required.
-
-```lisp
-(setq a (!randn `(10 3)))
-;#Const(((0.411... 0.244... 2.828...)        
-;                 ...
-;        (-1.26... -1.41... 0.821...)) :mgl t :shape (10 3))
-
-(!transpose a)
-;#Const(#<FUNCTION (LABELS CL-WAFFE.BACKENDS.MGL::LAZYTRANSPOSE :IN CL-WAFFE.BACKENDS.MGL::LAZY-EVAL-TRANSPOSE) {100CA0F5EB}>)
-
-; Generally, using delayed evaluation does not require additional new code.
-(!add * 1)
-;#Const(((1.411... 0.862... ~ 1.590... -0.26...)        
-;                 ...
-;        (3.828... 0.582... ~ -0.57... 1.821...)) :mgl t :shape (3 10))
-
-; Using !transpose is much faster for !matmul (even when the tensors are 3d/4d...).
-(time (!matmul a (!transpose a)))
-;Evaluation took:
-;  0.000 seconds of real time
-;  0.000107 seconds of total run time (0.000101 user, 0.000006 system)
-;  100.00% CPU
-;  147,434 processor cycles
-;  0 bytes consed
-  
-;#Const(((8.227... -1.29... ~ -4.10... 1.458...)        
-;                 ...
-;        (1.458... 0.180... ~ -2.59... 4.273...)) :mgl t :shape (10 10))
-
-; Compared to !transpose1...
-(time (!matmul a (!transpose1 a)))
-;Evaluation took:
-;  0.178 seconds of real time
-;  0.176052 seconds of total run time (0.120406 user, 0.055646 system)
-;  98.88% CPU
-;  4 forms interpreted
-;  773 lambdas converted
-;  410,887,630 processor cycles
-;  25,051,200 bytes consed
-  
-;#Const(((8.227... -1.29... ~ -4.10... 1.458...)        
-;                 ...
-;        (1.458... 0.180... ~ -2.59... 4.273...)) :mgl t :shape (10 10))
-
-; PS (2023/05/26). The lazy-evaluated tensors have been modified to display more elegant.
-(print a) ; #Const(<Transposed Tensor> :shape (10 10) :backward <Node: TRANSPOSETENSOR{W2126}>)
-```
-
-```lisp
-(setq a (!randn `(10 10)))
-;#Const(((0.570... -0.13... ~ 0.217... 0.862...)        
-;                 ...
-;        (-0.12... 0.384... ~ -0.25... -0.91...)) :mgl t :shape (10 10))
-
-(setq lazy-evaluated-a (!transpose a))
-;#Const(#<FUNCTION (LABELS CL-WAFFE.BACKENDS.MGL::LAZYTRANSPOSE :IN CL-WAFFE.BACKENDS.MGL::LAZY-EVAL-TRANSPOSE) {100E48135B}>)
-
-(print lazy-evaluated-a)
-;#Const(#<FUNCTION (LABELS CL-WAFFE.BACKENDS.MGL::LAZYTRANSPOSE :IN CL-WAFFE.BACKENDS.MGL::LAZY-EVAL-TRANSPOSE) {100E48135B}>)
-
-; value will accept and evaluated lazy-evaluated tensor.
-(value lazy-evaluated-a)
-
-(print lazy-evaluated-a)
-;#Const(((0.570... 1.228... ~ 0.050... -0.12...)        
-;                 ...
-;        (0.862... -0.82... ~ 1.360... -0.91...)) :mgl t :shape (10 10))
-```
-
-## Eazy to optimize
-
 For more detail: [defnode and call](https://hikettei.github.io/cl-waffe-docs/docs/tutorials.html#defnode-and-call)
 
 Nodes are described in a clear and highly functional notation:
@@ -545,8 +321,6 @@ True, almost implementations are using it (See also: `./source/optimizers/optimi
 			  (data (gethash i (self params)))))))
 ```
 
-## Switchable Backends
-
 See also: [Documentation](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#backends)
 
 It is allowed to redefine the original node in cl-waffe. Such nodes are managed by using `backend`.
@@ -576,6 +350,8 @@ It is allowed to redefine the original node in cl-waffe. Such nodes are managed 
 ```
 
 # Install
+
+### Requirements
 
 It is recommended to install following in advance:
 
@@ -611,13 +387,6 @@ $ ros run
 
 Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests to us. Don't hesitate to send me issues if you have any trouble!
 
-### Prerequisites
-
-1. SBCL
-2. Roswell
-3. Lakefile
-4. Quicklisp
-
 ### Running the tests
 
 ```shell
@@ -626,7 +395,7 @@ $ lake test
 
 should work.
 
-## Lakefile
+### Lakefile
 
 [Lakefile](https://github.com/leanprover/lake) is available at github repository. (Also it requires [Roswell](https://github.com/roswell/roswell))
 
@@ -644,9 +413,9 @@ Tasks:
   example:rnn              Run example model with Seq2Seq
 ```
 
-# Run MNIST With Roswell
+# Trying cl-waffe with Example Models
 
-
+(No Lake but Roswell Ver)
 ```shell
 $ cd examples
 $ sh install.sh
@@ -654,66 +423,13 @@ $ cd ..
 $ ./run-test-model.ros mnist
 ```
 
-or
-
+(Roswell and Lake ver)
 ```shell
 $ lake example:install
 $ lake example:fnn
 ```
 
 should work. `lake example:mnist` is also OK.
-
-# Currently Problems/Todo
-As of writing, I'm working on:
-
-- ~~破壊的代入のサポート(Support more destructive operations)~~(Done)
-- Neural Networkの追加 (Add cl-waffe.nn models)
-- RNNs are too much slower than PyTorch...
-- モデルの保存に対応 (Save and restore trained models.)
-- グラフの表示に対応 (Plotting losses and so on)
-- 様々なデータ構造を扱えるように (Support more types of data structure)
-- 性能向上（メモリ使用量/CPU使用率の観点から
-）(In term of cpu-usage rate/memory-usage, cl-waffe has a lot of challenge to performance.)
-- CUDAに対応 (Support CUDA)
-- 他の処理系で動くか試す (Try on another systems (e.g.: CCL))
-- Improving the quality of documentation.
-
-# Goals
-
-- Making cl-waffe a modern and fast framework.
-	- Fix: high memory usage
-	- Add: More APIs
-	- Add: Clear distinction between slow and fast APIs.
-	- Add: Simple rules to make it fast and lacklustre and documentations for it
-	- Goal: Training Transformer Model
-	
-- Making cl-waffe practical
-	- Support: cl-jupyter, any plotting library, matplotlib, etc...
-	- Support: CUDA with Full Performance!
-	- Add: Mathematical Functions
-	- Add: High power APIs (such features are rooted in !aref, broadcasting. they need to be optimized more)
-	- Add: DataLoader like PyTorch
-	- Add: Save and Restore Models, (Compatible with PyTorch if possible...)
-	
-- Go faster cl-waffe
-	- Support: more parallelized operators
-	- Keep whole codes abstracted and extensible
-	- Apply full optimisation when some functionality is reached enough.
-	- More benchmarks are needed and put it all in a table somewhere.
-
-I love Common Lisp very much and there are many excellent libraries for numerical operations with great ideas.
-
-However, I know I'm really reckless, but the one I want to make is:
-- Making full use of Common Lisp's nice features.
-- I want to have a range of functions comparable to Python's frameworks.
-- Simple/Compact notations and APIs
-
-Having started on 2022/12/26, this project will take a long time before these features are realised.
-
-
-Does anyone have any ideas? Please share with me on issues!
-
-Also, bug reports and more are welcome!
 
 # Acknowledgements
 
