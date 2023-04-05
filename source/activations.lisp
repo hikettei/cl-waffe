@@ -5,13 +5,17 @@
 (defparameter pi-single-float (the single-float (coerce pi 'single-float)))
 
 (defnode ReLUTensor nil
-  :parameters ((path-through nil) (zero-buff nil))
-  :forward ((x) ; Todo rewrite more faster way.
-		(unless (self zero-buff)
-		  (setf (self zero-buff) (!zeros (!shape x))))
-		(let ((mask (with-searching-calc-node :< x (self zero-buff))))
-		  (save-for-backward path-through mask)
-		  (!mul mask x)))
+  :parameters ((path-through nil)
+	       (zero-buff nil))
+  :forward-declaim (declaim (ftype (function (ReLUTensor waffetensor) waffetensor) :forward))
+  :forward ((x)
+	    (declare (optimize (speed 3)))
+	    (unless (self zero-buff)
+	      (setf (self zero-buff) (!zeros (!shape x))))
+	    (let ((mask (with-searching-calc-node :< x (self zero-buff))))
+	      (save-for-backward path-through mask)
+	      (!mul mask x)))
+  :backward-declaim (declaim (ftype (function (ReLUTensor waffetensor) list) :backward))
   :backward ((dy)
 	     (list (!mul (self path-through) dy))))
 
@@ -23,6 +27,8 @@ Relu(x) = { 0 (x < 0), x (x > 0) }
 Input: x where x is waffe supported data type.
 
 Output: Tensor"
+  (declare (optimize (speed 3))
+	   (type waffetensor x))
   (call (ReLUTensor) (assure-tensor x)))
 
 (defnode SigmoidTensor nil
