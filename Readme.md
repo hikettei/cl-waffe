@@ -1,15 +1,69 @@
-
-# cl-waffe
 [![CI](https://github.com/hikettei/cl-waffe/actions/workflows/ci.yml/badge.svg)](https://github.com/hikettei/cl-waffe/actions/workflows/ci.yml)
-![cl-waffe](https://hikettei.github.io/cl-waffe-docs/docs/cl-waffe-logo.png)
 
-**This package is still under development and experimental, so don't use this in your product.**
+<p align="center">
+    <a href="https://github.com/hikettei/cl-waffe">
+        <img alt="Logo" src="https://hikettei.github.io/cl-waffe-docs/cl-waffe.png" width="45%">
+    </a>
+    <br>
+    <h3 align="center">Deep Learning Framework for Common Lisp (Experimental) </h3>
+    <p align="center">
+    <a href="https://hikettei.github.io/cl-waffe-docs/docs/overview.html"><strong>Documentations »</strong></a>
+    <br />
+    <br />
+    <a href="https://github.com/hikettei/cl-waffe/issues">Issues</a>
+    ·
+    <a href="https://github.com/hikettei/cl-waffe/blob/main/benchmark/Result.md">Benchmarks</a>
+    ·
+    <a href="https://github.com/hikettei/cl-waffe/tree/main/tutorials/jp">Tutorials(JP)</a>
+  </p>
+</p>
 
-cl-waffe is a deep learning framework with modern APIs for Common Lisp based on [mgl-mat](https://github.com/melisgl/mgl-mat). 
 
-This is 100% written in Common Lisp (ignoring BLAS/CUBLAS parts). So it is super easy to extend kernel as you will. (In real, properly optimised and parallelised Common Lisp code is surprisingly fast, and not impossible to compete with C/C++.)
+# About This Project
 
-Not having GPUs, I can't test my framework on cuda ><. CUDA support is a little further along. (Ignoring some operations like Embedding, most operations are performed via [mgl-mat](https://github.com/melisgl/mgl-mat), so it should work without any modifications.)
+cl-waffe is a deep learning framework with modern APIs for Common Lisp, based on [mgl-mat](https://github.com/melisgl/mgl-mat). 
+
+This framework is 100% written in Common Lisp (ignored BLAS/CUBLAS parts). As a result, it is extremely easy to extend the features as needed. However, 
+The framework currently has a limited set of features, and I am working to expand its capabilities in future releases.
+
+**⚠️ This framework is still under development and experimental. If you are thinking on using it in your products, It would be wiser to use other libraries.** It should be noted that the author of cl-waffe is not an AI expert.  Also, not having GPUs, I can't test my framework on cuda ><. CUDA support is a little further along. (Ignoring some operations like Embedding, most operations are performed via [mgl-mat](https://github.com/melisgl/mgl-mat), so it should work without any modifications.)
+
+# TOC
+
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**
+
+- [What cl-waffe does?](#what-cl-waffe-does)
+  - [cl-waffe as a matrix operation library](#cl-waffe-as-a-matrix-operation-library)
+  - [cl-waffe as a deep learning framework](#cl-waffe-as-a-deep-learning-framework)
+- [News](#news)
+- [MNIST Example](#mnist-example)
+- [Features](#features)
+  - [Useful and high-level API](#useful-and-high-level-api)
+    - [Broadcasting](#broadcasting)
+    - [Highly functional Aref](#highly-functional-aref)
+    - [Rich APIs](#rich-apis)
+  - [Automatic Differentiation](#automatic-differentiation)
+  - [Eazy to optimize.](#eazy-to-optimize)
+    - [Fully Inlined Nodes](#fully-inlined-nodes)
+    - [Lazy-Evaluation](#lazy-evaluation)
+  - [Extensible APIs](#extensible-apis)
+- [Install](#install)
+    - [Requirements](#requirements)
+    - [Install via Github](#install-via-github)
+    - [Install via Roswell](#install-via-roswell)
+    - [Install via Ultralisp](#install-via-ultralisp)
+- [Contributing](#contributing)
+    - [Running the tests](#running-the-tests)
+    - [Lakefile](#lakefile)
+- [Trying cl-waffe with Example Models](#trying-cl-waffe-with-example-models)
+- [Acknowledgements](#acknowledgements)
+- [Author](#author)
+- [Environment](#environment)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 
 # What cl-waffe does?
 
@@ -19,7 +73,7 @@ cl-waffe is the two sides of the coin:
 
 ## cl-waffe as a matrix operation library
 
-Speaking of the former, cl-waffe aimed to wrap the existing Common Lisp matrix operation libraries with Numpy/PyTorch like APIs. And reduce overheads between cl-waffe and these libraries.
+For the first purpose, cl-waffe aims to wrap existing Common Lisp matrix operation libraries with Numpy/PyTorch like APIs, reducing overheads between cl-waffe and these libraries.
 
 So, If you are considering contributing to cl-waffe in terms of boosting its performance, the first thing you should do is **to contribute libraries cl-waffe uses**, especially, [mgl-mat](https://github.com/melisgl/mgl-mat).
 
@@ -44,43 +98,45 @@ True, cl-waffe works like in the relationship shown in this flow.
 
 ## cl-waffe as a deep learning framework
 
-We wrap such existing libraries and define forward and backward propagation via the macro `defnode`, thus enabling automatic differentiation.
+For more details: [defnode and call](https://hikettei.github.io/cl-waffe-docs/docs/tutorials.html#defnode-and-call)
 
-I think this is not an ideal situation because `array-to-mat` and `numcl:transpose` is both creating copies, but this is simultaneously good example to show what I want to do:
+The macros **defnode** and **call** serves as a key component of cl-waffe. In designing deep learning models, incorporating object-oriented programming can lead to more consice descriptions. Although Common Lisp has a powerful framework: CLOS and Closer-MOP, but I think its computational speed strongly depends on what common lisp implementation to use. (e.g.: SBCL/Clozure CL...) Thus, by using only defstruct and defun for defining the computation nodes and wrapping them with macros, (defnode) and (call), I have reduced the overhead associated with the process. This example shows how to define ScalarAdd Node.
 
 ```lisp
-(defnode TransposeOriginalTensor (shape)
-  :parameters ((prev-shape nil)
-               (shape shape :type cons))
-  :forward ((x)
-	    (setf (self prev-shape) (!shape x))
-	    (with-facet (array ((value x) 'array :direction :input))
-	      ; In defnode, it is not always necessary to use the cl-waffe API.
-	      ; With regard to this example, it defines a transpose with numcl's API.
-	      (sysconst (array-to-mat (numcl:transpose array)))))
-  :backward ((dy)
-	     (list (!transpose1 dy (self prev-shape)))))
-
-(defun !transpose1 (tensor &rest dims)
-  ; defined nodes are called with call
-  (call (TransposeOriginalTensor dims) tensor))
-
-(!transpose (!randn `(10 3)))
-
-;#Const(((-0.21... -1.92... ~ 0.560... -0.90...)        
-;                 ...
-;        (0.580... 0.197... ~ -0.86... 0.765...)) :dtype :float :shape (3 10) :backward <Node: TRANSPOSEORIGINALTENSOR{W2995}>)
+(defnode ScalarAdd ()
+  :disassemble-forward t
+  :forward-declaim (declaim (ftype (function (ScalarAdd waffetensor waffetensor) waffetensor) :forward))
+  :forward ((x y)
+	    (let ((x (data x))
+		  (y (data y)))
+	      (declare (type single-float x y))
+	      (const (+ x y))))
+  :disassemble-backward t
+  :backward-declaim (declaim (type (function (ScalarAdd waffetensor) list) :backward))
+  :backward ((dy) (list dy dy)))
 ```
 
-This is the basic idea behind cl-waffe's automatic differentiation.
+```lisp
+(time (call (ScalarAdd) (const 1.0) (const 1.0))) ; via cl-waffe
+;#Const(2.0 :dtype SINGLE-FLOAT :backward <Node: SCALARADD{W924}>)
+;Evaluation took:
+;  0.000 seconds of real time
+;  0.000005 seconds of total run time (0.000005 user, 0.000000 system)
+;  100.00% CPU
+;  11,084 processor cycles
+;  0 bytes consed
+  
+(time (+ 1.0 1.0)) ; CL Native
+;2.0
+;Evaluation took:
+;  0.000 seconds of real time
+;  0.000001 seconds of total run time (0.000000 user, 0.000001 system)
+;  100.00% CPU
+;  422 processor cycles
+;  0 bytes consed
+```
 
-These nodes are combined to define a `model` (via defmodel macro). Also, the model has `trainable parameters` and they're optimized by optimizers, defined by `defoptimizer`.
-
-(P.S.: I know not everyone likes this Chainer-like system (define-by-run), so I'm thinking of providing Keras-like APIs.)
-
-Anyway, these features have been developed as **extensible APIs** and do not need to be known by everyone.
-
-There are still **very few standard implementations of NNs(As of this writing, only supports RNN/Linear and so on...)/**, as I think it is important to get the computational fundamentals in place before implementing various deep learning methods. (but contributions are welcome!)
+Nodes called by the macro `(call) `are fully inlined, (like CL's `inline-generic-function`, `static-dispatch`). Considering ScalarAdd builds computation node in addition to summing up the arguments, these overheads are enough small.
 
 # News
 
@@ -89,52 +145,13 @@ There are still **very few standard implementations of NNs(As of this writing, o
 
 - (2023/03/26) I published the benchmark compared to Numpy/PyTorch. Available at [Here](https://github.com/hikettei/cl-waffe/blob/main/benchmark/Result.md). (Not quite up to my goal.) cl-waffe should peform better... however I guess there's a room to optimize in the cl-waffe's codes...
 
-# Documents
-
-[Documentation](https://hikettei.github.io/cl-waffe-docs) is available.
-
-Also, I started writing [Tutorials(Written in Japanese)](https://github.com/hikettei/cl-waffe/tree/main/tutorials/jp).
-
-As of this writing, available tutorials are written in Japanese and their writing continues, but eventually, I'm willing to complete and translate them into English. So don't worry if you don't speak Japanese.
-
-# TOC
-
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**
-
-- [MNIST Example](#mnist-example)
-- [Features](#features)
-  - [Broadcasting](#broadcasting)
-  - [Destructive APIs with a Simple Rule.](#destructive-apis-with-a-simple-rule)
-  - [Useful APIs like Numpy/PyTorch.](#useful-apis-like-numpypytorch)
-  - [Automatic Differentiation](#automatic-differentiation)
-  - [Useful Lazy-Evaluation System](#useful-lazy-evaluation-system)
-  - [Eazy to optimize](#eazy-to-optimize)
-  - [Extensible APIs](#extensible-apis)
-  - [Switchable Backends](#switchable-backends)
-- [Install](#install)
-    - [Install via Github](#install-via-github)
-    - [Install via Roswell](#install-via-roswell)
-    - [Install via Ultralisp](#install-via-ultralisp)
-- [Contributing](#contributing)
-    - [Prerequisites](#prerequisites)
-    - [Running the tests](#running-the-tests)
-  - [Lakefile](#lakefile)
-- [Run MNIST With Roswell](#run-mnist-with-roswell)
-- [Currently Problems/Todo](#currently-problemstodo)
-- [Goals](#goals)
-- [Acknowledgements](#acknowledgements)
-- [Author](#author)
-- [Environment](#environment)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
 # MNIST Example
 
 See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/mnist-tutorial.html)
 
-cl-waffe aimed to reduce the amount of total code written.
+This example demonstrates a three-layer MLP implemented using cl-waffe.
+
+With the help of cl-waffe, you can define models consisely like this:
 
 ```lisp
 ; Full Code is in ./examples/mnist.lisp
@@ -162,295 +179,112 @@ cl-waffe aimed to reduce the amount of total code written.
  :predict ((x) (call (model) x)))
  
 (let ((model (MLPTrainer :relu 1e-3)))
-  (step-model model (!randn `(10 784))))
+  (step-model model (!randn `(10 784)) (!ones `(10 10))))
 ```
 
 # Features
 
-I've only just started developing it, so I'm trying out a lot of features by hand. (That is some features below may well work, some may not.)
-
 As of this writing:
-- Broadcasting
-- Destructive APIs with a Simple Rule.
-- Useful APIs like Numpy/PyTorch
-- Automatic Differentiation
-- Useful Lazy-Evaluation System
-- Eazy to optimize.
+
+- Useful and high-level API
+- Automatic Differentation
+- Eazy to optimize
 - Extensible APIs
-- Switchable Backends
 
-## Broadcasting
+## Useful and high-level API
 
-See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#broadcasting)
+The standard cl-waffe API includes features like these, which are also supported by other Python libraries.
 
-cl-waffe has a broadcasting operations like other frameworks.
+- Broadcasting
+- Highly functional Aref
+- Rich API
+
+### Broadcasting
 
 ```lisp
-(setq a (!randn `(1 100 200)))
-;#Const((((1.900... -0.70... ~ 0.609... 1.397...)         
-;                   ...
-;         (0.781... 1.735... ~ -1.01... 0.152...))) :mgl t :shape (1 100 200))
-(setq b (!randn `(100 100 200)))
-;#Const((((-1.21... 0.823... ~ 2.001... -0.21...)         
-;                   ...
-;         (-0.34... 0.441... ~ -0.07... -0.38...))        
-;                 ...
-;        ((1.627... 1.127... ~ 0.705... 0.798...)         
-;                   ...
-;         (0.070... 1.883... ~ 1.850... -0.47...))) :mgl t :shape (100 100 200))
+(setq a (!randn `(100 100 100)))
+(setq b (!randn `(100 1)))
 
 (time (!add a b))
 ;Evaluation took:
-;  0.003 seconds of real time
-;  0.002999 seconds of total run time (0.002799 user, 0.000200 system)
-;  100.00% CPU
-;  6,903,748 processor cycles
-;  8,163,776 bytes consed
+;  0.004 seconds of real time
+;  0.004748 seconds of total run time (0.003399 user, 0.001349 system)
+;  125.00% CPU
+;  11,061,940 processor cycles
+;  4,190,448 bytes consed
   
-;#Const((((0.689... 0.115... ~ 2.611... 1.183...)         
+;#Const((((-1.25... -0.46... ~ 0.265... -0.37...)         
 ;                   ...
-;         (0.435... 2.177... ~ -1.08... -0.23...))        
+;         (0.675... -0.77... ~ -1.50... -1.22...))        
 ;                 ...
-;        ((3.528... 0.419... ~ 1.315... 2.195...)         
+;        ((-0.72... -0.25... ~ 1.381... 0.727...)         
 ;                   ...
-;         (0.851... 3.619... ~ 0.839... -0.32...))) :mgl t :shape (100 100 200))
+;         (0.198... 0.178... ~ -2.18... -1.40...))) :dtype :float :shape (100 100 100) :backward <Node: BROADCASTINGADDTENSOR{W90085}>)
 ```
 
-## Destructive APIs with a Simple Rule.
-
-See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#compute-tensors-in-a-destructive-way)
-
-Internally, Just add to your code `(!allow-destruct tensor)`, cl-waffe regards the tensor as unnecessary and destruct it. This is how implemented destructive operations are.
+### Highly functional Aref
 
 ```lisp
-(setq a (!randn `(100 100 100)))
-(setq b (!randn `(100 100 100)))
+(setq a (!init-with `(1000 1000) #'(lambda (x) x)))
+;#Const(((0.0 1.0 ~ 998.0... 999.0...)        
+;                 ...
+;        (99900... 99900... ~ 99999... 99999...)) :dtype :float :shape (1000 1000) :backward NIL)
 
-(time (!!add a b))
+(time (!aref a 0 t))
 ;Evaluation took:
 ;  0.000 seconds of real time
-;  0.000662 seconds of total run time (0.000605 user, 0.000057 system)
+;  0.000078 seconds of total run time (0.000078 user, 0.000000 system)
 ;  100.00% CPU
-;  1,422,578 processor cycles
+;  177,232 processor cycles
 ;  0 bytes consed
   
-;#Const((((-1.47... 1.016... ~ -1.29... -1.71...)         
-;                   ...
-;         (2.276... 0.878... ~ -1.35... 0.466...))        
+;#Const(((0.0 1.0 ~ 998.0... 999.0...)) :dtype :float :shape (1 1000) :backward <Node: AREFTENSOR{W90108}>)
+
+(time (!aref a `(2 -1) t))
+;Evaluation took:
+;  0.007 seconds of real time
+;  0.007651 seconds of total run time (0.006475 user, 0.001176 system)
+;  114.29% CPU
+;  17,779,036 processor cycles
+;  4,909,136 bytes consed
+  
+;#Const(((2000.... 2001.... ~ 2998.... 2999....)        
 ;                 ...
-;        ((1.712... 1.318... ~ 0.213... 1.262...)         
-;                   ...
-;         (1.084... -0.18... ~ -1.42... 0.552...))) :mgl t :shape (100 100 100))
+;        (99800... 99800... ~ 99899... 99899...)) :dtype :float :shape (997 1000) :backward <Node: AREFTENSOR{W90109}>)
+
+(setf (!aref a '(0 10) t) (!ones `(10)))
+;#Const(((1.0 1.0 ~ 1.0 1.0)        
+;                 ...
+;        (99900... 99900... ~ 99999... 99999...)) :dtype :float :shape (1000 1000) :backward <Node: SETFAREFTENSOR{W90130}>)
 ```
 
-## Useful APIs like Numpy/PyTorch.
+### Rich APIs
 
-See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/cl-waffe.html), Here's the list of all APIs in cl-waffe.
+There are many operations available in cl-waffe, and I am going to continue expanding them in the future.
 
-Here's API like `SliceTensor` in Numpy/PyTorch. Of course, they're differentiable.
-
-However, in practical, using offsets (in lisp, we call it displacement) will perform better. (e.g.: setting batch, applying word-by-word processing in RNN). so it is just extra.
-
-```lisp
-(setq a (!randn `(100 100 100)))
-;#Const((((-1.45... -0.70... ~ -0.87... -0.52...)         
-;                   ...
-;         (0.655... -1.47... ~ -2.10... -1.79...))        
-;                 ...
-;        ((-0.28... -1.75... ~ -1.28... 0.381...)         
-;                   ...
-;         (-0.55... -0.53... ~ 0.421... -0.13...))) :mgl t :shape (100 100 100))
-
-(time (!aref a 0 0 0))
-;Evaluation took:
-;  0.000 seconds of real time
-;  0.000163 seconds of total run time (0.000135 user, 0.000028 system)
-;  100.00% CPU
-;  235,060 processor cycles
-;  0 bytes consed
-  
-;#Const((((-1.45...))) :mgl t :shape (1 1 1))
-
-(time (!aref a t 0 0))
-;Evaluation took:
-;  0.000 seconds of real time
-;  0.000477 seconds of total run time (0.000455 user, 0.000022 system)
-;  100.00% CPU
-;  963,246 processor cycles
-;  98,256 bytes consed
-  
-;#Const((((-1.45...))        
-;                 ...
-;        ((-0.28...))) :mgl t :shape (100 1 1))
-
-(time (!aref a '(0 3) '(10 -1) t))
-
-;Evaluation took:
-;  0.001 seconds of real time
-;  0.001489 seconds of total run time (0.001445 user, 0.000044 system)
-;  100.00% CPU
-;  3,518,516 processor cycles
-;  322,144 bytes consed
-  
-;#Const((((-0.10... 0.226... ~ -1.68... 0.662...)         
-;                   ...
-;         (-0.14... 1.239... ~ -0.90... -0.60...))        
-;                 ...
-;        ((-0.97... 1.588... ~ 0.558... -1.79...)         
-;                   ...
-;         (-0.80... -1.50... ~ -1.11... -0.21...))) :mgl t :shape (3 89 100))
-
-(time (!aref a t t t))
-;Evaluation took:
-;  0.024 seconds of real time
-;  0.024426 seconds of total run time (0.024367 user, 0.000059 system)
-;  100.00% CPU
-;  56,193,050 processor cycles
-;  12,675,952 bytes consed
-  
-;#Const((((-1.45... -0.70... ~ -0.87... -0.52...)         
-;                   ...
-;         (0.655... -1.47... ~ -2.10... -1.79...))        
-;                 ...
-;        ((-0.28... -1.75... ~ -1.28... 0.381...)         
-;                   ...
-;         (-0.55... -0.53... ~ 0.421... -0.13...))) :mgl t :shape (100 100 100))
-
-(setq b (!ones `(100 3)))
-(time (setf (!aref a '(0 3)) b))
-;Evaluation took:
-;  0.001 seconds of real time
-;  0.001312 seconds of total run time (0.001274 user, 0.000038 system)
-;  100.00% CPU
-;  2,898,956 processor cycles
-;  262,048 bytes consed
-;#Const((((1.0 1.0 ~ -0.87... -0.52...)         
-;                   ...
-;         (1.0 1.0 ~ -2.10... -1.79...))        
-;                 ...
-;        ((-0.28... -1.75... ~ -1.28... 0.381...)         
-;                   ...
-;         (-0.55... -0.53... ~ 0.421... -0.13...))) :mgl t :shape (100 100 100))
-```
-
+See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/cl-waffe.html)
 
 ## Automatic Differentiation
 
-See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#basic-tensor-operations)
-
-Once forward is defined, backward is also automatically defined. This feature is indispensable for Deep Learning Framework. Of course it is available.
+define-by-run style:
 
 ```lisp
-(setq a (parameter (!randn `(10 10))))
-(setq b (parameter (!randn `(10 10))))
-(setq c (parameter (!randn `(10))))
-
+(setq a (parameter (!randn `(3 3))))
+(setq b (parameter (!randn `(3 3))))
+(setq c (parameter (!randn `(3 3))))
 
 (setq z (!sum (!add (!mul a b) c)))
 
-(time (backward z))
-;Evaluation took:
-;  0.001 seconds of real time
-;  0.001469 seconds of total run time (0.001344 user, 0.000125 system)
-;  100.00% CPU
-;  3,239,008 processor cycles
-;  130,048 bytes consed
-  
-;NIL
+(backward z)
 
-(print (const (grad a)))
-;#Const(((0.004... -0.00... ~ 0.004... 5.721...)
-;                 ...
-;        (0.001... 5.919... ~ 7.748... -0.00...)) :mgl t :shape (10 10))
-(print (const (grad b)))
-;#Const(((0.004... -0.00... ~ 0.004... 5.721...)
-;                 ...
-;        (0.001... 5.919... ~ 7.748... -0.00...)) :mgl t :shape (10 10))
-(print (const (grad c)))
-;#Const((0.01 0.01 ~ 0.01 0.01) :mgl t :shape (10))
+(grad a)
+(grad b)
+(grad c)
 ```
 
-## Useful Lazy-Evaluation System
+## Eazy to optimize.
 
-See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#lazy-evaluation)
-
-cl-waffe provides zero-cost transpose by using lazy-evaluation.
-
-Just use `!transpose` before `!matmul`, `!matmul` automatically recognises it and the retuend tensor is applied `transpose`.
-
-Here's `!transpose1` for the case when you just want a transposed tensor.
-
-The lazy-evaluated tensors are evaluated via function `(value tensor)`. Once this function called. the content of tensor is fulfilled with a new evaluated matrix. Don't worry, `(value tensor)` are scattered all over the place in cl-waffe's code, so no additional codes are required.
-
-```lisp
-(setq a (!randn `(10 3)))
-;#Const(((0.411... 0.244... 2.828...)        
-;                 ...
-;        (-1.26... -1.41... 0.821...)) :mgl t :shape (10 3))
-
-(!transpose a)
-;#Const(#<FUNCTION (LABELS CL-WAFFE.BACKENDS.MGL::LAZYTRANSPOSE :IN CL-WAFFE.BACKENDS.MGL::LAZY-EVAL-TRANSPOSE) {100CA0F5EB}>)
-
-; Generally, using delayed evaluation does not require additional new code.
-(!add * 1)
-;#Const(((1.411... 0.862... ~ 1.590... -0.26...)        
-;                 ...
-;        (3.828... 0.582... ~ -0.57... 1.821...)) :mgl t :shape (3 10))
-
-; Using !transpose is much faster for !matmul (even when the tensors are 3d/4d...).
-(time (!matmul a (!transpose a)))
-;Evaluation took:
-;  0.000 seconds of real time
-;  0.000107 seconds of total run time (0.000101 user, 0.000006 system)
-;  100.00% CPU
-;  147,434 processor cycles
-;  0 bytes consed
-  
-;#Const(((8.227... -1.29... ~ -4.10... 1.458...)        
-;                 ...
-;        (1.458... 0.180... ~ -2.59... 4.273...)) :mgl t :shape (10 10))
-
-; Compared to !transpose1...
-(time (!matmul a (!transpose1 a)))
-;Evaluation took:
-;  0.178 seconds of real time
-;  0.176052 seconds of total run time (0.120406 user, 0.055646 system)
-;  98.88% CPU
-;  4 forms interpreted
-;  773 lambdas converted
-;  410,887,630 processor cycles
-;  25,051,200 bytes consed
-  
-;#Const(((8.227... -1.29... ~ -4.10... 1.458...)        
-;                 ...
-;        (1.458... 0.180... ~ -2.59... 4.273...)) :mgl t :shape (10 10))
-
-; PS (2023/05/26). The lazy-evaluated tensors have been modified to display more elegant.
-(print a) ; #Const(<Transposed Tensor> :shape (10 10) :backward <Node: TRANSPOSETENSOR{W2126}>)
-```
-
-```lisp
-(setq a (!randn `(10 10)))
-;#Const(((0.570... -0.13... ~ 0.217... 0.862...)        
-;                 ...
-;        (-0.12... 0.384... ~ -0.25... -0.91...)) :mgl t :shape (10 10))
-
-(setq lazy-evaluated-a (!transpose a))
-;#Const(#<FUNCTION (LABELS CL-WAFFE.BACKENDS.MGL::LAZYTRANSPOSE :IN CL-WAFFE.BACKENDS.MGL::LAZY-EVAL-TRANSPOSE) {100E48135B}>)
-
-(print lazy-evaluated-a)
-;#Const(#<FUNCTION (LABELS CL-WAFFE.BACKENDS.MGL::LAZYTRANSPOSE :IN CL-WAFFE.BACKENDS.MGL::LAZY-EVAL-TRANSPOSE) {100E48135B}>)
-
-; value will accept and evaluated lazy-evaluated tensor.
-(value lazy-evaluated-a)
-
-(print lazy-evaluated-a)
-;#Const(((0.570... 1.228... ~ 0.050... -0.12...)        
-;                 ...
-;        (0.862... -0.82... ~ 1.360... -0.91...)) :mgl t :shape (10 10))
-```
-
-## Eazy to optimize
+### Fully Inlined Nodes
 
 For more detail: [defnode and call](https://hikettei.github.io/cl-waffe-docs/docs/tutorials.html#defnode-and-call)
 
@@ -481,6 +315,30 @@ It can be easily inlined via the macro `call`.
  (DECLARE (OPTIMIZE (SPEED 3) (SAFETY 1))
           (INLINE call-scalaradd-forward-mgl))
  (call-scalaradd-forward-mgl (SCALARADD) (CONST 1.0) (CONST 1.0)))
+```
+
+### Lazy-Evaluation
+
+Zero-cost transpose is achieved through the use of lazy evaluation.
+
+```lisp
+(setq a (!randn `(100 20)))
+(setq b (!randn `(100 20)))
+
+(!transpose a)
+;#Const(<Transposed Tensor> :shape (20 100) :backward <Node: TRANSPOSETENSOR{W90135}>)
+
+(time (!matmul (!transpose a) b))
+;Evaluation took:
+;  0.001 seconds of real time
+;  0.000312 seconds of total run time (0.000085 user, 0.000227 system)
+;  0.00% CPU
+;  4,329,458 processor cycles
+;  0 bytes consed
+  
+;#Const(((5.946... -6.45... ~ -14.0... 10.40...)        
+;                 ...
+;        (8.740... 6.130... ~ -6.76... -3.12...)) :dtype :float :shape (20 20) :backward <Node: MATMULTENSOR{W90165}>)
 ```
 
 ## Extensible APIs
@@ -529,11 +387,7 @@ True, almost implementations are using it (See also: `./source/optimizers/optimi
 			  (data (gethash i (self params)))))))
 ```
 
-## Switchable Backends
-
-See also: [Documentation](https://hikettei.github.io/cl-waffe-docs/docs/using-tensor.html#backends)
-
-It is allowed to redefine the original node in cl-waffe. Such nodes are managed by using `backend`.
+Also, it is allowed to redefine the original node in cl-waffe. Such nodes are managed by using `backend`.
 
 `define-node-extension` is available to extend the existing nodes.
 
@@ -553,13 +407,11 @@ It is allowed to redefine the original node in cl-waffe. Such nodes are managed 
 (defun operate-in-extension ()
   (with-backend :my-extension
     (= (data (!add 1 1)) 200)))
-
-(defun operate-restart-test () ; if the operation doesn't exists...
-  (with-backend :does-not-exists
-    (= (data (!add 1 1)) 2)))
 ```
 
 # Install
+
+### Requirements
 
 It is recommended to install following in advance:
 
@@ -595,13 +447,6 @@ $ ros run
 
 Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests to us. Don't hesitate to send me issues if you have any trouble!
 
-### Prerequisites
-
-1. SBCL
-2. Roswell
-3. Lakefile
-4. Quicklisp
-
 ### Running the tests
 
 ```shell
@@ -610,7 +455,7 @@ $ lake test
 
 should work.
 
-## Lakefile
+### Lakefile
 
 [Lakefile](https://github.com/leanprover/lake) is available at github repository. (Also it requires [Roswell](https://github.com/roswell/roswell))
 
@@ -628,76 +473,23 @@ Tasks:
   example:rnn              Run example model with Seq2Seq
 ```
 
-# Run MNIST With Roswell
-
-
-```shell
-$ cd examples
-$ sh install.sh
-$ cd ..
-$ ./run-test-model.ros mnist
-```
-
-or
+# Trying cl-waffe with Example Models
 
 ```shell
 $ lake example:install
 $ lake example:fnn
 ```
 
-should work. `lake example:mnist` is also OK.
+If Lake isn't available in your environment, try this:
 
-# Currently Problems/Todo
-As of writing, I'm working on:
+```shell
+$ cd examples
+$ sh install.sh
+$ cd ..
+$ ./run-test-model.ros fnn
+```
 
-- ~~破壊的代入のサポート(Support more destructive operations)~~(Done)
-- Neural Networkの追加 (Add cl-waffe.nn models)
-- RNNs are too much slower than PyTorch...
-- モデルの保存に対応 (Save and restore trained models.)
-- グラフの表示に対応 (Plotting losses and so on)
-- 様々なデータ構造を扱えるように (Support more types of data structure)
-- 性能向上（メモリ使用量/CPU使用率の観点から
-）(In term of cpu-usage rate/memory-usage, cl-waffe has a lot of challenge to performance.)
-- CUDAに対応 (Support CUDA)
-- 他の処理系で動くか試す (Try on another systems (e.g.: CCL))
-- Improving the quality of documentation.
-
-# Goals
-
-- Making cl-waffe a modern and fast framework.
-	- Fix: high memory usage
-	- Add: More APIs
-	- Add: Clear distinction between slow and fast APIs.
-	- Add: Simple rules to make it fast and lacklustre and documentations for it
-	- Goal: Training Transformer Model
-	
-- Making cl-waffe practical
-	- Support: cl-jupyter, any plotting library, matplotlib, etc...
-	- Support: CUDA with Full Performance!
-	- Add: Mathematical Functions
-	- Add: High power APIs (such features are rooted in !aref, broadcasting. they need to be optimized more)
-	- Add: DataLoader like PyTorch
-	- Add: Save and Restore Models, (Compatible with PyTorch if possible...)
-	
-- Go faster cl-waffe
-	- Support: more parallelized operators
-	- Keep whole codes abstracted and extensible
-	- Apply full optimisation when some functionality is reached enough.
-	- More benchmarks are needed and put it all in a table somewhere.
-
-I love Common Lisp very much and there are many excellent libraries for numerical operations with great ideas.
-
-However, I know I'm really reckless, but the one I want to make is:
-- Making full use of Common Lisp's nice features.
-- I want to have a range of functions comparable to Python's frameworks.
-- Simple/Compact notations and APIs
-
-Having started on 2022/12/26, this project will take a long time before these features are realised.
-
-
-Does anyone have any ideas? Please share with me on issues!
-
-Also, bug reports and more are welcome!
+either of them should work. `lake example:mnist` is also OK.
 
 # Acknowledgements
 
@@ -712,7 +504,6 @@ hikettei
 - Discord: rulia🌙#5298
 
 # Environment
-
 
 - SBCL
 	- it is recommended to use SBCL, I've not tested on others
