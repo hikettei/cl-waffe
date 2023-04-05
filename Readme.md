@@ -260,6 +260,8 @@ The standard cl-waffe API includes features like these, which are also supported
 
 ### Rich APIs
 
+There are many operations available in cl-waffe, and I am going to continue expanding them in the future.
+
 See also: [Document](https://hikettei.github.io/cl-waffe-docs/docs/cl-waffe.html)
 
 ## Automatic Differentiation
@@ -281,7 +283,6 @@ define-by-run style:
 ```
 
 ## Eazy to optimize.
-
 
 ### Fully Inlined Nodes
 
@@ -318,7 +319,7 @@ It can be easily inlined via the macro `call`.
 
 ### Lazy-Evaluation
 
-Zero-cost transpose
+Zero-cost transpose is achieved through the use of lazy evaluation.
 
 ```lisp
 (setq a (!randn `(100 20)))
