@@ -35,13 +35,20 @@
 	       (yi nil)
 	       (transpose-x? nil)
 	       (transpose-y? nil))
-  :forward ((x y) (save-for-backward xi x)
-		  (save-for-backward yi y)
-		  
-		  (setf (self transpose-x?) (lazy-transpose-p x))
-		  (setf (self transpose-y?) (lazy-transpose-p y))
-		  
-		  (with-searching-calc-node :matmul x y))
+  :forward-declaim (declaim (ftype (function (MatmulTensor waffetensor waffetensor) waffetensor) :forward))
+  :forward ((x y)
+	    (declare (optimize (speed 3) (safety 0)))
+	    (save-for-backward xi x)
+	    (save-for-backward yi y)
+	    
+	    (setf (self transpose-x?) (lazy-transpose-p x))
+	    (setf (self transpose-y?) (lazy-transpose-p y))
+	    (sysconst
+	     (cl-waffe.backends.mgl::matmul-tensor
+	      nil
+	      x
+	      x
+	      y)))
   :backward ((dy)
 	     (list (!matmul dy (if (self transpose-y?)
 				   (progn

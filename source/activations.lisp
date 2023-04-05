@@ -5,13 +5,18 @@
 (defparameter pi-single-float (the single-float (coerce pi 'single-float)))
 
 (defnode ReLUTensor nil
-  :parameters ((path-through nil) (zero-buff nil))
-  :forward ((x) ; Todo rewrite more faster way.
-		(unless (self zero-buff)
-		  (setf (self zero-buff) (!zeros (!shape x))))
-		(let ((mask (with-searching-calc-node :< x (self zero-buff))))
-		  (save-for-backward path-through mask)
-		  (!mul mask x)))
+  :parameters ((path-through nil)
+	       (zero-buff nil))
+  :forward-declaim (declaim (ftype (function (ReLUTensor waffetensor) waffetensor) :forward))
+  :forward ((x)
+	    (declare (optimize (speed 3) (safety 0)))
+	    (unless (self zero-buff)
+	      (setf (self zero-buff) (!zeros (!shape x))))
+
+	    (let ((mask (with-searching-calc-node :< x (self zero-buff))))
+	      (save-for-backward path-through mask)
+	      (!mul mask x)))
+  :backward-declaim (declaim (ftype (function (ReLUTensor waffetensor) list) :backward))
   :backward ((dy)
 	     (list (!mul (self path-through) dy))))
 
@@ -23,14 +28,24 @@ Relu(x) = { 0 (x < 0), x (x > 0) }
 Input: x where x is waffe supported data type.
 
 Output: Tensor"
+  (declare (optimize (speed 3))
+	   (type waffetensor x))
   (call (ReLUTensor) (assure-tensor x)))
 
 (defnode SigmoidTensor nil
   :parameters ((xi T))
+  :forward-declaim (declaim (ftype (function (SigmoidTensor waffetensor) waffetensor) :forward))
   :forward ((x)
-	    (let ((result (!!div 1 (!!add (!!exp (!mul -1 x)) 1))))
-	      (save-for-backward xi result)
-	      result))
+	    (declare (optimize (speed 3)))
+	    (let ((result (data (maybe-copy x))))
+	      (scal! -1.0 result)
+	      (.exp! result)
+	      (.+! 1.0 result)
+	      (.inv! result)
+	      (let ((result (sysconst result)))
+		(save-for-backward xi result)
+		result)))
+  :backward-declaim (declaim (ftype (function (SigmoidTensor waffetensor) list) :backward))
   :backward ((dy) (list (!mul dy
 			      (!mul (self xi)
 				    (!sub 1 (self xi)))))))
@@ -41,11 +56,14 @@ Output: Tensor"
 Input: x where x is waffe supported data type.
 
 Output: Tensor"
+  (declare (optimize (speed 3)))
   (call (SigmoidTensor) (assure-tensor x)))
 
 (defnode TanhTensor nil
   :parameters ((xi T))
+  :forward-declaim (declaim (ftype (function (TanhTensor waffetensor) waffetensor) :forward))
   :forward ((x)
+	    (declare (optimize (speed 3)))
 	    (save-for-backward xi x)
 	    (with-searching-calc-node :tanh x))
   :backward ((dy)
@@ -53,9 +71,11 @@ Output: Tensor"
 
 (defun !tanh (x)
   "Applying tanh to x, return a new sysconst with making nodes."
+  (declare (optimize (speed 3)))
   (call (TanhTensor) (assure-tensor x)))
 
-; Optimizing won't go well
+; No assumption they're work well. (Maybe not.)
+
 (define-with-typevar !gelu u (x &key (approximate t))
   "Applying gelu to x, returning a new sysconst.
 

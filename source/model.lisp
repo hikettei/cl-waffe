@@ -612,7 +612,6 @@ When backward, @b(Automatic differentiation applies).
 
 (defmacro define-node-extension (name
 				 &key
-				   optimize
 				   backend
 				   (disassemble-forward nil)
 				   forward-declaim
@@ -856,7 +855,7 @@ Example:
 			   (setf (waffetensor-variables x) (flatten (list ,@vars)))
 			   (setf (waffetensor-is-ancestor-param x)
 				 is-ancestor-param)))
-		       x)
+		       (update-tensor-state x (flatten (list ,@vars))))
 		   result)
 		 `(map
 		  'list
@@ -869,7 +868,7 @@ Example:
 	   (T
 	    ,(if (eql object-type :node)
 		 `(unless *no-grad*
-		    (progn
+		    (let ((flat-vars (flatten (list ,@vars))))
 		      (setf
 		       (waffetensor-path-through-node? result)
 		       result-next-state)
@@ -877,14 +876,16 @@ Example:
 		      (setf (waffetensor-state result) (model))
 		      ; Note: variables are flat lists.
 		      ; I hate this overehead of flatten...
-		      (setf (waffetensor-variables result) (flatten (list ,@vars)))
+		      (setf (waffetensor-variables result) flat-vars)
 		      (setf (waffetensor-is-ancestor-param result)
 			    is-ancestor-param)
-		      result)
-		    (progn
+		      result
+		      (setq result (update-tensor-state result flat-vars)))
+		    (let ((flat-vars (flatten (list ,@vars))))
 		      (setf
 		       (waffetensor-path-through-node? result)
-		       result-next-state)))
+		       result-next-state)
+		      (setq result (update-tensor-state result flat-vars))))
 		 `(setf
 		   (waffetensor-path-through-node? result)
 		   result-next-state))
@@ -937,19 +938,23 @@ Example:
 	       declaim-forms))
 	 ,(if disassemble-me
 	      `(defun ,tmp-fname (,self ,@args)
-		 ,@declarations
 		 ,docs
-		 (with-object-macrolet-forms ',self ,args-symbols
-		   ,@body)))
+		 (locally ,@declarations
+		   (with-object-macrolet-forms ',self ,args-symbols
+		     ,(if (find object-type `(:node :optimizer))
+			  `(with-define-function-in-defnode-way ,object-type ,args-symbols
+			     ,@body)
+			  `(with-define-function-in-defmodel-way ,args-symbols
+			     ,@body))))))
 	 (defun ,function-name (,self ,@args)
 	   ,docs
-	   ,@declarations
-	   (with-object-macrolet-forms ',self ',args-symbols
-	     ,(if (find object-type `(:node :optimizer))
-		  `(with-define-function-in-defnode-way ,object-type ,args-symbols
-		     ,@body)
-		  `(with-define-function-in-defmodel-way ,args-symbols
-		     ,@body))))
+	   (locally ,@declarations
+	     (with-object-macrolet-forms ',self ',args-symbols
+	       ,(if (find object-type `(:node :optimizer))
+		    `(with-define-function-in-defnode-way ,object-type ,args-symbols
+		       ,@body)
+		    `(with-define-function-in-defmodel-way ,args-symbols
+		       ,@body)))))
 	 ,(if disassemble-me
 	      `(disassemble #',tmp-fname))
 	 nil))))
@@ -965,8 +970,6 @@ Example:
 		       backward-declaim
 		       backward
 		       hide-from-tree
-		       optimize
-		       (regard-as-node nil)
 		       (document "An object, defined by cl-waffe")
 		       (object-type :object))
   "Defining cl-waffe's object

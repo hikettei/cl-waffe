@@ -105,6 +105,8 @@ And utils for broadcasting etc...
 (defnode ScalarAdd ()
   :forward-declaim (declaim (ftype (function (ScalarAdd waffetensor waffetensor) waffetensor) :forward))
   :forward ((x y)
+	    (declare (optimize (speed 3))
+		     (type waffetensor x y))
 	    (let ((x (data x))
 		  (y (data y)))
 	      (declare (type single-float x y))

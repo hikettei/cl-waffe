@@ -208,6 +208,14 @@ This structure is printable and printed nicely."
   (idx nil :type (or null symbol))
   (is-data-destructed? nil :type boolean))
 
+(declaim (ftype (function (waffetensor) waffetensor) maybe-copy))
+(defun maybe-copy (tensor)
+  "Returns a tensor, if tensor is allowed to destruct. otherwise returns a copy of tensor"
+  (declare (optimize (speed 3)))
+  (if (waffetensor-is-next-destruct? tensor)
+      tensor
+      (sysconst (copy-mat (data tensor)))))
+
 ;(declaim (inline data
 ;		 (setf data)))
 (defun data (tensor)

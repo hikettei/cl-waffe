@@ -6,19 +6,13 @@
 	       (shape t)
 	       (arg-size 0 :type fixnum))
   :forward ((&rest tensors)
+	    (declare (optimize (speed 3)))
 	    (let ((first-shape (the list (!shape (car tensors)))))
-	      #|(loop for i fixnum upfrom 0 below (length tensors)
-		    unless (equal first-shape (the list (!shape (nth i tensors))))
-		      do (unless (= (the fixnum
-					 (!shape (nth i tensors) (self axis)))
-				    (the fixnum
-					 (nth (self axis) first-shape)))
-			   (error "cl-waffe.stack!: all tensors must be consisted of the same shapes, but got ~a. excepted:~a" (nth i tensors) first-shape)))|#
 	      (let* ((result-shape
 		       (loop for i fixnum
 			     upfrom 0
 			       below (length first-shape)
-			     if (= i (self axis))
+			     if (= i (the fixnum (self axis)))
 			       collect (apply #'+
 					      (map 'list #'(lambda (tensor)
 							     (!shape tensor i))
@@ -36,6 +30,7 @@
 			(data result))
 		result)))
   :backward ((dy)
+	     (declare (optimize (speed 3)))
 	     (let ((count 0)
 		   (tmp-areas (loop for i fixnum upfrom 0 below (self axis)
 				    collect t)))
@@ -52,7 +47,10 @@
 	       (axis axis :type fixnum)
 	       (grads nil)
 	       (prev-shape t))
+  :forward-declaim (declaim (ftype (function (SplitTensorNode waffetensor) list) :forward))
   :forward ((tensor)
+	    (declare (optimize (speed 3))
+		     (type waffetensor tensor))
 	    (setf (self prev-shape) (!shape tensor))
 	    (setf (self grads) nil)
 	    (loop
@@ -67,8 +65,8 @@
 			   (multiple-value-bind (k rest)
 			       (round
 				(/
-				 (!shape tensor (self axis))
-				 (self split-size)))
+				 (the fixnum (!shape tensor (self axis)))
+				 (the fixnum (self split-size))))
 			     
 			     (declare (type fixnum k))
 			     (if (> rest 0.0)

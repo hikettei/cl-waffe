@@ -8,7 +8,7 @@
   :parameters ((shape shape)
 	       (base-shape T))
   :forward ((x) (setf (self base-shape) (!shape x))
-		(apply #'!faref x (self shape))) ;thread-node??
+		(apply #'!faref x (self shape)))
   :backward ((dy)
 	     (let ((dy-n (!zeros (self base-shape))))
 	       (setf (!areflist dy-n (self shape)) dy)
