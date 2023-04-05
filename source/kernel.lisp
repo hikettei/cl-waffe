@@ -117,6 +117,27 @@ Note: this is not setfable"
        (eql function-info :lazy-transpose)))
     (T nil)))
 
+(defun update-tensor-state (tensor variables)
+  (declare (type waffetensor tensor)
+	   (type list variables)
+	   (optimize (speed 3) (safety 0)))
+  (let ((thread-data
+	  (let ((r (find t (the list variables)
+			 :test #'(lambda (x y)
+				   (declare (ignore x))
+				   (waffetensor-thread-data y)))))
+	    (if r
+		(waffetensor-thread-data r)
+		nil)))
+	(path-through-node?
+	  (let ((m (member-if #'waffetensor-path-through-node? variables)))
+	    (if m
+		t
+		nil))))
+    (setf (waffetensor-thread-data tensor) thread-data)
+    (setf (waffetensor-path-through-node? tensor) path-through-node?)
+    tensor))
+
 ;(declaim (ftype (function (keyword cons) waffetensor) invoke-mgl-kernel invoke-cpu-kenel))
 (defun invoke-mgl-kernel (kernel-function variables &key (output nil) (overwrite nil))
   (declare (optimize (speed 3) (safety 0))
@@ -136,9 +157,10 @@ Note: this is not setfable"
 			   (if r
 			       (waffetensor-thread-data r)
 			       nil))
-	    :path-through-node? (find t (map 'list
-					     #'waffetensor-path-through-node?
-					     variables))))
+	    :path-through-node? (let ((m (member-if #'waffetensor-path-through-node? variables)))
+				  (if m
+				      t
+				      nil))))
 
 (defun invoke-cpu-kernel (kernel-function variables)
   (declare (optimize (speed 3) (safety 0))
