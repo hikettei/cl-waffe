@@ -55,6 +55,17 @@ See also: define-node-extension"
   `(let ((*default-backend* ,backend))
      ,@body))
 
+(deftype TensorData ()
+  `(or fixnum ; scalar values
+       float
+       null
+       cons
+       function
+
+       simple-array
+       mgl-mat:mat ; to be deleted
+       ))
+
 (deftype WaffeSupportedDataType ()
   "An type of waffe-tensor's content type,
 
@@ -72,7 +83,7 @@ See also: define-node-extension"
 (deftype waffe-array () ;  an list of waffe supported array data structures.
   `(or mgl-mat:mat))
 
-(defun waffe-array (c)
+(defun waffe-array-p (c)
   (and (typep c 'simple-array)
        (every (lambda (e) (typep e 'waffesupporteddatatype)) c)))
 
@@ -187,7 +198,8 @@ Value is following:
 @end(enum)
 
 This structure is printable and printed nicely."
-  (data nil :type WaffeTensorTypes)
+  ; どの構造体が使われていでどれが使われていないかを書き直す
+  (data nil :type Tensordata)
   (grad-tmp (make-grad-tmp) :type grad-tmp)
   (backward nil :type boolean)
   (backend :mgl :type keyword)
@@ -198,6 +210,10 @@ This structure is printable and printed nicely."
   (is-param? nil :type boolean)
   (is-ancestor-param nil :type boolean)
   (is-next-destruct? nil :type boolean)
+
+  (visible-area `(t) :type list)
+
+  ; 下は怪しい
   (destructive? nil :type boolean)
   (thread-data nil :type (or waffenodethread null))
   (is-sysconst? nil :type boolean)
@@ -301,7 +317,7 @@ When the argument that you want to insert is a tensor, this function automatical
      (if (eq mgl-mat:*default-mat-ctype* :double) ;...
 	 (coerce content 'double-float)
 	 (coerce content 'single-float)))
-    (simple-array (mgl-mat:array-to-mat content))
+;    (simple-array (mgl-mat:array-to-mat content))
     (T content)))
 
 (defun check-backend (backend tensor)

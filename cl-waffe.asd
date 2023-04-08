@@ -13,6 +13,7 @@
 	       #:mgl-mat
 	       #:alexandria
 	       #:cl-cuda
+	       #:cffi
 	       #:cl-libsvm-format
 	       #:lparallel
 	       #:trivial-garbage
@@ -24,6 +25,7 @@
 	       (:file "utils")
 	       (:file "dtype")
 	       (:file "conditions")
+	       ; the below is to be deleted
 	       (:module "backends/mgl-mat"
 		:components ((:file "cache")
 			     (:file "package")
@@ -36,6 +38,12 @@
 	       (:module "backends/cpu"
 		:components ((:file "package")
 			     (:file "kernel")))
+	       (:module "kernel"
+		:components ((:file "package")
+			     (:file "array")
+			     (:file "cuda")
+			     (:file "blas")))
+	       
 	       (:file "model")
 	       (:file "tensor")
 	       (:file "thread")
