@@ -317,10 +317,7 @@ When the argument that you want to insert is a tensor, this function automatical
      (if (eq mgl-mat:*default-mat-ctype* :double) ;...
 	 (coerce content 'double-float)
 	 (coerce content 'single-float)))
-    (simple-array
-     (case *default-backend*
-       (:mgl (mgl-mat:array-to-mat content))
-       (T content)))
+    (simple-array (mgl-mat:array-to-mat content))
     (T content)))
 
 (defun check-backend (backend tensor)

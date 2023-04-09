@@ -25,7 +25,8 @@
 	   #:hide-from-tree
 	   #:forward
 	   #:backward
-	   #:lazy-transpose-p)
+	   #:lazy-transpose-p
+	   #:maybe-copy)
   (:export #:with-backend
 	   #:define-node-extension)
   (:export ; conditions

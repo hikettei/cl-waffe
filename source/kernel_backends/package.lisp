@@ -13,7 +13,11 @@ Writing Metal Kernels.
   (:export
    ; Variables
    #:*dtype*
-   #:*available-dtypes*))
+   #:*available-dtypes*)
+
+  #| MPS APIs|#
+  (:export
+   #:matmul-mps))
 
 (in-package :cl-waffe.kernel)
 
@@ -33,32 +37,13 @@ Writing Metal Kernels.
     (unless plist
       (warn "cl-user::*cl-waffe-configuration* is not found.")
       (progn
-	(load-blas (find-config :BLAS plist))
-	(if (find-config :CUDA plist)
-	    (load-cuda))
-	))))
-
-(defun load-blas (path)
-  (load-foreign-library path))
-
-(defun load-cuda ()
-  (format t "CUDA is unsupported by me currently. Consider using mgl-mat backend."))
+	(if (second (find-config :mps plist))
+	    (load-mps))))))
 
 (defun load-mps ()
   (load-foreign-library "source/kernel_backends/mps/.build/release/libMPSBridge.dylib"))
 
 ; tmp
-(defcfun "mps_2dfgemm" :int
-	  (alpha :double)
-	  (a (:pointer :float))
-	  (b (:pointer :float))
-	  (beta :double)
-	  (c (:pointer :float))
-	  (m :int)
-	  (n :int)
-	  (k :int)
-	  (transpose_a :boolean)
-          (transpose_b :boolean))
 
 (defun backend-infomation (&optional (stream t))
   (format stream "Backend Information:"))

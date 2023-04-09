@@ -19,4 +19,3 @@
 (defun mgl-mat::coerce-to-ctype (element &key (ctype *dtype*))
   (coerce element (mgl-mat::ctype->lisp ctype)))
 
-

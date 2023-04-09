@@ -43,7 +43,8 @@
 		:components ((:file "package")
 			     (:file "array")
 			     (:file "cuda")
-			     (:file "blas")))
+			     (:file "blas")
+			     (:file "metal")))
 	       
 	       (:file "model")
 	       (:file "tensor")

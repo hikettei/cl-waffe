@@ -5,7 +5,10 @@
     :backend :mps
     :forward ((x)
   	      (save-for-backward xi x)
-	      (with-facet (x* ((data x) 'foreign-array :direction :input))
-		x*))
+	      (let ((result (maybe-copy x)))
+		(with-facets ((x* ((data x) 'foreign-array :direction :input))
+			      (o* ((data result) 'foreign-array :direction :output)))
+		  nil)
+		result))
     :backward ((dy)
 	       (list (!mul dy (!cos (self xi))))))

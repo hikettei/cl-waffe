@@ -6,17 +6,25 @@
   :forward-declaim (declaim (ftype (function (cl-waffe::MatmulTensor waffetensor waffetensor) waffetensor) :forward))
   :forward ((x y)
 	    (declare (optimize (speed 3) (safety 0)))
+	    
 	    (save-for-backward xi x)
 	    (save-for-backward yi y)
 	    
 	    (setf (self transpose-x?) (lazy-transpose-p x))
 	    (setf (self transpose-y?) (lazy-transpose-p y))
-	    (sysconst
-	     (cl-waffe.backends.mgl::matmul-tensor
-	      nil
-	      x
-	      x
-	      y)))
+	    
+	    (unless (= (!dims x) (!dims y) 2)
+	      (error ""))
+
+	    (let ((out (!zeros `(,(!shape x 0)
+				 ,(!shape y 1)))))
+	      (matmul-mps
+	       x
+	       y
+	       out
+	       :transpose-a (self transpose-x?)
+	       :transpose-b (self transpose-y?))
+	      out))
   :backward ((dy)
 	     (list (!matmul dy (if (self transpose-y?)
 				   (progn
