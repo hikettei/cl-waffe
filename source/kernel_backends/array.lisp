@@ -1,6 +1,9 @@
 
 (in-package :cl-waffe.kernel)
 
+
+; Note that: Native BLAS/CUDA APIs Only Supports single/double float.
+
 (defun mgl-mat::ctype-size (ctype)
   (case ctype
     (:short 2)
@@ -14,6 +17,6 @@
     (:double 'double-float)))
 
 (defun mgl-mat::coerce-to-ctype (element &key (ctype *dtype*))
-  (coerce element (dtype->lisp ctype)))
+  (coerce element (mgl-mat::ctype->lisp ctype)))
 
 

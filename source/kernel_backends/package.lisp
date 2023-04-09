@@ -17,13 +17,8 @@ Writing Metal Kernels.
 
 (in-package :cl-waffe.kernel)
 
-; Below is the configuration
-
-(defparameter *backend* :cpu "The backend cl-waffe uses, in default: :mps (Mac's Metal, macOS only) cpu or cuda.") ; maybe unused.
-
 (defparameter cl-user::*cl-waffe-configuration*
-  `((:blas "libblas.dylib")
-    (:mps nil)))
+  `((:mps nil))) ; with-backend :mps de kidou
 
 (defun find-config (name list)
   (loop for i fixnum upfrom 0 below (length list)
