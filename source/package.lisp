@@ -24,7 +24,8 @@
 	   #:parameters
 	   #:hide-from-tree
 	   #:forward
-	   #:backward)
+	   #:backward
+	   #:lazy-transpose-p)
   (:export #:with-backend
 	   #:define-node-extension)
   (:export ; conditions
@@ -196,7 +197,9 @@
 	   #:!atanh
 
 	   #:!argmin
-	   #:!argmax)
+	   #:!argmax
+
+	   #:init-features)
 
   (:export
 	   
@@ -229,6 +232,13 @@
   "An hash-table which records all forward nodes")
 (defvar *call-backward-features* (common-lisp:make-hash-table)
   "An hash-table which records all backward nodes")
+
+(defun init-features ()
+  "Initializes all features."
+  (format t "[WARN] Initializing features...")
+  (setf *call-forward-features* (common-lisp:make-hash-table))
+  (setf *call-forward-features* (common-lisp:make-hash-table))
+  t)
 
 (defparameter *cl-waffe-object-types* `(:model
 					:node

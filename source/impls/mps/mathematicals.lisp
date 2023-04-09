@@ -5,6 +5,7 @@
     :backend :mps
     :forward ((x)
   	      (save-for-backward xi x)
-	      (!sin x))
+	      (with-facet (x* ((data x) 'foreign-array :direction :input))
+		x*))
     :backward ((dy)
 	       (list (!mul dy (!cos (self xi))))))

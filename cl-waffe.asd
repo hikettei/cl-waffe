@@ -87,7 +87,8 @@
 			     (:file "cnn")))
 	       (:module "impls/mps"
 		:components ((:file "package")
-			     (:file "mathematicals")))
+			     (:file "mathematicals")
+			     (:file "matrix-operations")))
 	       (:module "io"
 		:components ((:file "package")
 			     (:file "libsvm")))))
