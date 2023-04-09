@@ -84,6 +84,9 @@
 			     (:file "layers")
 			     (:file "embedding")
 			     (:file "cnn")))
+	       (:module "impls/mps"
+		:components ((:file "package")
+			     (:file "mathematicals")))
 	       (:module "io"
 		:components ((:file "package")
 			     (:file "libsvm")))))
