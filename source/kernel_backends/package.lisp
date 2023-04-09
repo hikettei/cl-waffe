@@ -47,7 +47,20 @@
   (format t "CUDA is unsupported by me currently. Consider using mgl-mat backend."))
 
 (defun load-mps ()
-  )
+  (load-foreign-library "source/kernel_backends/mps/.build/release/libMPSBridge.dylib"))
+
+; tmp
+(defcfun "mps_2dfgemm" :int
+	  (alpha :double)
+	  (a (:pointer :float))
+	  (b (:pointer :float))
+	  (beta :double)
+	  (c (:pointer :float))
+	  (m :int)
+	  (n :int)
+	  (k :int)
+	  (transpose_a :boolean)
+  (transpose_b :boolean))
 
 (defun backend-infomation (&optional (stream t))
   (format stream "Backend Information:"))
