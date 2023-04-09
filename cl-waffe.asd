@@ -5,12 +5,11 @@
   :author "hikettei (Twitter:@icnhdm)"
   :licence "MIT"
   :version "0.1"
-  :description "An deep learning framework for Common Lisp"
+  :description "A Deep Learning Framework for Common Lisp"
   :source-control (:git "https://github.com/hikettei/cl-waffe.git")
   :pathname "source"
   :depends-on (#:numcl
 	       #:cl-ansi-text
-	       :static-vectors
 	       #:mgl-mat
 	       #:alexandria
 	       #:cl-cuda
