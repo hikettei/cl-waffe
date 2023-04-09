@@ -20,7 +20,6 @@
 				   (transpose-a nil)
 				   (transpose-b nil))
 					; To Add: case depending on dims, dtypes
-
   (with-facets ((x* ((data x) 'foreign-array :direction :input))
 		(y* ((data y) 'foreign-array :direction :input))
 		(o* ((data out) 'foreign-array :direction :input)))

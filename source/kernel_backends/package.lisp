@@ -10,10 +10,6 @@ Writing Metal Kernels.
 (defpackage :cl-waffe.kernel
   (:documentation "A kernel for cl-waffe, which enables MPS backend, FP16, view.")
   (:use :cl :cl-waffe :cffi :alexandria :mgl-mat :mgl-cube)
-  (:export
-   ; Variables
-   #:*dtype*
-   #:*available-dtypes*)
 
   #| MPS APIs|#
   (:export
@@ -41,7 +37,7 @@ Writing Metal Kernels.
 	    (load-mps))))))
 
 (defun load-mps ()
-  (load-foreign-library "source/kernel_backends/mps/.build/release/libMPSBridge.dylib"))
+  (load-foreign-library (pathname "source/kernel_backends/mps/.build/release/libMPSBridge.dylib")))
 
 ; tmp
 
