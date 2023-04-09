@@ -38,7 +38,7 @@
 	       (:module "backends/cpu"
 		:components ((:file "package")
 			     (:file "kernel")))
-	       (:module "kernel"
+	       (:module "kernel_backends"
 		:components ((:file "package")
 			     (:file "array")
 			     (:file "cuda")
