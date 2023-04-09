@@ -17,6 +17,9 @@ let package = Package(
     targets: [
         .target(
             name: "MPSBridge",
-            dependencies: [])
+            dependencies: []),
+        .testTarget(
+          name: "MPSBridgeTest",
+          dependencies: ["MPSBridge"])
     ]
 )
