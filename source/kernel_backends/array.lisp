@@ -35,7 +35,7 @@
 				  (:short 'short-float)
 				  (:float 'single-float)
 				  (:double 'double-float))
-           :initial-element initial-element)
+		  :initial-element (coerce initial-element (dtype->lisp ctype)))
           (static-vectors:make-static-vector
            length :element-type (dtype->lisp ctype)))
     (mgl-mat::with-foreign-array-locked (*foreign-pool*)
@@ -101,27 +101,10 @@
 
 
 (defmethod destroy-facet* ((facet-name (eql 'lisp-vector)) facet)
-  (declare (ignore facet)))
+  (declare (ignore facet))
+  ; deleted by gc.
+  )
 
 (defmethod destroy-facet* ((facet-name (eql 'static-vector)) facet)
   (mgl-mat::free-static-vector (facet-value facet)))
 
-(define-with-typevar alloc-cpu-mat u (dims)
-  (foreign-alloc (dtypecase
-		  (:short :short)
-		  (:float :float)
-		  (:double :double)
-		  (T (error "Unavailbe dtype (add cases for me)")))
-		 :count (apply #'* dims)))
-
-
-#|
-(define-with-typevar alloc-cuda-mat u (dims &key (initial-element 0))
-  (error "Unavailable"))
-|#
-
-(defun alloc-mat (dims)
-  (case *backend*
-    (:cpu (alloc-cpu-mat dims))
-    (T
-     (error "Currently cl-waffe doesn't supports ~a" *backend*))))

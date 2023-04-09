@@ -10,6 +10,7 @@
   :pathname "source"
   :depends-on (#:numcl
 	       #:cl-ansi-text
+	       :static-vectors
 	       #:mgl-mat
 	       #:alexandria
 	       #:cl-cuda

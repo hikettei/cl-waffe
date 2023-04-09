@@ -1,6 +1,12 @@
 
 (in-package :cl-user)
 
+#|
+Todo:
+Extend mgl-mat:vec class and support :short-float,
+Writing Metal Kernels.
+|#
+
 (defpackage :cl-waffe.kernel
   (:documentation "A kernel for cl-waffe, which enables MPS backend, FP16, view.")
   (:use :cl :cl-waffe :cffi :alexandria :mgl-mat :mgl-cube)
@@ -13,10 +19,7 @@
 
 ; Below is the configuration
 
-(defparameter *backend* :cpu "The backend cl-waffe uses, in default: :mps (Mac's Metal, macOS only) cpu or cuda.")
-
-(defparameter *blas-default-path*
-  `("libblas.dylib"))
+(defparameter *backend* :cpu "The backend cl-waffe uses, in default: :mps (Mac's Metal, macOS only) cpu or cuda.") ; maybe unused.
 
 (defparameter cl-user::*cl-waffe-configuration*
   `((:blas "libblas.dylib")
@@ -60,7 +63,7 @@
 	  (n :int)
 	  (k :int)
 	  (transpose_a :boolean)
-  (transpose_b :boolean))
+          (transpose_b :boolean))
 
 (defun backend-infomation (&optional (stream t))
   (format stream "Backend Information:"))

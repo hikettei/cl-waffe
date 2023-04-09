@@ -61,3 +61,59 @@ public func mps_2dfgemm(alpha: Double,
     c.initialize(from: bufferC.contents().assumingMemoryBound(to: Float.self), count: m * n)
     return 0
 }
+
+
+@available(macOS 10.13, *)
+@_cdecl("fsin_on_mps")
+public func fsin_on_mps(input: UnsafePointer<Float>, output: UnsafeMutablePointer<Float>, count: Int) -> Int {
+    return compute_1dfunc_kernel(functionName: "fsin", input: input, output: output, count: count)
+}
+
+@available(macOS 10.13, *)
+func compute_1dfunc_kernel(functionName: String, input: UnsafePointer<Float>, output: UnsafeMutablePointer<Float>, count: Int) -> Int {
+    do {
+        let inputBuffer = UnsafeRawPointer(input)
+        let commandBuffer = commandQueue.makeCommandBuffer()!
+        let computeCommandEncoder = commandBuffer.makeComputeCommandEncoder()!
+
+        let Function = defaultLibrary.makeFunction(name: functionName)!
+        let computePipelineState = try device.makeComputePipelineState(function: Function)
+        computeCommandEncoder.setComputePipelineState(computePipelineState)
+
+        let inputByteLength = count*MemoryLayout<Float>.size
+
+        let inVectorBuffer = device.makeBuffer(bytes: inputBuffer, length: inputByteLength, options: [])
+
+        computeCommandEncoder.setBuffer(inVectorBuffer, offset: 0, index: 0)
+
+        let resultRef = UnsafeMutablePointer<Float>.allocate(capacity: count)
+        let outVectorBuffer = device.makeBuffer(bytes: resultRef, length: inputByteLength, options: [])
+
+        computeCommandEncoder.setBuffer(outVectorBuffer, offset: 0, index: 1)
+        
+        let maxTotalThreadsPerThreadgroup = computePipelineState.maxTotalThreadsPerThreadgroup
+        let threadExecutionWidth = computePipelineState.threadExecutionWidth
+        let width  = maxTotalThreadsPerThreadgroup / threadExecutionWidth * threadExecutionWidth
+        let height = 1
+        let depth  = 1
+        
+        // 1D
+        let threadsPerGroup = MTLSize(width:width, height: height, depth: depth)
+        let numThreadgroups = MTLSize(width: (count + width - 1) / width, height: 1, depth: 1)
+        
+        computeCommandEncoder.dispatchThreadgroups(numThreadgroups, threadsPerThreadgroup: threadsPerGroup)
+        computeCommandEncoder.endEncoding()
+        commandBuffer.commit()
+        commandBuffer.waitUntilCompleted()
+        
+        // unsafe bitcast and assigin result pointer to output
+        output.initialize(from: outVectorBuffer!.contents().assumingMemoryBound(to: Float.self), count: count)
+        
+        free(resultRef)
+
+        return 0
+    } catch {
+        
+        return 1
+    }
+}

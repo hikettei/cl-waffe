@@ -16,12 +16,16 @@ final class MPSBridgeTests: XCTestCase {
 
         XCTAssertEqual("", "")
     }
-    
-    func testExample() {
-        XCTAssertEqual("Hello, World!", "Hello, World!")
-    }
 
+    func test_fsin () {
+        let x = UnsafeMutablePointer<Float>.allocate(capacity: 100)
+        let y = UnsafeMutablePointer<Float>.allocate(capacity: 100)
+
+        let _ = fsin_on_mps(input: x, output: y, count: 100)
+    }
+    
     static var allTests = [
-        ("testExample", testExample),
+      ("test_mps_2dfgemm", test_mps_2dfgemm),
+      ("test_fsin", test_fsin)
     ]
 }
