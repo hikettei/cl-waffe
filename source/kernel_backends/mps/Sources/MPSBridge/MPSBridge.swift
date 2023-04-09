@@ -46,10 +46,10 @@ public func mps_2dfgemm(alpha: Double,
     let bufferA = device.makeBuffer(bytes: a, length: size_a * MemoryLayout<Float>.stride, options: [])!
     let bufferB = device.makeBuffer(bytes: b, length: size_b * MemoryLayout<Float>.stride, options: [])!
     let bufferC = device.makeBuffer(bytes: c, length: size_c * MemoryLayout<Float>.stride, options: [])!
-    
-    let descA = MPSMatrixDescriptor(dimensions: 2, columns: k, rowBytes: m * MemoryLayout<Float>.stride, dataType: .float32)
-    let descB = MPSMatrixDescriptor(dimensions: 2, columns: n, rowBytes: n * MemoryLayout<Float>.stride, dataType: .float32)
-    let descC = MPSMatrixDescriptor(dimensions: 2, columns: n, rowBytes: k * MemoryLayout<Float>.stride, dataType: .float32)
+
+    let descA = MPSMatrixDescriptor(rows: m, columns: k, rowBytes: k * MemoryLayout<Float>.stride, dataType: .float32)
+    let descB = MPSMatrixDescriptor(rows: k, columns: n, rowBytes: k * MemoryLayout<Float>.stride, dataType: .float32)
+    let descC = MPSMatrixDescriptor(rows: m, columns: n, rowBytes: m * MemoryLayout<Float>.stride, dataType: .float32)
 
     let matrixA = MPSMatrix(buffer: bufferA, descriptor: descA)
     let matrixB = MPSMatrix(buffer: bufferB, descriptor: descB)
