@@ -4,7 +4,7 @@ import MetalPerformanceShaders
 import Accelerate
 import Foundation
 
-let metallib =  "\(#file.replacingOccurrences(of: "/MPSBridge.swift", with: ""))/Shaders.metallib"
+let metallib =  "\(#file.replacingOccurrences(of: "/MPSBridge.swift", with: ""))/kernel.metallib"
 
 // Initialized Device.
 // device=MLTDevice
@@ -59,5 +59,5 @@ public func mps_2dfgemm(alpha: Double,
     commandBuffer.commit()
     commandBuffer.waitUntilCompleted()
     c.initialize(from: bufferC.contents().assumingMemoryBound(to: Float.self), count: m * n)
-    return 1
+    return 0
 }

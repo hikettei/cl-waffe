@@ -42,7 +42,8 @@ Tasks:
   (sh "./roswell/gendoc.ros"))
 
 (namespace "build" ()
-  (task ("mps") ()
+     (task ("mps") ()
+     (sh "sh ./source/kernel_backends/mps/build_metal.sh")		 
      (sh "cd ./source/kernel_backends/mps && swift build -c release && cd ../../../")))
 
 (namespace "example"
