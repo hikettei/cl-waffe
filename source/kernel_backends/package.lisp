@@ -37,14 +37,16 @@ Writing Metal Kernels.
 	    (load-mps))))))
 
 (defun load-mps ()
-  (load-foreign-library (pathname "source/kernel_backends/mps/.build/release/libMPSBridge.dylib")))
+  ; Fixme: Make it relative.
+  (handler-case
+      (load-foreign-library (pathname "source/kernel_backends/mps/.build/release/libMPSBridge.dylib"))
+    (cffi:load-foreign-library-error (c)
+      (error c))))
 
-; tmp
 
 (defun backend-infomation (&optional (stream t))
-  (format stream "Backend Information:"))
-#|
-(eval-when (:compile-toplevel :load-toplevel :execute)
+  (format stream "=Backend Information:=====~%"))
+
+(eval-when (:execute)
   (load-configuration))
 
-|#
