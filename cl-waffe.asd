@@ -5,7 +5,7 @@
   :author "hikettei (Twitter:@icnhdm)"
   :licence "MIT"
   :version "0.1"
-  :description "An deep learning framework for Common Lisp"
+  :description "A Deep Learning Framework for Common Lisp"
   :source-control (:git "https://github.com/hikettei/cl-waffe.git")
   :pathname "source"
   :depends-on (#:numcl
@@ -13,6 +13,7 @@
 	       #:mgl-mat
 	       #:alexandria
 	       #:cl-cuda
+	       #:cffi
 	       #:cl-libsvm-format
 	       #:lparallel
 	       #:trivial-garbage
@@ -24,6 +25,7 @@
 	       (:file "utils")
 	       (:file "dtype")
 	       (:file "conditions")
+	       ; the below is to be deleted
 	       (:module "backends/mgl-mat"
 		:components ((:file "cache")
 			     (:file "package")
@@ -36,6 +38,13 @@
 	       (:module "backends/cpu"
 		:components ((:file "package")
 			     (:file "kernel")))
+	       (:module "kernel_backends"
+		:components ((:file "package")
+			     (:file "array")
+			     (:file "cuda")
+			     (:file "blas")
+			     (:file "metal")))
+	       
 	       (:file "model")
 	       (:file "tensor")
 	       (:file "thread")
@@ -76,6 +85,10 @@
 			     (:file "layers")
 			     (:file "embedding")
 			     (:file "cnn")))
+	       (:module "impls/mps"
+		:components ((:file "package")
+			     (:file "mathematicals")
+			     (:file "matrix-operations")))
 	       (:module "io"
 		:components ((:file "package")
 			     (:file "libsvm")))))

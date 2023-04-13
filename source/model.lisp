@@ -656,6 +656,10 @@ Example:
 			 "MODEL-LIST"))
 	     nil
 	     "define-node-extension is failed because cl-waffe::model-list is attempted to overwrite. This node is prohibited to extend")
+
+     (unless (find-class ',name nil)
+       (nosuchnode-error "define-node-extension attempted to redefine the node ~a, but it doesn't exist. define-node-extension isn't evaluated the original node is defined." ',name))
+     
      (define-node-function
 	 :forward
        ,name

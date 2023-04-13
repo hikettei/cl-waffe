@@ -1,9 +1,11 @@
 
 (in-package :cl-waffe)
 
-(defparameter *dtypes* `(:float :double)) ; To Add: :half
-(defparameter *dtype-prefixes* `(-f -d))
-(defparameter *dtype-cl-names* `(single-float double-float))
+(defparameter *dtype* :float "A datatype that cl-waffe uses")
+
+(defparameter *dtypes* `(:short :float :double)) ; To Add: :half
+(defparameter *dtype-prefixes* `(-s -f -d))
+(defparameter *dtype-cl-names* `(short-float single-float double-float))
 
 (defun dtype-p (dtype)
   (if (find dtype *dtypes*)
@@ -14,7 +16,8 @@
 
 (defmacro with-dtype (dtype &body body)
   "Switches the dtype. dtype = (:float :double). In default, :float."
-  `(let ((mgl-mat:*DEFAULT-MAT-CTYPE* ,(dtype-p dtype)))
+  `(let ((mgl-mat:*DEFAULT-MAT-CTYPE* ,(dtype-p dtype))
+	 (*dtype* ,(dtype-p dtype)))
      ,@body))
 
 (defun map-tree (fn tree)
@@ -100,12 +103,12 @@
        (defun ,function-name (,@args)
 	 ,doc
 	 (case mgl-mat:*DEFAULT-MAT-CTYPE*
-	   (:half
-	    (error "define-with-typevar: half is no implementation"))
-	   (:float
+	   (:short
 	    (,(car fnames) ,@params))
-	   (:double
+	   (:float
 	    (,(second fnames) ,@params))
+	   (:double
+	    (,(third fnames) ,@params))
 	   (T
 	    (error "no such dtype.")))))))
 
