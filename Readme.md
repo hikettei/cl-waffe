@@ -18,7 +18,6 @@
   </p>
 </p>
 
-
 # About This Project
 
 cl-waffe is a deep learning framework with modern APIs for Common Lisp, based on [mgl-mat](https://github.com/melisgl/mgl-mat). 
@@ -27,6 +26,8 @@ This framework is 100% written in Common Lisp (ignored BLAS/CUBLAS parts). As a 
 The framework currently has a limited set of features, and I am working to expand its capabilities in future releases.
 
 **⚠️ This framework is still under development and experimental. If you are thinking on using it in your products, It would be wiser to use other libraries.** It should be noted that the author of cl-waffe is not an AI expert.  Also, not having GPUs, I can't test my framework on cuda ><. CUDA support is a little further along. (Ignoring some operations like Embedding, most operations are performed via [mgl-mat](https://github.com/melisgl/mgl-mat), so it should work without any modifications.)
+
+(I've decided to stall this project for a little while but create a matrix operation library which satisfies my requirements.)
 
 # TOC
 
