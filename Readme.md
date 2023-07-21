@@ -18,6 +18,9 @@
   </p>
 </p>
 
+
+**(2023/07/21)**  As I think the current design of cl-waffe never reaches my goal: `Providing a solid and extensible baseline for Deep Learning on Common Lisp`, I've decided to start by building a matrix operation library which satisfies my requirement from zero, and then construct frameworks. Now, it is named [cl-waffe2](https://github.com/hikettei/cl-waffe2) and I'm devoting my free time to it.  This is highly extensible in that there's no barrier between developers and users, and is accelerated by JIT, instead of slightly more complex semantics. Albeit I'm focusing on a new project, `cl-waffe` is still enough working. Anyway, I'd be happy if you also visit my new project :).
+
 # About This Project
 
 cl-waffe is a deep learning framework with modern APIs for Common Lisp, based on [mgl-mat](https://github.com/melisgl/mgl-mat). 
