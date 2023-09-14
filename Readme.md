@@ -1,36 +1,14 @@
 [![CI](https://github.com/hikettei/cl-waffe/actions/workflows/ci.yml/badge.svg)](https://github.com/hikettei/cl-waffe/actions/workflows/ci.yml)
 
-<p align="center">
-    <a href="https://github.com/hikettei/cl-waffe">
-        <img alt="Logo" src="https://hikettei.github.io/cl-waffe-docs/cl-waffe.png" width="45%">
-    </a>
-    <br>
-    <h3 align="center">Deep Learning Framework for Common Lisp (Experimental) </h3>
-    <p align="center">
-    <a href="https://hikettei.github.io/cl-waffe-docs/docs/overview.html"><strong>Documentations »</strong></a>
-    <br />
-    <br />
-    <a href="https://github.com/hikettei/cl-waffe/issues">Issues</a>
-    ·
-    <a href="https://github.com/hikettei/cl-waffe/blob/main/benchmark/Result.md">Benchmarks</a>
-    ·
-    <a href="https://github.com/hikettei/cl-waffe/tree/main/tutorials/jp">Tutorials(JP)</a>
-  </p>
-</p>
+> ⚠️ This repository is abandoned by me since the development has complemently moved to [cl-waffe2](https://github.com/hikettei/cl-waffe2).
+> 
+> cl-waffe2 provides: by far the fastest, systematic, easy to optimize, customizable, and environment- and device- independent abstract matrix operations while cl-waffe do not.
+>
+> So it is recommended to check out cl-waffe2 instead of this project.
 
-
-**(2023/07/21)**  As I think the current design of cl-waffe never reaches my goal: `Providing a solid and extensible baseline for Deep Learning on Common Lisp`, I've decided to start by building a matrix operation library which satisfies my requirement from zero, and then construct frameworks. Now, it is named [cl-waffe2](https://github.com/hikettei/cl-waffe2) and I'm devoting my free time to it.  This is highly extensible in that there's no barrier between developers and users, and is accelerated by JIT, instead of slightly more complex semantics. Albeit I'm focusing on a new project, `cl-waffe` is still enough working. Anyway, I'd be happy if you also visit my new project :).
-
-# About This Project
+# cl-waffe
 
 cl-waffe is a deep learning framework with modern APIs for Common Lisp, based on [mgl-mat](https://github.com/melisgl/mgl-mat). 
-
-This framework is 100% written in Common Lisp (ignored BLAS/CUBLAS parts). As a result, it is extremely easy to extend the features as needed. However, 
-The framework currently has a limited set of features, and I am working to expand its capabilities in future releases.
-
-**⚠️ This framework is still under development and experimental. If you are thinking on using it in your products, It would be wiser to use other libraries.** It should be noted that the author of cl-waffe is not an AI expert.  Also, not having GPUs, I can't test my framework on cuda ><. CUDA support is a little further along. (Ignoring some operations like Embedding, most operations are performed via [mgl-mat](https://github.com/melisgl/mgl-mat), so it should work without any modifications.)
-
-(I've decided to stall this project for a little while but create a matrix operation library which satisfies my requirements.)
 
 # TOC
 
