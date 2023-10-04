@@ -1,6 +1,9 @@
 [![CI](https://github.com/hikettei/cl-waffe/actions/workflows/ci.yml/badge.svg)](https://github.com/hikettei/cl-waffe/actions/workflows/ci.yml)
 
-> ⚠️ This repository is abandoned by me since the development has complemently moved to [cl-waffe2](https://github.com/hikettei/cl-waffe2).
+# DEPRECATED! MOVED! UNSUPPORTED!
+
+**This repository is abandoned by me since the development has complemently moved to [cl-waffe2](https://github.com/hikettei/cl-waffe2).**
+
 > 
 > cl-waffe2 provides: by far the fastest, systematic, easy to optimize, customizable, and environment- and device- independent abstract matrix operations while cl-waffe do not.
 >
